@@ -709,3 +709,34 @@
   animation: flameLickB 0.18s ease-in-out infinite alternate;
   transform-origin: bottom center;
 }
+/* =========================================================================
+   BLOOD MOON: CELESTIAL DESCENT & SCREEN-CRACK RIG
+   ========================================================================= */
+
+@keyframes bloodMoonDescent {
+  0% {
+    transform: translateY(-220px) scale(0.5);
+    opacity: 0;
+    filter: brightness(3.5) contrast(2) drop-shadow(0 0 80px #ff0000);
+  }
+  50% {
+    opacity: 0.95;
+    filter: brightness(2) contrast(1.8) drop-shadow(0 0 50px #ff1100);
+  }
+  75% {
+    transform: translateY(18px) scale(1.08);
+    filter: brightness(1.6) contrast(1.5) drop-shadow(0 0 35px #cc0000);
+  }
+  88% {
+    transform: translateY(-6px) scale(0.97);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    filter: brightness(1) contrast(1.1) drop-shadow(0 0 25px rgba(220, 20, 60, 0.85));
+  }
+}
+
+.anim-blood-moon-drop {
+  animation: bloodMoonDescent 1.5s cubic-bezier(0.18, 0.9, 0.32, 1) forwards !important;
+}

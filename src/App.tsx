@@ -604,7 +604,52 @@ export const BOSS_EXCLUSIVE_CARDS: CardDef[] = [
 BOSS_EXCLUSIVE_CARDS.forEach(c => {
   ALL_CARD_LOOKUP[c.name] = c;
 });
+// Pre-warm memory cache for background plates and card art
+const PRELOAD_BACKGROUND_FILES = [
+  'splash.png',
+  'deck-selection.png',
+  'gameover.jpg',
+  'draft.png',
+  'crossroads-select.jpg',
+  'campfireevent.jpg',
+  'altarevent.jpg',
+  'tribeeventbg.jpg',
+  'costeventbg.jpg',
+  'bonelordevent.png',
+  'weaverevent.png',
+  'trialevent.jpg',
+  'choiceevent.png',
+];
 
+const preloadAssetUrl = (url: string): Promise<void> => {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+  });
+};
+
+export const preloadCoreAssets = async () => {
+  const bgPromises = PRELOAD_BACKGROUND_FILES.map(f =>
+    preloadAssetUrl(`${BASE}/assets/backgrounds/${f}`)
+  );
+
+  const cardUrls = Array.from(
+    new Set(
+      Object.values(ALL_CARD_LOOKUP)
+        .map(card => getCardArtUrl(card))
+        .filter((url): url is string => Boolean(url))
+    )
+  );
+
+  await Promise.all(bgPromises);
+
+  for (let i = 0; i < cardUrls.length; i += 8) {
+    await Promise.all(cardUrls.slice(i, i + 8).map(url => preloadAssetUrl(url)));
+  }
+};
 type EvolutionTarget = string | { target: string; chance: number }[];
 
 const EVOLUTION_MAP: Record<string, EvolutionTarget> = {
@@ -2180,6 +2225,9 @@ export default function App() {
   useEffect(() => {
     masterDeckRef.current = masterDeck;
   }, [masterDeck]);
+  useEffect(() => {
+    preloadCoreAssets();
+  }, []);
 
   // Hidden Run Statistics Trackers
   const [runStats, setRunStats] = useState<RunStats>({
@@ -2302,6 +2350,7 @@ export default function App() {
   const [bossTotem, setBossTotem] = useState<{ class: Tribe; sigil: string } | null>(null);
   const [woodcarverClasses, setWoodcarverClasses] = useState<Tribe[]>([]);
   const [isPhaseTransition, setIsPhaseTransition] = useState<boolean>(false);
+  const [isBloodMoonDropping, setIsBloodMoonDropping] = useState<boolean>(false);
   const [isOverkill, setIsOverkill] = useState<boolean>(false);
   const [sacrificedUnkillableCardIds, setSacrificedUnkillableCardIds] = useState<string[]>([]);
 
@@ -4460,7 +4509,7 @@ export default function App() {
             addLog("=== THE ZEALOT: PHASE 2 INITIALIZED ===");
             addLog("The battlefield is cleansed! Stone Walls encase your field, and an Adder coils in the queue!");
           } else if (bossState.type === 'The Begotten' || (bossState.type as any) === 'Goobert') {
-            // 1. Fadeout and wipe both frontline and queue
+            // 1. Clear both frontline and queue into paint splatters
             setEnemyBoard(prev => prev.map(c => c ? { ...c, isDying: true } : null));
             setEnemyQueue(prev => prev.map(c => c ? { ...c, isDying: true } : null));
             await sleep(400);
@@ -4469,6 +4518,7 @@ export default function App() {
             setEnemyBoard([null, null, null, null]);
             setEnemyQueue([null, null, null, null]);
 
+            // 2. Identify highest threat player creature
             let targetCol = 0;
             let highestPower = -1;
             for (let c = 0; c < 4; c++) {
@@ -4482,15 +4532,43 @@ export default function App() {
               }
             }
 
-            currEBoard[targetCol] = transformAmorphous(cloneCard(ALL_CARD_LOOKUP['Amoeba'], 0));
+            // Lane confronting player's strongest creature: Lethal Mirror Print
+            const threatenedCard = currPBoard[targetCol];
+            const mirrorPrint = threatenedCard
+              ? cloneCard(threatenedCard, 0)
+              : cloneCard(ALL_CARD_LOOKUP['Wolf'] || ALL_CARD_LOOKUP['Amoeba'], 0);
+            mirrorPrint.id = `goobert-press-mirror-${Date.now()}`;
+            mirrorPrint.attack = Math.max(2, (threatenedCard?.attack || 2));
+            mirrorPrint.health = Math.max(4, (threatenedCard?.health || 4));
+            mirrorPrint.sigils = Array.from(new Set([...mirrorPrint.sigils, 'Touch of Death', 'Made of Stone']));
+            (mirrorPrint as any).isGoobertClone = true;
+            currEBoard[targetCol] = mirrorPrint;
+
+            // Flank with Rotary Slime Amalgams
+            const adjacentCols = [0, 1, 2, 3].filter(c => c !== targetCol);
+            const leftFlank = adjacentCols[0] ?? 0;
+            const rightFlank = adjacentCols[1] ?? 3;
+
+            const makePressAmalgam = (idSuffix: string) => {
+              const amalgam = cloneCard(ALL_CARD_LOOKUP['Amalgam'] || ALL_CARD_LOOKUP['Amoeba'], 0);
+              amalgam.id = `goobert-press-${idSuffix}-${Date.now()}`;
+              amalgam.attack = 3;
+              amalgam.health = 5;
+              amalgam.sigils = ['Double Strike', 'Amorphous', 'Stinky'];
+              (amalgam as any).isGoobertClone = true;
+              return amalgam;
+            };
+
+            currEBoard[leftFlank] = makePressAmalgam('flankA');
+            currEBoard[rightFlank] = makePressAmalgam('flankB');
 
             setBossState(prev => ({
               ...prev,
               phase: 2,
-              activeDialogue: 'Do you have the new ink for my Stamps? My printing Press would love for you to say no!',
+              activeDialogue: 'THE ROTARY PRESS TURNS! Every impression stamped in lethal ink—let us see your flesh endure it!',
             }));
-            addLog("=== THE BEGOTTEN: PHASE 2 INITIALIZED ===");
-            addLog(`The Begotten paints an Amoeba directly into lane ${targetCol + 1}!`);
+            addLog("=== THE BEGOTTEN: PHASE 2 - ROTARY PRESS INITIALIZED ===");
+            addLog(`The Press slams down: Mirror Print in lane ${targetCol + 1} and Stamped Amalgams flank the board!`);
           } else if (bossState.type === 'BoneLord') {
             // Fadeout existing cards before Phase 2 or Phase 3 setup
             setEnemyBoard(prev => prev.map(c => c ? { ...c, isDying: true } : null));
@@ -4557,8 +4635,8 @@ export default function App() {
               addLog("=== THE BONE LORD: PHASE 2 INITIALIZED ===");
               addLog("Shadow envelops your creatures! Power and health inverted!");
             } else if (bossPhase === 2) {
-              // Phase 3: Blood Moon summons across the battlefield
-              currEBoard = [cloneCard(ALL_CARD_LOOKUP['BLOOD MOON'], 0), null, null, null];
+              // Phase 3: Battlefield is stripped clean; the Blood Moon descends once the seal breaks
+              currEBoard = [null, null, null, null];
               currEQueue = [null, null, null, null];
 
               setBossState(prev => ({
@@ -4567,7 +4645,7 @@ export default function App() {
                 activeDialogue: '....the Bone Lord’s gaze feels like it could rip the soul from your body….',
               }));
 
-              addLog("=== THE BONE LORD: PHASE 3 - BLOOD MOON RISES ===");
+              addLog("=== THE BONE LORD: PHASE 3 - AN UNHOLY ECLIPSE GATHERS ===");
             }
           }
 
@@ -5000,27 +5078,54 @@ export default function App() {
             maxToSpawn = Math.min(maxToSpawn, Math.max(0, 9 - bossState.phase1CardsPlayed));
           }
 
+          // Tactical Boss AI: prioritize empty threat lanes or open player lines
+          const lanePriority = emptySlots.map(slot => {
+            const pCard = currPBoard[slot];
+            const eFront = currEBoard[slot];
+            let priority = 0;
+
+            if (pCard && !eFront) {
+              const pAtk = getCardAttack(pCard, slot, true, currPBoard, currEBoard);
+              priority += pAtk * 10; // High threat: drop a wall immediately
+              if (pCard.sigils.some(s => ['Touch of Death', 'Double Strike', 'Bifurcated Strike'].includes(s))) {
+                priority += 20;
+              }
+            } else if (!pCard && !eFront) {
+              priority += 12; // Uncontested lane: push direct face damage
+            } else if (pCard && pCard.health <= 2) {
+              priority += 8; // Vulnerable creature: pick off quickly
+            }
+            return { slot, priority };
+          }).sort((a, b) => b.priority - a.priority);
+
           let spawnedThisWave = 0;
           for (let i = 0; i < maxToSpawn; i++) {
-            const targetSlot = emptySlots[i];
-            const candidate = cloneCard(getRandomEnemyCard(), 0);
+            const targetSlot = lanePriority[i]?.slot ?? emptySlots[i];
+            let candidate = cloneCard(getRandomEnemyCard(), 0);
 
-            // Zealot Phase 1: Non-Stone Wall cards gain a second random sigil
+            // Zealot Phase 1: Heavy zealous blessings
             if (bossState.type === 'Zealot' && bossPhase === 1 && candidate.name !== 'Stone Wall') {
-              const bonusSigils = [
-                'Airborne',
-                'Burrower',
-                'Double Strike',
-                'Bifurcated Strike',
-                'Mighty Leap',
-                'Touch of Death',
-                'Stinky',
-                'Sharp Quills',
-              ];
+              const bonusSigils = ['Airborne', 'Burrower', 'Double Strike', 'Bifurcated Strike', 'Mighty Leap', 'Touch of Death', 'Stinky', 'Sharp Quills'];
               const available = bonusSigils.filter(s => !candidate.sigils.includes(s));
               if (available.length > 0) {
-                const randomSigil = available[Math.floor(Math.random() * available.length)];
-                candidate.sigils = [...candidate.sigils, randomSigil];
+                candidate.sigils = [...candidate.sigils, available[Math.floor(Math.random() * available.length)]];
+              }
+            }
+
+            // The Begotten: Slime Duplications & Rotary Press Stamping
+            if (bossState.type === 'The Begotten' || (bossState.type as any) === 'Goobert') {
+              (candidate as any).isGoobertClone = true;
+              if (bossPhase === 1) {
+                // Phase 1: Painted mutations
+                candidate.sigils = Array.from(new Set([...candidate.sigils, 'Amorphous']));
+                candidate.health = Math.max(2, (candidate.health || 0) + 1);
+              } else {
+                // Phase 2: Rotary Press supercharged prints
+                const lethalPressStamps = ['Touch of Death', 'Double Strike', 'Bifurcated Strike', 'Sharp Quills'];
+                const stamp = lethalPressStamps[Math.floor(Math.random() * lethalPressStamps.length)];
+                candidate.attack = Math.max(2, (candidate.attack || 0) + 1);
+                candidate.health = Math.max(3, (candidate.health || 0) + 1);
+                candidate.sigils = Array.from(new Set([...candidate.sigils, 'Amorphous', stamp]));
               }
             }
 
@@ -5221,21 +5326,33 @@ export default function App() {
 
   const calculateGrade = (stats: RunStats): { letter: string; color: string } => {
     let score = Math.round(
-      stats.clearedStages * 1.5 +
-      stats.bossesDefeated * 22 +
+      stats.clearedStages * 1.2 +
+      stats.bossesDefeated * 16 +
       stats.finalBossesDefeated * 35 +
-      stats.enemyCardsDestroyed * 0.3 +
-      stats.scaleDamageDealt * 0.15 -
-      stats.scaleDamageTaken * 0.5
+      stats.enemyCardsDestroyed * 0.25 +
+      stats.scaleDamageDealt * 0.12 -
+      stats.scaleDamageTaken * 0.75
     );
 
-    // Hard rank milestones: Skill & progression gating
-    if (stats.bossesDefeated === 0 && stats.finalBossesDefeated === 0) {
-      score = Math.min(score, 58); // Capped at C
-    } else if (stats.bossesDefeated === 1 && stats.finalBossesDefeated === 0) {
-      score = Math.min(score, 74); // Capped at B
-    } else if (stats.bossesDefeated === 2 && stats.finalBossesDefeated === 0) {
-      score = Math.min(score, 88); // Capped at A
+    // Hard rank milestones prior to felling a Final Boss
+    if (stats.finalBossesDefeated === 0) {
+      // True God Run condition: cleared all 3 act bosses, took near-zero damage, high overkill
+      const isGodRun = 
+        stats.bossesDefeated >= 3 && 
+        stats.scaleDamageTaken <= 3 && 
+        stats.scaleDamageDealt >= 60 && 
+        score >= 95;
+
+      if (!isGodRun) {
+        if (stats.bossesDefeated === 0) {
+          score = Math.min(score, 58); // Capped at C
+        } else if (stats.bossesDefeated === 1) {
+          score = Math.min(score, 74); // Capped at B
+        } else {
+          // Reached or died at Bone Lord without felling him -> Hard capped at high A
+          score = Math.min(score, 89);
+        }
+      }
     }
 
     const rawScore = Math.min(100, Math.max(0, score));
@@ -5260,13 +5377,16 @@ export default function App() {
       color = 'text-orange-500';
     }
 
+    // Plus suffixes strictly require consecutive Final Boss clears (looping rituals)
     let suffix = '';
-    if (stats.finalBossesDefeated >= 1 || stats.bossesDefeated >= 4) suffix = '++';
-    else if (stats.bossesDefeated === 3) suffix = '+';
+    if (stats.finalBossesDefeated >= 3) {
+      suffix = '++';
+    } else if (stats.finalBossesDefeated >= 2) {
+      suffix = '+';
+    }
 
     return { letter: `${baseGrade}${suffix}`, color };
   };
-
   const handleContinueRitual = () => {
     setBossState({
       type: null,
@@ -5571,12 +5691,13 @@ export default function App() {
           ? 'The Weaver'
           : forcedBoss as any;
     } else if (isBoss) {
-      // Boss #4 (Duel 36 or 3 bosses defeated) is strictly locked to The Bone Lord
-      if (duelNum === 36 || runStats.bossesDefeated >= 3) {
+      // Boss #4 (Duel 36 or 3 standard bosses defeated in current cycle) is locked to The Bone Lord
+      const standardBossesInCycle = runStats.bossesDefeated % 4;
+      if (duelNum === 36 || standardBossesInCycle === 3) {
         bossType = 'BoneLord';
       } else {
         // Bosses 1, 2, and 3 (Duels 6, 14, 24): Shuffle the standard trio so each appears exactly once
-        if (!(window as any).__standardBossOrder || duelNum === 6 || runStats.bossesDefeated === 0) {
+        if (!(window as any).__standardBossOrder || duelNum === 6 || standardBossesInCycle === 0) {
           const pool: ('Zealot' | 'The Begotten' | 'The Weaver')[] = ['Zealot', 'The Begotten', 'The Weaver'];
           (window as any).__standardBossOrder = [...pool].sort(() => Math.random() - 0.5);
         }
@@ -5630,7 +5751,31 @@ export default function App() {
 
         addLog('=== BOSS BATTLE: The Zealot awakens in the cave! ===');
       } else if (bossType === 'The Begotten') {
-        initBoard[0] = transformAmorphous(cloneCard(ALL_CARD_LOOKUP['Amoeba'], 0));
+        // Lane 0: Shifting Living Slime
+        const primeAmoeba = transformAmorphous(cloneCard(ALL_CARD_LOOKUP['Amoeba'], 0));
+        primeAmoeba.attack = 2;
+        primeAmoeba.health = 4;
+        primeAmoeba.sigils = Array.from(new Set([...primeAmoeba.sigils, 'Stinky']));
+        (primeAmoeba as any).isGoobertClone = true;
+        initBoard[0] = primeAmoeba;
+
+        // Lanes 1 & 2: Stamped caricatures mockingly pulled from player's deck
+        const playerPool = masterDeck.filter(c => !c.unsacrificable && !c.isSacrifice && !(c as any).isTerrain);
+        const sourceDeck = playerPool.length > 0 ? playerPool : MAIN_DECK_POOL;
+
+        [1, 2].forEach(col => {
+          const raw = sourceDeck[Math.floor(Math.random() * sourceDeck.length)];
+          const paintedMockery = cloneCard(raw, 0);
+          paintedMockery.id = `goobert-p1-${col}-${Date.now()}`;
+          paintedMockery.attack = Math.max(1, (paintedMockery.attack || 0));
+          paintedMockery.health = Math.max(3, (paintedMockery.health || 0) + 1);
+          (paintedMockery as any).isGoobertClone = true;
+
+          const painterStamps = ['Bifurcated Strike', 'Sharp Quills', 'Amorphous', 'Fledgling'];
+          const chosenStamp = painterStamps[Math.floor(Math.random() * painterStamps.length)];
+          paintedMockery.sigils = Array.from(new Set([...(paintedMockery.sigils || []), chosenStamp]));
+          initBoard[col] = paintedMockery;
+        });
 
         setBossTotem(null);
         setBossState({
@@ -5638,14 +5783,14 @@ export default function App() {
           phase: 1,
           phase1CardsPlayed: 0,
           skipNextPlayerTurn: false,
-          activeDialogue: 'My Stamps are of the highest quality, let me show you!',
+          activeDialogue: 'I have prepared my canvas... your little beasts make such delightful impressions!',
           bgHex: '#082613',
           bgTransitionDuration: 2.5,
           isRitualComplete: false,
           ritualEndedVoluntarily: false,
         });
 
-        addLog('=== BOSS BATTLE: The Begotten prepares its canvas! ===');
+        addLog('=== BOSS BATTLE: The Begotten prepares its canvas with living caricatures! ===');
       } else if (bossType === 'BoneLord') {
         initBoard[0] = cloneCard(ALL_CARD_LOOKUP['Geist'], 0);
         const validPairs = [
@@ -7029,6 +7174,8 @@ export default function App() {
                     <img
                       src={iconSrc}
                       alt={sigilName}
+                      loading="eager"
+                      decoding="async"
                       className="w-[22px] h-[22px] object-contain select-none pointer-events-none"
                       onError={(e) => {
                         // Fallback to text icon if PNG asset path differs
@@ -7186,6 +7333,9 @@ export default function App() {
             <img
               src={getCardArtUrl(card)}
               alt={card.name}
+              loading="eager"
+              decoding="async"
+              fetchPriority={options?.isOpponent ? 'high' : 'auto'}
               className={`max-w-[88%] max-h-[88%] w-auto h-auto object-contain pointer-events-none select-none transition-transform ${
                 CARD_ART_OFFSETS[card.name] || ''
               } ${(() => {
@@ -9991,6 +10141,28 @@ export default function App() {
                         bgHex: '#300202',
                         bgTransitionDuration: 8,
                       }));
+
+                      // If Phase 3 is active and Blood Moon is waiting in the heavens, slam it down now
+                      if (bossPhase === 3 && !enemyBoard.some(c => c?.isMassive)) {
+                        setIsBoardRumbling(true);
+                        triggerSfx('hit');
+                        if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).playFinalBoss) {
+                          (ChiptuneAudio as any).playFinalBoss(2.2);
+                        }
+
+                        setTimeout(() => {
+                          const bloodMoonCard = {
+                            ...cloneCard(ALL_CARD_LOOKUP['BLOOD MOON'], 0),
+                            id: `blood-moon-${Date.now()}`
+                          };
+                          setEnemyBoard([bloodMoonCard, null, null, null]);
+                          setIsBloodMoonDropping(true);
+                          setTimeout(() => {
+                            setIsBoardRumbling(false);
+                            setIsBloodMoonDropping(false);
+                          }, 1500);
+                        }, 300);
+                      }
                     } else {
                       setBossState(prev => ({ ...prev, activeDialogue: null }));
                     }
@@ -10380,7 +10552,9 @@ export default function App() {
                         const isZeroPower = zeroPowerShakingCard?.isPlayer === false;
 
                         let bossAnimClass = '';
-                        if (isAttacking) {
+                        if (isBloodMoonDropping) {
+                          bossAnimClass = 'anim-blood-moon-drop z-50';
+                        } else if (isAttacking) {
                           // Massive monolith always slams straight forward, ignoring lane strike angles
                           bossAnimClass = 'animate-lunge-e-straight z-50';
                         } else if (isZeroPower) {
