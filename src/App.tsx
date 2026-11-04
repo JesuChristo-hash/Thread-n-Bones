@@ -805,6 +805,7 @@ interface ChiptuneAudioType {
   playImpact: (pitch: number, bus: GainNode, decay?: number, gainLevel?: number) => void;
   playSwell?: (freq: number, dest: GainNode, duration?: number, gainLevel?: number) => void;
   playCabin: (fadeTime?: number) => void;
+  playAmbient?: (fadeTime?: number) => void;
   playBattle: (fadeTime?: number) => void;
   playBoss: (fadeTime?: number) => void;
   playOrgan: (freqs: number[], bus: GainNode, duration?: number, gainLevel?: number) => void;
@@ -1219,6 +1220,10 @@ export const ChiptuneAudio: any = {
     filter.connect(gain);
     gain.connect(dest);
     noise.start(now);
+  },
+
+playAmbient(fadeTime = 1.8) {
+    this.playCabin(fadeTime);
   },
 
   // 1. Ambient (Reworked): Breathing drone, tape delay network, and bowed swells
@@ -1757,7 +1762,7 @@ export const ChiptuneAudio: any = {
         step = (step + 1) % 64;
       }, stepDuration * 1000);
 
-      inst.intervals.push(interval);
+      inst.timers.push(interval);
     }, fadeTime);
   },
 
@@ -1829,7 +1834,7 @@ export const ChiptuneAudio: any = {
         step = (step + 1) % 64;
       }, stepDuration * 1000);
 
-      inst.intervals.push(interval);
+      inst.timers.push(interval);
     }, fadeTime);
   },
 
@@ -1887,7 +1892,7 @@ export const ChiptuneAudio: any = {
         step = (step + 1) % 64;
       }, stepDuration * 1000);
 
-      inst.intervals.push(interval);
+      inst.timers.push(interval);
     }, fadeTime);
   }
 };
@@ -6077,8 +6082,18 @@ export default function App() {
     const initQueue: (CardDef | null)[] = [null, null, null, null];
 
     if (isBoss && bossType) {
-      if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).playFinalBoss) {
-        (ChiptuneAudio as any).playFinalBoss(1.8);
+      if (typeof ChiptuneAudio !== 'undefined') {
+        if (bossType === 'BoneLord') {
+          ChiptuneAudio.playFinalBoss?.(2.0);
+        } else if (bossType === 'Zealot') {
+          ChiptuneAudio.playTheZealot?.(1.5);
+        } else if (bossType === 'The Begotten') {
+          ChiptuneAudio.playTheBegotten?.(1.8);
+        } else if (bossType === 'The Weaver') {
+          ChiptuneAudio.playTheWeaver?.(1.5);
+        } else {
+          ChiptuneAudio.playBattle?.(1.4);
+        }
       }
       setIsPhaseTransition(true);
       setTimeout(() => setIsPhaseTransition(false), 2500);
@@ -10131,6 +10146,14 @@ export default function App() {
                         addLog("=== THE BONE LORD: PHASE 2 INITIALIZED ===");
                       } else if (bossPhase === 2) {
                         setEnemyBoard([cloneCard(ALL_CARD_LOOKUP['BLOOD MOON'], 0), null, null, null]);
+                        
+                        // Trigger Blood Moon descent animation and transition to Phase 3 Toccata
+                        setIsBloodMoonDropping(true);
+                        setTimeout(() => setIsBloodMoonDropping(false), 2400);
+
+                        if (typeof ChiptuneAudio !== 'undefined') {
+                          ChiptuneAudio.playFinalBossPhase3?.(0.8);
+                        }
                         setEnemyQueue([null, null, null, null]);
                         setBossState(prev => ({
                           ...prev,
