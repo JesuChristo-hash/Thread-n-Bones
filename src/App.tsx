@@ -1567,27 +1567,328 @@ export const ChiptuneAudio: any = {
     sub.stop(now + duration);
   },
 
-  // ==========================================
-  // BOSS TRACKS (Stubbed - routed to battle groove)
-  // ==========================================
+  // 4. Church Pipe Organ Voice (Additive Harmonics + Wooden Resonance)
+  playOrgan(freqs: number[], dest: any, duration = 2.4, gainLevel = 0.16) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    freqs.forEach((freq, idx) => {
+      const osc1 = this.ctx!.createOscillator();
+      const osc2 = this.ctx!.createOscillator();
+      const osc3 = this.ctx!.createOscillator();
+      const filter = this.ctx!.createBiquadFilter();
+      const voiceGain = this.ctx!.createGain();
+
+      osc1.type = 'sine';     // Fundamental pipe
+      osc2.type = 'sawtooth'; // Reed harmonic
+      osc3.type = 'triangle'; // Quint pipe (+7 semitones)
+
+      osc1.frequency.setValueAtTime(freq, now);
+      osc2.frequency.setValueAtTime(freq * 2, now + 0.02);
+      osc3.frequency.setValueAtTime(freq * 1.498, now);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1400, now);
+      filter.Q.value = 2.5;
+
+      // Pipe organ attack swell and trailing air release
+      const pan = (idx / (freqs.length || 1) - 0.5) * 0.4;
+      const panner = this.ctx!.createStereoPanner ? this.ctx!.createStereoPanner() : null;
+      if (panner) panner.pan.setValueAtTime(pan, now);
+
+      voiceGain.gain.setValueAtTime(0.001, now);
+      voiceGain.gain.linearRampToValueAtTime(gainLevel / Math.sqrt(freqs.length), now + 0.08);
+      voiceGain.gain.setValueAtTime((gainLevel / Math.sqrt(freqs.length)) * 0.9, now + duration * 0.7);
+      voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      osc3.connect(filter);
+      filter.connect(voiceGain);
+
+      if (panner) {
+        voiceGain.connect(panner);
+        panner.connect(dest);
+      } else {
+        voiceGain.connect(dest);
+      }
+
+      osc1.start(now);
+      osc2.start(now);
+      osc3.start(now);
+      osc1.stop(now + duration);
+      osc2.stop(now + duration);
+      osc3.stop(now + duration);
+    });
+  },
+
+  // 5. Dry Bone-Click Percussion (Resonant High-Q White Noise Chasm)
+  playBoneClick(dest: any, gainLevel = 0.22) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const bufferSize = Math.floor(this.ctx.sampleRate * 0.04);
+    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+
+    const whiteNoise = this.ctx.createBufferSource();
+    whiteNoise.buffer = noiseBuffer;
+
+    const bandpass = this.ctx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.setValueAtTime(2400 + Math.random() * 800, now);
+    bandpass.Q.value = 14;
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(gainLevel, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.038);
+
+    whiteNoise.connect(bandpass);
+    bandpass.connect(gain);
+    gain.connect(dest);
+
+    whiteNoise.start(now);
+    whiteNoise.stop(now + 0.04);
+  },
+
+  // 6. Resonant Acid Bass Saw (Filtered Attack Spike)
+  playBassSaw(freq: number, dest: any, duration = 0.26, gainLevel = 0.28) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const sub = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    sub.type = 'sine';
+
+    osc.frequency.setValueAtTime(freq, now);
+    sub.frequency.setValueAtTime(freq * 0.5, now);
+
+    filter.type = 'lowpass';
+    filter.Q.value = 7.0;
+    filter.frequency.setValueAtTime(950, now);
+    filter.frequency.exponentialRampToValueAtTime(80, now + duration * 0.95);
+
+    gain.gain.setValueAtTime(gainLevel, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(filter);
+    sub.connect(gain);
+    filter.connect(gain);
+    gain.connect(dest);
+
+    osc.start(now);
+    sub.start(now);
+    osc.stop(now + duration);
+    sub.stop(now + duration);
+  },
+
+  // =========================================================================
+  // 3. ACT BOSSES: THE TRIPTYCH (118 BPM Phrygian Dominant Ostinato)
+  // =========================================================================
+  playBossTheme(type: 'Zealot' | 'The Begotten' | 'The Weaver', fadeTime = 1.5) {
+    this.transitionTo(`boss-${type}`, (inst: any) => {
+      if (!this.ctx) return;
+      const echo = this.createEchoBus(inst, 0.254, 0.35, 950);
+
+      // D Phrygian Dominant root bass steps (D, Eb, F#, G, A)
+      const bassSeq: (number | null)[] = [
+        73.42, 73.42, 77.78, 73.42, 92.50, null, 77.78, 73.42,
+        73.42, 73.42, 98.00, 92.50, 77.78, 73.42, 110.00, null,
+        73.42, 73.42, 77.78, 73.42, 92.50, null, 77.78, 73.42,
+        65.41, null, 69.30, null, 73.42, 77.78, 92.50, 103.83
+      ];
+
+      // Piercing stabs and dissonant intervals
+      const stabChords: Record<number, number[]> = {
+        0:  [146.83, 220.00, 311.13], // D5 + Eb tritone edge
+        12: [155.56, 233.08, 311.13], // Eb minor stab
+        16: [146.83, 185.00, 293.66], // D Major / Phrygian 3rd
+        26: [130.81, 196.00, 277.18], // C#dim push
+      };
+
+      let step = 0;
+      const stepDuration = 0.127; // ~118 BPM 16th notes
+      const interval = setInterval(() => {
+        if (!this.ctx) return;
+
+        // Driving Industrial Kick
+        if (step % 8 === 0 || step % 16 === 10) {
+          this.playImpact(80, inst.bus, 0.42, 0.38);
+        }
+
+        // Mechanical Snare on beats 2 and 4
+        if (step % 8 === 4) {
+          this.playImpact(62, inst.bus, 0.26, 0.22);
+          this.playBoneClick(inst.bus, 0.24);
+        }
+
+        // Shuffling Bone-click percussion on 16th offbeats
+        if (step % 2 === 1 && Math.random() > 0.3) {
+          this.playBoneClick(inst.bus, 0.12);
+        }
+
+        // Aggressive Bassline
+        const bassNote = bassSeq[step % bassSeq.length];
+        if (bassNote) {
+          this.playBassSaw(bassNote, inst.bus, 0.18, 0.28);
+        }
+
+        // Lead Stabs
+        const chord = stabChords[step % 32];
+        if (chord) {
+          this.playSynthPiano(chord, echo, 0.9, 0.22);
+        }
+
+        // Boss-specific textural signatures
+        if (type === 'The Begotten' && step % 32 === 28) {
+          this.playFleshGroan(220, 85, echo, 1.2, 0.24);
+        } else if (type === 'The Weaver' && (step % 8 === 2 || step % 8 === 6)) {
+          this.playPluck(587.33, echo, 0.6, 0.12); // Needle plucks
+        } else if (type === 'Zealot' && step % 16 === 14) {
+          this.playPluck(185.00, echo, 1.1, 0.18); // Low grim chant drone
+        }
+
+        step = (step + 1) % 64;
+      }, stepDuration * 1000);
+
+      inst.intervals.push(interval);
+    }, fadeTime);
+  },
+
   playTheWeaver(fadeTime = 1.4) {
-    this.playBattle(fadeTime);
+    this.playBossTheme('The Weaver', fadeTime);
   },
 
   playTheZealot(fadeTime = 1.4) {
-    this.playBattle(fadeTime);
+    this.playBossTheme('Zealot', fadeTime);
   },
 
   playTheBegotten(fadeTime = 1.8) {
-    this.playBattle(fadeTime);
+    this.playBossTheme('The Begotten', fadeTime);
   },
 
+  // =========================================================================
+  // 4. THE BONE LORD: DOOM DIRGE (62 BPM Funeral Pipe Organ & Sub Pulses)
+  // =========================================================================
   playFinalBoss(fadeTime = 2.0) {
-    this.playBattle(fadeTime);
+    this.transitionTo('finalboss', (inst: any) => {
+      if (!this.ctx) return;
+      const organEcho = this.createEchoBus(inst, 0.48, 0.45, 750);
+
+      // Heavy Gothic liturgical chord progression in D Minor
+      const organChords: Record<number, number[]> = {
+        0:  [73.42, 110.00, 146.83, 174.61], // Dm (Plow down)
+        8:  [58.27, 116.54, 146.83, 233.08], // Bbmaj7/D
+        16: [49.00, 98.00, 146.83, 196.00],  // Gm/D
+        24: [55.00, 110.00, 138.59, 220.00], // A7 (The Scythe)
+        32: [73.42, 110.00, 146.83, 220.00], // Dm9
+        40: [65.41, 130.81, 164.81, 196.00], // C/E
+        48: [58.27, 87.31, 146.83, 174.61],  // Bb5
+        56: [55.00, 110.00, 146.83, 207.65], // A7(b5) Tragic resolution
+      };
+
+      const highMelodyChimes: Record<number, number> = {
+        4: 293.66, 12: 349.23, 20: 392.00, 28: 440.00,
+        36: 415.30, 44: 349.23, 52: 311.13, 60: 277.18
+      };
+
+      let step = 0;
+      const stepDuration = 0.242; // ~62 BPM 8th-step progression
+      const interval = setInterval(() => {
+        if (!this.ctx) return;
+
+        // Sub-bass quake on each bar start (36Hz fundamental earth-shake)
+        if (step % 8 === 0) {
+          this.playImpact(52, inst.bus, 0.55, 0.45);
+          this.playBassSaw(36.71, inst.bus, 1.4, 0.32);
+        }
+
+        // Churning pipe organ chords
+        if (organChords[step]) {
+          this.playOrgan(organChords[step], organEcho, 2.6, 0.22);
+        }
+
+        // Skeletal bone clicks ticking like an ancient clock
+        if (step % 2 === 0) {
+          this.playBoneClick(inst.bus, 0.2);
+        } else if (Math.random() > 0.4) {
+          this.playBoneClick(inst.bus, 0.1);
+        }
+
+        // Distant chime echoes in high register
+        if (highMelodyChimes[step]) {
+          this.playPluck(highMelodyChimes[step], organEcho, 1.6, 0.08);
+        }
+
+        step = (step + 1) % 64;
+      }, stepDuration * 1000);
+
+      inst.intervals.push(interval);
+    }, fadeTime);
   },
 
+  // =========================================================================
+  // 5. PHASE 3: THE BLOOD MOON (136 BPM Accelerated Cathedral Toccata)
+  // =========================================================================
   playFinalBossPhase3(fadeTime = 0.8) {
-    this.playBattle(fadeTime);
+    this.transitionTo('bloodmoon-phase3', (inst: any) => {
+      if (!this.ctx) return;
+      const hyperEcho = this.createEchoBus(inst, 0.165, 0.5, 1250);
+
+      // Frantic descending D-minor arpeggiator outline (Bach Toccata style)
+      const toccataRun: (number | null)[] = [
+        293.66, 277.18, 293.66, 220.00, 233.08, 196.00, 174.61, 164.81,
+        146.83, 138.59, 146.83, 110.00, 116.54, 98.00, 87.31, 82.41,
+        73.42, 146.83, 220.00, 293.66, 349.23, 440.00, 554.37, 587.33,
+        698.46, 587.33, 554.37, 440.00, 349.23, 293.66, 220.00, 146.83
+      ];
+
+      const moonImpacts: Record<number, number[]> = {
+        0:  [73.42, 146.83, 220.00],
+        8:  [65.41, 130.81, 196.00],
+        16: [58.27, 116.54, 174.61],
+        24: [55.00, 110.00, 164.81],
+      };
+
+      let step = 0;
+      const stepDuration = 0.11; // 136 BPM frantic 16th pulse
+      const interval = setInterval(() => {
+        if (!this.ctx) return;
+
+        // Double-kick artillery pulse
+        if (step % 4 === 0 || step % 8 === 2) {
+          this.playImpact(95, inst.bus, 0.35, 0.42);
+        }
+
+        // Heavy cracking bone snare
+        if (step % 8 === 4) {
+          this.playBoneClick(inst.bus, 0.35);
+          this.playImpact(70, inst.bus, 0.22, 0.28);
+        }
+
+        // Running Baroque pipe arpeggios
+        const note = toccataRun[step % toccataRun.length];
+        if (note) {
+          this.playOrgan([note], hyperEcho, 0.24, 0.18);
+        }
+
+        // Heavy pedal points on bar boundaries
+        if (moonImpacts[step % 32]) {
+          this.playOrgan(moonImpacts[step % 32], inst.bus, 1.2, 0.28);
+          this.playBassSaw(36.71, inst.bus, 0.4, 0.35);
+        }
+
+        step = (step + 1) % 64;
+      }, stepDuration * 1000);
+
+      inst.intervals.push(interval);
+    }, fadeTime);
   }
 };
 
@@ -5098,29 +5399,92 @@ export default function App() {
             return { slot, priority };
           }).sort((a, b) => b.priority - a.priority);
 
+          // 1. Calculate true incoming threat per lane (Direct, Airborne evasion, Diagonals)
+          const incomingThreatByLane = [0, 1, 2, 3].map(targetLane => {
+            let directThreat = 0;
+            let lethalAngle = false;
+
+            for (let pLane = 0; pLane < 4; pLane++) {
+              const pCard = currPBoard[pLane];
+              if (!pCard) continue;
+
+              const targets = buildStrikeTargets(pLane, pCard.sigils);
+              if (targets.includes(targetLane)) {
+                const atk = getCardAttack(pCard, pLane, true, currPBoard, currEBoard);
+                const isAirborne = pCard.sigils.includes('Airborne');
+                const eCard = currEBoard[targetLane];
+                const blocksAirborne = eCard && eCard.sigils.includes('Mighty Leap');
+
+                if (!eCard || (isAirborne && !blocksAirborne)) {
+                  directThreat += atk * 12;
+                } else {
+                  directThreat += atk * 4;
+                }
+
+                if (pCard.sigils.includes('Touch of Death')) directThreat += 15;
+                if (pCard.sigils.includes('Double Strike')) directThreat += atk * 6;
+              }
+            }
+
+            // Unopposed player line: push lethal scale damage
+            if (!currPBoard[targetLane] && !currEBoard[targetLane]) {
+              directThreat += 10;
+              lethalAngle = true;
+            }
+
+            return { lane: targetLane, threat: directThreat, isLethalAngle: lethalAngle };
+          });
+
+          // Sort empty queue slots by calculated threat priority
+          const sortedSlots = emptySlots.sort((a, b) => {
+            const threatA = incomingThreatByLane[a]?.threat || 0;
+            const threatB = incomingThreatByLane[b]?.threat || 0;
+            return threatB - threatA;
+          });
+
           let spawnedThisWave = 0;
           for (let i = 0; i < maxToSpawn; i++) {
-            const targetSlot = lanePriority[i]?.slot ?? emptySlots[i];
-            let candidate = cloneCard(getRandomEnemyCard(), 0);
+            const targetSlot = sortedSlots[i];
+            const pCard = currPBoard[targetSlot];
+            const threatProfile = incomingThreatByLane[targetSlot];
 
-            // Zealot Phase 1: Heavy zealous blessings
+            // 2. Tactical counter-pick based on lane situation
+            let candidate: CardDef;
+
+            if (threatProfile && threatProfile.threat >= 20 && pCard) {
+              const defensivePool = ENEMY_MAIN_DECK_POOL.filter(c => 
+                c.sigils.includes('Touch of Death') || 
+                c.sigils.includes('Sharp Quills') || 
+                c.sigils.includes('Mighty Leap') ||
+                (c.health || 0) >= 4
+              );
+              const pick = defensivePool.length > 0 ? defensivePool : ENEMY_MAIN_DECK_POOL;
+              candidate = cloneCard(pick[Math.floor(Math.random() * pick.length)], 0);
+            } else if (threatProfile?.isLethalAngle) {
+              const aggressivePool = ENEMY_MAIN_DECK_POOL.filter(c => 
+                (c.attack || 0) >= 2 || 
+                c.sigils.includes('Airborne') || 
+                c.sigils.includes('Bifurcated Strike')
+              );
+              const pick = aggressivePool.length > 0 ? aggressivePool : ENEMY_MAIN_DECK_POOL;
+              candidate = cloneCard(pick[Math.floor(Math.random() * pick.length)], 0);
+            } else {
+              candidate = cloneCard(getRandomEnemyCard(), 0);
+            }
+
+            // 3. Boss-specific augmentations
             if (bossState.type === 'Zealot' && bossPhase === 1 && candidate.name !== 'Stone Wall') {
               const bonusSigils = ['Airborne', 'Burrower', 'Double Strike', 'Bifurcated Strike', 'Mighty Leap', 'Touch of Death', 'Stinky', 'Sharp Quills'];
               const available = bonusSigils.filter(s => !candidate.sigils.includes(s));
               if (available.length > 0) {
                 candidate.sigils = [...candidate.sigils, available[Math.floor(Math.random() * available.length)]];
               }
-            }
-
-            // The Begotten: Slime Duplications & Rotary Press Stamping
-            if (bossState.type === 'The Begotten' || (bossState.type as any) === 'Goobert') {
+            } else if (bossState.type === 'The Begotten' || (bossState.type as any) === 'Goobert') {
               (candidate as any).isGoobertClone = true;
               if (bossPhase === 1) {
-                // Phase 1: Painted mutations
                 candidate.sigils = Array.from(new Set([...candidate.sigils, 'Amorphous']));
                 candidate.health = Math.max(2, (candidate.health || 0) + 1);
               } else {
-                // Phase 2: Rotary Press supercharged prints
                 const lethalPressStamps = ['Touch of Death', 'Double Strike', 'Bifurcated Strike', 'Sharp Quills'];
                 const stamp = lethalPressStamps[Math.floor(Math.random() * lethalPressStamps.length)];
                 candidate.attack = Math.max(2, (candidate.attack || 0) + 1);
@@ -5146,6 +5510,7 @@ export default function App() {
 
           setEnemyQueue([...currEQueue]);
           await sleep(300);
+          
         } else {
           // --- Scaled Turn Reinforcement Rules ---
           let maxAllowedTotalCards: number;
