@@ -3109,7 +3109,7 @@ export default function App() {
     }
 
     if (screen === 'DUEL') {
-      if (ChiptuneAudio.currentTrack !== 'battle') {
+      if (!isBossMatch && ChiptuneAudio.currentTrack !== 'battle') {
         ChiptuneAudio.playBattle();
       }
     } else if (screen === 'GAME_OVER' || screen === 'SPLASH') {
@@ -3119,7 +3119,7 @@ export default function App() {
         ChiptuneAudio.playCabin();
       }
     }
-  }, [screen, audioEnabled]);
+  }, [screen, audioEnabled, isBossMatch]);
 
   // Cleanup audio nodes on unmount
   useEffect(() => {
