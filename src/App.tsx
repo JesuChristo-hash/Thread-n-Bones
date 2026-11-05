@@ -475,7 +475,15 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Turkey Vulture", class: "Avian", attack: 3, health: 3, boneCost: 6, emoji: "🦃", sigils: ["Airborne"] },
   { name: "Wolf Cub", class: "Canine", attack: 1, health: 1, cost: 1, emoji: "🐾", sigils: ["Fledgling"], evolvesInto: "Wolf" },
   { name: "Skunk", class: "No Class", attack: 0, health: 3, cost: 1, emoji: "🦨", sigils: ["Stinky"] },
-
+  // --- NEW CARDS ---
+  { name: "Capybara", class: "No Class", attack: 0, health: 4, cost: 1, emoji: "🦫", sigils: ["Leader"] },
+  { name: "Stallion", class: "Hooved", attack: 2, health: 3, cost: 2, emoji: "🐎", sigils: ["Sprinter"] },
+  { name: "Snapper", class: "Reptile", attack: 1, health: 6, cost: 2, emoji: "🐢", sigils: [] },
+  { name: "Killer Whale", class: "No Class", attack: 3, health: 1, cost: 2, emoji: "🐋", sigils: ["Waterborne", "Sprinter"] },
+  { name: "Goose", class: "Avian", attack: 2, health: 1, cost: 1, emoji: "🪿", sigils: ["Airborne", "Sprinter"] },
+  { name: "Arachnid", class: "Insect", attack: 1, health: 3, cost: 0, boneCost: 5, emoji: "🕷️", sigils: ["Mighty Leap"] },
+  { name: "Kraken", class: "No Class", attack: 3, health: 1, cost: 0, boneCost: 8, emoji: "🦑", sigils: ["Waterborne", "Bifurcated Strike"] },
+  { name: "Scorpion", class: "Insect", attack: 1, health: 1, cost: 0, boneCost: 6, emoji: "🦂", sigils: ["Touch of Death"] },
   // --- Utility, Incubators & Bone Economy ---
   { name: "Tsuchinoko", class: "Reptile", attack: 1, health: 1, boneCost: 2, emoji: "🐍", sigils: ["Worthy Sacrifice"] },
   { name: "Red Stray", class: "Canine", attack: 1, health: 2, cost: 1, emoji: "🐕", sigils: ["Bone King"] },
@@ -5612,8 +5620,21 @@ export default function App() {
             const spawnCount = Math.min(emptySlots.length, maxSpawnsThisTurn, remainingQuota, slotsAvailable);
             let newlySpawned = 0;
 
+            // 1. Avoid slots trapped behind permanent frontline obstacles (Felled Trees, Stone Walls)
+            const viableSlots = emptySlots.filter(s => !currEBoard[s]?.unsacrificable);
+            const poolToUse = viableSlots.length > 0 ? viableSlots : emptySlots;
+
+            // 2. Shuffle candidates to eliminate the 0 -> 1 bias, then prioritize lanes facing player threats
+            const targetSlots = [...poolToUse]
+              .sort(() => Math.random() - 0.5)
+              .sort((a, b) => {
+                const aFacesThreat = currPBoard[a] !== null ? 1 : 0;
+                const bFacesThreat = currPBoard[b] !== null ? 1 : 0;
+                return bFacesThreat - aFacesThreat; // Threat-facing lanes first; ties stay randomized
+              });
+
             for (let i = 0; i < spawnCount; i++) {
-              const targetSlot = emptySlots[i];
+              const targetSlot = targetSlots[i];
               const validPool = ENEMY_MAIN_DECK_POOL.filter(c => getThreat(c) <= maxCardThreat);
               if (validPool.length === 0) break;
 
@@ -6408,8 +6429,8 @@ export default function App() {
       // Obstacles are an occasional encounter condition (30% chance in regular battles), not a constant
       const rollsTerrainEncounter = !isBoss && Math.random() < 0.30;
       if (rollsTerrainEncounter) {
-        // Exactly 1 obstacle spawns total across the battlefield: 65% player flank, 35% enemy frontline
-        if (Math.random() < 0.65) {
+        // Flat 50/50 split between player flank and enemy frontline
+        if (Math.random() < 0.50) {
           playerObstacleTarget = 1;
           const pLane = Math.floor(Math.random() * 4);
           const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
@@ -6438,16 +6459,18 @@ export default function App() {
       }
 
       // 2. Intelligent Backrow Lane Selection:
-      // - NEVER queue a creature behind an enemy frontline obstacle (it can never advance)
+      // - NEVER queue a creature behind an enemy frontline obstacle
       // - Prioritize open attack lanes over lanes directly facing a player tree/wall
-      const openFrontlineLanes = [0, 1, 2, 3].filter(l => initBoard[l] === null);
-      const prioritizedLanes = [...openFrontlineLanes].sort((a, b) => {
+      // - Shuffle available lanes FIRST to eliminate the column 0/1 bias
+      const openFrontlineLanes = [0, 1, 2, 3]
+        .filter(l => initBoard[l] === null)
+        .sort(() => Math.random() - 0.5);
+
+      const prioritizedLanes = openFrontlineLanes.sort((a, b) => {
         const aBlocked = nextPlayerBoard[a] !== null ? 1 : 0;
         const bBlocked = nextPlayerBoard[b] !== null ? 1 : 0;
-        if (aBlocked !== bBlocked) return aBlocked - bBlocked; // Clear player lanes come first
-        return Math.random() - 0.5;
+        return aBlocked - bBlocked; // Unblocked player lanes come first; ties retain random order
       });
-
       let currentBackRowThreat = 0;
       let playedCount = 0;
 
