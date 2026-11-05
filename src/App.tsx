@@ -1572,58 +1572,43 @@ playAmbient(fadeTime = 1.8) {
     sub.stop(now + duration);
   },
 
-  // 4. Church Pipe Organ Voice (Additive Harmonics + Wooden Resonance)
-  playOrgan(freqs: number[], dest: any, duration = 2.4, gainLevel = 0.16) {
+  // 4. Church Pipe Organ Voice (Gated Additive Harmonics)
+  playOrgan(freqs: number[], dest: any, duration = 0.8, gainLevel = 0.16) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
+    const voiceGain = gainLevel / Math.max(1, Math.sqrt(freqs.length));
 
-    freqs.forEach((freq, idx) => {
+    freqs.forEach(freq => {
       const osc1 = this.ctx!.createOscillator();
       const osc2 = this.ctx!.createOscillator();
-      const osc3 = this.ctx!.createOscillator();
       const filter = this.ctx!.createBiquadFilter();
-      const voiceGain = this.ctx!.createGain();
+      const gain = this.ctx!.createGain();
 
-      osc1.type = 'sine';     // Fundamental pipe
-      osc2.type = 'sawtooth'; // Reed harmonic
-      osc3.type = 'triangle'; // Quint pipe (+7 semitones)
+      osc1.type = 'triangle'; // Pure fundamental
+      osc2.type = 'sawtooth'; // Reed edge
 
       osc1.frequency.setValueAtTime(freq, now);
-      osc2.frequency.setValueAtTime(freq * 2, now + 0.02);
-      osc3.frequency.setValueAtTime(freq * 1.498, now);
+      osc2.frequency.setValueAtTime(freq * 2, now);
 
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(1400, now);
-      filter.Q.value = 2.5;
+      filter.frequency.setValueAtTime(1100, now);
+      filter.Q.value = 1.8;
 
-      // Pipe organ attack swell and trailing air release
-      const pan = (idx / (freqs.length || 1) - 0.5) * 0.4;
-      const panner = this.ctx!.createStereoPanner ? this.ctx!.createStereoPanner() : null;
-      if (panner) panner.pan.setValueAtTime(pan, now);
-
-      voiceGain.gain.setValueAtTime(0.001, now);
-      voiceGain.gain.linearRampToValueAtTime(gainLevel / Math.sqrt(freqs.length), now + 0.08);
-      voiceGain.gain.setValueAtTime((gainLevel / Math.sqrt(freqs.length)) * 0.9, now + duration * 0.7);
-      voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      // Tight gate: quick attack, clean sustain, rapid release before next step
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(voiceGain, now + 0.03);
+      gain.gain.setValueAtTime(voiceGain * 0.85, now + duration * 0.7);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
       osc1.connect(filter);
       osc2.connect(filter);
-      osc3.connect(filter);
-      filter.connect(voiceGain);
-
-      if (panner) {
-        voiceGain.connect(panner);
-        panner.connect(dest);
-      } else {
-        voiceGain.connect(dest);
-      }
+      filter.connect(gain);
+      gain.connect(dest);
 
       osc1.start(now);
       osc2.start(now);
-      osc3.start(now);
       osc1.stop(now + duration);
       osc2.stop(now + duration);
-      osc3.stop(now + duration);
     });
   },
 
@@ -1694,73 +1679,136 @@ playAmbient(fadeTime = 1.8) {
   },
 
   // =========================================================================
-  // 3. ACT BOSSES: THE TRIPTYCH (118 BPM Phrygian Dominant Ostinato)
+  // 3. ACT BOSSES: THE TRIPTYCH (Chamber Combat: Groove -> Rise -> Bridge)
   // =========================================================================
-  playBossTheme(type: 'Zealot' | 'The Begotten' | 'The Weaver', fadeTime = 1.5) {
+  playBossTheme(type: 'Zealot' | 'The Begotten' | 'The Weaver', fadeTime = 1.4) {
     this.transitionTo(`boss-${type}`, (inst: any) => {
       if (!this.ctx) return;
-      const echo = this.createEchoBus(inst, 0.254, 0.35, 950);
+      const pianoEcho = this.createEchoBus(inst, 0.38, 0.28, 850);
 
-      // D Phrygian Dominant root bass steps (D, Eb, F#, G, A)
-      const bassSeq: (number | null)[] = [
-        73.42, 73.42, 77.78, 73.42, 92.50, null, 77.78, 73.42,
-        73.42, 73.42, 98.00, 92.50, 77.78, 73.42, 110.00, null,
-        73.42, 73.42, 77.78, 73.42, 92.50, null, 77.78, 73.42,
-        65.41, null, 69.30, null, 73.42, 77.78, 92.50, 103.83
-      ];
+      // Acoustic Upright Piano Progression
+      const chords: Record<number, number[]> = {
+        // --- 1. Groove (Steps 0–31) ---
+        0:  [73.42, 110.00, 146.83, 174.61], // Dm
+        6:  [73.42, 164.81],                 // Dm9 push
+        8:  [87.31, 130.81, 174.61, 220.00], // F
+        14: [87.31, 174.61, 220.00],
+        16: [58.27, 116.54, 146.83, 174.61], // Bb
+        22: [58.27, 130.81, 164.81],
+        24: [55.00, 110.00, 138.59, 196.00], // A7
+        28: [55.00, 110.00, 146.83, 207.65], // A7(b5) turnaround
 
-      // Piercing stabs and dissonant intervals
-      const stabChords: Record<number, number[]> = {
-        0:  [146.83, 220.00, 311.13], // D5 + Eb tritone edge
-        12: [155.56, 233.08, 311.13], // Eb minor stab
-        16: [146.83, 185.00, 293.66], // D Major / Phrygian 3rd
-        26: [130.81, 196.00, 277.18], // C#dim push
+        // --- 2. The Rising Climb (Steps 32–47) ---
+        32: [73.42, 110.00, 146.83, 174.61], // Dm
+        36: [82.41, 123.47, 164.81, 196.00], // Edim
+        40: [87.31, 130.81, 174.61, 220.00], // F
+        44: [98.00, 146.83, 174.61, 220.00], // Gm
+        46: [103.83, 146.83, 174.61, 207.65],// G#dim7 apex
+
+        // --- 3. The Bridge & Turnaround (Steps 48–63) ---
+        48: [58.27, 116.54, 174.61, 220.00], // Bbmaj7
+        52: [49.00, 98.00, 146.83, 220.00],  // Gm9
+        56: [55.00, 110.00, 164.81, 220.00], // A7sus4
+        58: [55.00, 110.00, 138.59, 220.00]  // A7 resolve
       };
 
+      // Weeping Melodic Lead (Plucked parlor strings)
+      const topMelody: Record<number, number> = {
+        // Groove phrases
+        2:  293.66, 4:  349.23, 10: 440.00, 12: 392.00,
+        18: 349.23, 20: 329.63, 26: 293.66, 30: 277.18,
+
+        // The Climbing Escalation
+        34: 293.66, 36: 329.63, 38: 349.23, 40: 392.00,
+        42: 415.30, 44: 440.00, 46: 466.16,
+
+        // The Falling Bridge
+        48: 587.33, 50: 523.25, 52: 466.16, 54: 440.00,
+        56: 392.00, 58: 349.23, 59: 277.18
+      };
+
+      // 64-step Warm Acoustic Bassline
+      const bassline: (number | null)[] = [
+        // Groove
+        73.42, null, 73.42, null, 87.31, null, 73.42, 82.41,
+        87.31, null, 87.31, 110.00, null, 87.31, 65.41, null,
+        58.27, null, 58.27, null, 65.41, null, 58.27, 69.30,
+        55.00, null, 55.00, 82.41, null, 73.42, 69.30, 61.74,
+
+        // Ascent
+        73.42, null, 82.41, null, 87.31, null, 98.00, null,
+        103.83, null, 110.00, null, 116.54, null, 138.59, null,
+
+        // Bridge & Drop
+        58.27, null, 58.27, null, 49.00, null, 49.00, null,
+        55.00, null, 55.00, null, null, null, null, null
+      ];
+
       let step = 0;
-      const stepDuration = 0.127; // ~118 BPM 16th notes
       const interval = setInterval(() => {
         if (!this.ctx) return;
 
-        // Driving Industrial Kick
-        if (step % 8 === 0 || step % 16 === 10) {
-          this.playImpact(80, inst.bus, 0.42, 0.38);
+        // Upright Piano Chords
+        if (chords[step]) {
+          const chordDur = step >= 48 ? 2.6 : 2.0;
+          this.playSynthPiano(chords[step], pianoEcho, chordDur, 0.24);
         }
 
-        // Mechanical Snare on beats 2 and 4
-        if (step % 8 === 4) {
-          this.playImpact(62, inst.bus, 0.26, 0.22);
-          this.playBoneClick(inst.bus, 0.24);
+        // Plucked Lead
+        if (topMelody[step]) {
+          this.playPluck(topMelody[step], pianoEcho, 1.4, 0.11);
         }
 
-        // Shuffling Bone-click percussion on 16th offbeats
-        if (step % 2 === 1 && Math.random() > 0.3) {
-          this.playBoneClick(inst.bus, 0.12);
-        }
+        // --- Cabin Percussion ---
+        if (step < 60) {
+          // Primary wood impact on beats 1 and 5
+          if (step % 8 === 0) {
+            this.playImpact(88, inst.bus, 0.42, 0.36);
+          } else if (step % 8 === 3 && (step > 31 || step % 16 === 11)) {
+            this.playImpact(72, inst.bus, 0.28, 0.22);
+          }
 
-        // Aggressive Bassline
-        const bassNote = bassSeq[step % bassSeq.length];
-        if (bassNote) {
-          this.playBassSaw(bassNote, inst.bus, 0.18, 0.28);
-        }
+          // Backbeat floor strike and brush hit on beat 3
+          if (step % 8 === 4) {
+            this.playImpact(68, inst.bus, 0.22, 0.2);
+            this.playBrushHit(inst.bus, 0.16, 850, 0.1);
+          } else if (step % 2 === 1) {
+            // Shuffling room brush ticks
+            this.playBrushHit(inst.bus, 0.05, 2400, step % 4 === 3 ? 0.035 : 0.018);
+          }
 
-        // Lead Stabs
-        const chord = stabChords[step % 32];
-        if (chord) {
-          this.playSynthPiano(chord, echo, 0.9, 0.22);
+          // Offbeat bone tick adding tension during the climb
+          if (step >= 32 && step < 48 && step % 2 === 0) {
+            this.playBoneClick(inst.bus, 0.16);
+          }
         }
+        // Steps 60–63: Total percussion silence for the drop
 
-        // Boss-specific textural signatures
-        if (type === 'The Begotten' && step % 32 === 28) {
-          this.playFleshGroan(220, 85, echo, 1.2, 0.24);
-        } else if (type === 'The Weaver' && (step % 8 === 2 || step % 8 === 6)) {
-          this.playPluck(587.33, echo, 0.6, 0.12); // Needle plucks
-        } else if (type === 'Zealot' && step % 16 === 14) {
-          this.playPluck(185.00, echo, 1.1, 0.18); // Low grim chant drone
+        // --- Triangle-Wave Acoustic Bass ---
+        const note = bassline[step];
+        if (note) {
+          const osc = this.ctx.createOscillator();
+          const filter = this.ctx.createBiquadFilter();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(note, this.ctx.currentTime);
+          filter.type = 'lowpass';
+          filter.frequency.value = 240;
+
+          gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.32);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(inst.bus);
+
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.32);
         }
 
         step = (step + 1) % 64;
-      }, stepDuration * 1000);
+      }, 240); // 240ms step interval
 
       inst.timers.push(interval);
     }, fadeTime);
@@ -1779,59 +1827,56 @@ playAmbient(fadeTime = 1.8) {
   },
 
   // =========================================================================
-  // 4. THE BONE LORD: DOOM DIRGE (62 BPM Funeral Pipe Organ & Sub Pulses)
+  // 4. THE BONE LORD: DOOM DIRGE (58 BPM Sparse Cathedral Funeral March)
   // =========================================================================
   playFinalBoss(fadeTime = 2.0) {
     this.transitionTo('finalboss', (inst: any) => {
       if (!this.ctx) return;
-      const organEcho = this.createEchoBus(inst, 0.48, 0.45, 750);
+      const organEcho = this.createEchoBus(inst, 0.45, 0.35, 650);
 
-      // Heavy Gothic liturgical chord progression in D Minor
-      const organChords: Record<number, number[]> = {
-        0:  [73.42, 110.00, 146.83, 174.61], // Dm (Plow down)
-        8:  [58.27, 116.54, 146.83, 233.08], // Bbmaj7/D
-        16: [49.00, 98.00, 146.83, 196.00],  // Gm/D
-        24: [55.00, 110.00, 138.59, 220.00], // A7 (The Scythe)
-        32: [73.42, 110.00, 146.83, 220.00], // Dm9
-        40: [65.41, 130.81, 164.81, 196.00], // C/E
-        48: [58.27, 87.31, 146.83, 174.61],  // Bb5
-        56: [55.00, 110.00, 146.83, 207.65], // A7(b5) Tragic resolution
+      // Slow, breathing chord progression (4 beats per chord: Dm -> Bb -> Gm -> A)
+      const funeralChords: Record<number, number[]> = {
+        0:  [73.42, 110.00, 146.83, 174.61], // Dm
+        8:  [58.27, 116.54, 146.83, 174.61], // Bb
+        16: [49.00, 98.00, 146.83, 196.00],  // Gm
+        24: [55.00, 110.00, 138.59, 220.00]  // A
       };
 
-      const highMelodyChimes: Record<number, number> = {
-        4: 293.66, 12: 349.23, 20: 392.00, 28: 440.00,
-        36: 415.30, 44: 349.23, 52: 311.13, 60: 277.18
+      // Sparse, weeping organ lead notes (spaced out, not noodling)
+      const leadNotes: Record<number, number> = {
+        4:  293.66, // D4
+        12: 349.23, // F4
+        20: 329.63, // E4
+        28: 277.18  // C#4
       };
 
       let step = 0;
-      const stepDuration = 0.242; // ~62 BPM 8th-step progression
+      const stepDuration = 0.258; // 58 BPM 8th notes
       const interval = setInterval(() => {
         if (!this.ctx) return;
 
-        // Sub-bass quake on each bar start (36Hz fundamental earth-shake)
+        // Sub-bass bell impact on downbeats
         if (step % 8 === 0) {
-          this.playImpact(52, inst.bus, 0.55, 0.45);
-          this.playBassSaw(36.71, inst.bus, 1.4, 0.32);
+          this.playImpact(45, inst.bus, 0.7, 0.5);
+          this.playBassSaw(36.71, inst.bus, 1.8, 0.35); // Low D pedal
         }
 
-        // Churning pipe organ chords
-        if (organChords[step]) {
-          this.playOrgan(organChords[step], organEcho, 2.6, 0.22);
+        // Gated liturgical chords with breathing room between changes
+        if (funeralChords[step]) {
+          this.playOrgan(funeralChords[step], organEcho, 1.6, 0.28);
         }
 
-        // Skeletal bone clicks ticking like an ancient clock
+        // Single solemn church bell / pluck
+        if (leadNotes[step]) {
+          this.playPluck(leadNotes[step], organEcho, 1.5, 0.2);
+        }
+
+        // Metronomic ticking bone click on the offbeats
         if (step % 2 === 0) {
-          this.playBoneClick(inst.bus, 0.2);
-        } else if (Math.random() > 0.4) {
-          this.playBoneClick(inst.bus, 0.1);
+          this.playBoneClick(inst.bus, 0.16);
         }
 
-        // Distant chime echoes in high register
-        if (highMelodyChimes[step]) {
-          this.playPluck(highMelodyChimes[step], organEcho, 1.6, 0.08);
-        }
-
-        step = (step + 1) % 64;
+        step = (step + 1) % 32;
       }, stepDuration * 1000);
 
       inst.timers.push(interval);
@@ -1839,57 +1884,66 @@ playAmbient(fadeTime = 1.8) {
   },
 
   // =========================================================================
-  // 5. PHASE 3: THE BLOOD MOON (136 BPM Accelerated Cathedral Toccata)
+  // 5. PHASE 3: THE BLOOD MOON (132 BPM Gothic Pipe Toccata & Industrial Pulse)
   // =========================================================================
-  playFinalBossPhase3(fadeTime = 0.8) {
+  playFinalBossPhase3(fadeTime = 0.6) {
     this.transitionTo('bloodmoon-phase3', (inst: any) => {
       if (!this.ctx) return;
-      const hyperEcho = this.createEchoBus(inst, 0.165, 0.5, 1250);
+      const organEcho = this.createEchoBus(inst, 0.22, 0.3, 900);
 
-      // Frantic descending D-minor arpeggiator outline (Bach Toccata style)
-      const toccataRun: (number | null)[] = [
-        293.66, 277.18, 293.66, 220.00, 233.08, 196.00, 174.61, 164.81,
-        146.83, 138.59, 146.83, 110.00, 116.54, 98.00, 87.31, 82.41,
-        73.42, 146.83, 220.00, 293.66, 349.23, 440.00, 554.37, 587.33,
-        698.46, 587.33, 554.37, 440.00, 349.23, 293.66, 220.00, 146.83
+      // Relentless Baroque Pipe Run (Dm -> Bb -> C#dim -> Dm)
+      const organRun: number[] = [
+        293.66, 349.23, 440.00, 587.33, 554.37, 440.00, 349.23, 293.66,
+        233.08, 293.66, 349.23, 466.16, 440.00, 349.23, 293.66, 233.08,
+        277.18, 329.63, 415.30, 554.37, 587.33, 440.00, 349.23, 277.18,
+        293.66, 220.00, 174.61, 146.83, 138.59, 146.83, 174.61, 220.00
       ];
 
-      const moonImpacts: Record<number, number[]> = {
-        0:  [73.42, 146.83, 220.00],
-        8:  [65.41, 130.81, 196.00],
-        16: [58.27, 116.54, 174.61],
-        24: [55.00, 110.00, 164.81],
+      // Crushing full-register organ chords hitting every 8 steps
+      const organWalls: Record<number, number[]> = {
+        0:  [73.42, 146.83, 220.00, 293.66], // Dm
+        8:  [58.27, 116.54, 174.61, 233.08], // Bb
+        16: [69.30, 138.59, 174.61, 277.18], // C#dim
+        24: [55.00, 110.00, 164.81, 220.00]  // A7
       };
 
+      // Driving 16th-note saw bass
+      const bassDrive: number[] = [
+        73.42, 73.42, 146.83, 73.42, 73.42, 73.42, 146.83, 73.42,
+        58.27, 58.27, 116.54, 58.27, 58.27, 58.27, 116.54, 58.27,
+        69.30, 69.30, 138.59, 69.30, 69.30, 69.30, 138.59, 69.30,
+        55.00, 55.00, 110.00, 55.00, 55.00, 55.00, 110.00, 55.00
+      ];
+
       let step = 0;
-      const stepDuration = 0.11; // 136 BPM frantic 16th pulse
+      const stepDuration = 0.114; // ~132 BPM 16th notes
       const interval = setInterval(() => {
         if (!this.ctx) return;
 
-        // Double-kick artillery pulse
-        if (step % 4 === 0 || step % 8 === 2) {
-          this.playImpact(95, inst.bus, 0.35, 0.42);
+        // Heavy industrial sub kick (45Hz thud, zero bongo tone)
+        if (step % 4 === 0) {
+          this.playImpact(48, inst.bus, 0.35, 0.46);
         }
 
-        // Heavy cracking bone snare
+        // Heavy bone crack snare on 4 and 12
         if (step % 8 === 4) {
-          this.playBoneClick(inst.bus, 0.35);
-          this.playImpact(70, inst.bus, 0.22, 0.28);
+          this.playBoneClick(inst.bus, 0.38);
+          this.playImpact(58, inst.bus, 0.22, 0.28);
         }
 
-        // Running Baroque pipe arpeggios
-        const note = toccataRun[step % toccataRun.length];
-        if (note) {
-          this.playOrgan([note], hyperEcho, 0.24, 0.18);
+        // Relentless bassline
+        this.playBassSaw(bassDrive[step % bassDrive.length], inst.bus, 0.1, 0.3);
+
+        // Continuous high pipe manual runs
+        const pipeNote = organRun[step % organRun.length];
+        this.playOrgan([pipeNote], organEcho, 0.14, 0.22);
+
+        // Massive cathedral chord drops on the measure boundaries
+        if (organWalls[step % 32]) {
+          this.playOrgan(organWalls[step % 32], inst.bus, 0.85, 0.28);
         }
 
-        // Heavy pedal points on bar boundaries
-        if (moonImpacts[step % 32]) {
-          this.playOrgan(moonImpacts[step % 32], inst.bus, 1.2, 0.28);
-          this.playBassSaw(36.71, inst.bus, 0.4, 0.35);
-        }
-
-        step = (step + 1) % 64;
+        step = (step + 1) % 32;
       }, stepDuration * 1000);
 
       inst.timers.push(interval);
