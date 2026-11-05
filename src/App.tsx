@@ -2092,7 +2092,7 @@ const getAudioEngine = () => {
 };
 
 // --- Diegetic Talisman Watcher Eye (Tracks Cursor via Direct DOM Transform) ---
-const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalismanPricked }) => {q
+const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalismanPricked }) => {
   const socketRef = useRef<SVGGElement>(null);
   const pupilGroupRef = useRef<SVGGElement>(null);
 
