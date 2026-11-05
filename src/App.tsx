@@ -2091,6 +2091,21 @@ const getAudioEngine = () => {
   return null;
 };
 
+// Preload all art and backgrounds generated at build time
+  useEffect(() => {
+    fetch('/asset-manifest.json')
+      .then(res => res.json())
+      .then((files: string[]) => {
+        files.forEach(file => {
+          const img = new Image();
+          img.src = file.startsWith('/') ? file : `/${file}`;
+        });
+      })
+      .catch(() => {
+        // Fails silently in dev if manifest hasn't been generated yet
+      });
+  }, []);
+
 // --- Diegetic Talisman Watcher Eye (Tracks Cursor via Direct DOM Transform) ---
 const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalismanPricked }) => {
   const socketRef = useRef<SVGGElement>(null);

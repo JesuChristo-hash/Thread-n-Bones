@@ -7,6 +7,8 @@ echo "www.myfriendsaretulpas.com" > public/CNAME
 
 # 2. Compile production bundle
 echo "[*] Building client bundle..."
+# Generate manifest of all image assets in public/
+node -e "const fs = require('fs'); const files = fs.readdirSync('public', { recursive: true }).filter(f => /\.(png|jpe?g|webp|svg)$/i.test(f)).map(f => f.replace(/\\\\/g, '/')); fs.writeFileSync('public/asset-manifest.json', JSON.stringify(files));"
 npm run build
 
 # 3. Ship static assets to gh-pages
@@ -26,4 +28,5 @@ git add .
 git diff --quiet && git diff --staged --quiet || git commit -m "chore: sync stable build" -q
 git push -f origin main
 
+# 4. run this command --> " ./deploy.sh "
 echo "[✓] Deployment complete."
