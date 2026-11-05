@@ -2091,23 +2091,8 @@ const getAudioEngine = () => {
   return null;
 };
 
-// Preload all art and backgrounds generated at build time
-  useEffect(() => {
-    fetch('/asset-manifest.json')
-      .then(res => res.json())
-      .then((files: string[]) => {
-        files.forEach(file => {
-          const img = new Image();
-          img.src = file.startsWith('/') ? file : `/${file}`;
-        });
-      })
-      .catch(() => {
-        // Fails silently in dev if manifest hasn't been generated yet
-      });
-  }, []);
-
 // --- Diegetic Talisman Watcher Eye (Tracks Cursor via Direct DOM Transform) ---
-const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalismanPricked }) => {
+const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalismanPricked }) => {q
   const socketRef = useRef<SVGGElement>(null);
   const pupilGroupRef = useRef<SVGGElement>(null);
 
@@ -2450,7 +2435,21 @@ async function unlockSecretUrl(passcode: string): Promise<string | null> {
     return null;
   }
 }
+
 export default function App() {
+  // Preload all art and backgrounds generated at build time
+  useEffect(() => {
+    fetch('/asset-manifest.json')
+      .then(res => res.json())
+      .then((files: string[]) => {
+        files.forEach(file => {
+          const img = new Image();
+          img.src = file.startsWith('/') ? file : `/${file}`;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
   // --- Game Flow & Navigation ---
   const [screen, setScreenRaw] = useState<ScreenState>('SPLASH');
   const [logs, setLogs] = useState<string[]>(['> System initialized. Awaiting lineage selection...']);
