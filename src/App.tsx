@@ -2986,11 +2986,17 @@ export default function App() {
 
     // Only grant token if player bought nothing and cannot purchase anything
     if (!hasPurchasedItemThisEvent && cannotBuyAnything) {
-      // Filter exclusively for collectible field cards (no tokens, boss obstacles, or unsacrificables)
-      const validPool = MAIN_DECK_POOL.filter(
-        c => !c.unsacrificable && !c.isSacrifice && c.cost !== undefined && !(c as any).isTerrain && c.name !== 'Stone Wall' && c.name !== 'Felled Tree'
+      // Pull strictly from EVENT_CARD_POOL to respect ban lists (Red Colossus, Mycelium, evolutions)
+      const validPool = EVENT_CARD_POOL.filter(
+        c => !c.unsacrificable && 
+             !c.isSacrifice && 
+             c.cost !== undefined && 
+             !(c as any).isTerrain && 
+             c.name !== 'Stone Wall' && 
+             c.name !== 'Felled Tree' &&
+             c.name !== 'Trade Pelt'
       );
-      const candidates = validPool.length > 0 ? validPool : MAIN_DECK_POOL;
+      const candidates = validPool.length > 0 ? validPool : EVENT_CARD_POOL;
       const rawChosen = candidates[Math.floor(Math.random() * candidates.length)];
       const rewardCard = transformAmorphous(cloneCard(rawChosen, 0));
 
