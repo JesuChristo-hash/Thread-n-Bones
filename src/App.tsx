@@ -6434,11 +6434,13 @@ export default function App() {
         else if (c.sigils?.includes('Bifurcated Strike') || c.sigils?.includes('Double Strike')) strikeMultiplier = 2;
 
         const rawAtk = (c.attack || 0) * strikeMultiplier;
-        // 0-attack cards stall lanes; tax them based on half their health
-        const wallTax = (c.attack || 0) === 0 ? Math.max(1, Math.ceil((c.health || 1) / 2)) : 0;
+        // Tax 0-attack cards higher so they are not treated as free budget fillers
+        const wallTax = (c.attack || 0) === 0 ? Math.max(2, Math.ceil((c.health || 1) / 2)) : 0;
+        // Airborne bypasses player field blockers directly to the scale
+        const airborneTax = c.sigils?.includes('Airborne') && (c.attack || 0) > 0 ? 1.5 : 0;
         const touchOfDeathTax = c.sigils?.includes('Touch of Death') ? 2 : 0;
 
-        return rawAtk + wallTax + touchOfDeathTax;
+        return rawAtk + wallTax + airborneTax + touchOfDeathTax;
       };
 
       // 1. Obstacle generation runs FIRST so the AI can perceive board blockages
@@ -6491,20 +6493,57 @@ export default function App() {
         const bBlocked = nextPlayerBoard[b] !== null ? 1 : 0;
         return aBlocked - bBlocked; // Unblocked player lanes come first; ties retain random order
       });
+
+      // Encounter-scaled damage ceilings to prevent early turn-1/turn-2 OTKs
+      const maxTotalOpeningAtk = encounter <= 1 ? 2 : encounter <= 2 ? 3 : encounter <= 3 ? 4 : 5;
+      const maxSingleCardAtk = encounter <= 1 ? 2 : encounter <= 2 ? 2 : encounter <= 3 ? 3 : 4;
+      const maxZeroAtkCards = encounter <= 1 ? 0 : 1; // Zero-attack meat shields banned in stage 1, max 1 later
+
       let currentBackRowThreat = 0;
+      let currentBackRowAtk = 0;
+      let zeroAtkCount = 0;
       let playedCount = 0;
 
       for (let i = 0; i < Math.min(initialCount, prioritizedLanes.length); i++) {
         if (playedCount >= maxRegularCards) break;
+        if (currentBackRowAtk >= maxTotalOpeningAtk) break;
+
         const lane = prioritizedLanes[i];
         const threatRemaining = maxOpeningThreat - currentBackRowThreat;
-        if (threatRemaining <= 0) break;
+        const atkBudgetRemaining = maxTotalOpeningAtk - currentBackRowAtk;
+        if (threatRemaining <= 0 || atkBudgetRemaining <= 0) break;
 
-        const validCandidates = ENEMY_MAIN_DECK_POOL.filter(c => getThreat(c) <= threatRemaining);
+        const validCandidates = ENEMY_MAIN_DECK_POOL.filter(c => {
+          const atk = c.attack || 0;
+          let strikeMult = 1;
+          if (c.sigils?.includes('Trifurcated Strike')) strikeMult = 3;
+          else if (c.sigils?.includes('Bifurcated Strike') || c.sigils?.includes('Double Strike')) strikeMult = 2;
+          const effectiveAtk = atk * strikeMult;
+
+          if (getThreat(c) > threatRemaining) return false;
+          if (atk === 0 && zeroAtkCount >= maxZeroAtkCards) return false;
+          if (atk > maxSingleCardAtk) return false;
+          if (effectiveAtk > atkBudgetRemaining) return false;
+          if (encounter <= 1 && c.sigils?.includes('Airborne') && atk > 1) return false;
+
+          return true;
+        });
+
         if (validCandidates.length > 0) {
-          const chosen = transformAmorphous(cloneCard(validCandidates[Math.floor(Math.random() * validCandidates.length)], 0));
+          // Prefer active combatants over 0-atk walls when budget permits
+          const activeCombatants = validCandidates.filter(c => (c.attack || 0) > 0);
+          const poolToDraw = (zeroAtkCount === 0 && activeCombatants.length > 0) ? activeCombatants : validCandidates;
+
+          const chosen = transformAmorphous(cloneCard(poolToDraw[Math.floor(Math.random() * poolToDraw.length)], 0));
           initQueue[lane] = chosen;
+
+          let chosenMult = 1;
+          if (chosen.sigils?.includes('Trifurcated Strike')) chosenMult = 3;
+          else if (chosen.sigils?.includes('Bifurcated Strike') || chosen.sigils?.includes('Double Strike')) chosenMult = 2;
+
           currentBackRowThreat += getThreat(chosen);
+          currentBackRowAtk += (chosen.attack || 0) * chosenMult;
+          if ((chosen.attack || 0) === 0) zeroAtkCount++;
           playedCount++;
         }
       }
