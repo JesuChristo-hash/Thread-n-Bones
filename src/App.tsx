@@ -5653,13 +5653,59 @@ export default function App() {
                 return bFacesThreat - aFacesThreat; // Threat-facing lanes first; ties stay randomized
               });
 
+            // Calculate true effective damage (including Fledgling evolutions and multi-strikes)
+            const getEffectiveAtk = (c: CardDef | null): number => {
+              if (!c) return 0;
+              let atk = c.attack || 0;
+              const sigs = (c.sigils || []).map((s: any) => typeof s === 'string' ? s : s?.name || '');
+              if (sigs.includes('Fledgling') || c.name === 'Dire Wolf Pup') {
+                if (c.name === 'Dire Wolf Pup' || c.evolvesInto === 'Dire Wolf') {
+                  atk = 2;
+                  if (!sigs.includes('Double Strike')) sigs.push('Double Strike');
+                } else {
+                  atk += 1;
+                }
+              }
+              let mult = 1;
+              if (sigs.includes('Trifurcated Strike')) mult = 3;
+              else if (sigs.includes('Bifurcated Strike') || sigs.includes('Double Strike')) mult = 2;
+              return atk * mult;
+            };
+
+            const encNum = typeof encounter !== 'undefined' ? encounter : 1;
+            // Strict ceiling on total attack across field + queue to protect the 5-point scale
+            const maxAllowedTotalFieldAtk = encNum <= 1 ? 3 : encNum <= 2 ? 4 : encNum <= 3 ? 5 : 7;
+            const activeFrontlineAtk = currEBoard.reduce((acc, c) => acc + getEffectiveAtk(c), 0);
+            let currentQueueAtk = currEQueue.reduce((acc, c) => acc + getEffectiveAtk(c), 0);
+            let queuedZeroAtkCount = currEQueue.filter(c => c && (c.attack || 0) === 0).length;
+
             for (let i = 0; i < spawnCount; i++) {
               const targetSlot = targetSlots[i];
-              const validPool = ENEMY_MAIN_DECK_POOL.filter(c => getThreat(c) <= maxCardThreat);
+              const totalAtkNow = activeFrontlineAtk + currentQueueAtk;
+              const remainingAtkBudget = Math.max(0, maxAllowedTotalFieldAtk - totalAtkNow);
+
+              const validPool = ENEMY_MAIN_DECK_POOL.filter(c => {
+                if (getThreat(c) > maxCardThreat) return false;
+                const effAtk = getEffectiveAtk(c);
+                // Hard-stop if card exceeds remaining stage attack budget
+                if (effAtk > remainingAtkBudget) return false;
+                // Disallow spamming 0-power cards when a wall/egg is already in queue
+                if (effAtk === 0 && queuedZeroAtkCount >= 1) return false;
+                // Never queue heavy single-card nukes into early encounters mid-turn
+                if (encNum <= 2 && effAtk >= 4) return false;
+                return true;
+              });
+
               if (validPool.length === 0) break;
 
-              const candidate = transformAmorphous(cloneCard(validPool[Math.floor(Math.random() * validPool.length)], 0));
+              // Prioritize combatants over 0-atk walls whenever damage budget remains
+              const combatants = validPool.filter(c => getEffectiveAtk(c) > 0);
+              const poolToUse = (remainingAtkBudget > 0 && combatants.length > 0) ? combatants : validPool;
+
+              const candidate = transformAmorphous(cloneCard(poolToUse[Math.floor(Math.random() * poolToUse.length)], 0));
               currEQueue[targetSlot] = candidate;
+              currentQueueAtk += getEffectiveAtk(candidate);
+              if (getEffectiveAtk(candidate) === 0) queuedZeroAtkCount++;
               newlySpawned++;
             }
 
@@ -6429,16 +6475,30 @@ export default function App() {
 
       // Threat calculator: accounts for multi-strikers and damage-soaking walls
       const getThreat = (c: CardDef): number => {
-        let strikeMultiplier = 1;
-        if (c.sigils?.includes('Trifurcated Strike')) strikeMultiplier = 3;
-        else if (c.sigils?.includes('Bifurcated Strike') || c.sigils?.includes('Double Strike')) strikeMultiplier = 2;
+        // Resolve true combat potency for Fledgling cards
+        let effectiveBaseAtk = c.attack || 0;
+        let effectiveHealth = c.health || 1;
+        let sigils = c.sigils || [];
 
-        const rawAtk = (c.attack || 0) * strikeMultiplier;
-        // Tax 0-attack cards higher so they are not treated as free budget fillers
-        const wallTax = (c.attack || 0) === 0 ? Math.max(2, Math.ceil((c.health || 1) / 2)) : 0;
-        // Airborne bypasses player field blockers directly to the scale
-        const airborneTax = c.sigils?.includes('Airborne') && (c.attack || 0) > 0 ? 1.5 : 0;
-        const touchOfDeathTax = c.sigils?.includes('Touch of Death') ? 2 : 0;
+        if (sigils.includes('Fledgling') || c.name === 'Dire Wolf Pup') {
+          if (c.name === 'Dire Wolf Pup' || c.evolvesInto === 'Dire Wolf') {
+            effectiveBaseAtk = 2;
+            effectiveHealth = 5;
+            sigils = [...sigils, 'Double Strike'];
+          } else {
+            effectiveBaseAtk += 1;
+            effectiveHealth += 2;
+          }
+        }
+
+        let strikeMultiplier = 1;
+        if (sigils.includes('Trifurcated Strike')) strikeMultiplier = 3;
+        else if (sigils.includes('Bifurcated Strike') || sigils.includes('Double Strike')) strikeMultiplier = 2;
+
+        const rawAtk = effectiveBaseAtk * strikeMultiplier;
+        const wallTax = rawAtk === 0 ? Math.max(2, Math.ceil(effectiveHealth / 2)) : 0;
+        const airborneTax = sigils.includes('Airborne') && rawAtk > 0 ? 1.5 : 0;
+        const touchOfDeathTax = sigils.includes('Touch of Death') ? 2 : 0;
 
         return rawAtk + wallTax + airborneTax + touchOfDeathTax;
       };
