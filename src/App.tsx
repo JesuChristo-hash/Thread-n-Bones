@@ -826,6 +826,7 @@ interface ChiptuneAudioType {
   playTheWeaver: (fadeTime?: number) => void;
   playTheZealot: (fadeTime?: number) => void;
   playTheBegotten: (fadeTime?: number) => void;
+  stopAll?: (fadeTime?: number) => void;
 }
 
 export const ChiptuneAudio: any = {
@@ -932,6 +933,22 @@ export const ChiptuneAudio: any = {
     this.activeInstance = instance;
     this.currentTrack = trackName;
     startFn(instance);
+  },
+
+  stopAll(fadeTime = 0.5) {
+    if (!this.ctx || !this.activeInstance) return;
+    const now = this.ctx.currentTime;
+    const old = this.activeInstance;
+    try {
+      old.bus.gain.cancelScheduledValues(now);
+      old.bus.gain.setValueAtTime(old.bus.gain.value, now);
+      old.bus.gain.linearRampToValueAtTime(0.0001, now + fadeTime);
+      setTimeout(() => {
+        try { old.cleanup(); } catch (e) {}
+      }, fadeTime * 1000);
+    } catch (e) {}
+    this.activeInstance = null;
+    this.currentTrack = null;
   },
 
   stop(fadeTime = 1.0) {
@@ -4600,6 +4617,14 @@ export default function App() {
               eCard.health -= pAtk;
               addLog(`${pCard.name} dealt ${pAtk} damage to enemy ${eCard.name}.`);
             }
+
+            // Immediately cut all music to absolute silence when the Blood Moon is shattered
+            if (eCard.health <= 0 && (eCard.name === 'BLOOD MOON' || (eCard as any).isMassive)) {
+              if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).stopAll) {
+                (ChiptuneAudio as any).stopAll(0.3);
+              }
+            }
+
             triggerHpFlash(false, tLane);
             setEnemyBoard([...currEBoard]);
 
@@ -10341,15 +10366,8 @@ export default function App() {
                         setBossState(prev => ({ ...prev, phase: 2, activeDialogue: '......' }));
                         addLog("=== THE BONE LORD: PHASE 2 INITIALIZED ===");
                       } else if (bossPhase === 2) {
-                        setEnemyBoard([cloneCard(ALL_CARD_LOOKUP['BLOOD MOON'], 0), null, null, null]);
-                        
-                        // Trigger Blood Moon descent animation and transition to Phase 3 Toccata
-                        setIsBloodMoonDropping(true);
-                        setTimeout(() => setIsBloodMoonDropping(false), 2400);
-
-                        if (typeof ChiptuneAudio !== 'undefined') {
-                          ChiptuneAudio.playFinalBossPhase3?.(0.8);
-                        }
+                        // Clear board and queue; Blood Moon descends only after dialogue is dismissed
+                        setEnemyBoard([null, null, null, null]);
                         setEnemyQueue([null, null, null, null]);
                         setBossState(prev => ({
                           ...prev,
@@ -10730,8 +10748,8 @@ export default function App() {
                       if (bossPhase === 3 && !enemyBoard.some(c => c?.isMassive)) {
                         setIsBoardRumbling(true);
                         triggerSfx('hit');
-                        if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).playFinalBoss) {
-                          (ChiptuneAudio as any).playFinalBoss(2.2);
+                        if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).playFinalBossPhase3) {
+                          (ChiptuneAudio as any).playFinalBossPhase3(0.6);
                         }
 
                         setTimeout(() => {
@@ -10744,7 +10762,7 @@ export default function App() {
                           setTimeout(() => {
                             setIsBoardRumbling(false);
                             setIsBloodMoonDropping(false);
-                          }, 1500);
+                          }, 2400);
                         }, 300);
                       }
                     } else {
