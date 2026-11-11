@@ -6641,22 +6641,29 @@ export default function App() {
 
     setEnemyBoard(initBoard);
     setEnemyQueue(initQueue);
-    // Fair Hand Draw: Prioritize honest foundation cards before multi-strike sweepers
+    // Fair Hand Draw: Prioritize honest foundation cards before multi-strike sweepers (1-blood or 0-cost)
     const initialHand: CardDef[] = [currentTotem ? applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), currentTotem) : cloneCard(TOKEN_SQUIRREL, ouroborosBuffs)];
     const nukeSigils = ['Bifurcated Strike', 'Trifurcated Strike', 'Double Strike'];
-    let oneBloodIdx = shuffledDeck.findIndex(c => {
-      if (c.cost !== 1) return false;
+    const isStarterCost = (c: CardDef) =>
+      c.cost === 1 || ((c.cost === 0 || c.cost === undefined) && (!c.boneCost || c.boneCost === 0));
+
+    let starterIdx = shuffledDeck.findIndex(c => {
+      if (!isStarterCost(c)) return false;
       const sigs = (c.sigils || []).map((s: any) => typeof s === 'string' ? s : s?.name || '');
       return !sigs.some(s => nukeSigils.includes(s)) && (c.attack ?? 0) < 3;
     });
-    // Fallback if the deck only contains nukes or high costs
-    if (oneBloodIdx === -1) {
-      oneBloodIdx = shuffledDeck.findIndex(c => c.cost === 1);
+
+    // Fallback if the deck only contains nukes or higher costs
+    if (starterIdx === -1) {
+      starterIdx = shuffledDeck.findIndex(c => isStarterCost(c));
     }
-    if (oneBloodIdx !== -1) {
-      initialHand.push(transformAmorphous(shuffledDeck.splice(oneBloodIdx, 1)[0]));
-      addLog("Fair Hand dealt a 1-blood creature.");
+
+    if (starterIdx !== -1) {
+      const drawnStarter = transformAmorphous(shuffledDeck.splice(starterIdx, 1)[0]);
+      initialHand.push(drawnStarter);
+      addLog(`Fair Hand dealt a ${drawnStarter.cost === 1 ? '1-blood' : 'free'} creature.`);
     }
+
     while (initialHand.length < 4 && shuffledDeck.length > 0) {
       initialHand.push(transformAmorphous(shuffledDeck.pop()!));
     }
@@ -6786,7 +6793,7 @@ export default function App() {
     else if (lineageId === 'infestation') starters = ["Silkworm", "Ant Queen", "Flying Ant"];
     else if (lineageId === 'paleozoic') starters = ["Hyphae", "Mud Turtle", "Great White"];
     else if (lineageId === 'randomizer') {
-      starters = ["Amoeba", "Trade Pelt", "Trade Pelt"];
+      starters = ["Geck", "Trade Pelt", "Trade Pelt"];
       isRandomizer = true;
     }
 
@@ -8555,7 +8562,7 @@ export default function App() {
 
             <div className="grid grid-cols-3 gap-x-8 gap-y-2 w-full pb-1 max-w-5xl scale-[1.20] origin-center my-auto">
               {[
-                { id: 'randomizer', name: 'Unformed', desc: 'Masochistic', cards: ["Trade Pelt", "Trade Pelt", "Amoeba"] },
+                { id: 'randomizer', name: 'Unformed', desc: 'Masochistic', cards: ["Trade Pelt", "Trade Pelt", "Geck"] },
                 { id: 'witchcraft', name: 'Taiga', desc: 'Reliable', cards: ["Mole", "Moose Buck", "Black Goat"] },
                 { id: 'infestation', name: 'Colony', desc: 'Wretched', cards: ["Silkworm", "Flying Ant", "Ant Queen"] },
                 { id: 'skeleton', name: 'Scavengers', desc: 'Ravenous', cards: ["Warren", "Red Stray", "Dire Wolf Pup"] },
@@ -9227,7 +9234,7 @@ export default function App() {
                     </button>
                     {cannotBuyMore && (
                       <span className="mt-2 text-[10px] text-amber-600/70 font-mono tracking-wide">
-                        Cannot barter further — peddler offers a token card before the duel.
+                        The Merchant gives you a wicked grin...
                       </span>
                     )}
                   </div>
