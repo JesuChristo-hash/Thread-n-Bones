@@ -285,6 +285,10 @@ export const SIGIL_MAPPING: Record<string, string> = {
   'Brittle': '🥀',
   'Tidal Lock': '🪐',
   'Omnistrike': '✴️',
+  'Scapegoat': '🐐',
+  'Forager': '🌿',
+  'Leech': '🩸',
+  'Pack-Animal': '🐺',
 };
 
 export const SIGIL_DESCRIPTIONS: Record<string, string> = {
@@ -327,6 +331,10 @@ export const SIGIL_DESCRIPTIONS: Record<string, string> = {
   'Omnistrike': "Attacks all Creatures in zones. Can only attack directly on an empty board.",
   'Ant Spawner': "When played, a Worker Ant is added to your hand.",
   'Rampager': "Moves to an adjacent space, swapping positions with whatever stands there.",
+  'Scapegoat': "Whenever an adjacent allied creature would take lethal damage, this creature intercepts the blow instead, taking the full hit in its place.",
+  'Forager': "Whenever this creature deals direct scale damage, draw 1 card from your main deck.",
+  'Leech': "Whenever this creature deals damage to an opposing creature, it gains Health equal to the actual damage dealt.",
+  'Pack-Animal': "When sacrificed, this card is placed on the bottom of your main deck instead of being discarded, retaining any stat buffs and transferred sigils.",
 };
 
 // Base Cards & Tokens
@@ -437,7 +445,7 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "The Daus", class: "Hooved", attack: 2, health: 2, cost: 2, emoji: "🐖", sigils: ["Bellist"] },
   { name: "Elk", class: "Hooved", attack: 2, health: 4, cost: 2, emoji: "🦌", sigils: ["Sprinter"] },
   { name: "Pronghorn", class: "Hooved", attack: 1, health: 3, cost: 2, emoji: "🦌", sigils: ["Sprinter", "Bifurcated Strike"] },
-  { name: "River Snapper", class: "Reptile", attack: 1, health: 6, cost: 2, emoji: "🐢", sigils: [] },
+  { name: "River Snapper", class: "Reptile", attack: 1, health: 6, cost: 2, emoji: "🐢", sigils: ["Scapegoat"] },
   { name: "Bloodhound", class: "Canine", attack: 2, health: 3, cost: 2, emoji: "🐕", sigils: ["Guardian"] },
   { name: "Field Mice", class: "No Class", attack: 2, health: 2, cost: 2, emoji: "🐁", sigils: ["Fecundity"] },
   { name: "Adder", class: "Reptile", attack: 1, health: 1, cost: 2, emoji: "🐍", sigils: ["Touch of Death"] },
@@ -447,7 +455,7 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Dire Wolf", class: "Canine", attack: 2, health: 5, cost: 3, emoji: "🐺", sigils: ["Double Strike"] },
   { name: "Great White", class: "No Class", attack: 4, health: 2, cost: 3, emoji: "🦈", sigils: ["Waterborne"] },
   { name: "Opossum", class: "No Class", attack: 1, health: 1, boneCost: 2, emoji: "🐀", sigils: [] },
-  { name: "Coyote", class: "Canine", attack: 2, health: 1, boneCost: 3, emoji: "🐺", sigils: [] },
+  { name: "Coyote", class: "Canine", attack: 2, health: 1, boneCost: 4, emoji: "🐺", sigils: ["Pack-Animal"] },
   { name: "Cockroach", class: "Insect", attack: 1, health: 1, boneCost: 4, emoji: "💀", sigils: ["Unkillable"] },
   { name: "Rattler", class: "Reptile", attack: 3, health: 2, boneCost: 5, emoji: "🐍", sigils: [] },
   { name: "Alpha", class: "Canine", attack: 1, health: 2, boneCost: 4, emoji: "🐺", sigils: ["Leader"] },
@@ -461,7 +469,7 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Cat", class: "No Class", attack: 0, health: 1, cost: 1, emoji: "🐈", sigils: ["Many Lives"] },
   { name: "Mealworm", class: "Insect", attack: 0, health: 2, boneCost: 2, emoji: "🦋", sigils: ["Morsel"] },
   { name: "Rat King", class: "No Class", attack: 2, health: 1, cost: 2, emoji: "🐀", sigils: ["Bone King"] },
-  { name: "Raccoon", class: "No Class", attack: 1, health: 1, boneCost: 3, emoji: "🦝", sigils: ["Scavenger"] },
+  { name: "Raccoon", class: "No Class", attack: 1, health: 1, boneCost: 3, emoji: "🦝", sigils: ["Forager"] },
   { name: "Beaver", class: "No Class", attack: 1, health: 3, cost: 2, emoji: "🚪", sigils: ["Dam Builder"] },
   { name: "Elk Fawn", class: "Hooved", attack: 1, health: 1, cost: 1, emoji: "🦌", sigils: ["Sprinter", "Fledgling"], evolvesInto: "Elk" },
   { name: "Flying Ant", class: "Insect", attack: 0, health: 1, cost: 1, emoji: "🐜", tags: ["Ant"], sigils: ["Airborne"] },
@@ -471,14 +479,14 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Bat", class: "No Class", attack: 2, health: 1, boneCost: 4, emoji: "🦇", sigils: ["Airborne"] },
   { name: "Amalgam", class: "ALL Classes", attack: 3, health: 3, cost: 2, emoji: "🧬", sigils: [] },
   { name: "Lammergeier", class: "Avian", attack: 0, health: 4, cost: 3, emoji: "🦅", sigils: ["Airborne"] },
-  { name: "River Otter", class: "No Class", attack: 1, health: 1, cost: 1, emoji: "🦦", sigils: ["Waterborne"] },
+  { name: "River Otter", class: "No Class", attack: 1, health: 1, cost: 1, emoji: "🦦", sigils: ["Waterborne", "Forager"] },
   { name: "Turkey Vulture", class: "Avian", attack: 3, health: 3, boneCost: 6, emoji: "🦃", sigils: ["Airborne"] },
   { name: "Wolf Cub", class: "Canine", attack: 1, health: 1, cost: 1, emoji: "🐾", sigils: ["Fledgling"], evolvesInto: "Wolf" },
   { name: "Skunk", class: "No Class", attack: 0, health: 3, cost: 1, emoji: "🦨", sigils: ["Stinky"] },
   // --- NEW CARDS ---
-  { name: "Capybara", class: "No Class", attack: 0, health: 4, cost: 1, emoji: "🦫", sigils: ["Leader"] },
+  { name: "Capybara", class: "No Class", attack: 0, health: 4, cost: 1, emoji: "🦫", sigils: ["Scapegoat"] },
   { name: "Stallion", class: "Hooved", attack: 2, health: 3, cost: 2, emoji: "🐎", sigils: ["Sprinter"] },
-  { name: "Caiman", class: "Reptile", attack: 3, health: 1, cost: 2, emoji: "🐢", sigils: ["Corpse Eater"] },
+  { name: "Caiman", class: "Reptile", attack: 2, health: 1, cost: 2, emoji: "🐢", sigils: ["Leech"] },
   { name: "Killer Whale", class: "No Class", attack: 3, health: 1, cost: 2, emoji: "🐋", sigils: ["Waterborne", "Rampager"] },
   { name: "Goose", class: "Avian", attack: 2, health: 1, cost: 1, emoji: "🪿", sigils: ["Bloodlust", "Sprinter"] },
   { name: "Arachnid", class: "Insect", attack: 1, health: 2, cost: 0, boneCost: 5, emoji: "🕷️", sigils: ["Brittle"] },
@@ -489,8 +497,8 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Red Stray", class: "Canine", attack: 1, health: 2, cost: 1, emoji: "🐕", sigils: ["Bone King"] },
   { name: "Red Hound", class: "Canine", attack: 2, health: 3, cost: 2, emoji: "🐕", sigils: ["Bone Digger"] },
   { name: "Red Behemoth", class: "Canine", attack: 2, health: 5, cost: 2, emoji: "🐕", sigils: ["Bone Digger", "Hefty"] },
-  { name: "Red Colossus", class: "Canine", attack: 3, health: 9, cost: 3, emoji: "🐕", sigils: ["Hefty", "Bloodlust"] },
-  { name: "Jackal", class: "Canine", attack: 1, health: 2, boneCost: 4, emoji: "🐺", sigils: ["Guardian", "Corpse Eater"] },
+  { name: "Red Colossus", class: "Canine", attack: 3, health: 9, cost: 4, emoji: "🐕", sigils: ["Hefty", "Leech"] },
+  { name: "Jackal", class: "Canine", attack: 1, health: 3, boneCost: 4, emoji: "🐺", sigils: ["Pack-Animal", "Corpse Eater"] },
   { name: "Armadillo", class: "No Class", attack: 0, health: 3, boneCost: 3, emoji: "🛡️", sigils: ["Armored", "Sharp Quills"] },
   { name: "Cicada", class: "Insect", attack: 2, health: 1, boneCost: 3, emoji: "🦗", sigils: ["Airborne", "Brittle"] },
   { name: "Silkworm", class: "Insect", attack: 0, health: 1, cost: 0, emoji: "🐛", sigils: ["Fledgling"], evolvesInto: "Silken Moth" },
@@ -2311,6 +2319,88 @@ const createSmokeSprites = () => {
   });
 };
 
+const BattleTransitionOverlay: React.FC<{ phase: 'IDLE' | 'IN' | 'OUT' }> = ({ phase }) => {
+  const [curtainsClosed, setCurtainsClosed] = useState(false);
+
+  useEffect(() => {
+    if (phase === 'IN') {
+      setCurtainsClosed(false);
+      let raf2 = 0;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => {
+          setCurtainsClosed(true);
+        });
+      });
+      return () => {
+        cancelAnimationFrame(raf1);
+        if (raf2) cancelAnimationFrame(raf2);
+      };
+    }
+    if (phase === 'OUT' || phase === 'IDLE') {
+      setCurtainsClosed(false);
+    }
+  }, [phase]);
+
+  if (phase === 'IDLE') return null;
+
+  const isClosing = phase === 'IN';
+
+  return (
+    <div
+      className={`fixed inset-0 z-[95] overflow-hidden flex items-center justify-center ${
+        isClosing ? 'pointer-events-auto' : 'pointer-events-none'
+      }`}
+    >
+      {/* Backdrop dim as curtains draw shut */}
+      <div
+        className="absolute inset-0 bg-black/55 transition-opacity"
+        style={{
+          transitionDuration: isClosing ? '260ms' : '420ms',
+          opacity: curtainsClosed ? 1 : 0,
+        }}
+      />
+      {/* Left Crimson/Obsidian Curtain */}
+      <div
+        className="absolute inset-y-0 left-0 w-1/2 border-r-2 border-amber-500/50 shadow-[14px_0_40px_rgba(0,0,0,0.98)] transition-transform"
+        style={{
+          background:
+            'repeating-linear-gradient(90deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 14px, transparent 14px, transparent 34px), linear-gradient(90deg, #070504 0%, #170808 65%, #2a0b0b 100%)',
+          transitionDuration: isClosing ? '280ms' : '480ms',
+          transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          transform: curtainsClosed ? 'translateX(0%)' : 'translateX(-104%)',
+        }}
+      />
+      {/* Right Crimson/Obsidian Curtain */}
+      <div
+        className="absolute inset-y-0 right-0 w-1/2 border-l-2 border-amber-500/50 shadow-[-14px_0_40px_rgba(0,0,0,0.98)] transition-transform"
+        style={{
+          background:
+            'repeating-linear-gradient(-90deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 14px, transparent 14px, transparent 34px), linear-gradient(270deg, #070504 0%, #170808 65%, #2a0b0b 100%)',
+          transitionDuration: isClosing ? '280ms' : '480ms',
+          transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          transform: curtainsClosed ? 'translateX(0%)' : 'translateX(104%)',
+        }}
+      />
+      {/* Center Occult Seal Flash (peaks once curtains meet) */}
+      <div
+        className="relative z-10 flex flex-col items-center justify-center transition-all"
+        style={{
+          transitionDuration: curtainsClosed ? '180ms' : '240ms',
+          transitionDelay: curtainsClosed ? '140ms' : '0ms',
+          opacity: curtainsClosed ? 1 : 0,
+          transform: curtainsClosed ? 'scale(1)' : 'scale(0.82)',
+        }}
+      >
+        <div className="w-16 h-16 rotate-45 border-2 border-amber-400/80 bg-[#120806]/95 shadow-[0_0_32px_rgba(220,38,38,0.8)] flex items-center justify-center">
+          <span className="-rotate-45 font-['Cinzel',_serif] font-black text-amber-300 text-lg tracking-widest">
+            ⚔
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SmokeTransitionOverlay: React.FC<{ phase: 'IDLE' | 'IN' | 'OUT' }> = ({ phase }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const spritesRef = useRef<HTMLCanvasElement[] | null>(null);
@@ -2523,9 +2613,27 @@ export default function App() {
   const screenStageRef = useRef<HTMLDivElement>(null);
   const prevScreenRef = useRef<ScreenState>('SPLASH');
   const [smokePhase, setSmokePhase] = useState<'IDLE' | 'IN' | 'OUT'>('IDLE');
+  const [battleWipePhase, setBattleWipePhase] = useState<'IDLE' | 'IN' | 'OUT'>('IDLE');
   const [menuFadingOut, setMenuFadingOut] = useState<boolean>(false);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const battleWipeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastBattleWipeAtRef = useRef<number>(0);
   const menuFadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerBattleWipe = useCallback(() => {
+    const now = Date.now();
+    if (now - lastBattleWipeAtRef.current < 900) return;
+    lastBattleWipeAtRef.current = now;
+
+    if (battleWipeTimerRef.current) clearTimeout(battleWipeTimerRef.current);
+    setBattleWipePhase('IN');
+    battleWipeTimerRef.current = setTimeout(() => {
+      setBattleWipePhase('OUT');
+      battleWipeTimerRef.current = setTimeout(() => {
+        setBattleWipePhase('IDLE');
+      }, 500);
+    }, 460);
+  }, []);
 
   const isMenuScreen = (s: ScreenState) =>
     s === 'VIEW_DECK' || s === 'DEV_MENU' || s === 'EVENT_HOARDER_SEARCH';
@@ -2579,11 +2687,14 @@ export default function App() {
         }, 180);
       }, 550);
     } else {
+      if (isConsecutiveDuel) {
+        triggerBattleWipe();
+      }
       setSmokePhase('IDLE');
       prevScreenRef.current = nextVal;
       setScreenRaw(nextVal);
     }
-  }, []);
+  }, [triggerBattleWipe]);
 
   // --- Campaign / Run State ---
   const [hasCompletedTutorial, setHasCompletedTutorial] = useState<boolean>(() => {
@@ -2885,6 +2996,11 @@ export default function App() {
     currentStageName: string;
     startingBones?: number;
     ouroborosBuffs?: number;
+    runStats?: RunStats;
+    standardBossOrder?: ('Zealot' | 'The Begotten' | 'The Weaver')[];
+    permanentScaleDebuff?: number;
+    consecutiveOneTurnWins?: number;
+    otkCooldown?: number;
     savedAt: number;
   }
 
@@ -2926,6 +3042,11 @@ export default function App() {
           currentStageName,
           startingBones: startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones,
           ouroborosBuffs,
+          runStats,
+          standardBossOrder: (window as any).__standardBossOrder,
+          permanentScaleDebuff,
+          consecutiveOneTurnWins,
+          otkCooldown,
           savedAt: Date.now(),
         };
         localStorage.setItem(RUN_SAVE_KEY, JSON.stringify(payload));
@@ -2934,7 +3055,7 @@ export default function App() {
         console.warn("Auto-save failed:", e);
       }
     }
-  }, [masterDeck, items, totalOverkillDamage, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, screen]);
+  }, [masterDeck, items, totalOverkillDamage, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, screen]);
 
   // --- Item Restock & Blood Bank Pricing ---
   const ITEM_COSTS: Record<ItemId, number> = {
@@ -3627,6 +3748,19 @@ export default function App() {
             }
             setHand(prev => [...prev, applyPlayerTotem(transformAmorphous(returned), activeTotem)]);
             addLog(`${existingCard.name} returned to hand (Unkillable)!`);
+          } else if (existingCard.sigils.includes('Pack-Animal')) {
+            const masterCard = masterDeck.find(c => c.id === existingCard.id);
+            const returned = cloneCard(masterCard || existingCard, ouroborosBuffs);
+            returned.attack = Math.max(returned.attack || 0, existingCard.attack || 0);
+            returned.health = Math.max(returned.health || 0, existingCard.health || 0);
+            if (existingCard.name === 'Ouroboros') {
+              returned.attack = (existingCard.attack || 0) + 1;
+              returned.health = (existingCard.health || 0) + 1;
+            }
+            const baseSigils = masterCard?.sigils || existingCard.sigils.filter(s => s !== activeTotem?.body);
+            returned.sigils = Array.from(new Set(baseSigils));
+            setDeck(prev => [transformAmorphous(returned), ...prev]);
+            addLog(`${existingCard.name} returned to the bottom of your deck (Pack-Animal)!`);
           }
           return;
       } else {
@@ -4484,6 +4618,7 @@ export default function App() {
     let currPBoard = [...playerBoard];
     let currEBoard = [...enemyBoard];
     let currEQueue = [...enemyQueue];
+    let currDeck = [...deck];
     let currBones = bones;
     let handAdditions: CardDef[] = [];
 
@@ -4528,7 +4663,14 @@ export default function App() {
         continue;
       }
 
-      const targets = buildStrikeTargets(lane, pCard.sigils);
+      // Omnistrike: strikes each opposing occupied space from left to right; if none, strikes directly once
+      let targets: number[] = [];
+      if (pCard.sigils.includes('Omnistrike')) {
+        const occupiedLanes = [0, 1, 2, 3].filter(l => currEBoard[l] !== null);
+        targets = occupiedLanes.length > 0 ? occupiedLanes : [lane];
+      } else {
+        targets = buildStrikeTargets(lane, pCard.sigils);
+      }
 
       for (const tLane of targets) {
         if (!currPBoard[lane] || currPBoard[lane]!.health <= 0) break;
@@ -4594,8 +4736,28 @@ export default function App() {
             }
           }
 
+          // Scapegoat: Adjacent enemy intercepts lethal blow
+          let effectiveEnemyLane = tLane;
+          if (!(eCard.sigils.includes('Armored') && !eCard.shieldBroken) && !hasMassive) {
+            const wouldKillEnemy = (pCard.sigils.includes('Touch of Death') && !eCard.sigils.includes('Made of Stone')) || pAtk >= eCard.health;
+            if (wouldKillEnemy) {
+              const adjScapegoatLane = [tLane - 1, tLane + 1].find(
+                l => l >= 0 && l <= 3 && currEBoard[l] && currEBoard[l]!.health > 0 && currEBoard[l]!.sigils.includes('Scapegoat')
+              );
+              if (adjScapegoatLane !== undefined) {
+                const protectedName = eCard.name;
+                effectiveEnemyLane = adjScapegoatLane;
+                eCard = currEBoard[effectiveEnemyLane]!;
+                await triggerSigilJitter(false, effectiveEnemyLane);
+                addLog(`Enemy ${eCard.name} intercepted the lethal blow meant for ${protectedName}!`);
+              }
+            }
+          }
+
+          const finalEnemySlot = hasMassive ? massiveCardIdx : effectiveEnemyLane;
+
           if (eCard.sigils.includes('Armored') && !eCard.shieldBroken) {
-            await triggerSigilJitter(false, tLane);
+            await triggerSigilJitter(false, effectiveEnemyLane);
             eCard.shieldBroken = true;
             triggerSfx('armor');
             addLog(`Enemy ${eCard.name}'s armor absorbed the attack!`);
@@ -4603,7 +4765,7 @@ export default function App() {
           } else {
             // Damage Reaction:
             // "Card Damaged: Target card applies a 0.15s shake animation and red hue flash. Displayed Health value must flash and decrement ONLY after the shake completes."
-            await animateCardDamage(false, tLane);
+            await animateCardDamage(false, effectiveEnemyLane);
 
             const prevEHealth = eCard.health;
 
@@ -4618,6 +4780,18 @@ export default function App() {
               addLog(`${pCard.name} dealt ${pAtk} damage to enemy ${eCard.name}.`);
             }
 
+            // Leech: Heals attacker equal to actual damage dealt to the opposing creature
+            const actualDamageDealt = isTouchOfDeathLethal
+              ? Math.max(prevEHealth, pAtk)
+              : Math.max(0, Math.min(prevEHealth, pAtk));
+            if (pCard.sigils.includes('Leech') && actualDamageDealt > 0 && pCard.health > 0) {
+              await triggerSigilJitter(true, lane);
+              pCard.health += actualDamageDealt;
+              triggerHpFlash(true, lane);
+              setPlayerBoard([...currPBoard]);
+              addLog(`${pCard.name}'s Leech drained ${actualDamageDealt} Health!`);
+            }
+
             // Immediately cut all music to absolute silence when the Blood Moon is shattered
             if (eCard.health <= 0 && (eCard.name === 'BLOOD MOON' || (eCard as any).isMassive)) {
               if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).stopAll) {
@@ -4625,12 +4799,12 @@ export default function App() {
               }
             }
 
-            triggerHpFlash(false, tLane);
+            triggerHpFlash(false, effectiveEnemyLane);
             setEnemyBoard([...currEBoard]);
 
             // Sharp Quills counterattack from enemy
             if (eCard.sigils.includes('Sharp Quills')) {
-              await triggerSigilJitter(false, tLane);
+              await triggerSigilJitter(false, effectiveEnemyLane);
               await animateCardDamage(true, lane);
               pCard.health -= 1;
               triggerHpFlash(true, lane);
@@ -4669,8 +4843,8 @@ export default function App() {
             if (eCard.health <= 0) {
               addLog(`Enemy ${eCard.name} was slain!`);
               // Card Destroyed: Upward vertical wipe/dissolve over 0.2s then remove from DOM
-              await animateCardDestroy(false, targetSlotIndex);
-              currEBoard[targetSlotIndex] = null;
+              await animateCardDestroy(false, finalEnemySlot);
+              currEBoard[finalEnemySlot] = null;
               setRunStats(s => ({ ...s, enemyCardsDestroyed: s.enemyCardsDestroyed + 1 }));
               setEnemyBoard([...currEBoard]);
 
@@ -4703,20 +4877,15 @@ export default function App() {
               }
 
               // Rule 1: Excess / Trample Damage
-              // Excess combat damage never applies to the opponent's scale.
-              // If a player card kills an enemy creature with excess damage and an enemy creature is directly
-              // behind it in the back row of that same lane, apply the leftover excess damage to that back row creature.
-              // This also applies to diagonal attacks: excess damage applies to whatever back row creature occupies
-              // the destroyed creature's lane.
               if (pAtk > prevEHealth && prevEHealth > 0) {
                 const excess = pAtk - prevEHealth;
-                const backRowCard = currEQueue[tLane];
+                const backRowCard = currEQueue[effectiveEnemyLane];
 
                 if (backRowCard) {
                   if (backRowCard.sigils.includes('Armored') && !backRowCard.shieldBroken) {
-                    await triggerSigilJitter(false, tLane);
+                    await triggerSigilJitter(false, effectiveEnemyLane);
                     backRowCard.shieldBroken = true;
-                    setDamagedQueueLane(tLane);
+                    setDamagedQueueLane(effectiveEnemyLane);
                     triggerSfx('armor');
                     await sleep(150);
                     setDamagedQueueLane(null);
@@ -4724,18 +4893,18 @@ export default function App() {
                     setEnemyQueue([...currEQueue]);
                   } else {
                     backRowCard.health -= excess;
-                    setDamagedQueueLane(tLane);
+                    setDamagedQueueLane(effectiveEnemyLane);
                     triggerSfx('hit');
                     await sleep(150);
                     setDamagedQueueLane(null);
-                    addLog(`Excess damage! Leftover ${excess} damage struck enemy ${backRowCard.name} in the back row (Lane ${tLane + 1})!`);
+                    addLog(`Excess damage! Leftover ${excess} damage struck enemy ${backRowCard.name} in the back row (Lane ${effectiveEnemyLane + 1})!`);
 
                     if (backRowCard.health <= 0) {
                       addLog(`Enemy ${backRowCard.name} in the back row was destroyed by excess damage!`);
-                      currEQueue[tLane] = { ...backRowCard, isDying: true };
+                      currEQueue[effectiveEnemyLane] = { ...backRowCard, isDying: true };
                       setEnemyQueue([...currEQueue]);
                       await sleep(300);
-                      currEQueue[tLane] = null;
+                      currEQueue[effectiveEnemyLane] = null;
                       setEnemyQueue([...currEQueue]);
 
                       currPBoard.forEach((c, cIdx) => {
@@ -4751,7 +4920,7 @@ export default function App() {
                     }
                   }
                 } else {
-                  addLog(`Excess damage (${excess}) dissipated — no enemy creature in back row of lane ${tLane + 1}.`);
+                  addLog(`Excess damage (${excess}) dissipated — no enemy creature in back row of lane ${effectiveEnemyLane + 1}.`);
                 }
               }
             }
@@ -4783,6 +4952,20 @@ export default function App() {
             addLog(`${pCard.name} struck for ${pAtk}! Arterial shunt held gauge at +4; vented ${ventedThisStrike} oz into reservoir.`);
           } else {
             addLog(`${pCard.name} struck the opponent directly for ${pAtk}!`);
+          }
+
+          // Forager: Draw 1 card from main deck on direct scale damage
+          if (pCard.sigils.includes('Forager') && pAtk > 0) {
+            await triggerSigilJitter(true, lane);
+            if (currDeck.length > 0) {
+              const drawnCard = currDeck.pop()!;
+              const processedCard = transformAmorphous(applyPlayerTotem(drawnCard, activeTotem));
+              handAdditions.push(processedCard);
+              setDeck([...currDeck]);
+              addLog(`${pCard.name}'s Forager drew ${processedCard.name} from your deck!`);
+            } else {
+              addLog(`${pCard.name}'s Forager searched your deck, but it was empty.`);
+            }
           }
         }
 
@@ -4876,7 +5059,7 @@ export default function App() {
             setBossState(prev => ({
               ...prev,
               phase: 2,
-              activeDialogue: "She tosses aside the first carving... fashioning a far more vicious effigy for what remains.",
+              activeDialogue: "The spinning wheel on her Loom is a whirlwind, as she quickly turns to face you. Her eyes bloodshot and fixated on the cards.",
             }));
 
             addLog("=== THE WEAVER: PHASE 2 INITIALIZED ===");
@@ -5297,8 +5480,26 @@ export default function App() {
             }
           }
 
+          // Scapegoat: Adjacent allied creature intercepts lethal blow
+          let effectivePlayerLane = tLane;
+          if (!(pCard.sigils.includes('Armored') && !pCard.shieldBroken)) {
+            const wouldKillPlayer = (eCard.sigils.includes('Touch of Death') && !pCard.sigils.includes('Made of Stone')) || eAtk >= pCard.health;
+            if (wouldKillPlayer) {
+              const adjScapegoatLane = [tLane - 1, tLane + 1].find(
+                l => l >= 0 && l <= 3 && currPBoard[l] && currPBoard[l]!.health > 0 && currPBoard[l]!.sigils.includes('Scapegoat')
+              );
+              if (adjScapegoatLane !== undefined) {
+                const protectedName = pCard.name;
+                effectivePlayerLane = adjScapegoatLane;
+                pCard = currPBoard[effectivePlayerLane]!;
+                await triggerSigilJitter(true, effectivePlayerLane);
+                addLog(`Your ${pCard.name} leaped in front of ${protectedName} to intercept the lethal blow!`);
+              }
+            }
+          }
+
           if (pCard.sigils.includes('Armored') && !pCard.shieldBroken) {
-            await triggerSigilJitter(true, tLane);
+            await triggerSigilJitter(true, effectivePlayerLane);
             pCard.shieldBroken = true;
             triggerSfx('armor');
             addLog(`Your ${pCard.name}'s armor absorbed the attack!`);
@@ -5306,7 +5507,9 @@ export default function App() {
           } else {
             // Damage Reaction:
             // "Card Damaged: Target card applies a 0.15s shake animation and red hue flash. Displayed Health value must flash and decrement ONLY after the shake completes."
-            await animateCardDamage(true, tLane);
+            await animateCardDamage(true, effectivePlayerLane);
+
+            const prevPHealth = pCard.health;
 
             // Made of Stone: Immune to Touch of Death
             const isTouchOfDeath = eCard.sigils.includes('Touch of Death') && !pCard.sigils.includes('Made of Stone');
@@ -5318,7 +5521,20 @@ export default function App() {
               pCard.health -= eAtk;
               addLog(`Enemy ${eCard.name} dealt ${eAtk} damage to your ${pCard.name}.`);
             }
-            triggerHpFlash(true, tLane);
+
+            // Leech: Heals enemy attacker equal to actual damage dealt
+            const actualEnemyDamage = isTouchOfDeath
+              ? Math.max(prevPHealth, eAtk)
+              : Math.max(0, Math.min(prevPHealth, eAtk));
+            if (eCard.sigils.includes('Leech') && actualEnemyDamage > 0 && eCard.health > 0) {
+              await triggerSigilJitter(false, lane);
+              eCard.health += actualEnemyDamage;
+              triggerHpFlash(false, lane);
+              setEnemyBoard([...currEBoard]);
+              addLog(`Enemy ${eCard.name}'s Leech drained ${actualEnemyDamage} Health!`);
+            }
+
+            triggerHpFlash(true, effectivePlayerLane);
             setPlayerBoard([...currPBoard]);
 
             // The Daus Retribution
@@ -5352,7 +5568,7 @@ export default function App() {
 
             // Player Sharp Quills
             if (pCard.sigils.includes('Sharp Quills')) {
-              await triggerSigilJitter(true, tLane);
+              await triggerSigilJitter(true, effectivePlayerLane);
               await animateCardDamage(false, lane);
               eCard.health -= 1;
               triggerHpFlash(false, lane);
@@ -5366,13 +5582,13 @@ export default function App() {
             }
 
             if (pCard.sigils.includes('Bees Within')) {
-              await triggerSigilJitter(true, tLane);
+              await triggerSigilJitter(true, effectivePlayerLane);
               handAdditions.push(applyPlayerTotem(cloneCard(TOKEN_BEE), activeTotem));
               addLog(`Your ${pCard.name}'s Bees Within yielded a Bee to hand!`);
             }
 
             if (pCard.health <= 0) {
-              await animateCardDestroy(true, tLane);
+              await animateCardDestroy(true, effectivePlayerLane);
               const bYield = pCard.sigils.includes('Bone King') ? 4 : 1;
               currBones += bYield;
               setBones(currBones);
@@ -5406,10 +5622,10 @@ export default function App() {
                   // Filter by unique card ID so previously used instances are removed from hand state
                   setHand(h => h.filter(c => c.id !== ceCard.id));
                   triggerSummonWipe(ceCard.id);
-                  currPBoard[tLane] = ceCard;
+                  currPBoard[effectivePlayerLane] = ceCard;
                   addLog(`Corpse Eater triggered! ${ceCard.name} leaped into the fray!`);
                 } else {
-                  currPBoard[tLane] = null;
+                  currPBoard[effectivePlayerLane] = null;
                 }
                 setPlayerBoard([...currPBoard]);
             }
@@ -5520,7 +5736,12 @@ export default function App() {
               const pCard = currPBoard[pLane];
               if (!pCard) continue;
 
-              const targets = buildStrikeTargets(pLane, pCard.sigils);
+              const targets = pCard.sigils.includes('Omnistrike')
+                ? (() => {
+                    const occ = [0, 1, 2, 3].filter(l => currEBoard[l] !== null);
+                    return occ.length > 0 ? occ : [pLane];
+                  })()
+                : buildStrikeTargets(pLane, pCard.sigils);
               if (targets.includes(targetLane)) {
                 const atk = getCardAttack(pCard, pLane, true, currPBoard, currEBoard);
                 const isAirborne = pCard.sigils.includes('Airborne');
@@ -6120,15 +6341,19 @@ export default function App() {
       }
 
       const data: RunSaveData = JSON.parse(raw);
+      const restoredDuels = data.duelsCompleted ?? 0;
+      const restoredStage = data.stage ?? 1;
+      const inferredBossesDefeated = data.runStats?.bossesDefeated ?? Math.max(0, restoredStage - 1);
+
       setMasterDeck(data.masterDeck);
       if (typeof masterDeckRef !== 'undefined' && masterDeckRef?.current) {
         masterDeckRef.current = data.masterDeck;
       }
       setItems(data.items);
       setTotalOverkillDamage(data.totalOverkillDamage ?? 0);
-      setStage(data.stage ?? 1);
+      setStage(restoredStage);
       setLevel(data.level ?? 1);
-      setDuelsCompleted(data.duelsCompleted ?? 0);
+      setDuelsCompleted(restoredDuels);
       setTotemPieces(data.totemPieces ?? []);
       setActiveTotem(data.activeTotem ?? { head: null, body: null });
       if (data.currentStageName) {
@@ -6142,11 +6367,35 @@ export default function App() {
       if (data.ouroborosBuffs !== undefined) {
         setOuroborosBuffs(data.ouroborosBuffs);
       }
+      if (data.runStats) {
+        setRunStats(data.runStats);
+      } else {
+        setRunStats(prev => ({
+          ...prev,
+          bossesDefeated: inferredBossesDefeated,
+          clearedStages: restoredDuels,
+        }));
+      }
+      if (data.standardBossOrder) {
+        (window as any).__standardBossOrder = data.standardBossOrder;
+      }
+      if (data.permanentScaleDebuff !== undefined) {
+        setPermanentScaleDebuff(data.permanentScaleDebuff);
+      }
+      if (data.consecutiveOneTurnWins !== undefined) {
+        setConsecutiveOneTurnWins(data.consecutiveOneTurnWins);
+      }
+      if (data.otkCooldown !== undefined) {
+        setOtkCooldown(data.otkCooldown);
+      }
 
       setShowContinueModal(false);
       triggerSfx('play');
       addLog("Expedition restored from the occult seal.");
-      startNextDuel(undefined, data.masterDeck);
+      startNextDuel(undefined, data.masterDeck, undefined, {
+        duelsCompleted: restoredDuels,
+        bossesDefeated: inferredBossesDefeated,
+      });
     } catch (err) {
       console.error("Failed to load save file:", err);
       clearRunSave();
@@ -6156,11 +6405,21 @@ export default function App() {
   };
 
   // --- Duel Initialization ---
-  const startNextDuel = (
+  const startNextDuel = async (
     forcedBoss?: boolean | 'Zealot' | 'The Begotten' | 'BoneLord' | 'The Weaver' | 'Goobert' | 'Woodcarver',
     deckOverride?: CardDef[],
-    totemOverride?: Totem | null
+    totemOverride?: Totem | null,
+    progressOverride?: { duelsCompleted?: number; bossesDefeated?: number }
   ) => {
+    // When advancing directly from an active duel, close curtains before swapping the board
+    if (prevScreenRef.current === 'DUEL') {
+      triggerBattleWipe();
+      await new Promise(res => setTimeout(res, 320));
+    }
+
+    const effectiveDuelsCompleted = progressOverride?.duelsCompleted ?? duelsCompleted;
+    const effectiveBossesDefeated = progressOverride?.bossesDefeated ?? runStats.bossesDefeated;
+
     setScale(-permanentScaleDebuff);
 
     // Duel-specific item state resets
@@ -6173,7 +6432,7 @@ export default function App() {
     setPhase('PLAY');
 
     // Roll the new stage name ONLY when the first battle of a new stage begins (after Duels 6, 14, and 24)
-    const isNewStageFirstDuel = (duelsCompleted === 6 || duelsCompleted === 14 || duelsCompleted === 24);
+    const isNewStageFirstDuel = (effectiveDuelsCompleted === 6 || effectiveDuelsCompleted === 14 || effectiveDuelsCompleted === 24);
     if (isNewStageFirstDuel && !forcedBoss) {
       setCurrentStageName(getRandomStageName());
     }
@@ -6213,8 +6472,10 @@ export default function App() {
 
     setDeck(shuffledDeck);
 
+    // Consecutive-battle curtain wipe already triggered prior to board reset
+
     // Full 36-duel campaign cadence: Bosses at 6, 14, 24, and 36
-    const duelNum = (duelsCompleted % 36) + 1;
+    const duelNum = (effectiveDuelsCompleted % 36) + 1;
     const isBoss = typeof forcedBoss === 'string' ? true : (forcedBoss !== undefined ? forcedBoss : (duelNum === 6 || duelNum === 14 || duelNum === 24 || duelNum === 36));
     setIsBossMatch(isBoss);
     setBossPhase(1);
@@ -6228,7 +6489,7 @@ export default function App() {
           : forcedBoss as any;
     } else if (isBoss) {
       // Boss #4 (Duel 36 or 3 standard bosses defeated in current cycle) is locked to The Bone Lord
-      const standardBossesInCycle = runStats.bossesDefeated % 4;
+      const standardBossesInCycle = effectiveBossesDefeated % 4;
       if (duelNum === 36 || standardBossesInCycle === 3) {
         bossType = 'BoneLord';
       } else {
@@ -6288,7 +6549,7 @@ export default function App() {
           phase: 1,
           phase1CardsPlayed: 0,
           skipNextPlayerTurn: false,
-          activeDialogue: null,
+          activeDialogue: 'The Altar of the Old One remembers every drop spilled upon it... kneel before the your God, interloper.',
           bgHex: '#251c19',
           bgTransitionDuration: 3,
           isRitualComplete: false,
@@ -6386,7 +6647,7 @@ export default function App() {
           phase: 1,
           phase1CardsPlayed: 0,
           skipNextPlayerTurn: false,
-          activeDialogue: null,
+          activeDialogue: 'The Weaver is hunched over her Loom. Wholly uninterested in your presence.',
           bgHex: '#24080e',
           bgTransitionDuration: 2,
           isRitualComplete: false,
@@ -6762,11 +7023,11 @@ export default function App() {
     const draftBannedNames = ['Red Stray', 'Red Hound', 'Red Behemoth', 'Red Colossus', 'Mycelium', 'Silken Moth'];
     if (draftBannedNames.includes(card.name)) return false;
 
-    // Restrict cards costing 3 or more blood
-    if (card.cost && card.cost >= 3) return false;
+    // Restrict cards costing more than 3 blood
+    if (card.cost && card.cost > 3) return false;
 
-    // Power cap (attack >= 3) applies unless the card costs 2 blood
-    if (card.cost !== 2 && card.attack >= 3) return false;
+    // Power cap (attack >= 3) applies unless the card costs 2 or 3 blood
+    if (card.cost !== 2 && card.cost !== 3 && card.attack >= 3) return false;
 
     const bannedSigils = [
       'Bifurcated Strike',
@@ -6804,12 +7065,25 @@ export default function App() {
     const pool: CardDef[] = [];
     const seen = new Set<string>();
     const eligiblePool = MAIN_DECK_POOL.filter(isStarterDraftEligible);
-    while (pool.length < 8) {
+    let boneCostCount = 0;
+    let threeBloodCount = 0;
+    let attempts = 0;
+
+    while (pool.length < 8 && attempts < 500) {
+      attempts++;
       const c = cloneCard(eligiblePool[Math.floor(Math.random() * eligiblePool.length)]);
-      if (!seen.has(c.name)) {
-        seen.add(c.name);
-        pool.push(c);
-      }
+      if (seen.has(c.name)) continue;
+
+      const isBoneCard = (c.boneCost ?? 0) > 0;
+      const isThreeBlood = c.cost === 3;
+
+      if (isBoneCard && boneCostCount >= 3) continue;
+      if (isThreeBlood && threeBloodCount >= 1) continue;
+
+      seen.add(c.name);
+      if (isBoneCard) boneCostCount++;
+      if (isThreeBlood) threeBloodCount++;
+      pool.push(c);
     }
 
     setDraftPlayerDeck(pDeck);
@@ -6898,6 +7172,17 @@ export default function App() {
     setCurrentStageName(getRandomStageName());
     setTotemPieces([]);
     setActiveTotem({ head: null, body: null });
+    delete (window as any).__standardBossOrder;
+    setRunStats({
+      bossesDefeated: 0,
+      scaleDamageDealt: 0,
+      scaleDamageTaken: 0,
+      cardsSacrificed: 0,
+      enemyCardsDestroyed: 0,
+      grizzlyWallsSurvived: 0,
+      clearedStages: 0,
+      finalBossesDefeated: 0,
+    });
 
     // After the Draft, only for the first event choice, the player is always only given 3 options: Altar, Campfire, or Bone Lord
     const firstEvents = ['altar', 'campfire', 'bonelord'];
@@ -8254,8 +8539,9 @@ export default function App() {
       }
         `}</style>
 
-        {/* Volumetric Occult Smoke Cloud Transition Overlay */}
+        {/* Volumetric Occult Smoke Cloud & Consecutive Battle Transition Overlays */}
         <SmokeTransitionOverlay phase={smokePhase} />
+        <BattleTransitionOverlay phase={battleWipePhase} />
 
         {/* Active Stage Screen Container */}
         <div
@@ -8766,6 +9052,11 @@ export default function App() {
                         currentStageName,
                         startingBones: startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones,
                         ouroborosBuffs,
+                        runStats,
+                        standardBossOrder: (window as any).__standardBossOrder,
+                        permanentScaleDebuff,
+                        consecutiveOneTurnWins,
+                        otkCooldown,
                         savedAt: Date.now(),
                       }));
                       setSavedRunExists(true);
@@ -11273,11 +11564,14 @@ export default function App() {
                         );
                       }
 
+                      const hideBossCards = isBossMatch && Boolean(bossState.activeDialogue);
+
                       return (
                         <>
                           {/* Row 1: Opponent Queue Row */}
                            <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 opacity-90 w-full overflow-visible">
-                             {enemyQueue.map((card, idx) => {
+                             {enemyQueue.map((rawCard, idx) => {
+                               const card = hideBossCards ? null : rawCard;
                                const isDropping = droppingQueueLane === idx;
                                return (
                                  <div
@@ -11328,7 +11622,8 @@ export default function App() {
 
                            {/* Row 2: Opponent Active Board Slots */}
                            <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 w-full overflow-visible">
-                             {enemyBoard.map((card, idx) => {
+                             {enemyBoard.map((rawCard, idx) => {
+                                 const card = hideBossCards ? null : rawCard;
                                  const isAttackingThisLane = activeAttacker?.isPlayer === false && activeAttacker?.lane === idx;
                                  const isDamagedThisLane = damagedCard?.isPlayer === false && damagedCard?.lane === idx;
                                  const isDestroyedThisLane = destroyedCard?.isPlayer === false && destroyedCard?.lane === idx;
