@@ -8934,15 +8934,15 @@ export default function App() {
             <div className="text-4xl mb-2 filter sepia-[0.4]">{bossState.ritualEndedVoluntarily ? '🕯️' : '💀'}</div>
 
             <div className="text-[11px] text-amber-600/90 font-bold uppercase tracking-widest mb-1">
-              {bossState.ritualEndedVoluntarily ? '+-- RITUAL CONCLUDED --+' : '+-- CATASTROPHIC FAILURE --+'}
+              {bossState.ritualEndedVoluntarily ? '+-- SUCCESS --+' : '+-- CATASTROPHIC FAILURE --+'}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-widest text-red-500 mb-1 drop-shadow-[0_2px_12px_rgba(239,68,68,0.4)]">
-              {bossState.ritualEndedVoluntarily ? 'Ritual Finished' : 'The Old One Awaits You'}
+              {bossState.ritualEndedVoluntarily ? 'RITUAL CONCLUDED' : 'The Old One Awaits You'}
             </h1>
 
             <div className="text-xs font-mono uppercase tracking-widest text-[#cfb794]/80 mb-6">
-              {bossState.ritualEndedVoluntarily ? 'The Ritual is finally completed' : 'Your Blood Runs Cold'}
+              {bossState.ritualEndedVoluntarily ? 'The Bone Lord has been sealed away' : 'Your Blood Runs Cold'}
             </div>
 
             {/* Stats mounted in a backlit dark cardplate */}
@@ -9373,35 +9373,140 @@ export default function App() {
           CROSSROADS EVENT ROUTER SCREEN
          ========================================================================= */}
       {screen === 'EVENT_CROSSROADS' && (
-        <div 
+        <div
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('crossroads-select.jpg')}
         >
-          <div className="flex flex-col items-center justify-center max-w-3xl w-full my-auto text-center">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- YOUR PATH DIVERGES --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Crossroads</h1>
-            <p className="text-amber-400/60 text-xs mb-8 text-center max-w-md uppercase tracking-wider">The path diverges in the gloom. Your options are grim.</p>
+          {/* Subtle atmospheric vignette so stone pillars remain visible while foreground cards pop */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(10,7,5,0.42)_0%,rgba(5,4,3,0.84)_100%)] pointer-events-none" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full mb-8">
-              {crossroadsOptions.map(eId => {
-                const details: Record<string, { title: string; desc: string; icon: React.ReactNode }> = {
-                  'campfire': { title: 'Divine Blessing', desc: 'Allow the Zealot to Baptize a Creature, empowering it', icon: <Flame className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'altar': { title: 'Mystical Altar', desc: 'Surrender a Creature to the Maker to transfer its Crests', icon: <Sparkles className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
-                  'carving': { title: 'Woven Patches', desc: 'A Creature from the chosen Tribal Crest heeds your call', icon: <Award className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'cost': { title: 'Five Finger Discount', desc: 'You catch the Merchant dozing off', icon: <Zap className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
-                  'bonelord': { title: 'Bloodrites', desc: 'The Old One demands a sacrifice, granting you a Blessing', icon: <Skull className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
-                  'mycologist': { title: 'Stitched Anew', desc: 'Allow the Weaver to sew duplicate cards together', icon: <Layers className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'goobert': { title: 'Printing Press', desc: 'The Begotten offers to Stamp a card', icon: <Sparkles className="w-5 h-5 text-teal-400 filter sepia-[0.4]" /> },
-                  'cave': { title: 'The Steeple', desc: 'The Zealot tests if your Creatures are worthy', icon: <Eye className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
-                  'choice': { title: 'Wild Creatures', desc: 'A group of Creatures approach from the darkness', icon: <HelpCircle className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
-                  'totem': { title: 'The Weaver', desc: 'Assemble an Effigy from a Tribe Patch and Crest', icon: <Wrench className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'items': { title: 'Surplus Cache', desc: 'Barter your overkill blood harvest for arcane relics', icon: <span className="text-base select-none">🎒</span> },
+          <div className="relative z-10 flex flex-col items-center justify-center max-w-4xl w-full my-auto text-center">
+            {/* Header Block with soft focal shadow */}
+            <div className="mb-8 px-6 py-3 rounded-sm bg-[#0b0705]/55 backdrop-blur-[2px] border border-[#3a2416]/50 shadow-[0_10px_30px_rgba(0,0,0,0.75)]">
+              <div className="text-[10px] text-amber-500/80 font-bold tracking-[0.28em] uppercase mb-1">
+                +-- YOUR PATH DIVERGES --+
+              </div>
+              <h1 className="text-2xl sm:text-4xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-amber-200 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] mb-1.5">
+                Crossroads
+              </h1>
+              <p className="text-[#cfb794]/80 text-[11px] max-w-md mx-auto uppercase tracking-wider leading-relaxed">
+                The way forward is shrouded in the gloom. Choose which omen to follow.
+              </p>
+            </div>
+
+            {/* Three Occult Shrine Plaques */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 w-full mb-4">
+              {crossroadsOptions.map((eId, idx) => {
+                const numerals = ['I', 'II', 'III'];
+                const details: Record<
+                  string,
+                  { title: string; tag: string; desc: string; accent: string; icon: React.ReactNode }
+                > = {
+                  campfire: {
+                    title: 'Divine Blessing',
+                    tag: 'Baptism',
+                    desc: 'Allow the Zealot to baptize a Creature, empowering its flesh.',
+                    accent: 'group-hover:border-amber-500/80 group-hover:shadow-[0_18px_40px_rgba(217,119,6,0.18)]',
+                    icon: <Flame className="w-5 h-5 text-amber-400" />,
+                  },
+                  altar: {
+                    title: 'Mystical Altar',
+                    tag: 'Sacrifice',
+                    desc: 'Surrender a Creature to the Maker to transfer its Crests.',
+                    accent: 'group-hover:border-red-500/75 group-hover:shadow-[0_18px_40px_rgba(220,38,38,0.18)]',
+                    icon: <Sparkles className="w-5 h-5 text-amber-300" />,
+                  },
+                  carving: {
+                    title: 'Woven Patches',
+                    tag: 'Kinship',
+                    desc: 'A Creature bearing the chosen Tribal Crest heeds your call.',
+                    accent: 'group-hover:border-amber-500/80 group-hover:shadow-[0_18px_40px_rgba(217,119,6,0.18)]',
+                    icon: <Award className="w-5 h-5 text-amber-400" />,
+                  },
+                  cost: {
+                    title: 'Five Finger Discount',
+                    tag: 'Pilfer',
+                    desc: 'You catch the Merchant dozing beside his unguarded wares.',
+                    accent: 'group-hover:border-amber-400/80 group-hover:shadow-[0_18px_40px_rgba(245,158,11,0.18)]',
+                    icon: <Zap className="w-5 h-5 text-amber-300" />,
+                  },
+                  bonelord: {
+                    title: 'Bloodrites',
+                    tag: 'Offering',
+                    desc: 'The Old One demands a sacrifice, granting an eternal Boon.',
+                    accent: 'group-hover:border-red-500/75 group-hover:shadow-[0_18px_40px_rgba(185,28,28,0.2)]',
+                    icon: <Skull className="w-5 h-5 text-stone-200" />,
+                  },
+                  mycologist: {
+                    title: 'Stitched Anew',
+                    tag: 'Fusion',
+                    desc: 'Allow the Weaver to sew duplicate Creatures into one.',
+                    accent: 'group-hover:border-purple-400/75 group-hover:shadow-[0_18px_40px_rgba(168,85,247,0.18)]',
+                    icon: <Layers className="w-5 h-5 text-amber-400" />,
+                  },
+                  goobert: {
+                    title: 'Printing Press',
+                    tag: 'Forgery',
+                    desc: 'The Begotten offers to stamp a flawed replica of a card.',
+                    accent: 'group-hover:border-emerald-400/75 group-hover:shadow-[0_18px_40px_rgba(16,185,129,0.18)]',
+                    icon: <Sparkles className="w-5 h-5 text-teal-300" />,
+                  },
+                  cave: {
+                    title: 'The Steeple',
+                    tag: 'Ordeal',
+                    desc: 'The Zealot weighs your deck against a ritual trial.',
+                    accent: 'group-hover:border-stone-400/75 group-hover:shadow-[0_18px_40px_rgba(168,162,158,0.16)]',
+                    icon: <Eye className="w-5 h-5 text-stone-200" />,
+                  },
+                  choice: {
+                    title: 'Wild Creatures',
+                    tag: 'Encounter',
+                    desc: 'Three beasts emerge from the thicket awaiting recruitment.',
+                    accent: 'group-hover:border-amber-500/80 group-hover:shadow-[0_18px_40px_rgba(217,119,6,0.18)]',
+                    icon: <HelpCircle className="w-5 h-5 text-amber-300" />,
+                  },
+                  totem: {
+                    title: 'The Weaver',
+                    tag: 'Effigy',
+                    desc: 'Assemble an Effigy from a Tribe Patch and Crest.',
+                    accent: 'group-hover:border-amber-500/80 group-hover:shadow-[0_18px_40px_rgba(217,119,6,0.18)]',
+                    icon: <Wrench className="w-5 h-5 text-amber-400" />,
+                  },
+                  items: {
+                    title: 'Surplus Cache',
+                    tag: 'Barter',
+                    desc: 'Barter your overkill blood harvest for arcane relics.',
+                    accent: 'group-hover:border-red-400/80 group-hover:shadow-[0_18px_40px_rgba(220,38,38,0.18)]',
+                    icon: (
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-5 h-5 text-amber-400"
+                      >
+                        <path d="M6 7h12l1 13H5L6 7Z" />
+                        <path d="M9 7V5a3 3 0 0 1 6 0v2" />
+                        <path d="M10 12h4" />
+                      </svg>
+                    ),
+                  },
                 };
-                const d = details[eId] || { title: 'Unknown', desc: 'The path ahead lies in darkness.', icon: <Sparkles className="w-5 h-5" /> };
+
+                const d = details[eId] || {
+                  title: 'Unknown',
+                  tag: 'Omen',
+                  desc: 'The path ahead lies in darkness.',
+                  accent: 'group-hover:border-amber-500/75',
+                  icon: <Sparkles className="w-5 h-5 text-amber-300" />,
+                };
 
                 return (
-                  <div
+                  <button
                     key={eId}
+                    type="button"
                     onClick={() => {
                       if (eId === 'items') startItemEvent();
                       else if (eId === 'campfire') initCampfire();
@@ -9415,17 +9520,41 @@ export default function App() {
                       else if (eId === 'choice') initCardChoice();
                       else if (eId === 'totem') initBuildTotem();
                     }}
-                    className="p-4 text-left transition-all cursor-pointer group flex flex-col justify-between border border-amber-950/40 hover:border-amber-700/60"
+                    className={`relative flex flex-col justify-between text-center rounded-sm bg-gradient-to-b from-[#18100c]/95 via-[#120b08]/95 to-[#0b0705]/98 border border-[#3e2618] shadow-[0_14px_34px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,220,175,0.08)] backdrop-blur-sm transition-all duration-200 hover:-translate-y-1.5 active:translate-y-0 cursor-pointer group overflow-hidden ${d.accent}`}
                   >
-                    <div className="mb-2">{d.icon}</div>
-                    <div>
-                      <div className="font-mono font-bold text-sm text-amber-200 group-hover:text-amber-100 uppercase tracking-widest">{d.title}</div>
-                      <div className="text-[11px] text-stone-400/70 mt-1 font-mono leading-relaxed">{d.desc}</div>
+                    {/* Top Waystone Header Strip */}
+                    <div className="w-full px-4 py-2 border-b border-[#2b1a10] bg-[#0d0806]/80 flex items-center justify-between text-[10px] uppercase tracking-[0.22em]">
+                      <span className="text-amber-700/90 font-bold">PATH {numerals[idx] || idx + 1}</span>
+                      <span className="text-stone-400/75 group-hover:text-amber-300/90 transition-colors">
+                        {d.tag}
+                      </span>
                     </div>
-                    <div className="mt-3 font-mono text-[10px] uppercase tracking-widest text-amber-200/50 group-hover:text-amber-100 group-hover:tracking-[0.2em] transition-all">
-                      PROCEED
+
+                    {/* Card Body */}
+                    <div className="px-5 pt-7 pb-6 flex flex-col items-center flex-1">
+                      {/* Diamond Occult Icon Socket */}
+                      <div className="w-11 h-11 rotate-45 mb-6 border border-[#4d301e] group-hover:border-amber-400/80 bg-[#0d0806] shadow-[0_4px_16px_rgba(0,0,0,0.85),inset_0_0_12px_rgba(217,119,6,0.12)] group-hover:shadow-[0_0_20px_rgba(217,119,6,0.3)] flex items-center justify-center transition-all duration-200">
+                        <div className="-rotate-45 transition-transform duration-200 group-hover:scale-110">
+                          {d.icon}
+                        </div>
+                      </div>
+
+                      <div className="font-['Cinzel',_serif] font-bold text-base text-amber-200 group-hover:text-white uppercase tracking-[0.14em] leading-snug">
+                        {d.title}
+                      </div>
+
+                      <div className="w-10 h-px bg-gradient-to-r from-transparent via-amber-700/60 to-transparent my-3" />
+
+                      <p className="text-[11px] text-stone-300/75 group-hover:text-stone-200/90 font-mono leading-relaxed">
+                        {d.desc}
+                      </p>
                     </div>
-                  </div>
+
+                    {/* Recessed Action Footer */}
+                    <div className="w-full py-2.5 px-4 border-t border-[#2d1c12] bg-[#0e0906] group-hover:bg-[#22140c] font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.22em] text-[#cfb794]/75 group-hover:text-amber-200 transition-colors">
+                      › PROCEED ‹
+                    </div>
+                  </button>
                 );
               })}
             </div>
@@ -9712,9 +9841,9 @@ export default function App() {
         >
           <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE WEAVER'S WEFT --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Embroidered Crests</h1>
+            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Tribal Patches</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
-              Threadbare swatches rest upon a lone loom. Claiming an embroidered Patch will summon a creature of its Tribe.
+              Threadbare swatches rest upon a lone loom. Claiming a Tribal Patch will summon a creature of its Tribe.
             </p>
 
             <div className="flex flex-wrap gap-6 justify-center max-w-2xl mb-8">
