@@ -3327,14 +3327,32 @@ export default function App() {
       return;
     }
 
-    // Battle music stops playing and is overwritten by ambient theme when opening Dev Tools or View Deck
-    /// Do not interrupt or overwrite battle/boss music when inspecting overlays
-    if (screen === 'VIEW_DECK' || screen === 'DEV_MENU' || screen === 'EVENT_HOARDER_SEARCH') {
+    // Do not interrupt or overwrite battle/boss music while inspecting overlays or mid-smoke transition
+    if (
+      screen === 'VIEW_DECK' ||
+      screen === 'DEV_MENU' ||
+      screen === 'EVENT_HOARDER_SEARCH' ||
+      smokePhase === 'IN'
+    ) {
       return;
     }
 
     if (screen === 'DUEL') {
-      if (!isBossMatch && ChiptuneAudio.currentTrack !== 'battle') {
+      if (isBossMatch) {
+        if (bossState.type === 'BoneLord') {
+          const desiredTrack = bossPhase === 3 ? 'bloodmoon-phase3' : 'finalboss';
+          if (ChiptuneAudio.currentTrack !== desiredTrack) {
+            if (bossPhase === 3) ChiptuneAudio.playFinalBossPhase3?.(0.6);
+            else ChiptuneAudio.playFinalBoss?.(1.8);
+          }
+        } else if (bossState.type === 'Zealot' && ChiptuneAudio.currentTrack !== 'boss-Zealot') {
+          ChiptuneAudio.playTheZealot?.(1.5);
+        } else if (bossState.type === 'The Begotten' && ChiptuneAudio.currentTrack !== 'boss-The Begotten') {
+          ChiptuneAudio.playTheBegotten?.(1.8);
+        } else if (bossState.type === 'The Weaver' && ChiptuneAudio.currentTrack !== 'boss-The Weaver') {
+          ChiptuneAudio.playTheWeaver?.(1.5);
+        }
+      } else if (ChiptuneAudio.currentTrack !== 'battle') {
         ChiptuneAudio.playBattle();
       }
     } else if (screen === 'GAME_OVER' || screen === 'SPLASH') {
@@ -3344,7 +3362,7 @@ export default function App() {
         ChiptuneAudio.playCabin();
       }
     }
-  }, [screen, audioEnabled, isBossMatch]);
+  }, [screen, audioEnabled, isBossMatch, bossState.type, bossPhase, smokePhase]);
 
   // Cleanup audio nodes on unmount
   useEffect(() => {
