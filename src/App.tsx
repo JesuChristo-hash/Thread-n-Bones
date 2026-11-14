@@ -134,6 +134,7 @@ export interface BossCombatState {
   bgTransitionDuration: number;
   isRitualComplete: boolean;
   ritualEndedVoluntarily: boolean;
+  ritualSurrendered?: boolean;
 }
 
 // --- Asset Path Helpers ---
@@ -6204,6 +6205,7 @@ export default function App() {
       ...prev,
       isRitualComplete: false,
       ritualEndedVoluntarily: true,
+      ritualSurrendered: false,
     }));
     setScreen('GAME_OVER');
   };
@@ -6364,6 +6366,12 @@ export default function App() {
   const handleLossMatch = () => {
     clearRunSave();
     setModalAlert(null);
+    setBossState(prev => ({
+      ...prev,
+      isRitualComplete: false,
+      ritualEndedVoluntarily: false,
+      ritualSurrendered: false,
+    }));
     setScreen('GAME_OVER');
   };
 
@@ -6519,6 +6527,20 @@ export default function App() {
     const isBoss = typeof forcedBoss === 'string' ? true : (forcedBoss !== undefined ? forcedBoss : (duelNum === 6 || duelNum === 14 || duelNum === 24 || duelNum === 36));
     setIsBossMatch(isBoss);
     setBossPhase(1);
+    if (!isBoss) {
+      setBossState({
+        type: null,
+        phase: 1,
+        phase1CardsPlayed: 0,
+        skipNextPlayerTurn: false,
+        activeDialogue: null,
+        bgHex: '#18181b',
+        bgTransitionDuration: 0,
+        isRitualComplete: false,
+        ritualEndedVoluntarily: false,
+        ritualSurrendered: false,
+      });
+    }
 
     let bossType: 'Zealot' | 'The Begotten' | 'BoneLord' | 'The Weaver' | null = null;
     if (typeof forcedBoss === 'string') {
@@ -7171,8 +7193,10 @@ export default function App() {
     setDraftSelectedTradeIdx(null);
     triggerSfx('play');
 
+    const hasPeltsRemaining = nextP.some(c => c.name === "Trade Pelt");
+
     // If another trade is queued, trigger the cascade flip-down ritual and reveal 4 random cards
-    if (remainingTrades > 0) {
+    if (remainingTrades > 0 && hasPeltsRemaining) {
       setDraftFlippingDown(true);
       setDraftRevealedIndices([]);
 
@@ -7182,7 +7206,7 @@ export default function App() {
           .map((card, i) => (card !== null ? i : -1))
           .filter(i => i !== -1);
 
-        // Randomly roll 4 choices from the 7 survivors
+        // Randomly roll 4 choices from the survivors
         const shuffled = [...validIndices].sort(() => Math.random() - 0.5);
         const chosenFour = shuffled.slice(0, 4);
 
@@ -7194,6 +7218,14 @@ export default function App() {
         setTimeout(() => {
           setDraftFlippingUp(false);
         }, 300);
+      }, 350);
+    } else {
+      // No trades or pelts left: flip all remaining shop cards face-down
+      setDraftFlippingDown(true);
+      setDraftRevealedIndices([]);
+
+      setTimeout(() => {
+        setDraftFlippingDown(false);
       }, 350);
     }
   };
@@ -8949,18 +8981,38 @@ export default function App() {
           style={getScreenBgStyle('gameover.jpg')}
         >
           <div className="max-w-xl w-full flex flex-col items-center bg-[#0d0806]/92 border border-[#3e2316] rounded-sm p-8 shadow-[0_22px_55px_rgba(0,0,0,0.95)] backdrop-blur-[2px]">
-            <div className="text-4xl mb-2 filter sepia-[0.4]">{bossState.ritualEndedVoluntarily ? '🕯️' : '💀'}</div>
-
-            <div className="text-[11px] text-amber-600/90 font-bold uppercase tracking-widest mb-1">
-              {bossState.ritualEndedVoluntarily ? '+-- SUCCESS --+' : '+-- CATASTROPHIC FAILURE --+'}
+            <div className="text-4xl mb-2 filter sepia-[0.4]">
+              {bossState.ritualEndedVoluntarily ? '🕯️' : bossState.ritualSurrendered ? '🕯️' : '💀'}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-widest text-red-500 mb-1 drop-shadow-[0_2px_12px_rgba(239,68,68,0.4)]">
-              {bossState.ritualEndedVoluntarily ? 'RITUAL CONCLUDED' : 'The Old One Awaits You'}
+            <div className="text-[11px] text-amber-600/90 font-bold uppercase tracking-widest mb-1">
+              {bossState.ritualEndedVoluntarily
+                ? '+-- SUCCESS --+'
+                : bossState.ritualSurrendered
+                  ? '+-- RITUAL ABANDONED --+'
+                  : '+-- CATASTROPHIC FAILURE --+'}
+            </div>
+
+            <h1
+              className={`text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-widest mb-1 ${
+                bossState.ritualEndedVoluntarily
+                  ? 'text-amber-300 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)]'
+                  : 'text-red-500 drop-shadow-[0_2px_12px_rgba(239,68,68,0.4)]'
+              }`}
+            >
+              {bossState.ritualEndedVoluntarily
+                ? 'RITUAL CONCLUDED'
+                : bossState.ritualSurrendered
+                  ? 'Forfeited to the Dark'
+                  : 'The Old One Awaits You'}
             </h1>
 
             <div className="text-xs font-mono uppercase tracking-widest text-[#cfb794]/80 mb-6">
-              {bossState.ritualEndedVoluntarily ? 'The Bone Lord has been sealed away' : 'Your Blood Runs Cold'}
+              {bossState.ritualEndedVoluntarily
+                ? 'The Bone Lord has been sealed away'
+                : bossState.ritualSurrendered
+                  ? 'You snuffed the candle before the altar'
+                  : 'Your Blood Runs Cold'}
             </div>
 
             {/* Stats mounted in a backlit dark cardplate */}
@@ -9126,7 +9178,8 @@ export default function App() {
                   setBossState(prev => ({
                     ...prev,
                     isRitualComplete: false,
-                    ritualEndedVoluntarily: true,
+                    ritualEndedVoluntarily: false,
+                    ritualSurrendered: true,
                   }));
                   setScreen('GAME_OVER');
                 }}
@@ -9163,16 +9216,21 @@ export default function App() {
                   {draftPlayerDeck.slice(0, 3).map((c, sliceIdx) => {
                     const idx = sliceIdx;
                     const isSelected = draftSelectedDeckIdx === idx;
+                    const canTradePelt =
+                      c.name === "Trade Pelt" &&
+                      draftTradesLeft > 0 &&
+                      !draftFlippingDown &&
+                      !draftFlippingUp;
                     return (
                       <div
                         key={c.id || `draft-p-${c.name}-${idx}`}
                         onClick={() => {
-                          if (c.name === "Trade Pelt") {
+                          if (canTradePelt) {
                             setDraftSelectedDeckIdx(draftSelectedDeckIdx === idx ? null : idx);
                           }
                         }}
                         className={`transform origin-center shrink-0 transition-all duration-200 ${
-                          c.name !== "Trade Pelt" ? "opacity-50" : "cursor-pointer"
+                          !canTradePelt ? "opacity-50" : "cursor-pointer"
                         } ${
                           isSelected
                             ? "scale-[1.20] -translate-y-4 z-30"
@@ -9190,16 +9248,21 @@ export default function App() {
                   {draftPlayerDeck.slice(3).map((c, sliceIdx) => {
                     const idx = sliceIdx + 3;
                     const isSelected = draftSelectedDeckIdx === idx;
+                    const canTradePelt =
+                      c.name === "Trade Pelt" &&
+                      draftTradesLeft > 0 &&
+                      !draftFlippingDown &&
+                      !draftFlippingUp;
                     return (
                       <div
                         key={c.id || `draft-p-${c.name}-${idx}`}
                         onClick={() => {
-                          if (c.name === "Trade Pelt") {
+                          if (canTradePelt) {
                             setDraftSelectedDeckIdx(draftSelectedDeckIdx === idx ? null : idx);
                           }
                         }}
                         className={`transform origin-center shrink-0 transition-all duration-200 ${
-                          c.name !== "Trade Pelt" ? "opacity-50" : "cursor-pointer"
+                          !canTradePelt ? "opacity-50" : "cursor-pointer"
                         } ${
                           isSelected
                             ? "scale-[1.20] -translate-y-4 z-30"
@@ -9408,7 +9471,7 @@ export default function App() {
                 Crossroads
               </h1>
               <p className="text-[#cfb794]/80 text-[11px] max-w-md mx-auto uppercase tracking-wider leading-relaxed">
-                The way forward is shrouded in the gloom. Choose which omen to follow.
+                The way ahead is shrouded in the gloom. Choose an omen to follow.
               </p>
             </div>
 
@@ -9451,7 +9514,7 @@ export default function App() {
                   bonelord: {
                     title: 'Bloodrites',
                     tag: 'Offering',
-                    desc: 'The Old One demands a sacrifice, granting an eternal Boon.',
+                    desc: 'The Old One demands a sacrifice, granting an eternal Blessing.',
                     accent: 'group-hover:border-red-500/75 group-hover:shadow-[0_18px_40px_rgba(185,28,28,0.2)]',
                     icon: <Skull className="w-5 h-5 text-stone-200" />,
                   },
