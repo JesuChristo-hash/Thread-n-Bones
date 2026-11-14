@@ -334,7 +334,7 @@ export const SIGIL_DESCRIPTIONS: Record<string, string> = {
   'Rampager': "Moves to an adjacent space, swapping positions with whatever stands there.",
   'Scapegoat': "Whenever an adjacent allied creature would take lethal damage, this creature intercepts the blow instead, taking the full hit in its place.",
   'Forager': "Whenever this creature deals direct scale damage, draw 1 card from your main deck.",
-  'Leech': "Whenever this creature deals damage to an opposing creature, it gains Health equal to the actual damage dealt.",
+  'Leech': "Whenever this creature kills an opposing creature, it steals that creature's total Health.",
   'Pack-Animal': "When sacrificed, this card is placed on the bottom of your main deck instead of being discarded, retaining any stat buffs and transferred sigils.",
 };
 
@@ -787,7 +787,13 @@ export function transformAmorphous(card: CardDef): CardDef {
 
 export function applyPlayerTotem(card: CardDef, activeTotem: Totem): CardDef {
   if (!card || !activeTotem.head || !activeTotem.body) return card;
-  if (card.class === activeTotem.head || card.class === "ALL Classes") {
+  if (
+    activeTotem.body === 'Fledgling' &&
+    ((card as any).hasEvolved || card.name.startsWith('Elder '))
+  ) {
+    return card;
+  }
+  if (card.class === activeTotem.head || activeTotem.head === "ALL Classes") {
     if (!card.sigils) card.sigils = [];
     if (!card.sigils.includes(activeTotem.body)) {
       card.sigils = [...card.sigils, activeTotem.body];
@@ -4614,14 +4620,18 @@ export default function App() {
               }
             });
 
+            (evolved as any).hasEvolved = true;
             addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} matured into a ${evoName}!`);
-            return isPlayer ? applyPlayerTotem(evolved, activeTotem) : evolved;
+            const finalEvolved = isPlayer ? applyPlayerTotem(evolved, activeTotem) : evolved;
+            finalEvolved.sigils = (finalEvolved.sigils || []).filter(s => s !== 'Fledgling');
+            return finalEvolved;
           } else {
           const elder = { ...card };
+          (elder as any).hasEvolved = true;
           elder.name = `Elder ${card.name}`;
           elder.attack = (elder.attack || 0) + 1;
           elder.health = (elder.health || 0) + 2;
-          elder.sigils = elder.sigils.filter(s => s !== 'Fledgling');
+          elder.sigils = (elder.sigils || []).filter(s => s !== 'Fledgling');
           addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} matured into an Elder form! (+1 ATK / +2 HP)`);
           return elder;
         }
@@ -4817,16 +4827,14 @@ export default function App() {
               addLog(`${pCard.name} dealt ${pAtk} damage to enemy ${eCard.name}.`);
             }
 
-            // Leech: Heals attacker equal to actual damage dealt to the opposing creature
-            const actualDamageDealt = isTouchOfDeathLethal
-              ? Math.max(prevEHealth, pAtk)
-              : Math.max(0, Math.min(prevEHealth, pAtk));
-            if (pCard.sigils.includes('Leech') && actualDamageDealt > 0 && pCard.health > 0) {
+            // Leech: Steals the slain target's total health on kill
+            const stolenHealth = Math.max(0, prevEHealth);
+            if (pCard.sigils.includes('Leech') && eCard.health <= 0 && stolenHealth > 0 && pCard.health > 0) {
               await triggerSigilJitter(true, lane);
-              pCard.health += actualDamageDealt;
+              pCard.health += stolenHealth;
               triggerHpFlash(true, lane);
               setPlayerBoard([...currPBoard]);
-              addLog(`${pCard.name}'s Leech drained ${actualDamageDealt} Health!`);
+              addLog(`${pCard.name}'s Leech drained ${stolenHealth} Health from ${eCard.name}!`);
             }
 
             // Immediately cut all music to absolute silence when the Blood Moon is shattered
@@ -5559,16 +5567,14 @@ export default function App() {
               addLog(`Enemy ${eCard.name} dealt ${eAtk} damage to your ${pCard.name}.`);
             }
 
-            // Leech: Heals enemy attacker equal to actual damage dealt
-            const actualEnemyDamage = isTouchOfDeath
-              ? Math.max(prevPHealth, eAtk)
-              : Math.max(0, Math.min(prevPHealth, eAtk));
-            if (eCard.sigils.includes('Leech') && actualEnemyDamage > 0 && eCard.health > 0) {
+            // Leech: Steals the slain target's total health on kill
+            const stolenEnemyHealth = Math.max(0, prevPHealth);
+            if (eCard.sigils.includes('Leech') && pCard.health <= 0 && stolenEnemyHealth > 0 && eCard.health > 0) {
               await triggerSigilJitter(false, lane);
-              eCard.health += actualEnemyDamage;
+              eCard.health += stolenEnemyHealth;
               triggerHpFlash(false, lane);
               setEnemyBoard([...currEBoard]);
-              addLog(`Enemy ${eCard.name}'s Leech drained ${actualEnemyDamage} Health!`);
+              addLog(`Enemy ${eCard.name}'s Leech drained ${stolenEnemyHealth} Health from your ${pCard.name}!`);
             }
 
             triggerHpFlash(true, effectivePlayerLane);
