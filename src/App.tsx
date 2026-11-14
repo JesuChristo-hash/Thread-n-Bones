@@ -492,12 +492,11 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Arachnid", class: "Insect", attack: 1, health: 2, cost: 0, boneCost: 5, emoji: "🕷️", sigils: ["Brittle"] },
   { name: "Kraken", class: "No Class", attack: 3, health: 1, cost: 0, boneCost: 8, emoji: "🦑", sigils: ["Waterborne", "Bifurcated Strike"] },
   { name: "Scorpion", class: "Insect", attack: 1, health: 1, cost: 0, boneCost: 6, emoji: "🦂", sigils: ["Touch of Death"] },
-  // --- Utility, Incubators & Bone Economy ---
   { name: "Tsuchinoko", class: "Reptile", attack: 1, health: 1, boneCost: 2, emoji: "🐍", sigils: ["Worthy Sacrifice"] },
   { name: "Red Stray", class: "Canine", attack: 1, health: 2, cost: 1, emoji: "🐕", sigils: ["Bone King"] },
   { name: "Red Hound", class: "Canine", attack: 2, health: 3, cost: 2, emoji: "🐕", sigils: ["Bone Digger"] },
-  { name: "Red Behemoth", class: "Canine", attack: 2, health: 5, cost: 2, emoji: "🐕", sigils: ["Bone Digger", "Hefty"] },
-  { name: "Red Colossus", class: "Canine", attack: 3, health: 9, cost: 4, emoji: "🐕", sigils: ["Hefty", "Leech"] },
+  { name: "Red Behemoth", class: "Canine", attack: 3, health: 9, cost: 3, emoji: "🐕", sigils: ["Bone Digger", "Hefty"] },
+  { name: "Red Colossus", class: "Canine", attack: 4, health: 13, cost: 4, emoji: "🐕", sigils: ["Leech", "Hefty"] },
   { name: "Jackal", class: "Canine", attack: 1, health: 3, boneCost: 4, emoji: "🐺", sigils: ["Pack-Animal", "Corpse Eater"] },
   { name: "Armadillo", class: "No Class", attack: 0, health: 3, boneCost: 3, emoji: "🛡️", sigils: ["Armored", "Sharp Quills"] },
   { name: "Cicada", class: "Insect", attack: 2, health: 1, boneCost: 3, emoji: "🦗", sigils: ["Airborne", "Brittle"] },
@@ -2750,6 +2749,10 @@ export default function App() {
     clearedStages: 0,
     finalBossesDefeated: 0,
   });
+  const runStatsRef = useRef<RunStats>(runStats);
+  useEffect(() => {
+    runStatsRef.current = runStats;
+  }, [runStats]);
 
   // Visual-only trackers (preserves runStats and end-game scoring equations)
   const displayStage = (runStats?.bossesDefeated ?? 0) + 1;
@@ -2988,6 +2991,7 @@ export default function App() {
     masterDeck: CardDef[];
     items: (ItemId | null)[];
     totalOverkillDamage: number;
+    highestOverkill?: number;
     stage: number;
     level: number;
     duelsCompleted: number;
@@ -3034,6 +3038,7 @@ export default function App() {
           masterDeck,
           items,
           totalOverkillDamage,
+          highestOverkill,
           stage,
           level,
           duelsCompleted,
@@ -3042,7 +3047,7 @@ export default function App() {
           currentStageName,
           startingBones: startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones,
           ouroborosBuffs,
-          runStats,
+          runStats: runStatsRef.current,
           standardBossOrder: (window as any).__standardBossOrder,
           permanentScaleDebuff,
           consecutiveOneTurnWins,
@@ -3055,7 +3060,7 @@ export default function App() {
         console.warn("Auto-save failed:", e);
       }
     }
-  }, [masterDeck, items, totalOverkillDamage, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, screen]);
+  }, [masterDeck, items, totalOverkillDamage, highestOverkill, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, screen]);
 
   // --- Item Restock & Blood Bank Pricing ---
   const ITEM_COSTS: Record<ItemId, number> = {
@@ -4118,6 +4123,7 @@ export default function App() {
           addLog("You reach into the Magical Hat... and pull out a Rabbit!");
         } else {
           const lane = Math.floor(Math.random() * 4);
+          const existingVictim = playerBoard[lane];
           const stoneWallCard = ALL_CARD_LOOKUP['Stone Wall'] || {
             name: 'Stone Wall',
             class: 'Terrain' as any,
@@ -4127,19 +4133,31 @@ export default function App() {
             emoji: '🧱',
             sigils: []
           };
-          setPlayerBoard(prev => {
-            const next = [...prev];
-            if (next[lane]) {
-              addLog(`The Magical Hat drops a Stone Wall into lane ${lane + 1}, crushing your ${next[lane]!.name}!`);
+
+          (async () => {
+            if (existingVictim) {
+              triggerSfx('sacrifice');
+              await animateCardDestroy(true, lane);
+              addLog(`The Magical Hat drops a Stone Wall into lane ${lane + 1}, crushing your ${existingVictim.name}!`);
             } else {
               addLog(`The Magical Hat manifests a Stone Wall in lane ${lane + 1}.`);
             }
-            next[lane] = {
-              ...cloneCard(stoneWallCard),
-              id: `stone-hat-${Date.now()}`
-            };
-            return next;
-          });
+
+            const wallId = `stone-hat-${Date.now()}`;
+            triggerSummonWipe(wallId);
+            triggerSfx('hit');
+            setIsBoardRumbling(true);
+            setTimeout(() => setIsBoardRumbling(false), 220);
+
+            setPlayerBoard(prev => {
+              const next = [...prev];
+              next[lane] = {
+                ...cloneCard(stoneWallCard),
+                id: wallId
+              };
+              return next;
+            });
+          })();
         }
         break;
       }
@@ -6351,6 +6369,7 @@ export default function App() {
       }
       setItems(data.items);
       setTotalOverkillDamage(data.totalOverkillDamage ?? 0);
+      setHighestOverkill(data.highestOverkill ?? 0);
       setStage(restoredStage);
       setLevel(data.level ?? 1);
       setDuelsCompleted(restoredDuels);
@@ -6367,15 +6386,18 @@ export default function App() {
       if (data.ouroborosBuffs !== undefined) {
         setOuroborosBuffs(data.ouroborosBuffs);
       }
-      if (data.runStats) {
-        setRunStats(data.runStats);
-      } else {
-        setRunStats(prev => ({
-          ...prev,
-          bossesDefeated: inferredBossesDefeated,
-          clearedStages: restoredDuels,
-        }));
-      }
+      const restoredStats: RunStats = {
+        bossesDefeated: data.runStats?.bossesDefeated ?? inferredBossesDefeated,
+        scaleDamageDealt: data.runStats?.scaleDamageDealt ?? 0,
+        scaleDamageTaken: data.runStats?.scaleDamageTaken ?? 0,
+        cardsSacrificed: data.runStats?.cardsSacrificed ?? 0,
+        enemyCardsDestroyed: data.runStats?.enemyCardsDestroyed ?? 0,
+        grizzlyWallsSurvived: data.runStats?.grizzlyWallsSurvived ?? 0,
+        clearedStages: data.runStats?.clearedStages ?? restoredDuels,
+        finalBossesDefeated: data.runStats?.finalBossesDefeated ?? 0,
+      };
+      setRunStats(restoredStats);
+      runStatsRef.current = restoredStats;
       if (data.standardBossOrder) {
         (window as any).__standardBossOrder = data.standardBossOrder;
       }
