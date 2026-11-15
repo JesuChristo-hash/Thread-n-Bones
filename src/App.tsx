@@ -2867,6 +2867,7 @@ export default function App() {
   const [sfxVol, setSfxVol] = useState<number>(0.7);
   const [bossPhase, setBossPhase] = useState<number>(1);
   const [bossTotem, setBossTotem] = useState<{ class: Tribe; sigil: string } | null>(null);
+  const [hasDefeatedWeaver, setHasDefeatedWeaver] = useState<boolean>(false);
   const [woodcarverClasses, setWoodcarverClasses] = useState<Tribe[]>([]);
   const [isPhaseTransition, setIsPhaseTransition] = useState<boolean>(false);
   const [isBloodMoonDropping, setIsBloodMoonDropping] = useState<boolean>(false);
@@ -3008,6 +3009,7 @@ export default function App() {
     ouroborosBuffs?: number;
     runStats?: RunStats;
     standardBossOrder?: ('Zealot' | 'The Begotten' | 'The Weaver')[];
+    hasDefeatedWeaver?: boolean;
     permanentScaleDebuff?: number;
     consecutiveOneTurnWins?: number;
     otkCooldown?: number;
@@ -3055,6 +3057,7 @@ export default function App() {
           ouroborosBuffs,
           runStats: runStatsRef.current,
           standardBossOrder: (window as any).__standardBossOrder,
+          hasDefeatedWeaver,
           permanentScaleDebuff,
           consecutiveOneTurnWins,
           otkCooldown,
@@ -6115,7 +6118,7 @@ export default function App() {
 
     const pool = ENEMY_MAIN_DECK_POOL;
     const card = cloneCard(pool[Math.floor(Math.random() * pool.length)], 0);
-    if (isBossMatch && bossTotem && card.class === bossTotem.class) {
+    if (bossTotem && (card.class === bossTotem.class || card.class === "ALL Classes")) {
       if (!card.sigils.includes(bossTotem.sigil)) {
         card.sigils.push(bossTotem.sigil);
       }
@@ -6344,6 +6347,7 @@ export default function App() {
         winMessage = "The Begotten wriggles and writhes in the dirt, crying a woeful wail as he wallows.";
       } else if (bossState.type === 'The Weaver' || (bossState.type as any) === 'Woodcarver') {
         winMessage = "The Weaver gravely grasped her poppet, violently rending it usunder before vanishing.";
+        setHasDefeatedWeaver(true);
       }
     }
 
@@ -6431,6 +6435,9 @@ export default function App() {
       runStatsRef.current = restoredStats;
       if (data.standardBossOrder) {
         (window as any).__standardBossOrder = data.standardBossOrder;
+      }
+      if (data.hasDefeatedWeaver !== undefined) {
+        setHasDefeatedWeaver(Boolean(data.hasDefeatedWeaver));
       }
       if (data.permanentScaleDebuff !== undefined) {
         setPermanentScaleDebuff(data.permanentScaleDebuff);
@@ -6532,6 +6539,8 @@ export default function App() {
     const isBoss = typeof forcedBoss === 'string' ? true : (forcedBoss !== undefined ? forcedBoss : (duelNum === 6 || duelNum === 14 || duelNum === 24 || duelNum === 36));
     setIsBossMatch(isBoss);
     setBossPhase(1);
+    setBossTotem(null);
+    let activeEncounterTotem: { class: Tribe; sigil: string } | null = null;
     if (!isBoss) {
       setBossState({
         type: null,
@@ -6545,6 +6554,27 @@ export default function App() {
         ritualEndedVoluntarily: false,
         ritualSurrendered: false,
       });
+
+      // 35% chance for a standard encounter to field a random totem once The Weaver has been defeated
+      if (hasDefeatedWeaver && Math.random() < 0.35) {
+        const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved"];
+        const randomTotemSigils: string[] = [
+          'Airborne',
+          'Burrower',
+          'Fledgling',
+          'Hefty',
+          'Sharp Quills',
+          'Waterborne',
+          'Mighty Leap',
+          'Sprinter',
+          'Stinky',
+          'Bone King',
+        ];
+        const chosenTribe = tribes[Math.floor(Math.random() * tribes.length)];
+        const chosenSigil = randomTotemSigils[Math.floor(Math.random() * randomTotemSigils.length)];
+        activeEncounterTotem = { class: chosenTribe, sigil: chosenSigil };
+      }
+      setBossTotem(activeEncounterTotem);
     }
 
     let bossType: 'Zealot' | 'The Begotten' | 'BoneLord' | 'The Weaver' | null = null;
@@ -6948,6 +6978,13 @@ export default function App() {
           const poolToDraw = (zeroAtkCount === 0 && activeCombatants.length > 0) ? activeCombatants : validCandidates;
 
           const chosen = transformAmorphous(cloneCard(poolToDraw[Math.floor(Math.random() * poolToDraw.length)], 0));
+          if (
+            activeEncounterTotem &&
+            (chosen.class === activeEncounterTotem.class || chosen.class === "ALL Classes") &&
+            !chosen.sigils.includes(activeEncounterTotem.sigil)
+          ) {
+            chosen.sigils.push(activeEncounterTotem.sigil);
+          }
           initQueue[lane] = chosen;
 
           let chosenMult = 1;
@@ -6965,6 +7002,9 @@ export default function App() {
       setEnemyCardsPlayed(playedCount);
       setEnemyWavesLeft(2);
       addLog(`Encounter ${encounter} started [Tier ${difficultyTier}] (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
+      if (activeEncounterTotem) {
+        addLog(`Totem Battle! The adversary wields a [${activeEncounterTotem.class}] + [${activeEncounterTotem.sigil}] totem.`);
+      }
     }
 
     setEnemyBoard(initBoard);
@@ -7249,6 +7289,8 @@ export default function App() {
     setCurrentStageName(getRandomStageName());
     setTotemPieces([]);
     setActiveTotem({ head: null, body: null });
+    setBossTotem(null);
+    setHasDefeatedWeaver(false);
     delete (window as any).__standardBossOrder;
     setRunStats({
       bossesDefeated: 0,
@@ -7938,9 +7980,18 @@ export default function App() {
       laneIndex !== undefined &&
       (options?.isOpponent ? phase !== 'ENEMY' : phase === 'ENEMY');
 
-    // 2. Totem logic (active battle screen: player totem & boss totem)
-    const isPlayerTotemAffected = screen === 'DUEL' && isPlayer && !!(activeTotem?.head && activeTotem?.body && (card.class === activeTotem.head || card.class === "ALL Classes"));
-    const isBossTotemAffected = screen === 'DUEL' && !isPlayer && !!(bossTotem?.class && (card.class === bossTotem.class || card.class === "ALL Classes"));
+    // 2. Totem logic (active battle screen: player totem & boss/encounter totem)
+    const hasAlreadyEvolved = Boolean((card as any).hasEvolved || card.name.startsWith('Elder '));
+    const isPlayerTotemAffected =
+      screen === 'DUEL' &&
+      isPlayer &&
+      !!(activeTotem?.head && activeTotem?.body && (card.class === activeTotem.head || card.class === "ALL Classes")) &&
+      !(activeTotem.body === 'Fledgling' && hasAlreadyEvolved);
+    const isBossTotemAffected =
+      screen === 'DUEL' &&
+      !isPlayer &&
+      !!(bossTotem?.class && (card.class === bossTotem.class || card.class === "ALL Classes")) &&
+      !(bossTotem.sigil === 'Fledgling' && hasAlreadyEvolved);
     const isTotemAffected = isPlayerTotemAffected || isBossTotemAffected;
 
     if (isPlayerTotemAffected && activeTotem.body && !card.sigils.includes(activeTotem.body)) {
@@ -9151,6 +9202,7 @@ export default function App() {
                         ouroborosBuffs,
                         runStats,
                         standardBossOrder: (window as any).__standardBossOrder,
+                        hasDefeatedWeaver,
                         permanentScaleDebuff,
                         consecutiveOneTurnWins,
                         otkCooldown,
@@ -11377,11 +11429,12 @@ export default function App() {
                     <div className="w-20 h-[1px] bg-gradient-to-r from-transparent via-[#3a2f26] to-transparent mt-1.5" />
                   </div>
 
-                  {/* Stitched Effigy Display (Weaver's Needlework) */}
-                  {(Boolean(isBossMatch && bossTotem) || Boolean(activeTotem?.head && activeTotem?.body)) && (
+                  {/* Stitched Effigy Display (Weaver's Needlework & Post-Weaver Totem Duels) */}
+                  {(Boolean(bossTotem) || Boolean(activeTotem?.head && activeTotem?.body)) && (
                     <div className="flex flex-row items-center justify-center gap-2 w-full mt-1.5 px-1">
-                      {/* Boss Effigy (The Weaver's Poppet) */}
-                      {isBossMatch && bossState.type === 'The Weaver' && bossTotem && (() => {
+                      {/* Enemy Totem / Weaver's Poppet */}
+                      {bossTotem && (!isBossMatch || bossState.type === 'The Weaver') && (() => {
+                        const isWeaverPoppet = isBossMatch && bossState.type === 'The Weaver';
                         const tribeName = (bossTotem as any).class || (bossTotem as any).tribe || (bossTotem as any).head || 'Canine';
                         const sigilName = (bossTotem as any).sigil || (bossTotem as any).body || '';
                         const patchIcon = TRIBE_EMBROIDERY[tribeName] || (
@@ -11390,13 +11443,19 @@ export default function App() {
 
                         return (
                           <div
-                            className={`relative border border-dashed border-purple-700/70 bg-[#160c1c] shadow-[0_4px_14px_rgba(30,10,40,0.7)] p-2 flex flex-col items-center justify-between text-center select-none rounded-[3px] shrink-0 ${
+                            className={`relative border border-dashed ${
+                              isWeaverPoppet
+                                ? 'border-purple-700/70 bg-[#160c1c] shadow-[0_4px_14px_rgba(30,10,40,0.7)]'
+                                : 'border-red-900/70 bg-[#1a0d0d] shadow-[0_4px_14px_rgba(40,10,10,0.7)]'
+                            } p-2 flex flex-col items-center justify-between text-center select-none rounded-[3px] shrink-0 ${
                               Boolean(activeTotem?.head && activeTotem?.body) ? 'flex-1 min-w-0 h-[134px]' : 'w-24 sm:w-28 h-[134px]'
                             }`}
-                            title={`Weaver's Poppet: ${tribeName} kin bear the ${sigilName || 'unmarked'} stitch`}
+                            title={`${isWeaverPoppet ? "Weaver's Poppet" : 'Foe Totem'}: ${tribeName} kin bear the ${sigilName || 'unmarked'} sigil`}
                           >
-                            <span className="text-[7px] font-mono uppercase tracking-[0.18em] text-purple-400/90 leading-none shrink-0">
-                              Poppet
+                            <span className={`text-[7px] font-mono uppercase tracking-[0.18em] leading-none shrink-0 ${
+                              isWeaverPoppet ? 'text-purple-400/90' : 'text-red-400/90'
+                            }`}>
+                              {isWeaverPoppet ? 'Poppet' : 'Foe Totem'}
                             </span>
 
                             {/* Head Patch */}
@@ -11445,7 +11504,7 @@ export default function App() {
                         return (
                           <div
                             className={`relative border border-dashed border-[#8c6747]/80 bg-[#150f0a] shadow-[0_4px_14px_rgba(20,10,0,0.7)] p-2 flex flex-col items-center justify-between text-center select-none rounded-[3px] shrink-0 ${
-                              isBossMatch && bossTotem ? 'flex-1 min-w-0 h-[134px]' : 'w-24 sm:w-28 h-[134px]'
+                              bossTotem ? 'flex-1 min-w-0 h-[134px]' : 'w-24 sm:w-28 h-[134px]'
                             }`}
                             title={`Stitched Effigy: ${tribeName} kin sewn with ${sigilName}`}
                           >
@@ -11715,7 +11774,7 @@ export default function App() {
                                   : `${bossAnimClass}${defBorder}`
                               }`}
                               style={{
-                                backgroundImage: `url(${bloodMoonImg})`,
+                                backgroundImage: `url(${BASE}/assets/cardbases/blood_moon.gif)`,
                                 backgroundSize: '100% 100%',
                               }}
                             >
