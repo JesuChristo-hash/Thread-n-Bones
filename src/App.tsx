@@ -7,7 +7,6 @@ import React, { useState, useEffect, useRef, useCallback, type JSX } from 'react
 // @ts-ignore
 import discordGif from './assets/text/sidehustle-discord.gif';
 import cardBaseImg from './assets/card/card_base.png';
-import bloodMoonImg from './assets/card/blood_moon.png';
 
 import {
   Skull,
@@ -8121,7 +8120,7 @@ export default function App() {
                 : 'transition-transform duration-200 ease-out'
             } ${borderStyle} ${animClass}`}
             style={{
-              backgroundImage: `url(${bloodMoonImg})`,
+              backgroundImage: `url(${BASE}/assets/cardbases/blood_moon.gif)`,
               backgroundSize: '100% 100%',
             }}
           >
@@ -8299,15 +8298,15 @@ export default function App() {
             </div>
           )}
 
-         {/* --- ARCH WINDOW (Lowered to 24.5% to center in the stone frame) --- */}
-          <div className="absolute top-[24.5%] left-[19.5%] w-[61%] h-[40.5%] flex items-center justify-center overflow-hidden pointer-events-none z-10">
+         {/* --- ARCH WINDOW (Aligned to updated card_base.png stone recess) --- */}
+          <div className="absolute top-[21%] left-[19%] w-[62%] h-[46.5%] rounded-t-full flex items-center justify-center overflow-hidden pointer-events-none z-10">
             <img
               src={getCardArtUrl(card)}
               alt={card.name}
               loading="eager"
               decoding="async"
               fetchPriority={options?.isOpponent ? 'high' : 'auto'}
-              className={`max-w-[88%] max-h-[88%] w-auto h-auto object-contain pointer-events-none select-none transition-transform ${
+              className={`max-w-[92%] max-h-[92%] w-auto h-auto object-contain pointer-events-none select-none transition-transform ${
                 CARD_ART_OFFSETS[card.name] || ''
               } ${(() => {
                 const isDirectionalBeast = ['Elk', 'Elk Fawn', 'Pronghorn', 'Moose Buck', 'Demon Elk'].some(n => card.name?.includes(n));
