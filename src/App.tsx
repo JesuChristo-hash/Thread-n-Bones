@@ -167,17 +167,19 @@ const CARD_ART_SLUG_ALIASES: Record<string, string> = {
   harepelt: 'pelt',
 };
 
+const ASSET_SESSION_VERSION = Date.now();
+
 export const getCardArtUrl = (card: CardDef): string => {
   if (card.artUrl) return card.artUrl;
   const rawSlug = toAssetSlug(card.name || '');
   if (CARD_ART_SLUG_ALIASES[rawSlug]) {
-    return `${BASE}/assets/cardart/${CARD_ART_SLUG_ALIASES[rawSlug]}.png`;
+    return `${BASE}/assets/cardart/${CARD_ART_SLUG_ALIASES[rawSlug]}.png?v=${ASSET_SESSION_VERSION}`;
   }
   // Strip Fledgling evolution prefixes so art lookup maps to the base creature sprite
   const baseName = (card.name || '').replace(/^(Elder|Greater|God)\s+/i, '');
   const slug = toAssetSlug(baseName);
   const resolvedSlug = CARD_ART_SLUG_ALIASES[slug] || slug;
-  return `${BASE}/assets/cardart/${resolvedSlug}.png?v=${Date.now()}`;
+  return `${BASE}/assets/cardart/${resolvedSlug}.png?v=${ASSET_SESSION_VERSION}`;
 };
 
 // Targeted offsets for specific sprites that need bespoke positioning
