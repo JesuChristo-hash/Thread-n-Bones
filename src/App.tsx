@@ -4,8 +4,6 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, type JSX } from 'react';
-// @ts-ignore
-import discordGif from './assets/text/sidehustle-discord.gif';
 import cardBaseImg from './assets/card/card_base.png';
 
 import {
@@ -138,6 +136,7 @@ export interface BossCombatState {
 
 // --- Asset Path Helpers ---
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+const discordGif = `${BASE}/assets/text/sidehustle-discord.webp`;
 
 export const toAssetSlug = (str: string): string =>
   str.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -173,7 +172,7 @@ export const getCardArtUrl = (card: CardDef): string => {
   if (card.artUrl) return card.artUrl;
   const rawSlug = toAssetSlug(card.name || '');
   if (rawSlug === 'bloodmoon') {
-    return `${BASE}/assets/cardbases/blood_moon.gif?v=${ASSET_SESSION_VERSION}`;
+    return `${BASE}/assets/cardbases/blood_moon.webp?v=${ASSET_SESSION_VERSION}`;
   }
   if (CARD_ART_SLUG_ALIASES[rawSlug]) {
     return `${BASE}/assets/cardart/${CARD_ART_SLUG_ALIASES[rawSlug]}.png?v=${ASSET_SESSION_VERSION}`;
@@ -8183,7 +8182,7 @@ export default function App() {
                 : 'transition-transform duration-200 ease-out'
             } ${borderStyle} ${animClass}`}
             style={{
-              backgroundImage: `url(${BASE}/assets/cardbases/blood_moon.gif)`,
+              backgroundImage: `url(${BASE}/assets/cardbases/blood_moon.webp)`,
               backgroundSize: '100% 100%',
             }}
           >
@@ -8694,7 +8693,7 @@ export default function App() {
             transform: 'translateZ(0)',
             backfaceVisibility: 'hidden',
           }}
-          className={`flex flex-col text-slate-200 overflow-hidden font-sans select-none image-rendering-pixelated ${getStageBgClass(stage, isBossMatch)} ${isTutorialGlitching ? 'animate-tutorial-glitch' : ''}`}
+          className={`flex flex-col text-slate-200 overflow-hidden font-sans select-none ${getStageBgClass(stage, isBossMatch)} ${isTutorialGlitching ? 'animate-tutorial-glitch' : ''}`}
         >
         {/* =========================================================================
             SPLASH SCREEN
@@ -11798,7 +11797,7 @@ export default function App() {
                                   : `${bossAnimClass}${defBorder}`
                               }`}
                               style={{
-                                backgroundImage: `url(${BASE}/assets/cardbases/blood_moon.gif)`,
+                                backgroundImage: `url(${BASE}/assets/cardbases/blood_moon.webp)`,
                                 backgroundSize: '100% 100%',
                               }}
                             >
