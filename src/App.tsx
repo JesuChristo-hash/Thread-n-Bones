@@ -3306,6 +3306,7 @@ export default function App() {
   const [devTab, setDevTab] = useState<'ACTIONS' | 'ALTER_DECK' | 'CARDS' | 'SIGILS'>('ACTIONS');
   const [devCardSearch, setDevCardSearch] = useState<string>('');
   const [devCardsFilter, setDevCardsFilter] = useState<string>('');
+  const [devInspectCard, setDevInspectCard] = useState<CardDef | null>(null);
   const [devAlterCard, setDevAlterCard] = useState<CardDef | null>(null);
 
   // Duel field ref for shake animations
@@ -8227,8 +8228,8 @@ export default function App() {
             </div>
 
             {/* Dynamic Health Socket for Blood Moon */}
-            <div className="absolute bottom-[4.2%] right-[5%] w-[23%] h-[16%] flex items-center justify-center pointer-events-none z-20">
-              <span className="font-['Cinzel',_serif] font-black text-sm text-red-500 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+            <div className="absolute bottom-[6.5%] right-[5%] w-[23%] h-[16%] flex items-center justify-center pointer-events-none z-20">
+              <span className="font-['Cinzel',_serif] font-black text-sm leading-none text-red-500 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
                 {card.health}
               </span>
             </div>
@@ -11107,65 +11108,127 @@ export default function App() {
               </button>
             </div>
 
-            {/* List All Cards Table with Search */}
-            {devTab === 'CARDS' && (
-              <div className="border border-amber-950/40 p-3 mb-6">
-                <div className="relative mb-2">
-                  <input
-                    type="text"
-                    placeholder="Search cards by name, tribe, cost, or sigil..."
-                    value={devCardsFilter}
-                    onChange={e => setDevCardsFilter(e.target.value)}
-                    className="w-full bg-transparent border-b border-amber-950/60 pb-1.5 pr-8 text-xs text-amber-200 placeholder-stone-600 font-mono focus:outline-none focus:border-amber-600"
-                  />
-                  {devCardsFilter && (
-                    <button
-                      onClick={() => setDevCardsFilter('')}
-                      className="absolute right-2 top-0.5 text-xs text-stone-500 hover:text-amber-200 font-mono cursor-pointer"
-                      title="Clear search"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-                <div className="text-[10px] text-stone-500 font-mono mb-2 flex justify-between">
-                  <span>Showing {
-                    Object.values(ALL_CARD_LOOKUP).filter(c => {
-                      const term = devCardsFilter.trim().toLowerCase();
-                      if (!term) return true;
-                      const nameMatches = c.name?.toLowerCase().includes(term);
-                      const classMatches = c.class?.toLowerCase().includes(term);
-                      const sigilMatches = (c.sigils || []).some(s => s?.toLowerCase().includes(term));
-                      const costMatches = (c.cost !== undefined && String(c.cost) === term) || (c.boneCost !== undefined && String(c.boneCost) === term);
-                      return nameMatches || classMatches || sigilMatches || costMatches;
-                    }).length
-                  } cards</span>
-                  {devCardsFilter && <span className="text-amber-400">Filter active</span>}
-                </div>
-                <div className="max-h-56 overflow-y-auto text-xs font-mono space-y-1">
-                  {Object.values(ALL_CARD_LOOKUP)
-                    .filter(c => {
-                      const term = devCardsFilter.trim().toLowerCase();
-                      if (!term) return true;
-                      const nameMatches = c.name?.toLowerCase().includes(term);
-                      const classMatches = c.class?.toLowerCase().includes(term);
-                      const sigilMatches = (c.sigils || []).some(s => s?.toLowerCase().includes(term));
-                      const costMatches = (c.cost !== undefined && String(c.cost) === term) || (c.boneCost !== undefined && String(c.boneCost) === term);
-                      return nameMatches || classMatches || sigilMatches || costMatches;
-                    })
-                    .map(c => (
-                      <div key={c.name} className="py-1 border-b border-amber-950/30 flex justify-between items-center hover:bg-amber-950/20 px-1">
-                        <span>
-                          <strong className="text-amber-300">{c.name}</strong> {c.emoji} | <span className="text-stone-400">{c.class}</span>
-                        </span>
-                        <span className="text-stone-400 text-[11px]">
-                          ATK: {c.attack} HP: {c.health} | Cost: {c.cost !== undefined ? `${c.cost} Blood` : c.boneCost ? `${c.boneCost} Bones` : '0'}
-                        </span>
+            {/* Visual Card Art Inspector with Search */}
+            {devTab === 'CARDS' && (() => {
+              const term = devCardsFilter.trim().toLowerCase();
+              const filteredCards = Object.values(ALL_CARD_LOOKUP)
+                .filter(c => {
+                  if (!term) return true;
+                  const nameMatches = c.name?.toLowerCase().includes(term);
+                  const classMatches = c.class?.toLowerCase().includes(term);
+                  const sigilMatches = (c.sigils || []).some(s => s?.toLowerCase().includes(term));
+                  const costMatches =
+                    (c.cost !== undefined && String(c.cost) === term) ||
+                    (c.boneCost !== undefined && String(c.boneCost) === term);
+                  return nameMatches || classMatches || sigilMatches || costMatches;
+                })
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+              const getCleanAssetPath = (card: CardDef) => {
+                if (card.name?.toLowerCase().includes('moon')) {
+                  return 'public/assets/cardbases/blood_moon.webp';
+                }
+                const raw = getCardArtUrl(card) || '';
+                const file = raw.split('/').pop()?.split('?')[0] || 'missing.png';
+                return `public/assets/cardart/${file}`;
+              };
+
+              return (
+                <div className="border border-amber-950/40 p-3 mb-6">
+                  <div className="relative mb-2">
+                    <input
+                      type="text"
+                      placeholder="Search cards by name, tribe, cost, or sigil..."
+                      value={devCardsFilter}
+                      onChange={e => setDevCardsFilter(e.target.value)}
+                      className="w-full bg-transparent border-b border-amber-950/60 pb-1.5 pr-8 text-xs text-amber-200 placeholder-stone-600 font-mono focus:outline-none focus:border-amber-600"
+                    />
+                    {devCardsFilter && (
+                      <button
+                        onClick={() => setDevCardsFilter('')}
+                        className="absolute right-2 top-0.5 text-xs text-stone-500 hover:text-amber-200 font-mono cursor-pointer"
+                        title="Clear search"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="text-[10px] text-stone-500 font-mono mb-3 flex justify-between">
+                    <span>Showing {filteredCards.length} cards — click any card to inspect art</span>
+                    {devCardsFilter && <span className="text-amber-400">Filter active</span>}
+                  </div>
+
+                  {/* Enlarged Photoshop Audit Spotlight */}
+                  {devInspectCard && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#120d0a] border border-amber-700/50 rounded-sm p-4 mb-4">
+                      <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <div className="transform scale-125 origin-center my-4 mx-3">
+                          {renderCard(devInspectCard, { showCost: true })}
+                        </div>
+                        <div className="text-left font-mono space-y-1.5">
+                          <div className="text-sm font-bold text-amber-200 uppercase tracking-wider">
+                            {devInspectCard.name}
+                          </div>
+                          <div className="text-xs text-emerald-400">
+                            File:{' '}
+                            <span className="select-all">
+                              {getCleanAssetPath(devInspectCard)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-amber-400/80">
+                            Offset: {CARD_ART_OFFSETS[devInspectCard.name] || 'none'}
+                          </div>
+                          <div className="text-[11px] text-stone-400">
+                            Tribe: {devInspectCard.class} | ATK/HP: {devInspectCard.attack}/{devInspectCard.health} | Sigils:{' '}
+                            {devInspectCard.sigils?.join(', ') || 'None'}
+                          </div>
+                        </div>
                       </div>
-                    ))}
+                      <button
+                        onClick={() => setDevInspectCard(null)}
+                        className="self-start sm:self-center px-3 py-1.5 text-[11px] uppercase tracking-widest bg-[#1c1410] hover:bg-[#2a1e18] border border-[#3a2a20] text-[#cfb794] rounded-sm cursor-pointer"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Visual Card Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[55vh] overflow-y-auto p-2 bg-[#090705]/80 border border-amber-950/30 rounded-sm">
+                    {filteredCards.map(c => {
+                      const fileName = getCleanAssetPath(c).split('/').pop() || 'missing.png';
+                      const offset = CARD_ART_OFFSETS[c.name];
+                      const isInspected = devInspectCard?.name === c.name;
+
+                      return (
+                        <div
+                          key={c.name}
+                          onClick={() => setDevInspectCard(c)}
+                          className={`flex flex-col items-center p-2 rounded-sm border transition-colors cursor-pointer ${
+                            isInspected
+                              ? 'bg-amber-950/30 border-amber-500/70'
+                              : 'bg-[#110c09]/90 border-[#261c15] hover:border-amber-700/60'
+                          }`}
+                        >
+                          <div className="pointer-events-none">
+                            {renderCard(c, { showCost: true })}
+                          </div>
+                          <span className="mt-2 text-[10px] font-mono text-amber-200/90 truncate max-w-full select-all">
+                            {fileName}
+                          </span>
+                          {offset && (
+                            <span className="mt-0.5 text-[9px] font-mono text-cyan-400/80 truncate max-w-full">
+                              {offset}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* List All Sigils Grid */}
             {devTab === 'SIGILS' && (
