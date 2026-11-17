@@ -3310,52 +3310,75 @@ export default function App() {
   const isRitualReady = ritualReadyProgress >= 100;
 
   useEffect(() => {
-    const MIN_BOOT_MS = 8000;
-    const start = performance.now();
+    let interval: ReturnType<typeof setInterval>;
+    let cancelled = false;
 
-    const urls = new Set<string>([
-      `${BASE}/assets/cardbases/card_base.png`,
-      `${BASE}/assets/cardbases/cardbacks.png`,
-      `${BASE}/assets/cardbases/bestowed-card-base.png`,
-      `${BASE}/assets/cardbases/combined-card-base.png`,
-      `${BASE}/assets/cardbases/duplicate-card-base.png`,
-      `${BASE}/assets/cardbases/blood_moon.webp`,
-      ...Object.values(ALL_CARD_LOOKUP).map((c) => getCardArtUrl(c)),
-      ...Object.keys(SIGIL_MAPPING).map((s) => getSigilArtUrl(s)),
-    ]);
-
-    let loadedCount = 0;
-    const totalUrls = urls.size || 1;
-
-    urls.forEach((src) => {
-      if (!src) {
-        loadedCount++;
-        return;
+    const initPreloader = async () => {
+      let isCacheWarm = false;
+      try {
+        if ('caches' in window) {
+          const cache = await caches.open('thread-bones-assets-v2');
+          const cachedKeys = await cache.keys();
+          isCacheWarm = cachedKeys.length >= 20;
+        }
+      } catch {
+        isCacheWarm = false;
       }
-      const img = new Image();
-      img.decoding = 'async';
-      img.onload = img.onerror = () => {
-        loadedCount++;
-      };
-      img.src = src;
-    });
 
-    const interval = setInterval(() => {
-      const elapsedRatio = Math.min(1, (performance.now() - start) / MIN_BOOT_MS);
-      const assetRatio = loadedCount / totalUrls;
-      const combined =
-        elapsedRatio >= 1 && assetRatio >= 1
-          ? 1
-          : Math.min(elapsedRatio, assetRatio >= 1 ? 0.99 : Math.min(elapsedRatio, 0.95));
+      if (cancelled) return;
 
-      setRitualReadyProgress(Math.floor(combined * 100));
+      const minBootMs = isCacheWarm ? 1500 : 8000;
+      const start = performance.now();
 
-      if (combined >= 1) {
-        clearInterval(interval);
-      }
-    }, 100);
+      const urls = new Set<string>([
+        `${BASE}/assets/cardbases/card_base.png`,
+        `${BASE}/assets/cardbases/cardbacks.png`,
+        `${BASE}/assets/cardbases/bestowed-card-base.png`,
+        `${BASE}/assets/cardbases/combined-card-base.png`,
+        `${BASE}/assets/cardbases/duplicate-card-base.png`,
+        `${BASE}/assets/cardbases/blood_moon.webp`,
+        ...Object.values(ALL_CARD_LOOKUP).map((c) => getCardArtUrl(c)),
+        ...Object.keys(SIGIL_MAPPING).map((s) => getSigilArtUrl(s)),
+      ]);
 
-    return () => clearInterval(interval);
+      let loadedCount = 0;
+      const totalUrls = urls.size || 1;
+
+      urls.forEach((src) => {
+        if (!src) {
+          loadedCount++;
+          return;
+        }
+        const img = new Image();
+        img.decoding = 'async';
+        img.onload = img.onerror = () => {
+          loadedCount++;
+        };
+        img.src = src;
+      });
+
+      interval = setInterval(() => {
+        const elapsedRatio = Math.min(1, (performance.now() - start) / minBootMs);
+        const assetRatio = loadedCount / totalUrls;
+        const combined =
+          elapsedRatio >= 1 && assetRatio >= 1
+            ? 1
+            : Math.min(elapsedRatio, assetRatio >= 1 ? 0.99 : Math.min(elapsedRatio, 0.95));
+
+        setRitualReadyProgress(Math.floor(combined * 100));
+
+        if (combined >= 1) {
+          clearInterval(interval);
+        }
+      }, 100);
+    };
+
+    initPreloader();
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+    };
   }, []);
   const [devInspectCard, setDevInspectCard] = useState<CardDef | null>(null);
   const [devAlterCard, setDevAlterCard] = useState<CardDef | null>(null);
