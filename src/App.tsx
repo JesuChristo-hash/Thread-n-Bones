@@ -3313,21 +3313,8 @@ export default function App() {
     let interval: ReturnType<typeof setInterval>;
     let cancelled = false;
 
-    const initPreloader = async () => {
-      let isCacheWarm = false;
-      try {
-        if ('caches' in window) {
-          const cache = await caches.open('thread-bones-assets-v3');
-          const cachedKeys = await cache.keys();
-          isCacheWarm = cachedKeys.length >= 20;
-        }
-      } catch {
-        isCacheWarm = false;
-      }
-
-      if (cancelled) return;
-
-      const minBootMs = isCacheWarm ? 1500 : 8000;
+    const initPreloader = () => {
+      const minBootMs = 1500;
       const start = performance.now();
 
       const urls = new Set<string>([
