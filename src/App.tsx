@@ -172,6 +172,9 @@ const ASSET_SESSION_VERSION = Date.now();
 export const getCardArtUrl = (card: CardDef): string => {
   if (card.artUrl) return card.artUrl;
   const rawSlug = toAssetSlug(card.name || '');
+  if (rawSlug === 'bloodmoon') {
+    return `${BASE}/assets/cardbases/blood_moon.gif?v=${ASSET_SESSION_VERSION}`;
+  }
   if (CARD_ART_SLUG_ALIASES[rawSlug]) {
     return `${BASE}/assets/cardart/${CARD_ART_SLUG_ALIASES[rawSlug]}.png?v=${ASSET_SESSION_VERSION}`;
   }
