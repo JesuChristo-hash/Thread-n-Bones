@@ -206,20 +206,21 @@ const ARENA_BACKGROUND_FILES: Record<string, string> = {
   weaver: 'weaverboss.jpg',
   zealot: 'zealotboss.jpg',
   begotten: 'begottenboss.jpg',
-  finalboss: 'finalboss.png',
-  splash: 'splash.png',
-  deckSelect: 'deck-selection.png',
+  finalboss: 'finalboss.jpg',
+  splash: 'splash.jpg',
+  deckSelect: 'deck-selection.jpg',
   gameover: 'gameover.jpg',
-  draft: 'draft.png',
+  draft: 'draft.jpg',
   crossroads: 'crossroads-select.jpg',
   campfire: 'campfireevent.jpg',
   altar: 'altarevent.jpg',
   totemCarving: 'tribeeventbg.jpg',
   costBargain: 'costeventbg.jpg',
-  bonelord: 'bonelordevent.png',
+  bonelord: 'bonelordevent.jpg',
   trial: 'trialevent.jpg',
-  cardChoice: 'choiceevent.png',
-  weaverEvent: 'weaverevent.png',
+  cardChoice: 'choiceevent.jpg',
+  weaverEvent: 'weaverevent.jpg',
+  merchantEvent: 'merchant_event.jpg',
 };
 
 export const getBackgroundUrl = (key: string): string => {
@@ -626,19 +627,20 @@ BOSS_EXCLUSIVE_CARDS.forEach(c => {
 });
 // Pre-warm memory cache for background plates and card art
 const PRELOAD_BACKGROUND_FILES = [
-  'splash.png',
-  'deck-selection.png',
+  'splash.jpg',
+  'deck-selection.jpg',
   'gameover.jpg',
-  'draft.png',
+  'draft.jpg',
   'crossroads-select.jpg',
   'campfireevent.jpg',
   'altarevent.jpg',
   'tribeeventbg.jpg',
   'costeventbg.jpg',
-  'bonelordevent.png',
-  'weaverevent.png',
+  'bonelordevent.jpg',
+  'weaverevent.jpg',
   'trialevent.jpg',
-  'choiceevent.png',
+  'choiceevent.jpg',
+  'merchant_event.jpg',
 ];
 
 const preloadAssetUrl = (url: string): Promise<void> => {
@@ -653,7 +655,7 @@ const preloadAssetUrl = (url: string): Promise<void> => {
 
 export const preloadCoreAssets = async () => {
   // 1. Prioritize splash background first so title screen renders immediately
-  await preloadAssetUrl(`${BASE}/assets/backgrounds/splash.png`);
+  await preloadAssetUrl(`${BASE}/assets/backgrounds/splash.jpg`);
 
   // 2. Preload lightweight card sprites (skip 9MB blood_moon.gif until final boss)
   const cardUrls = Array.from(
