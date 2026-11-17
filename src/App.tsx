@@ -3335,27 +3335,38 @@ export default function App() {
       let loadedCount = 0;
       const queue = Array.from(urls).filter(Boolean);
       const totalUrls = queue.length || 1;
-      const CONCURRENCY = 6;
+      const CONCURRENCY = 3;
+
+      const loadOne = async (src: string) => {
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = src;
+        if (img.decode) {
+          await img.decode();
+        } else {
+          await new Promise<void>((res, rej) => {
+            img.onload = () => res();
+            img.onerror = () => rej();
+          });
+        }
+      };
 
       const worker = async () => {
         while (queue.length > 0 && !cancelled) {
           const src = queue.shift()!;
           try {
-            const img = new Image();
-            img.decoding = 'async';
-            img.src = src;
-            if (img.decode) {
-              await img.decode();
-            } else {
-              await new Promise<void>((res) => {
-                img.onload = img.onerror = () => res();
-              });
-            }
+            await loadOne(src);
           } catch {
-            // Ignore broken/missing assets so boot never stalls
+            await new Promise((r) => setTimeout(r, 250));
+            try {
+              await loadOne(src);
+            } catch {
+              // Ignore genuinely missing assets so boot never stalls
+            }
           } finally {
             loadedCount++;
           }
+          await new Promise((r) => setTimeout(r, 20));
         }
       };
 
