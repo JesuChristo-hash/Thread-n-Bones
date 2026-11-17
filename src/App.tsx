@@ -652,22 +652,27 @@ const preloadAssetUrl = (url: string): Promise<void> => {
 };
 
 export const preloadCoreAssets = async () => {
-  const bgPromises = PRELOAD_BACKGROUND_FILES.map(f =>
-    preloadAssetUrl(`${BASE}/assets/backgrounds/${f}`)
-  );
+  // 1. Prioritize splash background first so title screen renders immediately
+  await preloadAssetUrl(`${BASE}/assets/backgrounds/splash.png`);
 
+  // 2. Preload lightweight card sprites (skip 9MB blood_moon.gif until final boss)
   const cardUrls = Array.from(
     new Set(
       Object.values(ALL_CARD_LOOKUP)
+        .filter(card => card.name !== 'BLOOD MOON')
         .map(card => getCardArtUrl(card))
         .filter((url): url is string => Boolean(url))
     )
   );
 
-  await Promise.all(bgPromises);
-
   for (let i = 0; i < cardUrls.length; i += 8) {
     await Promise.all(cardUrls.slice(i, i + 8).map(url => preloadAssetUrl(url)));
+  }
+
+  // 3. Trickle heavy event/screen backgrounds one by one so main thread & GPU stay smooth
+  for (const f of PRELOAD_BACKGROUND_FILES) {
+    if (f === 'splash.png') continue;
+    await preloadAssetUrl(`${BASE}/assets/backgrounds/${f}`);
   }
 };
 type EvolutionTarget = string | { target: string; chance: number }[];
@@ -8705,13 +8710,22 @@ export default function App() {
               backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.6) 0px, rgba(0,0,0,0.6) 1px, transparent 1px, transparent 3px)',
             }}
           />
-          {/* Eerie Candle/Ritual Backlight Glow */}
-          <div className="absolute w-[520px] h-[320px] rounded-full bg-red-900/20 blur-[100px] pointer-events-none z-10 animate-candle-breath" />
+          {/* Eerie Candle/Ritual Backlight Glow (radial-gradient avoids expensive 100px blur filter) */}
+          <div
+            className="absolute w-[640px] h-[420px] rounded-full pointer-events-none z-10 animate-candle-breath"
+            style={{
+              background: 'radial-gradient(circle, rgba(127, 29, 29, 0.28) 0%, rgba(127, 29, 29, 0.08) 45%, transparent 72%)',
+              willChange: 'transform, opacity',
+            }}
+          />
           
           {/* Centered Glowing Stylized SVG Pentagram with Esoteric Runes */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-            <div className="w-[420px] h-[420px] sm:w-[500px] sm:h-[500px] md:w-[560px] md:h-[560px] animate-pentagram-rotate">
-              <svg viewBox="0 0 200 200" className="w-full h-full text-red-900/45 filter drop-shadow-[0_0_18px_rgba(185,28,28,0.45)]">
+            <div
+              className="w-[420px] h-[420px] sm:w-[500px] sm:h-[500px] md:w-[560px] md:h-[560px] animate-pentagram-rotate"
+              style={{ willChange: 'transform' }}
+            >
+              <svg viewBox="0 0 200 200" className="w-full h-full text-red-900/55">
               {/* Main Outer Runes Border Ring */}
               <circle cx="100" cy="100" r="94" fill="none" stroke="currentColor" strokeWidth="1.2" />
               <circle cx="100" cy="100" r="90" fill="none" stroke="currentColor" strokeWidth="0.8" strokeDasharray="3, 4" />
