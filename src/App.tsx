@@ -8648,11 +8648,11 @@ export default function App() {
             }
           @keyframes splashOccultPulse {
           0%, 100% {
-            filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.6)) drop-shadow(0 0 32px rgba(153, 27, 27, 0.45));
-            opacity: 0.95;
+            transform: scale(1);
+            opacity: 0.72;
           }
           50% {
-            filter: drop-shadow(0 0 24px rgba(248, 113, 113, 0.9)) drop-shadow(0 0 54px rgba(220, 38, 38, 0.65));
+            transform: scale(1.015);
             opacity: 1;
           }
         }
@@ -8665,6 +8665,8 @@ export default function App() {
           50% { transform: scale(1.06); opacity: 0.65; }
         }
         .animate-occult-pulse {
+          filter: drop-shadow(0 0 18px rgba(239, 68, 68, 0.75)) drop-shadow(0 0 42px rgba(185, 28, 28, 0.55));
+          will-change: transform, opacity;
           animation: splashOccultPulse 4.5s ease-in-out infinite;
         }
         .animate-candle-breath {
