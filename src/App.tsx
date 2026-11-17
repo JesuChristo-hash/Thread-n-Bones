@@ -8191,12 +8191,9 @@ export default function App() {
             <div className="absolute bottom-[22%] left-0 right-0 flex items-center justify-center gap-1 px-1 z-30 pointer-events-auto">
               {(card.sigils || []).map((sigil: any, idx: number) => {
                 const sigilName = typeof sigil === 'string' ? sigil : sigil?.name || '';
-                const cleanKey = sigilName.toLowerCase().replace(/[\s_]+/g, '');
-                const iconSrc = typeof sigil === 'object' && sigil?.icon 
-                  ? sigil.icon 
-                  : (typeof (window as any).SIGIL_ICONS !== 'undefined' && (window as any).SIGIL_ICONS[sigilName])
-                    ? (window as any).SIGIL_ICONS[sigilName]
-                    : `${BASE}/assets/sigils/${sigilName.toLowerCase().replace(/\s+/g, '_')}.png`;
+                const iconSrc = typeof sigil === 'object' && sigil?.icon
+                  ? sigil.icon
+                  : getSigilArtUrl(sigilName);
 
                 return (
                   <div
