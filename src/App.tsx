@@ -8702,7 +8702,7 @@ export default function App() {
         {screen === 'SPLASH' && (
         <div 
           className="absolute inset-0 z-50 flex flex-col items-center justify-center p-4 overflow-hidden select-none animate-fade-up"
-          style={getScreenBgStyle('splash.png')}
+          style={getScreenBgStyle('splash.jpg')}
         >
           {/* Blood-Red Tabletop Vignette & Subtle CRT Scanlines */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_15%,rgba(14,4,4,0.85)_70%,rgba(0,0,0,0.98)_100%)] pointer-events-none z-10" />
@@ -8986,7 +8986,7 @@ export default function App() {
       {screen === 'DECK_SELECT' && (
         <div 
           className="absolute inset-0 z-50 flex flex-col items-center justify-between p-3 sm:p-4 overflow-hidden animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('deck-selection.png')}
+          style={getScreenBgStyle('deck-selection.jpg')}
         >
           {/* Ambient Candlelight Flickering Overlays */}
           <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(245,158,11,0.22)_0%,rgba(180,83,9,0.08)_45%,transparent_70%)] pointer-events-none animate-[pulse_5s_infinite_ease-in-out] blur-2xl z-0" />
@@ -9276,7 +9276,7 @@ export default function App() {
       {screen === 'DRAFT' && (
         <div
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-hidden font-mono select-none"
-          style={getScreenBgStyle('draft.png')}
+          style={getScreenBgStyle('draft.jpg')}
         >
           <h1 className="text-2xl md:text-3xl font-serif text-[#d4af37] tracking-widest text-center italic drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] mb-8">
             ...Take Two more Creatures along with you...
@@ -9724,7 +9724,10 @@ export default function App() {
           ITEM RESTOCK EVENT SCREEN (SURPLUS CACHE)
          ========================================================================= */}
       {screen === 'EVENT_ITEMS' && (
-        <div className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-center p-6 select-none font-mono">
+        <div
+          className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-center p-6 select-none font-mono"
+          style={getScreenBgStyle('merchant_event.jpg')}
+        >
           {cacheConsolationCard ? (
             /* Consolation Card Showcase Modal */
             <div className="flex flex-col items-center justify-center max-w-md w-full text-center animate-menu-fade-in">
@@ -10086,7 +10089,7 @@ export default function App() {
       {screen === 'EVENT_BONE_LORD' && (
         <div 
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('bonelordevent.png')}
+          style={getScreenBgStyle('bonelordevent.jpg')}
         >
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE BONE LORD --+</div>
@@ -10121,7 +10124,7 @@ export default function App() {
          ========================================================================= */}
       {screen === 'EVENT_MYCOLOGIST' && (
         <div
-          style={getScreenBgStyle('weaverevent.png')}
+          style={getScreenBgStyle('weaverevent.jpg')}
           className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
         >
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
@@ -10341,7 +10344,7 @@ export default function App() {
       {screen === 'EVENT_BUILD_TOTEM' && (
         <div 
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('weaverevent.png')}
+          style={getScreenBgStyle('weaverevent.jpg')}
         >
           <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE WEAVER'S LOOM --+</div>
@@ -10600,7 +10603,7 @@ export default function App() {
       {screen === 'EVENT_CARD_CHOICE' && (
         <div 
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('choiceevent.png')}
+          style={getScreenBgStyle('choiceevent.jpg')}
         >
           <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- DECK REINFORCEMENT --+</div>
