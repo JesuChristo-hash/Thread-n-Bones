@@ -3306,6 +3306,57 @@ export default function App() {
   const [devTab, setDevTab] = useState<'ACTIONS' | 'ALTER_DECK' | 'CARDS' | 'SIGILS'>('ACTIONS');
   const [devCardSearch, setDevCardSearch] = useState<string>('');
   const [devCardsFilter, setDevCardsFilter] = useState<string>('');
+  const [ritualReadyProgress, setRitualReadyProgress] = useState<number>(0);
+  const isRitualReady = ritualReadyProgress >= 100;
+
+  useEffect(() => {
+    const MIN_BOOT_MS = 8000;
+    const start = performance.now();
+
+    const urls = new Set<string>([
+      `${BASE}/assets/cardbases/card_base.png`,
+      `${BASE}/assets/cardbases/cardbacks.png`,
+      `${BASE}/assets/cardbases/bestowed-card-base.png`,
+      `${BASE}/assets/cardbases/combined-card-base.png`,
+      `${BASE}/assets/cardbases/duplicate-card-base.png`,
+      `${BASE}/assets/cardbases/blood_moon.webp`,
+      ...Object.values(ALL_CARD_LOOKUP).map((c) => getCardArtUrl(c)),
+      ...Object.keys(SIGIL_MAPPING).map((s) => getSigilArtUrl(s)),
+    ]);
+
+    let loadedCount = 0;
+    const totalUrls = urls.size || 1;
+
+    urls.forEach((src) => {
+      if (!src) {
+        loadedCount++;
+        return;
+      }
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = img.onerror = () => {
+        loadedCount++;
+      };
+      img.src = src;
+    });
+
+    const interval = setInterval(() => {
+      const elapsedRatio = Math.min(1, (performance.now() - start) / MIN_BOOT_MS);
+      const assetRatio = loadedCount / totalUrls;
+      const combined =
+        elapsedRatio >= 1 && assetRatio >= 1
+          ? 1
+          : Math.min(elapsedRatio, assetRatio >= 1 ? 0.99 : Math.min(elapsedRatio, 0.95));
+
+      setRitualReadyProgress(Math.floor(combined * 100));
+
+      if (combined >= 1) {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
   const [devInspectCard, setDevInspectCard] = useState<CardDef | null>(null);
   const [devAlterCard, setDevAlterCard] = useState<CardDef | null>(null);
 
@@ -8891,7 +8942,9 @@ export default function App() {
 
             {/* Ritual Action Button */}
             <button
+              disabled={!isRitualReady}
               onClick={() => {
+                if (!isRitualReady) return;
                 try {
                   ChiptuneAudio.init();
                   ChiptuneAudio.playAmbient();
@@ -8905,7 +8958,11 @@ export default function App() {
                   setScreen('DECK_SELECT');
                 }
               }}
-              className="group mt-3 sm:mt-5 cursor-pointer bg-transparent border-0 p-1 focus:outline-none transition-transform duration-150 hover:scale-105 active:scale-95 flex justify-center overflow-visible"
+              className={`group mt-3 sm:mt-5 bg-transparent border-0 p-1 focus:outline-none transition-all duration-300 flex flex-col items-center justify-center overflow-visible ${
+                isRitualReady
+                  ? 'cursor-pointer opacity-100 hover:scale-105 active:scale-95'
+                  : 'cursor-wait opacity-45 grayscale'
+              }`}
             >
               <pre 
                 style={{ 
@@ -8928,6 +8985,11 @@ export default function App() {
          ▄█████████▀   ██████████   ████████▀  █▀    ▀█   █▀         ███    ███ █▀     ▄████▀   ████████▀    ███    █▀  █████▄▄██ 
                                                                      ███    ███                                             ▀     `}
     </pre>
+    {!isRitualReady && (
+                <span className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.25em] text-amber-400/80 animate-pulse">
+                  [ Kindling Altar... {ritualReadyProgress}% ]
+                </span>
+              )}
         </button>
       </div>
     </div>
