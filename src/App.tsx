@@ -8722,11 +8722,9 @@ export default function App() {
             }
           @keyframes splashOccultPulse {
           0%, 100% {
-            transform: scale(1);
-            opacity: 0.72;
+            opacity: 0.78;
           }
           50% {
-            transform: scale(1.015);
             opacity: 1;
           }
         }
@@ -8739,8 +8737,8 @@ export default function App() {
           50% { transform: scale(1.06); opacity: 0.65; }
         }
         .animate-occult-pulse {
-          filter: drop-shadow(0 0 18px rgba(239, 68, 68, 0.75)) drop-shadow(0 0 42px rgba(185, 28, 28, 0.55));
-          will-change: transform, opacity;
+          text-shadow: 0 0 14px rgba(239, 68, 68, 0.75), 0 0 28px rgba(185, 28, 28, 0.5);
+          will-change: opacity;
           animation: splashOccultPulse 4.5s ease-in-out infinite;
         }
         .animate-candle-breath {
