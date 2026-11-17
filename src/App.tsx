@@ -3317,7 +3317,7 @@ export default function App() {
       let isCacheWarm = false;
       try {
         if ('caches' in window) {
-          const cache = await caches.open('thread-bones-assets-v2');
+          const cache = await caches.open('thread-bones-assets-v3');
           const cachedKeys = await cache.keys();
           isCacheWarm = cachedKeys.length >= 20;
         }
@@ -3331,6 +3331,10 @@ export default function App() {
       const start = performance.now();
 
       const urls = new Set<string>([
+        `${BASE}/assets/backgrounds/splash.jpg`,
+        `${BASE}/assets/backgrounds/deck-selection.jpg`,
+        `${BASE}/assets/backgrounds/draft.jpg`,
+        `${BASE}/assets/backgrounds/battlebg1.jpg`,
         `${BASE}/assets/cardbases/card_base.png`,
         `${BASE}/assets/cardbases/cardbacks.png`,
         `${BASE}/assets/cardbases/bestowed-card-base.png`,
@@ -3342,20 +3346,33 @@ export default function App() {
       ]);
 
       let loadedCount = 0;
-      const totalUrls = urls.size || 1;
+      const queue = Array.from(urls).filter(Boolean);
+      const totalUrls = queue.length || 1;
+      const CONCURRENCY = 6;
 
-      urls.forEach((src) => {
-        if (!src) {
-          loadedCount++;
-          return;
+      const worker = async () => {
+        while (queue.length > 0 && !cancelled) {
+          const src = queue.shift()!;
+          try {
+            const img = new Image();
+            img.decoding = 'async';
+            img.src = src;
+            if (img.decode) {
+              await img.decode();
+            } else {
+              await new Promise<void>((res) => {
+                img.onload = img.onerror = () => res();
+              });
+            }
+          } catch {
+            // Ignore broken/missing assets so boot never stalls
+          } finally {
+            loadedCount++;
+          }
         }
-        const img = new Image();
-        img.decoding = 'async';
-        img.onload = img.onerror = () => {
-          loadedCount++;
-        };
-        img.src = src;
-      });
+      };
+
+      Array.from({ length: Math.min(CONCURRENCY, totalUrls) }, () => worker());
 
       interval = setInterval(() => {
         const elapsedRatio = Math.min(1, (performance.now() - start) / minBootMs);

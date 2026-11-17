@@ -1,4 +1,4 @@
-const CACHE_NAME = 'thread-bones-assets-v2';
+const CACHE_NAME = 'thread-bones-assets-v3';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => {
