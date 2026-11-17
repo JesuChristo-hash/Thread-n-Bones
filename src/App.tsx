@@ -857,8 +857,8 @@ export const ChiptuneAudio: any = {
   ctx: null,
   currentTrack: null,
   activeInstance: null,
-  musicVolume: 0.7,
-  sfxVolume: 0.8,
+  musicVolume: 0.3,
+  sfxVolume: 0.6,
   musicGain: null as GainNode | null,
 
   init() {
@@ -2005,7 +2005,7 @@ const chiptuneAudio = ChiptuneAudio;
 // Built-in Web Audio API sound generator for game events
 const playSound = (type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone' | 'defeat' | 'victory' | 'armor') => {
   try {
-    const sfxMult = typeof ChiptuneAudio.sfxVolume === 'number' ? ChiptuneAudio.sfxVolume : 0.8;
+    const sfxMult = typeof ChiptuneAudio.sfxVolume === 'number' ? ChiptuneAudio.sfxVolume : 0.6;
     if (sfxMult <= 0) return;
 
     let ctx = ChiptuneAudio.ctx;
@@ -2874,8 +2874,8 @@ export default function App() {
 
   // Boss State
   const [isBossMatch, setIsBossMatch] = useState<boolean>(false);
-  const [musicVol, setMusicVol] = useState<number>(0.5);
-  const [sfxVol, setSfxVol] = useState<number>(0.7);
+  const [musicVol, setMusicVol] = useState<number>(0.3);
+  const [sfxVol, setSfxVol] = useState<number>(0.6);
   const [bossPhase, setBossPhase] = useState<number>(1);
   const [bossTotem, setBossTotem] = useState<{ class: Tribe; sigil: string } | null>(null);
   const [hasDefeatedWeaver, setHasDefeatedWeaver] = useState<boolean>(false);
