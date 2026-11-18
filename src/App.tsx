@@ -738,7 +738,6 @@ export default function App() {
     masterDeckRef.current = masterDeck;
   }, [masterDeck]);
   useEffect(() => {
-    preloadCoreAssets();
   }, []);
 
   // Hidden Run Statistics Trackers
@@ -1343,29 +1342,25 @@ export default function App() {
         `${BASE}/assets/cardbases/bestowed-card-base.png`,
         `${BASE}/assets/cardbases/combined-card-base.png`,
         `${BASE}/assets/cardbases/duplicate-card-base.png`,
-        `${BASE}/assets/cardbases/blood_moon.webp`,
-        ...Object.values(ALL_CARD_LOOKUP).map((c) => getCardArtUrl(c)),
+        ...Object.values(ALL_CARD_LOOKUP)
+          .filter((c) => c.name !== 'BLOOD MOON')
+          .map((c) => getCardArtUrl(c)),
         ...Object.keys(SIGIL_MAPPING).map((s) => getSigilArtUrl(s)),
       ]);
 
       let loadedCount = 0;
       const queue = Array.from(urls).filter(Boolean);
       const totalUrls = queue.length || 1;
-      const CONCURRENCY = 3;
+      const CONCURRENCY = 8;
 
-      const loadOne = async (src: string) => {
-        const img = new Image();
-        img.decoding = 'async';
-        img.src = src;
-        if (img.decode) {
-          await img.decode();
-        } else {
-          await new Promise<void>((res, rej) => {
-            img.onload = () => res();
-            img.onerror = () => rej();
-          });
-        }
-      };
+      const loadOne = (src: string) =>
+        new Promise<void>((res, rej) => {
+          const img = new Image();
+          img.decoding = 'async';
+          img.onload = () => res();
+          img.onerror = () => rej();
+          img.src = src;
+        });
 
       const worker = async () => {
         while (queue.length > 0 && !cancelled) {
@@ -1373,7 +1368,6 @@ export default function App() {
           try {
             await loadOne(src);
           } catch {
-            await new Promise((r) => setTimeout(r, 250));
             try {
               await loadOne(src);
             } catch {
@@ -1382,7 +1376,6 @@ export default function App() {
           } finally {
             loadedCount++;
           }
-          await new Promise((r) => setTimeout(r, 20));
         }
       };
 
@@ -1391,17 +1384,14 @@ export default function App() {
       interval = setInterval(() => {
         const elapsedRatio = Math.min(1, (performance.now() - start) / minBootMs);
         const assetRatio = loadedCount / totalUrls;
-        const combined =
-          elapsedRatio >= 1 && assetRatio >= 1
-            ? 1
-            : Math.min(elapsedRatio, assetRatio >= 1 ? 0.99 : Math.min(elapsedRatio, 0.95));
+        const combined = Math.min(elapsedRatio, assetRatio);
 
         setRitualReadyProgress(Math.floor(combined * 100));
 
         if (combined >= 1) {
           clearInterval(interval);
         }
-      }, 100);
+      }, 60);
     };
 
     initPreloader();
