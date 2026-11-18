@@ -18,7 +18,7 @@ self.addEventListener('fetch', (e) => {
       caches.open(CACHE_NAME).then(async (cache) => {
         const cached = await cache.match(e.request, { ignoreSearch: true });
         if (cached) return cached;
-        const fresh = await fetlet fresh = await fetch(e.request);
+        let fresh = await fetch(e.request);
         if (fresh.status === 503 || fresh.status === 429) {
           await new Promise((r) => setTimeout(r, 300 + Math.random() * 400));
           fresh = await fetch(e.request);

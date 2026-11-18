@@ -31,2078 +31,71 @@ import {
   Bell
 } from 'lucide-react';
 
-// --- Types & Data Definitions ---
-export type Tribe = 'No Class' | 'Reptile' | 'Avian' | 'Canine' | 'Hooved' | 'Insect' | 'ALL Classes';
-export type CardInstance = any;
-export const TRIBE_ICONS: Record<Tribe, string> = {
-  'Canine': '🐺',
-  'Insect': '🕷️',
-  'Avian': '🦅',
-  'Reptile': '🦎',
-  'Hooved': '🦌',
-  'ALL Classes': '✨',
-  'No Class': ''
-};
-
-export interface CardDef {
-  wasPlayedThisDuel?: boolean;
-  battlesPlayed?: number;
-  id?: string;
-  name: string;
-  class: Tribe;
-  attack: number;
-  health: number;
-  cost?: number; // Blood cost
-  boneCost?: number; // Bone cost
-  emoji: string;
-  sigils: string[];
-  artUrl?: string; // Path or base64 data URI for custom card illustration
-  tags?: string[];
-  evolvesInto?: string;
-  isSacrifice?: boolean;
-  unsacrificable?: boolean;
-  age?: number;
-  sprintDir?: number;
-  shieldBroken?: boolean;
-  justTookDamage?: boolean;
-  animatingStrike?: boolean;
-  strikeOffset?: number;
-  isDying?: boolean;
-  
-  // Added for Goobert duplicates
-  isGoobertClone?: boolean;
-  isMycologistCombined?: boolean;
-  isAmalgam?: boolean;
-
-  // Boss & combat mechanics
-  isMassive?: boolean;
-  hasAttackedThisTurn?: boolean;
-}
-
-export interface Totem {
-  head: Tribe | null;
-  body: string | null;
-}
-
-export type GamePhase = 'DRAW' | 'PLAY' | 'COMBAT' | 'ENEMY' | 'SEARCH' | 'GAME_OVER';
-
-export type ScreenState =
-  | 'SPLASH'
-  | 'DECK_SELECT'
-  | 'DRAFT'
-  | 'DUEL'
-  | 'VIEW_DECK'
-  | 'DEV_MENU'
-  | 'GAME_OVER'
-  | 'EVENT_CROSSROADS'
-  | 'EVENT_CAMPFIRE'
-  | 'EVENT_ITEMS'
-  | 'EVENT_ALTAR'
-  | 'EVENT_TOTEM_CARVING'
-  | 'EVENT_COST_BARGAIN'
-  | 'EVENT_BONE_LORD'
-  | 'EVENT_MYCOLOGIST'
-  | 'EVENT_GOOBERT'
-  | 'EVENT_CAVE_TRIAL'
-  | 'EVENT_CARD_CHOICE'
-  | 'EVENT_BUILD_TOTEM'
-  | 'EVENT_HOARDER_SEARCH';
-
-export interface RunStats {
-  bossesDefeated: number;       // x
-  scaleDamageDealt: number;     // y
-  scaleDamageTaken: number;     // z
-  cardsSacrificed: number;      // a
-  enemyCardsDestroyed: number;  // b
-  grizzlyWallsSurvived: number; // c
-  clearedStages: number;        // w
-  finalBossesDefeated: number;  // n
-}
-
-export type BossType = 'Zealot' | 'The Begotten' | 'BoneLord' | 'The Weaver' | null;
-
-export interface BossCombatState {
-  type: BossType;
-  phase: number;
-  phase1CardsPlayed: number;
-  skipNextPlayerTurn: boolean;
-  activeDialogue: string | null;
-  bgHex: string;
-  bgTransitionDuration: number;
-  isRitualComplete: boolean;
-  ritualEndedVoluntarily: boolean;
-  ritualSurrendered?: boolean;
-}
-
-// --- Asset Path Helpers ---
-const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
-const discordGif = `${BASE}/assets/text/sidehustle-discord.webp`;
-
-export const toAssetSlug = (str: string): string =>
-  str.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-const CARD_ART_SLUG_ALIASES: Record<string, string> = {
-  // Disk has oppossum.png, code expects opossum
-  opossum: 'oppossum',
-  oppossum: 'oppossum',
-
-  // Disk has lammergier.png, code expects lammergeier
-  lammergeier: 'lammergier',
-  lammergier: 'lammergier',
-
-  // Disk has vulture.png, code expects turkeyvulture
-  turkeyvulture: 'vulture',
-  vulture: 'vulture',
-
-  // Disk has bee.png for Beehive / Brood
-  beehive: 'bee',
-  brood: 'bee',
-  'house fly': 'maggots',
-  housefly: 'maggots',
-
-  // Trade Pelt mappings
-  tradepelt: 'pelt',
-  pelt: 'pelt',
-  harepelt: 'pelt',
-};
-
-const ASSET_SESSION_VERSION = Date.now();
-
-export const getCardArtUrl = (card: CardDef): string => {
-  if (card.artUrl) return card.artUrl;
-  const rawSlug = toAssetSlug(card.name || '');
-  if (rawSlug === 'bloodmoon') {
-    return `${BASE}/assets/cardbases/blood_moon.webp?v=${ASSET_SESSION_VERSION}`;
-  }
-  if (CARD_ART_SLUG_ALIASES[rawSlug]) {
-    return `${BASE}/assets/cardart/${CARD_ART_SLUG_ALIASES[rawSlug]}.png?v=${ASSET_SESSION_VERSION}`;
-  }
-  // Strip Fledgling evolution prefixes so art lookup maps to the base creature sprite
-  const baseName = (card.name || '').replace(/^(Elder|Greater|God)\s+/i, '');
-  const slug = toAssetSlug(baseName);
-  const resolvedSlug = CARD_ART_SLUG_ALIASES[slug] || slug;
-  return `${BASE}/assets/cardart/${resolvedSlug}.png?v=${ASSET_SESSION_VERSION}`;
-};
-
-// Targeted offsets for specific sprites that need bespoke positioning
-export const CARD_ART_OFFSETS: Record<string, string> = {
-  'Raven': 'translate-y-1 translate-x-1',
-  'Wild Bull': 'translate-y-1',
-  'Amoeba': '-translate-y-1',
-  'Stoat': 'translate-y-1.5 translate-x-1',
-};
-
-export const getSigilArtUrl = (sigilName: string): string => {
-  return `${BASE}/assets/sigils/${toAssetSlug(sigilName)}.png`;
-};
-
-// Exact file registry to handle the mixed .jpg / .png extensions
-const ARENA_BACKGROUND_FILES: Record<string, string> = {
-  battle1: 'battlebg1.jpg',
-  battle2: 'battlebg2.jpg',
-  battle3: 'battlebg3.jpg',
-  battle4: 'battlebg4.jpg',
-  weaver: 'weaverboss.jpg',
-  zealot: 'zealotboss.jpg',
-  begotten: 'begottenboss.jpg',
-  finalboss: 'finalboss.jpg',
-  splash: 'splash.jpg',
-  deckSelect: 'deck-selection.jpg',
-  gameover: 'gameover.jpg',
-  draft: 'draft.jpg',
-  crossroads: 'crossroads-select.jpg',
-  campfire: 'campfireevent.jpg',
-  altar: 'altarevent.jpg',
-  totemCarving: 'tribeeventbg.jpg',
-  costBargain: 'costeventbg.jpg',
-  bonelord: 'bonelordevent.jpg',
-  trial: 'trialevent.jpg',
-  cardChoice: 'choiceevent.jpg',
-  weaverEvent: 'weaverevent.jpg',
-  merchantEvent: 'merchant_event.jpg',
-};
-
-export const getBackgroundUrl = (key: string): string => {
-  const filename = ARENA_BACKGROUND_FILES[key] || `${toAssetSlug(key)}.jpg`;
-  return `${BASE}/assets/backgrounds/${filename}`;
-};
-
-export const getArenaBackground = (stage: number, isBoss: boolean, bossName?: string): string => {
-  if (isBoss) {
-    const b = (bossName || '').toLowerCase();
-    if (b.includes('weaver')) return getBackgroundUrl('weaver');
-    if (b.includes('zealot')) return getBackgroundUrl('zealot');
-    if (b.includes('begotten')) return getBackgroundUrl('begotten');
-    return getBackgroundUrl('finalboss');
-  }
-
-  // Standard duel stages cycle battlebg1 through battlebg4
-  const bgIndex = ((stage - 1) % 4) + 1;
-  return getBackgroundUrl(`battle${bgIndex}`);
-};
-
-export const getScreenBgStyle = (filename: string): React.CSSProperties => ({
-  backgroundImage: `radial-gradient(circle at 50% 45%, rgba(18, 12, 8, 0.62) 0%, rgba(10, 6, 4, 0.90) 100%), url(${BASE}/assets/backgrounds/${filename})`,
-  backgroundSize: 'cover',
-  backgroundPosition: 'center',
-  backgroundRepeat: 'no-repeat',
-});
-
-// --- Sigils Configuration ---
-export const SIGIL_MAPPING: Record<string, string> = {
-  'Shadow': '🌑',  
-  'Airborne': '🕊️',
-  'Fecundity': '🌱',
-  'Unkillable': '💀',
-  'Worthy Sacrifice': '🩸',
-  'Bifurcated Strike': '⑂',
-  'Trifurcated Strike': '⑆',
-  'Mighty Leap': '🛡️',
-  'Rabbit Hole': '🕳️',
-  'Touch of Death': '☠️',
-  'Waterborne': '🌊',
-  'Sprinter': '💨',
-  'Fledgling': '🐣',
-  'Armored': '⚜️',
-  'Leader': '🚩',
-  'Corpse Eater': '🍖',
-  'Bloodlust': '🗡️',
-  'Bellist': '🔔',
-  'Double Strike': '⚡',
-  'Loose Tail': '🦎',
-  'Guardian': '🐾',
-  'Hefty': '🧱',
-  'Burrower': '⛏️',
-  'Sharp Quills': '📌',
-  'Hoarder': '🔎',
-  'Many Lives': '♾️',
-  'Morsel': '🍎',
-  'Bone King': '👑',
-  'Bone Digger': '🦴',
-  'Scavenger': '⛏️',
-  'Dam Builder': '🏞️',
-  'Bees Within': '🐝',
-  'Amorphous': '❓',
-  'Stinky': '🤢',
-  'Ant Spawner': '🐜',
-  'Rampager': '🐗',
-  'Made of Stone': '🗿',
-  'Brittle': '🥀',
-  'Tidal Lock': '🪐',
-  'Omnistrike': '✴️',
-  'Scapegoat': '🐐',
-  'Forager': '🌿',
-  'Leech': '🩸',
-  'Pack-Animal': '🐺',
-};
-
-export const SIGIL_DESCRIPTIONS: Record<string, string> = {
-  'Airborne': "Strikes directly at the opponent's scale, ignoring opposing creatures unless they have Mighty Leap.",
-  'Fecundity': "When played, a copy of this card is added to your hand.",
-  'Unkillable': "When this creature perishes or is sacrificed, a copy returns to your hand.",
-  'Worthy Sacrifice': "Counts as 3 Blood when sacrificed.",
-  'Bifurcated Strike': "Strikes the opposing spaces to the left and right.",
-  'Trifurcated Strike': "Strikes the opposing spaces to the left, center, and right.",
-  'Mighty Leap': "Blocks opposing Airborne creatures.",
-  'Rabbit Hole': "When played, a Rabbit (0/1) is added to your hand.",
-  'Touch of Death': "Instantly kills any creature it damages.",
-  'Waterborne': "Submerges during the opponent's turn, allowing them to attack over this creature directly.",
-  'Sprinter': "Moves to an adjacent empty space at the end of the turn.",
-  'Fledgling': "Matures into a stronger form after 1 turn on the board.",
-  'Armored': "Negates the first instance of damage taken.",
-  'Leader': "Grants +1 Attack to adjacent allied creatures.",
-  'Corpse Eater': "If an allied creature perishes in combat, this card enters the board automatically from hand.",
-  'Bloodlust': "Gains +1 Attack whenever it kills an opposing creature.",
-  'Bellist': "When played, spawns Chimes (0/1) in adjacent empty spaces.",
-  'Double Strike': "Strikes the opposing target space an additional time.",
-  'Loose Tail': "When attacked, leaves a Tail (0/2) behind and slips into an adjacent space.",
-  'Guardian': "When an opposing creature is played opposite an empty slot, leaps to block it.",
-  'Hefty': "Moves to an adjacent space at turn end, pushing other creatures in that direction.",
-  'Burrower': "When an empty space is attacked, moves to block incoming damage.",
-  'Sharp Quills': "Deals 1 damage back to any creature that strikes it.",
-  'Hoarder': "When played, allows you to search your deck for any card and draw it.",
-  'Many Lives': "Can be sacrificed multiple times without perishing.",
-  'Morsel': "When sacrificed, passes its Attack and Health to the next creature played.",
-  'Bone King': "Yields 4 Bones instead of 1 when it perishes.",
-  'Bone Digger': "Generates 1 Bone at the end of your turn.",
-  'Scavenger': "Generates 1 Bone whenever any creature perishes.",
-  'Dam Builder': "When played, spawns Dams (0/2) in adjacent empty spaces.",
-  'Bees Within': "When struck, adds an Airborne Bee (1/1) to your hand.",
-  'Amorphous': "When drawn, morphs into a random sigil.",
-  'Stinky': "Reduces the Attack of the opposing creature by 1.",
-  'Made of Stone': "Immune to Touch of Death and Stinky debuffs.",
-  'Tidal Lock': "Pulls celestial gravity; forces all incoming attacks directly into itself.",
-  'Shadow': "Stats are inverted under the Bone Lord's eclipse.",
-  'Omnistrike': "Attacks all Creatures in zones. Can only attack directly on an empty board.",
-  'Ant Spawner': "When played, a Worker Ant is added to your hand.",
-  'Rampager': "Moves to an adjacent space, swapping positions with whatever stands there.",
-  'Scapegoat': "Whenever an adjacent allied creature would take lethal damage, this creature intercepts the blow instead, taking the full hit in its place.",
-  'Forager': "Whenever this creature deals direct scale damage, draw 1 card from your main deck.",
-  'Leech': "Whenever this creature kills an opposing creature, it steals that creature's total Health.",
-  'Pack-Animal': "When sacrificed, this card is placed on the bottom of your main deck instead of being discarded, retaining any stat buffs and transferred sigils.",
-};
-
-// Base Cards & Tokens
-export const TOKEN_SQUIRREL: CardDef = { name: "Squirrel", class: "No Class", attack: 0, health: 1, cost: 0, emoji: "🐿️", isSacrifice: true, sigils: [] };
-export const TOKEN_RABBIT: CardDef = { name: "Rabbit", class: "No Class", attack: 0, health: 1, cost: 0, emoji: "🐇", isSacrifice: true, sigils: [] };
-export const TOKEN_CHIME: CardDef = { name: "Chime", class: "No Class", attack: 0, health: 1, cost: 0, emoji: "🔔", isSacrifice: false, unsacrificable: true, sigils: [] };
-export const TOKEN_DAM: CardDef = { name: "Dam", class: "No Class", attack: 0, health: 2, cost: 0, emoji: "🏠", isSacrifice: false, unsacrificable: true, sigils: [] };
-export const TOKEN_TAIL: CardDef = { name: "Tail", class: "No Class", attack: 0, health: 2, cost: 0, emoji: "🦎", isSacrifice: false, unsacrificable: true, sigils: [] };
-export const TOKEN_VERTIBRAE: CardDef = { name: "Vertibrae", class: "No Class", attack: 0, health: 1, cost: 0, emoji: "🦴", isSacrifice: false, unsacrificable: true, sigils: [] };
-// Maps each tutorial rule directly to its spatial UI anchor on the tabletop
-export const getTutorialDialoguePosition = (message: string | null): string => {
-  if (!message) return 'fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md';
-
-  // 1. Above Player Hand
-  if (
-    message.includes('Squirrels are free') ||
-    message.includes('Sacrifice cards in play')
-  ) {
-    return 'fixed bottom-40 sm:bottom-48 left-1/2 -translate-x-1/2 w-[90%] sm:w-auto max-w-sm z-50';
-  }
-
-  // 2. Above Enemy Card (Coyote in Lane 1)
-  if (message.includes('Opposed cards clash')) {
-    return 'fixed top-24 sm:top-32 left-1/2 -translate-x-1/2 sm:-translate-x-[62%] w-[88%] sm:w-auto max-w-xs sm:max-w-sm z-50';
-  }
-
-  // 3. Right Side of Blood Runnel (The Scale)
-  if (message.includes('Take blood from your opponent')) {
-    return 'fixed top-20 sm:top-28 right-2 sm:right-6 md:right-10 w-[85%] sm:w-auto max-w-xs z-50';
-  }
-
-  // 4. Above Bones Counter (Lower-right flank)
-  if (message.includes('Bones build up')) {
-    return 'fixed bottom-48 sm:bottom-56 right-4 sm:right-10 md:right-14 w-[85%] sm:w-auto max-w-xs z-50';
-  }
-
-  // 5. Over Turn End Button (Commit Talisman Plinth)
-  if (message.includes('Commit to your actions')) {
-    return 'fixed bottom-36 sm:bottom-44 left-4 sm:left-10 md:left-16 w-[85%] sm:w-auto max-w-xs z-50';
-  }
-
-  // 6. Over Enemy Back Row (Enemy Queue)
-  if (message.includes('Enemy cards will move in')) {
-    return 'fixed top-12 sm:top-16 left-1/2 -translate-x-1/2 w-[90%] sm:w-auto max-w-sm z-50';
-  }
-
-  // 7. On Player Turn 2 Start (Above Draw Decks)
-  if (message.includes('Draw from only one deck')) {
-    return 'fixed bottom-44 sm:bottom-52 right-4 sm:right-10 md:right-14 w-[85%] sm:w-auto max-w-xs z-50';
-  }
-
-  return 'fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50';
-};
-// --- Weaver's Needlework: Tribal Embroidered Patches ---
-export const TRIBE_EMBROIDERY: Record<string, JSX.Element> = {
-  Canine: (
-    <svg className="w-5 h-5 mx-auto text-amber-200" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M4 5l3 4 5-2 5 2 3-4-2 9-3 3-3-1-3 1-3-3L4 5zm5 11l3 3 3-3H9z" />
-      <circle cx="8" cy="11" r="1" fill="#140d08" />
-      <circle cx="16" cy="11" r="1" fill="#140d08" />
-    </svg>
-  ),
-  Avian: (
-    <svg className="w-5 h-5 mx-auto text-amber-200" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 3l2 4 6-2-4 6 5 2-7 4-2 4-2-4-7-4 5-2-4-6 6 2 2-4z" />
-      <circle cx="12" cy="10" r="1.5" fill="#140d08" />
-    </svg>
-  ),
-  Insect: (
-    <svg className="w-5 h-5 mx-auto text-amber-200" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2a3 3 0 00-3 3v1H6l2 3H6l2 3H5l3 3c.5 3 2.5 5 4 6 1.5-1 3.5-3 4-6l3-3h-3l2-3h-2l2-3h-3V5a3 3 0 00-3-3zm-1 6h2v4h-2V8zm0 5h2v4h-2v-4z" />
-    </svg>
-  ),
-  Reptile: (
-    <svg className="w-5 h-5 mx-auto text-amber-200" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 3c-3 0-5 2-5 5 0 2 1 3 2 4l-4 4 2 2 4-4c1 1 2 1 3 1s2 0 3-1l4 4 2-2-4-4c1-1 2-2 2-4 0-3-2-5-5-5zm-2 4a1 1 0 110 2 1 1 0 010-2zm4 0a1 1 0 110 2 1 1 0 010-2z" />
-    </svg>
-  ),
-  Hooved: (
-    <svg className="w-5 h-5 mx-auto text-amber-200" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M4 3l4 4-2 3 3-1 2 3h2l2-3 3 1-2-3 4-4-5 1-2-3-2 3-5-1zm6 10l-1 5 3 3 3-3-1-5h-4z" />
-    </svg>
-  ),
-};
-export const TOKEN_PELT: CardDef = { name: "Trade Pelt", class: "No Class", attack: 0, health: 1, cost: 0, emoji: "📜", isSacrifice: false, sigils: [] };
-export const TOKEN_BEE: CardDef = { name: "Bee", class: "Insect", attack: 1, health: 1, cost: 0, emoji: "🐝", isSacrifice: false, sigils: ["Airborne"] };
-export const CARD_STONE_WALL: CardDef = { id: 'stone_wall', name: 'Stone Wall', class: 'No Class', attack: 0, health: 4, cost: 0, boneCost: 0, emoji: '🏔️', sigils: ["Made of Stone"], unsacrificable: true };
-export const CARD_FELLED_TREE: CardDef = { id: 'felled_tree', name: 'Felled Tree', class: 'No Class', attack: 0, health: 3, cost: 0, boneCost: 0, emoji: '🌳', sigils: ["Mighty Leap"], unsacrificable: true };
-export const CARD_GRIZZLY: CardDef = { name: "Grizzly", class: "No Class", attack: 4, health: 6, cost: 3, emoji: "🐻", sigils: ["Mighty Leap"] };
-
-export const MAIN_DECK_POOL: CardDef[] = [
-  { name: "Amoeba", class: "No Class", attack: 1, health: 2, boneCost: 2, emoji: "🦠", sigils: ["Amorphous"] },
-  { name: "Stoat", class: "No Class", attack: 1, health: 3, cost: 1, emoji: "🦦", sigils: [] },
-  { name: "Bullfrog", class: "Reptile", attack: 1, health: 2, cost: 1, emoji: "🐸", sigils: ["Mighty Leap"] },
-  { name: "Skink", class: "Reptile", attack: 1, health: 2, cost: 1, emoji: "🦎", sigils: ["Loose Tail"] },
-  { name: "Sparrow", class: "Avian", attack: 1, health: 2, cost: 1, emoji: "🐦", sigils: ["Airborne"] },
-  { name: "Warren", class: "No Class", attack: 0, health: 2, cost: 1, emoji: "🕳️", sigils: ["Rabbit Hole"] },
-  { name: "Mantis", class: "Insect", attack: 1, health: 1, cost: 1, emoji: "🦗", sigils: ["Bifurcated Strike"] },
-  { name: "Mantiseater", class: "Insect", attack: 1, health: 1, cost: 1, emoji: "👁️", sigils: ["Trifurcated Strike"] },
-  { name: "Black Goat", class: "Hooved", attack: 0, health: 1, cost: 1, emoji: "🐐", sigils: ["Worthy Sacrifice"] },
-  { name: "Worker Ant", class: "Insect", attack: 0, health: 2, cost: 1, emoji: "🐜", tags: ["Ant"], sigils: [] },
-  { name: "Wolf", class: "Canine", attack: 3, health: 2, cost: 2, emoji: "🐺", sigils: [] },
-  { name: "Raven", class: "Avian", attack: 2, health: 3, cost: 2, emoji: "🐦‍⬛", sigils: ["Airborne"] },
-  { name: "Dire Wolf Pup", class: "Canine", attack: 1, health: 1, cost: 2, emoji: "🐶", sigils: ["Fledgling", "Bone Digger"], evolvesInto: "Dire Wolf" },
-  { name: "Wild Bull", class: "Hooved", attack: 3, health: 2, cost: 2, emoji: "🐂", sigils: ["Rampager"] },
-  { name: "Mud Turtle", class: "Reptile", attack: 2, health: 2, cost: 2, emoji: "🐢", sigils: ["Armored"] },
-  { name: "Hodag", class: "Canine", attack: 1, health: 4, cost: 2, emoji: "👹", sigils: ["Bloodlust"] },
-  { name: "The Daus", class: "Hooved", attack: 2, health: 2, cost: 2, emoji: "🐖", sigils: ["Bellist"] },
-  { name: "Elk", class: "Hooved", attack: 2, health: 4, cost: 2, emoji: "🦌", sigils: ["Sprinter"] },
-  { name: "Pronghorn", class: "Hooved", attack: 1, health: 3, cost: 2, emoji: "🦌", sigils: ["Sprinter", "Bifurcated Strike"] },
-  { name: "River Snapper", class: "Reptile", attack: 1, health: 6, cost: 2, emoji: "🐢", sigils: ["Scapegoat"] },
-  { name: "Bloodhound", class: "Canine", attack: 2, health: 3, cost: 2, emoji: "🐕", sigils: ["Guardian"] },
-  { name: "Field Mice", class: "No Class", attack: 2, health: 2, cost: 2, emoji: "🐁", sigils: ["Fecundity"] },
-  { name: "Adder", class: "Reptile", attack: 1, health: 1, cost: 2, emoji: "🐍", sigils: ["Touch of Death"] },
-  { name: "Ant Queen", class: "Insect", attack: 0, health: 3, cost: 2, emoji: "👑", tags: ["Ant"], sigils: ["Ant Spawner"] },
-  { name: "Grizzly", class: "No Class", attack: 4, health: 6, cost: 3, emoji: "🐻", sigils: [] },
-  { name: "Moose Buck", class: "Hooved", attack: 3, health: 7, cost: 3, emoji: "🦌", sigils: ["Hefty"] },
-  { name: "Dire Wolf", class: "Canine", attack: 2, health: 5, cost: 3, emoji: "🐺", sigils: ["Double Strike"] },
-  { name: "Great White", class: "No Class", attack: 4, health: 2, cost: 3, emoji: "🦈", sigils: ["Waterborne"] },
-  { name: "Opossum", class: "No Class", attack: 1, health: 1, boneCost: 2, emoji: "🐀", sigils: [] },
-  { name: "Coyote", class: "Canine", attack: 2, health: 1, boneCost: 4, emoji: "🐺", sigils: ["Pack-Animal"] },
-  { name: "Cockroach", class: "Insect", attack: 1, health: 1, boneCost: 4, emoji: "💀", sigils: ["Unkillable"] },
-  { name: "Rattler", class: "Reptile", attack: 3, health: 2, boneCost: 5, emoji: "🐍", sigils: [] },
-  { name: "Alpha", class: "Canine", attack: 1, health: 2, boneCost: 4, emoji: "🐺", sigils: ["Leader"] },
-  { name: "House Fly", class: "Insect", attack: 1, health: 2, boneCost: 4, emoji: "🐛", sigils: ["Corpse Eater"] },
-  { name: "Wolverine", class: "No Class", attack: 1, health: 3, boneCost: 4, emoji: "🦡", sigils: ["Bloodlust"] },
-  { name: "Demon Elk", class: "Hooved", attack: 1, health: 2, boneCost: 4, emoji: "🦌", sigils: ["Sprinter", "Touch of Death"] },
-  { name: "Geck", class: "Reptile", attack: 1, health: 1, cost: 0, emoji: "🦎", sigils: [] },
-  { name: "Magpie", class: "Avian", attack: 1, health: 1, cost: 2, emoji: "🦉", sigils: ["Airborne", "Hoarder"] },
-  { name: "Mole", class: "No Class", attack: 0, health: 4, cost: 1, emoji: "🐹", sigils: ["Burrower"] },
-  { name: "Porcupine", class: "No Class", attack: 1, health: 2, cost: 1, emoji: "🦔", sigils: ["Sharp Quills"] },
-  { name: "Cat", class: "No Class", attack: 0, health: 1, cost: 1, emoji: "🐈", sigils: ["Many Lives"] },
-  { name: "Mealworm", class: "Insect", attack: 0, health: 2, boneCost: 2, emoji: "🦋", sigils: ["Morsel"] },
-  { name: "Rat King", class: "No Class", attack: 2, health: 1, cost: 2, emoji: "🐀", sigils: ["Bone King"] },
-  { name: "Raccoon", class: "No Class", attack: 1, health: 1, boneCost: 3, emoji: "🦝", sigils: ["Forager"] },
-  { name: "Beaver", class: "No Class", attack: 1, health: 3, cost: 2, emoji: "🚪", sigils: ["Dam Builder"] },
-  { name: "Elk Fawn", class: "Hooved", attack: 1, health: 1, cost: 1, emoji: "🦌", sigils: ["Sprinter", "Fledgling"], evolvesInto: "Elk" },
-  { name: "Flying Ant", class: "Insect", attack: 0, health: 1, cost: 1, emoji: "🐜", tags: ["Ant"], sigils: ["Airborne"] },
-  { name: "Brood", class: "Insect", attack: 0, health: 2, cost: 1, emoji: "🍯", sigils: ["Bees Within"] },
-  { name: "Tadpole", class: "Reptile", attack: 0, health: 1, cost: 0, emoji: "🐟", sigils: ["Waterborne", "Fledgling"], evolvesInto: "Bullfrog" },
-  { name: "Ouroboros", class: "Reptile", attack: 1, health: 1, cost: 2, emoji: "🐉", sigils: ["Unkillable"] },
-  { name: "Bat", class: "No Class", attack: 2, health: 1, boneCost: 4, emoji: "🦇", sigils: ["Airborne"] },
-  { name: "Amalgam", class: "ALL Classes", attack: 3, health: 3, cost: 2, emoji: "🧬", sigils: [] },
-  { name: "Lammergeier", class: "Avian", attack: 0, health: 4, cost: 3, emoji: "🦅", sigils: ["Airborne"] },
-  { name: "River Otter", class: "No Class", attack: 1, health: 1, cost: 1, emoji: "🦦", sigils: ["Waterborne", "Forager"] },
-  { name: "Turkey Vulture", class: "Avian", attack: 3, health: 3, boneCost: 6, emoji: "🦃", sigils: ["Airborne"] },
-  { name: "Wolf Cub", class: "Canine", attack: 1, health: 1, cost: 1, emoji: "🐾", sigils: ["Fledgling"], evolvesInto: "Wolf" },
-  { name: "Skunk", class: "No Class", attack: 0, health: 3, cost: 1, emoji: "🦨", sigils: ["Stinky"] },
-  // --- NEW CARDS ---
-  { name: "Capybara", class: "No Class", attack: 0, health: 4, cost: 1, emoji: "🦫", sigils: ["Scapegoat"] },
-  { name: "Stallion", class: "Hooved", attack: 2, health: 3, cost: 2, emoji: "🐎", sigils: ["Sprinter"] },
-  { name: "Caiman", class: "Reptile", attack: 2, health: 1, cost: 2, emoji: "🐢", sigils: ["Leech"] },
-  { name: "Killer Whale", class: "No Class", attack: 3, health: 1, cost: 2, emoji: "🐋", sigils: ["Waterborne", "Rampager"] },
-  { name: "Goose", class: "Avian", attack: 2, health: 1, cost: 1, emoji: "🪿", sigils: ["Bloodlust", "Sprinter"] },
-  { name: "Arachnid", class: "Insect", attack: 1, health: 2, cost: 0, boneCost: 5, emoji: "🕷️", sigils: ["Brittle"] },
-  { name: "Kraken", class: "No Class", attack: 3, health: 1, cost: 0, boneCost: 8, emoji: "🦑", sigils: ["Waterborne", "Bifurcated Strike"] },
-  { name: "Scorpion", class: "Insect", attack: 1, health: 1, cost: 0, boneCost: 6, emoji: "🦂", sigils: ["Touch of Death"] },
-  { name: "Tsuchinoko", class: "Reptile", attack: 1, health: 1, boneCost: 2, emoji: "🐍", sigils: ["Worthy Sacrifice"] },
-  { name: "Red Stray", class: "Canine", attack: 1, health: 2, cost: 1, emoji: "🐕", sigils: ["Bone King"] },
-  { name: "Red Hound", class: "Canine", attack: 2, health: 3, cost: 2, emoji: "🐕", sigils: ["Bone Digger"] },
-  { name: "Red Behemoth", class: "Canine", attack: 3, health: 9, cost: 3, emoji: "🐕", sigils: ["Bone Digger", "Hefty"] },
-  { name: "Red Colossus", class: "Canine", attack: 4, health: 13, cost: 4, emoji: "🐕", sigils: ["Leech", "Hefty"] },
-  { name: "Jackal", class: "Canine", attack: 1, health: 3, boneCost: 4, emoji: "🐺", sigils: ["Pack-Animal", "Corpse Eater"] },
-  { name: "Armadillo", class: "No Class", attack: 0, health: 3, boneCost: 3, emoji: "🛡️", sigils: ["Armored", "Sharp Quills"] },
-  { name: "Cicada", class: "Insect", attack: 2, health: 1, boneCost: 3, emoji: "🦗", sigils: ["Airborne", "Brittle"] },
-  { name: "Silkworm", class: "Insect", attack: 0, health: 1, cost: 0, emoji: "🐛", sigils: ["Fledgling"], evolvesInto: "Silken Moth" },
-  { name: "Silken Moth", class: "Insect", attack: 2, health: 1, cost: 0, emoji: "🐛", sigils: ["Airborne"] },
-  { name: "Hyphae", class: "No Class", attack: 0, health: 2, cost: 0, emoji: "🍄", sigils: ["Morsel", "Fledgling"], evolvesInto: "Mycelium" },
-  { name: "Mycelium", class: "No Class", attack: 1, health: 3, cost: 0, emoji: "🍄", sigils: ["Stinky", "Rampager"] }
-];
-
-export const ALL_CARD_LOOKUP: Record<string, CardDef> = {
-  "Squirrel": TOKEN_SQUIRREL,
-  "Rabbit": TOKEN_RABBIT,
-  "Chime": TOKEN_CHIME,
-  "Dam": TOKEN_DAM,
-  "Tail": TOKEN_TAIL,
-  "Vertibrae": TOKEN_VERTIBRAE,
-  "Trade Pelt": TOKEN_PELT,
-  "Bee": TOKEN_BEE,
-  "Stone Wall": CARD_STONE_WALL,
-  "Felled Tree": CARD_FELLED_TREE,
-};
-
-// --- Custom Items & Item Token Definitions ---
-export const CARD_FLAMING_SKELETON: CardDef = {
-  id: 'flaming_skeleton',
-  name: 'Flaming Skeleton',
-  class: 'No Class',
-  attack: 3,
-  health: 1,
-  cost: 0,
-  boneCost: 0,
-  emoji: '🔥',
-  sigils: []
-};
-
-export type ItemId =
-  | 'magical_hat'
-  | 'bone_lords_horn'
-  | 'joker_stamp'
-  | 'large_matchbook'
-  | 'coin_purse'
-  | 'bronze_crucifix'
-  | 'loaded_die'
-  | 'bronze_acorn';
-
-export interface ItemDef {
-  id: ItemId;
-  name: string;
-  emoji: string;
-  description: string;
-}
-
-export const ALL_ITEMS: Record<ItemId, ItemDef> = {
-  magical_hat: {
-    id: 'magical_hat',
-    name: 'Magical Hat',
-    emoji: '🎩',
-    description: '50% chance to summon a Rabbit to hand, or crush a player slot with a Stone Wall.'
-  },
-  bone_lords_horn: {
-    id: 'bone_lords_horn',
-    name: "Bone Lord's Horn",
-    emoji: '📯',
-    description: 'Evolves all allied creatures into their tribal skeletal equivalents.'
-  },
-  joker_stamp: {
-    id: 'joker_stamp',
-    name: 'Joker Stamp',
-    emoji: '🃏',
-    description: 'Submerges an enemy front-row card: replaces sigils with Waterborne, sets stats to 0/1.'
-  },
-  large_matchbook: {
-    id: 'large_matchbook',
-    name: 'Large Matchbook',
-    emoji: '🔥',
-    description: 'Incinerates an enemy card and inflicts lingering Burn on opposing lanes.'
-  },
-  coin_purse: {
-    id: 'coin_purse',
-    name: 'Coin Purse',
-    emoji: '💰',
-    description: 'Provides +4 Bones. The Zealot might trade for it in Phase 2.'
-  },
-  bronze_crucifix: {
-    id: 'bronze_crucifix',
-    name: 'Bronze Crucifix',
-    emoji: '✝️',
-    description: 'Bypasses Bone Lord phases or dims the Blood Moon.'
-  },
-  loaded_die: {
-    id: 'loaded_die',
-    name: 'Loaded Die',
-    emoji: '🎲',
-    description: 'Roll to draw cards from chosen deck. Beware rolling a five.'
-  },
-  bronze_acorn: {
-    id: 'bronze_acorn',
-    name: 'Bronze Acorn',
-    emoji: '🌰',
-    description: 'Infuses all Squirrels with +1 Power and +1 Health for this duel.'
-  }
-};
-
-MAIN_DECK_POOL.forEach(c => {
-  ALL_CARD_LOOKUP[c.name] = c;
-});
-
-export const BOSS_EXCLUSIVE_CARDS: CardDef[] = [
-  { name: "Skeleton", class: "No Class", attack: 1, health: 1, emoji: "💀", sigils: ["Brittle"] },
-  { name: "Geist", class: "No Class", attack: 0, health: 7, emoji: "👻", sigils: ["Burrower", "Fledgling"], evolvesInto: "Ghast" },
-  { name: "Ghast", class: "No Class", attack: 3, health: 9, emoji: "🌫️", sigils: ["Airborne", "Brittle"] },
-  { name: "Skeleton Canine", class: "Canine", attack: 2, health: 2, emoji: "🦴", sigils: ["Double Strike"] },
-  { name: "Exoskeleton", class: "Insect", attack: 1, health: 1, emoji: "🦂", sigils: ["Trifurcated Strike", "Brittle"] },
-  { name: "Tortoise Shell", class: "Reptile", attack: 1, health: 2, emoji: "🐢", sigils: ["Waterborne"] },
-  { name: "Anubis", class: "No Class", attack: 1, health: 4, emoji: "⚰️", sigils: ["Bifurcated Strike"] },
-  { name: "Reaper", class: "Avian", attack: 4, health: 1, emoji: "⌛", sigils: ["Stinky", "Airborne"] },
-  { name: "BLOOD MOON", class: "No Class", attack: 2, health: 80, emoji: "🌑", sigils: ["Mighty Leap", "Made of Stone", "Omnistrike", "Tidal Lock", "Stinky"], isMassive: true }
-];
-
-BOSS_EXCLUSIVE_CARDS.forEach(c => {
-  ALL_CARD_LOOKUP[c.name] = c;
-});
-// Pre-warm memory cache for background plates and card art
-const PRELOAD_BACKGROUND_FILES = [
-  'splash.jpg',
-  'deck-selection.jpg',
-  'gameover.jpg',
-  'draft.jpg',
-  'crossroads-select.jpg',
-  'campfireevent.jpg',
-  'altarevent.jpg',
-  'tribeeventbg.jpg',
-  'costeventbg.jpg',
-  'bonelordevent.jpg',
-  'weaverevent.jpg',
-  'trialevent.jpg',
-  'choiceevent.jpg',
-  'merchant_event.jpg',
-];
-
-const preloadAssetUrl = (url: string): Promise<void> => {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.decoding = 'async';
-    img.src = url;
-    img.onload = () => resolve();
-    img.onerror = () => resolve();
-  });
-};
-
-export const preloadCoreAssets = async () => {
-  // 1. Prioritize splash background first so title screen renders immediately
-  await preloadAssetUrl(`${BASE}/assets/backgrounds/splash.jpg`);
-
-  // 2. Preload lightweight card sprites (skip 9MB blood_moon.gif until final boss)
-  const cardUrls = Array.from(
-    new Set(
-      Object.values(ALL_CARD_LOOKUP)
-        .filter(card => card.name !== 'BLOOD MOON')
-        .map(card => getCardArtUrl(card))
-        .filter((url): url is string => Boolean(url))
-    )
-  );
-
-  for (let i = 0; i < cardUrls.length; i += 8) {
-    await Promise.all(cardUrls.slice(i, i + 8).map(url => preloadAssetUrl(url)));
-  }
-
-  // 3. Trickle heavy event/screen backgrounds one by one so main thread & GPU stay smooth
-  for (const f of PRELOAD_BACKGROUND_FILES) {
-    if (f === 'splash.png') continue;
-    await preloadAssetUrl(`${BASE}/assets/backgrounds/${f}`);
-  }
-};
-type EvolutionTarget = string | { target: string; chance: number }[];
-
-const EVOLUTION_MAP: Record<string, EvolutionTarget> = {
-  "Tadpole": [
-    { target: "Bullfrog", chance: 40 },
-    { target: "Mud Turtle", chance: 30 },
-    { target: "River Snapper", chance: 15 },
-    { target: "Tsuchinoko", chance: 10 },
-    { target: "Great White", chance: 5 }
-  ],
-  "Elk Fawn": "Elk",
-  "Dire Wolf Pup": "Dire Wolf",
-  "Wolf Cub": "Wolf",
-  "Elk": "Moose Buck",
-  "Mantis": "Mantiseater",
-  "Geist": "Ghast",
-  "Cat": "Anubis",
-  "Silkworm": "Silken Moth",
-  "Hyphae": "Mycelium"
-};
-
-// Restricted pool of sigils for Boss totem in Woodcarver Boss
-export const WOODCARVER_BOSS_TOTEM_SIGILS: string[] = [
-  'Airborne',
-  'Burrower',
-  'Fledgling',
-  'Hefty',
-  'Sharp Quills',
-  'Waterborne',
-  'Bifurcated Strike',
-  'Trifurcated Strike',
-  'Mighty Leap'
-];
-
-// Cards strictly excluded from every enemy's card pool
-export const ENEMY_EXCLUDED_CARD_NAMES = new Set([
-  'Hodag',
-  'Demon Elk',
-  'Daus',
-  'Magpie',
-  'Raccoon',
-  'Lammergeier',
-  'Ouroboros',
-  'Brood',
-  'Geck',
-  'Cat',
-  'Black Goat',
-  'Warren',
-  'Silkworm',
-  'Silken Moth',
-  'Hyphae',
-  'Mycelium',
-  'Tsuchinoko',
-  'Red Stray',
-  'Red Colossus',
-  'Red Behemoth'
-]);
-
-export const ENEMY_MAIN_DECK_POOL: CardDef[] = MAIN_DECK_POOL.filter(c => !ENEMY_EXCLUDED_CARD_NAMES.has(c.name));
-
-export const EVENT_EXCLUDED_CARD_NAMES = new Set([
-  'Red Stray',
-  'Red Hound',
-  'Red Behemoth',
-  'Red Colossus',
-  'Mycelium',
-  'Silken Moth'
-]);
-export const EVENT_CARD_POOL: CardDef[] = MAIN_DECK_POOL.filter(c => !EVENT_EXCLUDED_CARD_NAMES.has(c.name));
-
-export interface BossDialogueSet {
-  greetings: string[];
-  dismissals: string[];
-}
-
-export const BOSS_DIALOGUES: Record<string, BossDialogueSet> = {
-  "The Woodcarver": {
-    greetings: [
-      "The wood speaks to me in whispers... let us see what it carves for you.",
-      "Every piece of bark holds a spirit. Do you dare disturb them?",
-      "My chisels are sharp, traveler. Let us test the grain of your resolve."
-    ],
-    dismissals: [
-      "The grain was true... you have carved your own destiny today.",
-      "My figures crumble to sawdust. Walk on, champion of the woods.",
-      "The forest acknowledges your craft. Take your leave in peace."
-    ]
-  }
-};
-
-// Safe ID generator that guarantees strictly unique keys
-let cardIdIndex = 1;
-export function generateCardId(prefix = 'card'): string {
-  return `${prefix}-${Date.now()}-${cardIdIndex++}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-export function cloneCard(def: CardDef, ouroborosBuffs = 0): CardDef {
-  if (!def) {
-    console.error("cloneCard received undefined card definition");
-    return { name: "Void", class: "No Class", attack: 0, health: 1, emoji: "❓", sigils: [] };
-  }
-  const c: CardDef = JSON.parse(JSON.stringify(def));
-  c.id = generateCardId(c.name.toLowerCase().replace(/\s+/g, '-'));
-  if (c.name === "Ouroboros" && ouroborosBuffs > 0) {
-    // Base stats are already permanently incremented in masterDeck; do not stack on clone
-  }
-  return c;
-}
-
-export function transformAmorphous(card: CardDef): CardDef {
-  if (!card) return card;
-  if (card.sigils && card.sigils.includes('Amorphous')) {
-    const pool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
-    card.sigils = card.sigils.filter(s => s !== 'Amorphous');
-    card.sigils.push(pool[Math.floor(Math.random() * pool.length)]);
-  }
-  return card;
-}
-
-export function applyPlayerTotem(card: CardDef, activeTotem: Totem): CardDef {
-  if (!card || !activeTotem.head || !activeTotem.body) return card;
-  if (
-    activeTotem.body === 'Fledgling' &&
-    ((card as any).hasEvolved || card.name.startsWith('Elder '))
-  ) {
-    return card;
-  }
-  if (card.class === activeTotem.head || activeTotem.head === "ALL Classes") {
-    if (!card.sigils) card.sigils = [];
-    if (!card.sigils.includes(activeTotem.body)) {
-      card.sigils = [...card.sigils, activeTotem.body];
-    }
-  }
-  return card;
-}
+import {
+  Tribe,
+  CardInstance,
+  TRIBE_ICONS,
+  CardDef,
+  Totem,
+  GamePhase,
+  ScreenState,
+  RunStats,
+  BossType,
+  BossCombatState,
+  BASE,
+  discordGif,
+  toAssetSlug,
+  getCardArtUrl,
+  CARD_ART_OFFSETS,
+  getSigilArtUrl,
+  getBackgroundUrl,
+  getArenaBackground,
+  getScreenBgStyle,
+  SIGIL_MAPPING,
+  SIGIL_DESCRIPTIONS,
+  TOKEN_SQUIRREL,
+  TOKEN_RABBIT,
+  TOKEN_CHIME,
+  TOKEN_DAM,
+  TOKEN_TAIL,
+  TOKEN_VERTIBRAE,
+  getTutorialDialoguePosition,
+  TRIBE_EMBROIDERY,
+  TOKEN_PELT,
+  TOKEN_BEE,
+  CARD_STONE_WALL,
+  CARD_FELLED_TREE,
+  CARD_GRIZZLY,
+  MAIN_DECK_POOL,
+  ALL_CARD_LOOKUP,
+  CARD_FLAMING_SKELETON,
+  ItemId,
+  ItemDef,
+  ALL_ITEMS,
+  BOSS_EXCLUSIVE_CARDS,
+  preloadCoreAssets,
+  EvolutionTarget,
+  EVOLUTION_MAP,
+  WOODCARVER_BOSS_TOTEM_SIGILS,
+  ENEMY_EXCLUDED_CARD_NAMES,
+  ENEMY_MAIN_DECK_POOL,
+  EVENT_EXCLUDED_CARD_NAMES,
+  EVENT_CARD_POOL,
+  BossDialogueSet,
+  BOSS_DIALOGUES,
+  generateCardId,
+  cloneCard,
+  transformAmorphous,
+  applyPlayerTotem
+} from './data/gameData';
 
 // --- Built-in Chiptune Audio Synthesizer ---
-export interface TrackInstance {
-  name: string;
-  bus: GainNode;
-  nodes: (AudioNode & { stop?: (when?: number) => void })[];
-  timers: (ReturnType<typeof setTimeout> | ReturnType<typeof setInterval>)[];
-  cleanup: () => void;
-}
 
-interface ChiptuneAudioType {
-  [key: string]: any;
-  ctx: AudioContext | null;
-  currentTrack: string | null;
-  activeInstance: TrackInstance | null;
-  init: () => void;
-  transitionTo: (trackName: string, startFn: (inst: TrackInstance) => void, fadeTime?: number) => void;
-  stop: (fadeTime?: number) => void;
-  playSynthPiano: (freqs: number[], bus: GainNode, duration?: number, gainLevel?: number) => void;
-  playSlapBass: (freq: number, bus: GainNode, isPop?: boolean, duration?: number, gainLevel?: number) => void;
-  playStrings: (chordFreqs: number[], bus: GainNode, duration?: number, gainLevel?: number) => void;
-  playBrass: (freq: number, bus: GainNode, duration?: number, gainLevel?: number) => void;
-  playPluck: (freq: number, bus: GainNode, duration?: number, gainLevel?: number) => void;
-  playImpact: (pitch: number, bus: GainNode, decay?: number, gainLevel?: number) => void;
-  playSwell?: (freq: number, dest: GainNode, duration?: number, gainLevel?: number) => void;
-  playCabin: (fadeTime?: number) => void;
-  playAmbient?: (fadeTime?: number) => void;
-  playBattle: (fadeTime?: number) => void;
-  playBoss: (fadeTime?: number) => void;
-  playOrgan: (freqs: number[], bus: GainNode, duration?: number, gainLevel?: number) => void;
-  playBoneClick: (freq: number, bus: GainNode, gainLevel?: number) => void;
-  playFinalBoss: (fadeTime?: number) => void;
-  playFinalBossPhase3: (fadeTime?: number) => void;
-  playHarp: (freq: number, bus: GainNode, duration?: number, gainLevel?: number) => void;
-  playBell: (freq: number, bus: GainNode, duration?: number, gainLevel?: number) => void;
-  playFleshGroan: (startFreq: number, endFreq: number, bus: GainNode, duration?: number, gainLevel?: number) => void;
-  playTheWeaver: (fadeTime?: number) => void;
-  playTheZealot: (fadeTime?: number) => void;
-  playTheBegotten: (fadeTime?: number) => void;
-  stopAll?: (fadeTime?: number) => void;
-}
 
-export const ChiptuneAudio: any = {
-  ctx: null,
-  currentTrack: null,
-  activeInstance: null,
-  musicVolume: 0.3,
-  sfxVolume: 0.6,
-  musicGain: null as GainNode | null,
-
-  init() {
-    try {
-      if (!this.ctx) {
-        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        this.ctx = new AudioCtx();
-      }
-      if (this.ctx && !this.musicGain) {
-        this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
-        this.musicGain.connect(this.ctx.destination);
-      }
-      if (this.ctx && this.ctx.state === 'suspended') {
-        this.ctx.resume();
-      }
-    } catch {}
-  },
-
-  setMusicVolume(val: number) {
-    const clamped = Math.max(0, Math.min(1, val));
-    this.musicVolume = clamped;
-    this.init();
-    if (this.ctx && this.musicGain) {
-      this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.musicGain.gain.setValueAtTime(clamped, this.ctx.currentTime);
-    }
-  },
-
-  setSfxVolume(val: number) {
-    const clamped = Math.max(0, Math.min(1, val));
-    this.sfxVolume = clamped;
-  },
-
-  playSfxPreview() {
-    this.init();
-    if (!this.ctx || this.sfxVolume <= 0) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(587.33, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.09);
-    gain.gain.setValueAtTime(0.25 * this.sfxVolume, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.12);
-  },
-
-  transitionTo(trackName: string, startFn: (inst: TrackInstance) => void, fadeTime = 1.5) {
-    this.init();
-    if (!this.ctx) return;
-    if (this.currentTrack === trackName) return;
-
-    const now = this.ctx.currentTime;
-
-    if (this.activeInstance) {
-      const old = this.activeInstance;
-      old.bus.gain.cancelScheduledValues(now);
-      old.bus.gain.setValueAtTime(old.bus.gain.value, now);
-      old.bus.gain.linearRampToValueAtTime(0.0001, now + fadeTime);
-
-      setTimeout(() => {
-        old.cleanup();
-      }, fadeTime * 1000);
-    }
-
-    const bus = this.ctx.createGain();
-    bus.gain.setValueAtTime(0.0001, now);
-    bus.gain.linearRampToValueAtTime(1.0, now + fadeTime);
-    bus.connect(this.musicGain || this.ctx.destination);
-
-    const instance: TrackInstance = {
-      name: trackName,
-      bus: bus,
-      nodes: [],
-      timers: [],
-      cleanup() {
-        this.timers.forEach(t => {
-          clearInterval(t as unknown as number);
-          clearTimeout(t as unknown as number);
-        });
-        this.nodes.forEach(n => {
-          try {
-            if (n.stop) n.stop();
-            n.disconnect();
-          } catch {}
-        });
-        try {
-          this.bus.disconnect();
-        } catch {}
-      }
-    };
-
-    this.activeInstance = instance;
-    this.currentTrack = trackName;
-    startFn(instance);
-  },
-
-  stopAll(fadeTime = 0.5) {
-    if (!this.ctx || !this.activeInstance) return;
-    const now = this.ctx.currentTime;
-    const old = this.activeInstance;
-    try {
-      old.bus.gain.cancelScheduledValues(now);
-      old.bus.gain.setValueAtTime(old.bus.gain.value, now);
-      old.bus.gain.linearRampToValueAtTime(0.0001, now + fadeTime);
-      setTimeout(() => {
-        try { old.cleanup(); } catch (e) {}
-      }, fadeTime * 1000);
-    } catch (e) {}
-    this.activeInstance = null;
-    this.currentTrack = null;
-  },
-
-  stop(fadeTime = 1.0) {
-    if (!this.activeInstance || !this.ctx) return;
-    const now = this.ctx.currentTime;
-    const old = this.activeInstance;
-
-    old.bus.gain.cancelScheduledValues(now);
-    old.bus.gain.setValueAtTime(old.bus.gain.value, now);
-    old.bus.gain.linearRampToValueAtTime(0.0001, now + fadeTime);
-
-    setTimeout(() => {
-      old.cleanup();
-    }, fadeTime * 1000);
-
-    this.activeInstance = null;
-    this.currentTrack = null;
-  },
-
-  // --- Specialized Instruments ---
-
-  // Heavy, dark synth piano chord/strike
-  playSynthPiano(freqs: number[], bus: GainNode, duration = 1.6, gainLevel = 0.22) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    freqs.forEach(freq => {
-      if (!this.ctx) return;
-      const oscSine = this.ctx.createOscillator();
-      const oscTri = this.ctx.createOscillator();
-      const filter = this.ctx.createBiquadFilter();
-      const gain = this.ctx.createGain();
-
-      oscSine.type = 'sine';
-      oscTri.type = 'triangle';
-
-      // Slight hammer transient drop
-      oscSine.frequency.setValueAtTime(freq * 1.02, now);
-      oscSine.frequency.exponentialRampToValueAtTime(freq, now + 0.04);
-      oscTri.frequency.setValueAtTime(freq, now);
-
-      // Warm acoustic lowpass roll-off
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(850, now);
-      filter.frequency.exponentialRampToValueAtTime(220, now + duration);
-
-      // Piano decay curve
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(gainLevel / freqs.length, now + 0.015);
-      gain.gain.exponentialRampToValueAtTime(gainLevel * 0.35, now + 0.3);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-      oscSine.connect(filter);
-      oscTri.connect(filter);
-      filter.connect(gain);
-      gain.connect(bus);
-
-      oscSine.start(now);
-      oscTri.start(now);
-      oscSine.stop(now + duration);
-      oscTri.stop(now + duration);
-    });
-  },
-
-  // Slap Bass: punchy sub-drive with a bright thumb/pop attack
-  playSlapBass(freq: number, bus: GainNode, isPop = false, duration = 0.35, gainLevel = 0.26) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    const osc = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-
-    osc.type = isPop ? 'sawtooth' : 'triangle';
-    osc.frequency.setValueAtTime(freq, now);
-
-    // Resonant slap filter sweep
-    filter.type = 'lowpass';
-    filter.Q.value = isPop ? 5.0 : 3.0;
-    const startFilter = isPop ? 2800 : 1200;
-    filter.frequency.setValueAtTime(startFilter, now);
-    filter.frequency.exponentialRampToValueAtTime(140, now + 0.12);
-
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(gainLevel, now + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(bus);
-
-    osc.start(now);
-    osc.stop(now + duration);
-
-    // Perceptual transient click/thump
-    const click = this.ctx.createOscillator();
-    const clickGain = this.ctx.createGain();
-    click.type = 'square';
-    click.frequency.setValueAtTime(isPop ? 800 : 300, now);
-    clickGain.gain.setValueAtTime(0.08, now);
-    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
-
-    click.connect(clickGain);
-    clickGain.connect(bus);
-    click.start(now);
-    click.stop(now + 0.02);
-  },
-
-  // Heavy 4-voice detuned string ensemble swell
-  playStrings(chordFreqs: number[], bus: GainNode, duration = 2.8, gainLevel = 0.14) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    chordFreqs.forEach(freq => {
-      [-7, 7].forEach(cents => {
-        if (!this.ctx) return;
-        const osc = this.ctx.createOscillator();
-        const filter = this.ctx.createBiquadFilter();
-        const gain = this.ctx.createGain();
-
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(freq * Math.pow(2, cents / 1200), now);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(700, now);
-
-        // Lush orchestral swell & release
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.linearRampToValueAtTime(gainLevel / (chordFreqs.length * 2), now + 0.35);
-        gain.gain.setValueAtTime(gainLevel * 0.7 / (chordFreqs.length * 2), now + duration * 0.7);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(bus);
-
-        osc.start(now);
-        osc.stop(now + duration);
-      });
-    });
-  },
-
-  // Toned-down brass accent
-  playBrass(freq: number, bus: GainNode, duration = 0.6, gainLevel = 0.15) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    const osc1 = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-
-    osc1.type = 'sawtooth';
-    osc2.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(freq, now);
-    osc2.frequency.setValueAtTime(freq * 1.005, now);
-
-    filter.type = 'lowpass';
-    filter.Q.value = 2.5;
-    filter.frequency.setValueAtTime(200, now);
-    filter.frequency.exponentialRampToValueAtTime(900, now + 0.07);
-    filter.frequency.exponentialRampToValueAtTime(150, now + duration);
-
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(gainLevel, now + 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    osc1.connect(filter);
-    osc2.connect(filter);
-    filter.connect(gain);
-    gain.connect(bus);
-
-    osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + duration);
-    osc2.stop(now + duration);
-  },
-
-  playPluck(freq: number, bus: GainNode, duration = 1.8, gainLevel = 0.07) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, now);
-    gain.gain.setValueAtTime(gainLevel, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    osc.connect(gain);
-    gain.connect(bus);
-    osc.start(now);
-    osc.stop(now + duration);
-  },
-
-  playImpact(pitch: number, bus: GainNode, decay = 0.4, gainLevel = 0.3) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.frequency.setValueAtTime(pitch, now);
-    osc.frequency.exponentialRampToValueAtTime(25, now + decay);
-    gain.gain.setValueAtTime(gainLevel, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-
-    osc.connect(gain);
-    gain.connect(bus);
-    osc.start(now);
-    osc.stop(now + decay);
-  },
-
-  // Slow, mournful bowed string/pad swell for ambient mid-range
-  playSwell(freq: number, dest: GainNode, duration = 5.5, gainLevel = 0.06) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    [-4, 4].forEach(detuneCents => {
-      const osc = this.ctx.createOscillator();
-      const filter = this.ctx.createBiquadFilter();
-      const gain = this.ctx.createGain();
-
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq * Math.pow(2, detuneCents / 1200), now);
-
-      // Warm, muffled filter that opens slightly at the peak of the swell
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(160, now);
-      filter.frequency.exponentialRampToValueAtTime(480, now + duration * 0.45);
-      filter.frequency.exponentialRampToValueAtTime(140, now + duration);
-
-      // Slow fade-in, long tail
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(gainLevel * 0.5, now + duration * 0.45);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(dest);
-
-      osc.start(now);
-      osc.stop(now + duration);
-    });
-  },
-
-// --- Spatial & Utility Helpers ---
-  createEchoBus(inst: any, delayTime = 0.36, feedbackAmt = 0.38, filterCutoff = 950) {
-    if (!this.ctx) return inst.bus;
-    const input = this.ctx.createGain();
-    const delay = this.ctx.createDelay();
-    const feedback = this.ctx.createGain();
-    const filter = this.ctx.createBiquadFilter();
-
-    delay.delayTime.value = delayTime;
-    feedback.gain.value = feedbackAmt;
-    filter.type = 'lowpass';
-    filter.frequency.value = filterCutoff;
-
-    input.connect(inst.bus);
-    input.connect(delay);
-    delay.connect(filter);
-    filter.connect(inst.bus);
-    filter.connect(feedback);
-    feedback.connect(delay);
-
-    inst.nodes.push(input, delay, feedback, filter);
-    return input;
-  },
-
-  // Brushed snare / organic percussion hit
-  playBrushHit(dest: any, decay = 0.12, toneFreq = 900, gainLevel = 0.08) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    const bufferSize = Math.floor(this.ctx.sampleRate * decay);
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.Q.value = 1.8;
-    filter.frequency.setValueAtTime(toneFreq, now);
-
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(gainLevel, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + decay);
-
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(dest);
-    noise.start(now);
-  },
-
-playAmbient(fadeTime = 1.8) {
-    this.playCabin(fadeTime);
-  },
-
-  // 1. Ambient (Reworked): Breathing drone, tape delay network, and bowed swells
-  playCabin(fadeTime = 1.8) {
-    this.transitionTo('cabin', (inst: any) => {
-      if (!this.ctx) return;
-
-      // --- A. Breathing Sub-Drone ---
-      const droneFilter = this.ctx.createBiquadFilter();
-      droneFilter.type = 'lowpass';
-      droneFilter.frequency.value = 145;
-
-      // Slow LFO to make the drone filter slowly open and close (~8s cycle)
-      const lfo = this.ctx.createOscillator();
-      const lfoGain = this.ctx.createGain();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.12;
-      lfoGain.gain.value = 45; // Sweeps filter between 100Hz and 190Hz
-      lfo.connect(lfoGain);
-      lfoGain.connect(droneFilter.frequency);
-      lfo.start();
-      inst.nodes.push(lfo);
-
-      const subGain = this.ctx.createGain();
-      subGain.gain.value = 0.12;
-      droneFilter.connect(subGain);
-      subGain.connect(inst.bus);
-
-      // D1, D2 detuned pair, plus a faint A2 fifth
-      [
-        { f: 36.71, type: 'sawtooth' as OscillatorType },
-        { f: 73.42, type: 'sawtooth' as OscillatorType },
-        { f: 73.85, type: 'sawtooth' as OscillatorType },
-        { f: 110.00, type: 'triangle' as OscillatorType }
-      ].forEach(v => {
-        if (!this.ctx) return;
-        const osc = this.ctx.createOscillator();
-        osc.type = v.type;
-        osc.frequency.value = v.f;
-        osc.connect(droneFilter);
-        osc.start();
-        inst.nodes.push(osc);
-      });
-
-      // --- B. Dark Tape Delay Bus for Plucks ---
-      const pluckBus = this.ctx.createGain();
-      const delay = this.ctx.createDelay();
-      const feedback = this.ctx.createGain();
-      const delayFilter = this.ctx.createBiquadFilter();
-
-      delay.delayTime.value = 0.48; // ~Half-second echo
-      feedback.gain.value = 0.42;   // Decaying repeats
-      delayFilter.type = 'lowpass';
-      delayFilter.frequency.value = 900; // Darken each repeat
-
-      // Dry path + Wet loop
-      pluckBus.connect(inst.bus);
-      pluckBus.connect(delay);
-      delay.connect(delayFilter);
-      delayFilter.connect(inst.bus);
-      delayFilter.connect(feedback);
-      feedback.connect(delay);
-
-      // --- C. Generative Plucks & Arpeggio Rolls ---
-      const palette = [
-        98.00,  // G2
-        110.00, // A2
-        130.81, // C3
-        146.83, // D3
-        164.81, // E3
-        174.61, // F3
-        196.00, // G3
-        220.00, // A3
-        246.94, // B3 (Dorian natural 6th)
-        261.63, // C4
-        293.66, // D4
-        329.63, // E4
-        349.23, // F4
-        440.00  // A4
-      ];
-
-      const schedulePluck = () => {
-        if (this.activeInstance !== inst) return;
-        const roll = Math.random();
-        const idx = Math.floor(Math.random() * (palette.length - 3));
-        const baseNote = palette[idx];
-
-        if (roll > 0.72) {
-          // 3-note slow rolled chord
-          this.playPluck(baseNote, pluckBus, 3.0, 0.055);
-          const t1 = setTimeout(() => {
-            if (this.activeInstance === inst) this.playPluck(palette[idx + 1], pluckBus, 2.6, 0.045);
-          }, 210);
-          const t2 = setTimeout(() => {
-            if (this.activeInstance === inst) this.playPluck(palette[idx + 3], pluckBus, 2.4, 0.035);
-          }, 440);
-          inst.timers.push(t1, t2);
-        } else if (roll > 0.4) {
-          // Harmonic dyad (fifth or fourth)
-          this.playPluck(baseNote, pluckBus, 2.8, 0.055);
-          const t = setTimeout(() => {
-            if (this.activeInstance === inst) {
-              this.playPluck(baseNote * 1.5, pluckBus, 2.2, 0.038);
-            }
-          }, 190);
-          inst.timers.push(t);
-        } else if (roll > 0.15) {
-          // Lonely single note
-          this.playPluck(baseNote, pluckBus, 2.4, 0.065);
-        }
-
-        const next = 1100 + Math.random() * 1900;
-        const mainTimer = setTimeout(schedulePluck, next);
-        inst.timers.push(mainTimer);
-      };
-
-      // --- D. Haunting Bowed Mid-Range Swells ---
-      const swellNotes = [
-        [146.83, 220.00], // D3 + A3 (Open fifth)
-        [130.81, 196.00], // C3 + G3
-        [174.61, 220.00], // F3 + A3 (Minor third warmth)
-        [110.00, 164.81], // A2 + E3
-        [146.83, 246.94]  // D3 + B3 (Dorian ache)
-      ];
-
-      const scheduleSwell = () => {
-        if (this.activeInstance !== inst) return;
-        const pair = swellNotes[Math.floor(Math.random() * swellNotes.length)];
-        const dur = 4.5 + Math.random() * 2.5;
-
-        pair.forEach(freq => {
-          this.playSwell(freq, inst.bus, dur, 0.055);
-        });
-
-        const nextSwell = 5000 + Math.random() * 4000;
-        const swellTimer = setTimeout(scheduleSwell, nextSwell);
-        inst.timers.push(swellTimer);
-      };
-
-      schedulePluck();
-      scheduleSwell();
-    }, fadeTime);
-  },
-
-  // ==========================================
-  // 2. BATTLE (64-Step Noir Synth Piano Groove)
-  // ==========================================
-  playBattle(fadeTime = 1.4) {
-    this.transitionTo('battle', (inst: any) => {
-      if (!this.ctx) return;
-      const pianoEcho = this.createEchoBus(inst, 0.38, 0.28, 850);
-
-      const chords: Record<number, number[]> = {
-        0:  [73.42, 110.00, 146.83, 174.61], // Dm
-        6:  [73.42, 164.81],                 // Dm9 push
-        8:  [87.31, 130.81, 174.61, 220.00], // F
-        16: [58.27, 116.54, 146.83, 174.61], // Bb
-        22: [58.27, 130.81, 164.81],         // Bbmaj9 offbeat
-        24: [55.00, 110.00, 138.59, 196.00], // A7
-        32: [98.00, 146.83, 174.61, 220.00], // Gm9
-        40: [73.42, 110.00, 146.83, 220.00], // Dm/F
-        48: [82.41, 116.54, 146.83, 196.00], // Em7b5
-        56: [55.00, 110.00, 146.83, 196.00], // A7sus4
-        60: [55.00, 110.00, 138.59, 174.61]  // A7 resolve
-      };
-
-      const topMelody: Record<number, number> = {
-        34: 293.66, 36: 329.63, 38: 349.23,
-        42: 440.00, 44: 392.00, 46: 349.23,
-        50: 329.63, 52: 293.66, 54: 277.18,
-        58: 293.66, 62: 277.18
-      };
-
-      const bassline: (number | null)[] = [
-        73.42, null, 73.42, null, 87.31, null, 73.42, 82.41,
-        87.31, null, 87.31, 110.00, null, 87.31, 65.41, null,
-        58.27, null, 58.27, null, 65.41, null, 58.27, 69.30,
-        55.00, null, 55.00, 82.41, null, 73.42, 69.30, 61.74,
-        49.00, null, 49.00, null, 58.27, null, 65.41, 73.42,
-        73.42, null, 73.42, 65.41, null, 58.27, 55.00, null,
-        41.20, null, 41.20, null, 58.27, null, 55.00, 49.00,
-        55.00, null, 55.00, null, 55.00, 61.74, 65.41, 69.30
-      ];
-
-      let step = 0;
-      const interval = setInterval(() => {
-        if (!this.ctx) return;
-
-        if (chords[step]) {
-          this.playSynthPiano(chords[step], pianoEcho, 2.2, 0.22);
-        }
-
-        if (topMelody[step]) {
-          this.playPluck(topMelody[step], pianoEcho, 1.4, 0.08);
-        }
-
-        if (step % 8 === 0) {
-          this.playImpact(88, inst.bus, 0.4, 0.34);
-        } else if (step % 8 === 3 && step > 31) {
-          this.playImpact(72, inst.bus, 0.25, 0.2);
-        }
-
-        if (step % 8 === 4) {
-          this.playImpact(68, inst.bus, 0.2, 0.18);
-          this.playBrushHit(inst.bus, 0.14, 850, 0.08);
-        } else if (step % 2 === 1) {
-          this.playBrushHit(inst.bus, 0.05, 2400, step % 4 === 3 ? 0.03 : 0.015);
-        }
-
-        const note = bassline[step];
-        if (note) {
-          const osc = this.ctx.createOscillator();
-          const filter = this.ctx.createBiquadFilter();
-          const gain = this.ctx.createGain();
-
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(note, this.ctx.currentTime);
-          filter.type = 'lowpass';
-          filter.frequency.value = 240;
-
-          gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.26);
-
-          osc.connect(filter);
-          filter.connect(gain);
-          gain.connect(inst.bus);
-
-          osc.start();
-          osc.stop(this.ctx.currentTime + 0.26);
-        }
-
-        step = (step + 1) % 64;
-      }, 290);
-
-      inst.timers.push(interval);
-    }, fadeTime);
-  },
-
-  // --- Boss-Specific Instrument Generators ---
-
-  // 1. Metallic Arachnid Harp / Harpsichord (for The Weaver)
-  playHarp(freq: number, dest: any, duration = 0.85, gainLevel = 0.1) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    const osc1 = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-
-    osc1.type = 'sawtooth';
-    osc2.type = 'triangle';
-    osc1.frequency.setValueAtTime(freq, now);
-    osc2.frequency.setValueAtTime(freq * 2, now);
-
-    filter.type = 'lowpass';
-    filter.Q.value = 3.5;
-    filter.frequency.setValueAtTime(3200, now);
-    filter.frequency.exponentialRampToValueAtTime(380, now + duration * 0.7);
-
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(gainLevel, now + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    osc1.connect(filter);
-    osc2.connect(filter);
-    filter.connect(gain);
-    gain.connect(dest);
-
-    osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + duration);
-    osc2.stop(now + duration);
-  },
-
-  // 2. Sanctuary Bronze Bell via FM Synthesis (for The Zealot)
-  playBell(freq: number, dest: any, duration = 2.6, gainLevel = 0.16) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    const carrier = this.ctx.createOscillator();
-    const modulator = this.ctx.createOscillator();
-    const modGain = this.ctx.createGain();
-    const mainGain = this.ctx.createGain();
-
-    carrier.type = 'sine';
-    modulator.type = 'sine';
-    carrier.frequency.setValueAtTime(freq, now);
-    modulator.frequency.setValueAtTime(freq * 2.756, now);
-
-    modGain.gain.setValueAtTime(freq * 1.8, now);
-    modGain.gain.exponentialRampToValueAtTime(0.01, now + duration * 0.65);
-
-    mainGain.gain.setValueAtTime(0.001, now);
-    mainGain.gain.linearRampToValueAtTime(gainLevel, now + 0.01);
-    mainGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    modulator.connect(modGain);
-    modGain.connect(carrier.frequency);
-    carrier.connect(mainGain);
-    mainGain.connect(dest);
-
-    carrier.start(now);
-    modulator.start(now);
-    carrier.stop(now + duration);
-    modulator.stop(now + duration);
-  },
-
-  // 3. Pitch-Gliding Biological Synth Groan (for The Begotten)
-  playFleshGroan(startFreq: number, endFreq: number, dest: any, duration = 1.6, gainLevel = 0.22) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    const osc = this.ctx.createOscillator();
-    const sub = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'sawtooth';
-    sub.type = 'sine';
-
-    osc.frequency.setValueAtTime(startFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration * 0.85);
-    sub.frequency.setValueAtTime(startFreq * 0.5, now);
-    sub.frequency.exponentialRampToValueAtTime(endFreq * 0.5, now + duration * 0.85);
-
-    filter.type = 'lowpass';
-    filter.Q.value = 6.5;
-    filter.frequency.setValueAtTime(180, now);
-    filter.frequency.exponentialRampToValueAtTime(680, now + duration * 0.45);
-    filter.frequency.exponentialRampToValueAtTime(110, now + duration);
-
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(gainLevel, now + duration * 0.25);
-    gain.gain.setValueAtTime(gainLevel * 0.8, now + duration * 0.7);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    osc.connect(filter);
-    sub.connect(gain);
-    filter.connect(gain);
-    gain.connect(dest);
-
-    osc.start(now);
-    sub.start(now);
-    osc.stop(now + duration);
-    sub.stop(now + duration);
-  },
-
-  // 4. Church Pipe Organ Voice (Gated Additive Harmonics)
-  playOrgan(freqs: number[], dest: any, duration = 0.8, gainLevel = 0.16) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    const voiceGain = gainLevel / Math.max(1, Math.sqrt(freqs.length));
-
-    freqs.forEach(freq => {
-      const osc1 = this.ctx!.createOscillator();
-      const osc2 = this.ctx!.createOscillator();
-      const filter = this.ctx!.createBiquadFilter();
-      const gain = this.ctx!.createGain();
-
-      osc1.type = 'triangle'; // Pure fundamental
-      osc2.type = 'sawtooth'; // Reed edge
-
-      osc1.frequency.setValueAtTime(freq, now);
-      osc2.frequency.setValueAtTime(freq * 2, now);
-
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(1100, now);
-      filter.Q.value = 1.8;
-
-      // Tight gate: quick attack, clean sustain, rapid release before next step
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(voiceGain, now + 0.03);
-      gain.gain.setValueAtTime(voiceGain * 0.85, now + duration * 0.7);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-      osc1.connect(filter);
-      osc2.connect(filter);
-      filter.connect(gain);
-      gain.connect(dest);
-
-      osc1.start(now);
-      osc2.start(now);
-      osc1.stop(now + duration);
-      osc2.stop(now + duration);
-    });
-  },
-
-  // 5. Dry Bone-Click Percussion (Resonant High-Q White Noise Chasm)
-  playBoneClick(dest: any, gainLevel = 0.22) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    const bufferSize = Math.floor(this.ctx.sampleRate * 0.04);
-    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const output = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = Math.random() * 2 - 1;
-    }
-
-    const whiteNoise = this.ctx.createBufferSource();
-    whiteNoise.buffer = noiseBuffer;
-
-    const bandpass = this.ctx.createBiquadFilter();
-    bandpass.type = 'bandpass';
-    bandpass.frequency.setValueAtTime(2400 + Math.random() * 800, now);
-    bandpass.Q.value = 14;
-
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(gainLevel, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.038);
-
-    whiteNoise.connect(bandpass);
-    bandpass.connect(gain);
-    gain.connect(dest);
-
-    whiteNoise.start(now);
-    whiteNoise.stop(now + 0.04);
-  },
-
-  // 6. Resonant Acid Bass Saw (Filtered Attack Spike)
-  playBassSaw(freq: number, dest: any, duration = 0.26, gainLevel = 0.28) {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    const osc = this.ctx.createOscillator();
-    const sub = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'sawtooth';
-    sub.type = 'sine';
-
-    osc.frequency.setValueAtTime(freq, now);
-    sub.frequency.setValueAtTime(freq * 0.5, now);
-
-    filter.type = 'lowpass';
-    filter.Q.value = 7.0;
-    filter.frequency.setValueAtTime(950, now);
-    filter.frequency.exponentialRampToValueAtTime(80, now + duration * 0.95);
-
-    gain.gain.setValueAtTime(gainLevel, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    osc.connect(filter);
-    sub.connect(gain);
-    filter.connect(gain);
-    gain.connect(dest);
-
-    osc.start(now);
-    sub.start(now);
-    osc.stop(now + duration);
-    sub.stop(now + duration);
-  },
-
-  // =========================================================================
-  // 3. ACT BOSSES: THE TRIPTYCH (Chamber Combat: Groove -> Rise -> Bridge)
-  // =========================================================================
-  playBossTheme(type: 'Zealot' | 'The Begotten' | 'The Weaver', fadeTime = 1.4) {
-    this.transitionTo(`boss-${type}`, (inst: any) => {
-      if (!this.ctx) return;
-      const pianoEcho = this.createEchoBus(inst, 0.38, 0.28, 850);
-
-      // Acoustic Upright Piano Progression
-      const chords: Record<number, number[]> = {
-        // --- 1. Groove (Steps 0–31) ---
-        0:  [73.42, 110.00, 146.83, 174.61], // Dm
-        6:  [73.42, 164.81],                 // Dm9 push
-        8:  [87.31, 130.81, 174.61, 220.00], // F
-        14: [87.31, 174.61, 220.00],
-        16: [58.27, 116.54, 146.83, 174.61], // Bb
-        22: [58.27, 130.81, 164.81],
-        24: [55.00, 110.00, 138.59, 196.00], // A7
-        28: [55.00, 110.00, 146.83, 207.65], // A7(b5) turnaround
-
-        // --- 2. The Rising Climb (Steps 32–47) ---
-        32: [73.42, 110.00, 146.83, 174.61], // Dm
-        36: [82.41, 123.47, 164.81, 196.00], // Edim
-        40: [87.31, 130.81, 174.61, 220.00], // F
-        44: [98.00, 146.83, 174.61, 220.00], // Gm
-        46: [103.83, 146.83, 174.61, 207.65],// G#dim7 apex
-
-        // --- 3. The Bridge & Turnaround (Steps 48–63) ---
-        48: [58.27, 116.54, 174.61, 220.00], // Bbmaj7
-        52: [49.00, 98.00, 146.83, 220.00],  // Gm9
-        56: [55.00, 110.00, 164.81, 220.00], // A7sus4
-        58: [55.00, 110.00, 138.59, 220.00]  // A7 resolve
-      };
-
-      // Weeping Melodic Lead (Plucked parlor strings)
-      const topMelody: Record<number, number> = {
-        // Groove phrases
-        2:  293.66, 4:  349.23, 10: 440.00, 12: 392.00,
-        18: 349.23, 20: 329.63, 26: 293.66, 30: 277.18,
-
-        // The Climbing Escalation
-        34: 293.66, 36: 329.63, 38: 349.23, 40: 392.00,
-        42: 415.30, 44: 440.00, 46: 466.16,
-
-        // The Falling Bridge
-        48: 587.33, 50: 523.25, 52: 466.16, 54: 440.00,
-        56: 392.00, 58: 349.23, 59: 277.18
-      };
-
-      // 64-step Warm Acoustic Bassline
-      const bassline: (number | null)[] = [
-        // Groove
-        73.42, null, 73.42, null, 87.31, null, 73.42, 82.41,
-        87.31, null, 87.31, 110.00, null, 87.31, 65.41, null,
-        58.27, null, 58.27, null, 65.41, null, 58.27, 69.30,
-        55.00, null, 55.00, 82.41, null, 73.42, 69.30, 61.74,
-
-        // Ascent
-        73.42, null, 82.41, null, 87.31, null, 98.00, null,
-        103.83, null, 110.00, null, 116.54, null, 138.59, null,
-
-        // Bridge & Drop
-        58.27, null, 58.27, null, 49.00, null, 49.00, null,
-        55.00, null, 55.00, null, null, null, null, null
-      ];
-
-      let step = 0;
-      const interval = setInterval(() => {
-        if (!this.ctx) return;
-
-        // Upright Piano Chords
-        if (chords[step]) {
-          const chordDur = step >= 48 ? 2.6 : 2.0;
-          this.playSynthPiano(chords[step], pianoEcho, chordDur, 0.24);
-        }
-
-        // Plucked Lead
-        if (topMelody[step]) {
-          this.playPluck(topMelody[step], pianoEcho, 1.4, 0.11);
-        }
-
-        // --- Cabin Percussion ---
-        if (step < 60) {
-          // Primary wood impact on beats 1 and 5
-          if (step % 8 === 0) {
-            this.playImpact(88, inst.bus, 0.42, 0.36);
-          } else if (step % 8 === 3 && (step > 31 || step % 16 === 11)) {
-            this.playImpact(72, inst.bus, 0.28, 0.22);
-          }
-
-          // Backbeat floor strike and brush hit on beat 3
-          if (step % 8 === 4) {
-            this.playImpact(68, inst.bus, 0.22, 0.2);
-            this.playBrushHit(inst.bus, 0.16, 850, 0.1);
-          } else if (step % 2 === 1) {
-            // Shuffling room brush ticks
-            this.playBrushHit(inst.bus, 0.05, 2400, step % 4 === 3 ? 0.035 : 0.018);
-          }
-
-          // Offbeat bone tick adding tension during the climb
-          if (step >= 32 && step < 48 && step % 2 === 0) {
-            this.playBoneClick(inst.bus, 0.16);
-          }
-        }
-        // Steps 60–63: Total percussion silence for the drop
-
-        // --- Triangle-Wave Acoustic Bass ---
-        const note = bassline[step];
-        if (note) {
-          const osc = this.ctx.createOscillator();
-          const filter = this.ctx.createBiquadFilter();
-          const gain = this.ctx.createGain();
-
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(note, this.ctx.currentTime);
-          filter.type = 'lowpass';
-          filter.frequency.value = 240;
-
-          gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.32);
-
-          osc.connect(filter);
-          filter.connect(gain);
-          gain.connect(inst.bus);
-
-          osc.start();
-          osc.stop(this.ctx.currentTime + 0.32);
-        }
-
-        step = (step + 1) % 64;
-      }, 240); // 240ms step interval
-
-      inst.timers.push(interval);
-    }, fadeTime);
-  },
-
-  playTheWeaver(fadeTime = 1.4) {
-    this.playBossTheme('The Weaver', fadeTime);
-  },
-
-  playTheZealot(fadeTime = 1.4) {
-    this.playBossTheme('Zealot', fadeTime);
-  },
-
-  playTheBegotten(fadeTime = 1.8) {
-    this.playBossTheme('The Begotten', fadeTime);
-  },
-
-  // =========================================================================
-  // 4. THE BONE LORD: DOOM DIRGE (58 BPM Sparse Cathedral Funeral March)
-  // =========================================================================
-  playFinalBoss(fadeTime = 2.0) {
-    this.transitionTo('finalboss', (inst: any) => {
-      if (!this.ctx) return;
-      const organEcho = this.createEchoBus(inst, 0.45, 0.35, 650);
-
-      // Slow, breathing chord progression (4 beats per chord: Dm -> Bb -> Gm -> A)
-      const funeralChords: Record<number, number[]> = {
-        0:  [73.42, 110.00, 146.83, 174.61], // Dm
-        8:  [58.27, 116.54, 146.83, 174.61], // Bb
-        16: [49.00, 98.00, 146.83, 196.00],  // Gm
-        24: [55.00, 110.00, 138.59, 220.00]  // A
-      };
-
-      // Sparse, weeping organ lead notes (spaced out, not noodling)
-      const leadNotes: Record<number, number> = {
-        4:  293.66, // D4
-        12: 349.23, // F4
-        20: 329.63, // E4
-        28: 277.18  // C#4
-      };
-
-      let step = 0;
-      const stepDuration = 0.258; // 58 BPM 8th notes
-      const interval = setInterval(() => {
-        if (!this.ctx) return;
-
-        // Sub-bass bell impact on downbeats
-        if (step % 8 === 0) {
-          this.playImpact(45, inst.bus, 0.7, 0.5);
-          this.playBassSaw(36.71, inst.bus, 1.8, 0.35); // Low D pedal
-        }
-
-        // Gated liturgical chords with breathing room between changes
-        if (funeralChords[step]) {
-          this.playOrgan(funeralChords[step], organEcho, 1.6, 0.28);
-        }
-
-        // Single solemn church bell / pluck
-        if (leadNotes[step]) {
-          this.playPluck(leadNotes[step], organEcho, 1.5, 0.2);
-        }
-
-        // Metronomic ticking bone click on the offbeats
-        if (step % 2 === 0) {
-          this.playBoneClick(inst.bus, 0.16);
-        }
-
-        step = (step + 1) % 32;
-      }, stepDuration * 1000);
-
-      inst.timers.push(interval);
-    }, fadeTime);
-  },
-
-  // =========================================================================
-  // 5. PHASE 3: THE BLOOD MOON (132 BPM Gothic Pipe Toccata & Industrial Pulse)
-  // =========================================================================
-  playFinalBossPhase3(fadeTime = 0.6) {
-    this.transitionTo('bloodmoon-phase3', (inst: any) => {
-      if (!this.ctx) return;
-      const organEcho = this.createEchoBus(inst, 0.22, 0.3, 900);
-
-      // Relentless Baroque Pipe Run (Dm -> Bb -> C#dim -> Dm)
-      const organRun: number[] = [
-        293.66, 349.23, 440.00, 587.33, 554.37, 440.00, 349.23, 293.66,
-        233.08, 293.66, 349.23, 466.16, 440.00, 349.23, 293.66, 233.08,
-        277.18, 329.63, 415.30, 554.37, 587.33, 440.00, 349.23, 277.18,
-        293.66, 220.00, 174.61, 146.83, 138.59, 146.83, 174.61, 220.00
-      ];
-
-      // Crushing full-register organ chords hitting every 8 steps
-      const organWalls: Record<number, number[]> = {
-        0:  [73.42, 146.83, 220.00, 293.66], // Dm
-        8:  [58.27, 116.54, 174.61, 233.08], // Bb
-        16: [69.30, 138.59, 174.61, 277.18], // C#dim
-        24: [55.00, 110.00, 164.81, 220.00]  // A7
-      };
-
-      // Driving 16th-note saw bass
-      const bassDrive: number[] = [
-        73.42, 73.42, 146.83, 73.42, 73.42, 73.42, 146.83, 73.42,
-        58.27, 58.27, 116.54, 58.27, 58.27, 58.27, 116.54, 58.27,
-        69.30, 69.30, 138.59, 69.30, 69.30, 69.30, 138.59, 69.30,
-        55.00, 55.00, 110.00, 55.00, 55.00, 55.00, 110.00, 55.00
-      ];
-
-      let step = 0;
-      const stepDuration = 0.114; // ~132 BPM 16th notes
-      const interval = setInterval(() => {
-        if (!this.ctx) return;
-
-        // Heavy industrial sub kick (45Hz thud, zero bongo tone)
-        if (step % 4 === 0) {
-          this.playImpact(48, inst.bus, 0.35, 0.46);
-        }
-
-        // Heavy bone crack snare on 4 and 12
-        if (step % 8 === 4) {
-          this.playBoneClick(inst.bus, 0.38);
-          this.playImpact(58, inst.bus, 0.22, 0.28);
-        }
-
-        // Relentless bassline
-        this.playBassSaw(bassDrive[step % bassDrive.length], inst.bus, 0.1, 0.3);
-
-        // Continuous high pipe manual runs
-        const pipeNote = organRun[step % organRun.length];
-        this.playOrgan([pipeNote], organEcho, 0.14, 0.22);
-
-        // Massive cathedral chord drops on the measure boundaries
-        if (organWalls[step % 32]) {
-          this.playOrgan(organWalls[step % 32], inst.bus, 0.85, 0.28);
-        }
-
-        step = (step + 1) % 32;
-      }, stepDuration * 1000);
-
-      inst.timers.push(interval);
-    }, fadeTime);
-  }
-};
-
+import { ChiptuneAudio, playSound, getAudioEngine } from './audio/ChiptuneAudio';
+import { loadArchive, recordBossVictory, recordDiscoveredCards, recordRunCompletion, type PersistentArchive } from './data/archive';
+import { ArchiveModal } from './components/ArchiveModal';
 const chiptuneAudio = ChiptuneAudio;
-
-// Built-in Web Audio API sound generator for game events
-const playSound = (type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone' | 'defeat' | 'victory' | 'armor') => {
-  try {
-    const sfxMult = typeof ChiptuneAudio.sfxVolume === 'number' ? ChiptuneAudio.sfxVolume : 0.6;
-    if (sfxMult <= 0) return;
-
-    let ctx = ChiptuneAudio.ctx;
-    if (!ctx) {
-      ChiptuneAudio.init();
-      ctx = ChiptuneAudio.ctx;
-    }
-    if (!ctx) {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      ctx = new AudioCtx();
-    }
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    const now = ctx.currentTime;
-    if (type === 'draw') {
-      osc.frequency.setValueAtTime(320, now);
-      osc.frequency.exponentialRampToValueAtTime(480, now + 0.1);
-      gain.gain.setValueAtTime(0.12 * sfxMult, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.1);
-    } else if (type === 'sacrifice') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(140, now);
-      osc.frequency.exponentialRampToValueAtTime(60, now + 0.22);
-      gain.gain.setValueAtTime(0.25 * sfxMult, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-      osc.start(now);
-      osc.stop(now + 0.22);
-    } else if (type === 'play') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(220, now);
-      osc.frequency.exponentialRampToValueAtTime(440, now + 0.12);
-      gain.gain.setValueAtTime(0.18 * sfxMult, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      osc.start(now);
-      osc.stop(now + 0.12);
-    } else if (type === 'hit') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(95, now);
-      osc.frequency.exponentialRampToValueAtTime(35, now + 0.15);
-      gain.gain.setValueAtTime(0.28 * sfxMult, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    } else if (type === 'bone') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(560, now);
-      osc.frequency.exponentialRampToValueAtTime(700, now + 0.08);
-      gain.gain.setValueAtTime(0.15 * sfxMult, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-      osc.start(now);
-      osc.stop(now + 0.08);
-    } else if (type === 'bell') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, now);
-      osc.frequency.exponentialRampToValueAtTime(780, now + 0.5);
-      gain.gain.setValueAtTime(0.2 * sfxMult, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-      osc.start(now);
-      osc.stop(now + 0.5);
-    } else if (type === 'victory') {
-      osc.frequency.setValueAtTime(330, now);
-      osc.frequency.setValueAtTime(440, now + 0.15);
-      osc.frequency.setValueAtTime(660, now + 0.3);
-      gain.gain.setValueAtTime(0.2 * sfxMult, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-      osc.start(now);
-      osc.stop(now + 0.5);
-    } else if (type === 'defeat') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.exponentialRampToValueAtTime(40, now + 0.7);
-      gain.gain.setValueAtTime(0.25 * sfxMult, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-      osc.start(now);
-      osc.stop(now + 0.7);
-    } else if (type === 'armor') {
-        // High-frequency metallic iron clang / deflection ring
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(1150, now);
-        osc.frequency.exponentialRampToValueAtTime(380, now + 0.18);
-        gain.gain.setValueAtTime(0.35 * sfxMult, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        osc.start(now);
-        osc.stop(now + 0.18);
-    }
-  } catch {
-    // Audio context may require user gesture
-  }
-};
 
 export const getStageBgClass = (s: number, isBoss: boolean): string => {
   if (isBoss) return 'bg-gradient-to-b from-[#26080e] via-[#150508] to-[#080204]';
@@ -2119,17 +112,6 @@ export const getStageBgClass = (s: number, isBoss: boolean): string => {
     default:
       return 'bg-gradient-to-b from-[#0a1611] via-[#08110d] to-[#050a08]';
   }
-};
-
-// Universal audio reference bridge
-const getAudioEngine = () => {
-  try {
-    if (typeof ChiptuneAudio !== 'undefined') return ChiptuneAudio;
-    if (typeof chiptuneAudio !== 'undefined') return chiptuneAudio;
-    if (typeof (window as any).ChiptuneAudio !== 'undefined') return (window as any).ChiptuneAudio;
-    if (typeof (window as any).chiptuneAudio !== 'undefined') return (window as any).chiptuneAudio;
-  } catch (_) {}
-  return null;
 };
 
 // --- Diegetic Talisman Watcher Eye (Tracks Cursor via Direct DOM Transform) ---
@@ -2577,6 +559,10 @@ export default function App() {
   const [screen, setScreenRaw] = useState<ScreenState>('SPLASH');
   const [logs, setLogs] = useState<string[]>(['> System initialized. Awaiting lineage selection...']);
   const [showPauseMenu, setShowPauseMenu] = useState<boolean>(false);
+  const [archive, setArchive] = useState<PersistentArchive>(() => loadArchive());
+  const [archiveModalTab, setArchiveModalTab] = useState<'COMPENDIUM' | 'LEDGER' | null>(null);
+  const recordedGameOverRef = useRef<boolean>(false);
+  const [selectedLineage, setSelectedLineage] = useState<string | null>(null);
   const [showAudioSettings, setShowAudioSettings] = useState<boolean>(false);
   const chiptuneAudio = ChiptuneAudio;
   const [previousScreen, setPreviousScreen] = useState<ScreenState>('DUEL');
@@ -3000,6 +986,36 @@ export default function App() {
   const [isEnemyRetracting, setIsEnemyRetracting] = useState<boolean>(false);
   const [totalOverkillDamage, setTotalOverkillDamage] = useState<number>(0);
   const [highestOverkill, setHighestOverkill] = useState<number>(0);
+
+  // Persist newly encountered cards & sigils to Compendium
+  useEffect(() => {
+    const onBoard = (playerBoard || []).filter((c): c is CardDef => Boolean(c));
+    const combined = [...(masterDeck || []), ...(hand || []), ...onBoard];
+    if (combined.length > 0) {
+      setArchive(prev => recordDiscoveredCards(prev, combined));
+    }
+  }, [masterDeck, hand, playerBoard]);
+
+  // Persist run completion stats once per GAME_OVER transition
+  useEffect(() => {
+    if (screen === 'GAME_OVER') {
+      if (!recordedGameOverRef.current) {
+        recordedGameOverRef.current = true;
+        const won = Boolean(bossState?.ritualEndedVoluntarily) || (runStatsRef.current?.finalBossesDefeated || 0) > 0;
+        setArchive(prev =>
+          recordRunCompletion(
+            prev,
+            runStatsRef.current,
+            highestOverkill,
+            won,
+            selectedLineage
+          )
+        );
+      }
+    } else {
+      recordedGameOverRef.current = false;
+    }
+  }, [screen, highestOverkill, bossState?.ritualEndedVoluntarily]);
   const [showOverkill, setShowOverkill] = useState<boolean>(false);
   const [isTalismanPricked, setIsTalismanPricked] = useState<boolean>(false);
   const isCinematic = false;
@@ -6402,6 +4418,7 @@ export default function App() {
 
     // Stages strictly increment by +1 ONLY after a boss is felled
     if (isBossMatch) {
+      setArchive(prev => recordBossVictory(prev, bossState.type));
       setStage(prev => prev + 1);
       setLevel(1);
     } else {
@@ -7249,6 +5266,7 @@ export default function App() {
   };
 
   const handleSelectLineage = (lineageId: string) => {
+    setSelectedLineage(lineageId);
     setStartingBones(0);
     startingBonesRef.current = 0;
     setBones(0);
@@ -8288,7 +6306,14 @@ export default function App() {
                   <div
                     key={`${sigilName}-${idx}`}
                     title={`${sigilName}: ${SIGIL_DESCRIPTIONS[sigilName] || 'A dark, inscrutable power.'}`}
-                    className="relative z-10 transition-transform duration-150 ease-out hover:scale-135 hover:z-40 origin-center cursor-help drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSigilDetailModal({
+                        name: sigilName,
+                        desc: SIGIL_DESCRIPTIONS[sigilName] || 'A dark, inscrutable power.',
+                      });
+                    }}
+                    className="relative z-10 transition-transform duration-150 ease-out hover:scale-135 active:scale-125 hover:z-40 origin-center cursor-pointer drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] touch-manipulation"
                   >
                     <img
                       src={iconSrc}
@@ -8546,7 +6571,14 @@ export default function App() {
                   <div
                     key={`sigil-${s}-${idx}`}
                     title={armorTitle}
-                    className={`${medallionSizeClass} relative shrink-0 rounded-full border flex items-center justify-center overflow-hidden pointer-events-auto cursor-help transition-all duration-150 ease-out hover:scale-135 hover:z-40 origin-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] ${medallionBorderClass}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSigilDetailModal({
+                        name: s,
+                        desc: isArmorSigil ? armorTitle : (SIGIL_DESCRIPTIONS[s] || 'A dark, inscrutable power.'),
+                      });
+                    }}
+                    className={`${medallionSizeClass} relative shrink-0 rounded-full border flex items-center justify-center overflow-hidden pointer-events-auto cursor-pointer transition-all duration-150 ease-out hover:scale-135 active:scale-125 hover:z-40 origin-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] touch-manipulation ${medallionBorderClass}`}
                   >
                     <img
                       src={getSigilArtUrl(s)}
@@ -9027,6 +7059,25 @@ export default function App() {
                 </span>
               )}
         </button>
+
+        {isRitualReady && (
+          <div className="mt-4 flex items-center justify-center gap-4 sm:gap-6 font-mono text-[11px] uppercase tracking-[0.22em]">
+            <button
+              type="button"
+              onClick={() => setArchiveModalTab('COMPENDIUM')}
+              className="px-3 py-1.5 bg-black/50 hover:bg-red-950/40 border border-red-950/70 hover:border-red-700/70 text-amber-200/80 hover:text-amber-100 transition-colors cursor-pointer"
+            >
+              [ Compendium ]
+            </button>
+            <button
+              type="button"
+              onClick={() => setArchiveModalTab('LEDGER')}
+              className="px-3 py-1.5 bg-black/50 hover:bg-red-950/40 border border-red-950/70 hover:border-red-700/70 text-amber-200/80 hover:text-amber-100 transition-colors cursor-pointer"
+            >
+              [ Ledger ]
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )}
@@ -9092,7 +7143,7 @@ export default function App() {
             style={{ animationDelay: '2.5s' }}
           />
 
-            <div className="grid grid-cols-3 gap-x-8 gap-y-2 w-full pb-1 max-w-5xl scale-[1.20] origin-center my-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 sm:gap-x-8 gap-y-3 sm:gap-y-2 w-full pb-2 max-w-5xl scale-100 sm:scale-[1.20] origin-center my-auto overflow-y-auto max-h-[82vh] px-1">
               {[
                 { id: 'randomizer', name: 'Unformed', desc: 'Masochistic', cards: ["Trade Pelt", "Trade Pelt", "Geck"] },
                 { id: 'witchcraft', name: 'Taiga', desc: 'Reliable', cards: ["Mole", "Moose Buck", "Black Goat"] },
@@ -9237,6 +7288,14 @@ export default function App() {
       {/* =========================================================================
           GENERIC PAUSE / SETTINGS MENU MODAL
          ========================================================================= */}
+      {archiveModalTab && (
+        <ArchiveModal
+          initialTab={archiveModalTab}
+          archive={archive}
+          onClose={() => setArchiveModalTab(null)}
+        />
+      )}
+
       {showPauseMenu && (
         <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-up font-mono select-none">
           <div className="max-w-sm w-full text-center relative border border-amber-950/60 p-6 bg-[#0c0805]">
@@ -9291,6 +7350,28 @@ export default function App() {
                     className="w-full accent-amber-500 h-1 bg-stone-900 rounded cursor-pointer touch-manipulation"
                   />
                 </div>
+              </div>
+
+              {/* Compendium & Lifetime Ledger */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    setShowPauseMenu(false);
+                    setArchiveModalTab('COMPENDIUM');
+                  }}
+                  className="w-full py-2 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer text-center"
+                >
+                  COMPENDIUM
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPauseMenu(false);
+                    setArchiveModalTab('LEDGER');
+                  }}
+                  className="w-full py-2 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer text-center"
+                >
+                  LEDGER
+                </button>
               </div>
 
               {/* Diegetic Timber Action Buttons */}
