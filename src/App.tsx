@@ -95,7 +95,7 @@ import {
 
 
 import { ChiptuneAudio, playSound, getAudioEngine } from './audio/ChiptuneAudio';
-import { loadArchive, recordBossVictory, recordDiscoveredCards, recordRunCompletion, type PersistentArchive } from './data/archive';
+import { loadArchive, recordBossVictory, recordDiscoveredCards, recordRunCompletion, resetArchive, type PersistentArchive } from './data/archive';
 import { ArchiveModal } from './components/ArchiveModal';
 const chiptuneAudio = ChiptuneAudio;
 
@@ -562,6 +562,8 @@ export default function App() {
   const [logs, setLogs] = useState<string[]>(['> System initialized. Awaiting lineage selection...']);
   const [showPauseMenu, setShowPauseMenu] = useState<boolean>(false);
   const [archive, setArchive] = useState<PersistentArchive>(() => loadArchive());
+  const isForcedDevBossRef = useRef<boolean>(false);
+  const [devConfirmWipeArchive, setDevConfirmWipeArchive] = useState<boolean>(false);
   const [archiveModalTab, setArchiveModalTab] = useState<'COMPENDIUM' | 'LEDGER' | null>(null);
   const recordedGameOverRef = useRef<boolean>(false);
   const [selectedLineage, setSelectedLineage] = useState<string | null>(null);
@@ -1528,6 +1530,7 @@ export default function App() {
   };
 
   const handleRestartRun = () => {
+    isForcedDevBossRef.current = false;
     setScreen('SPLASH');
     setScale(0);
     setBlood(0);
@@ -4414,10 +4417,15 @@ export default function App() {
     const newLevel = (nextDuels % 2) + 1;
 
     // Stages strictly increment by +1 ONLY after a boss is felled
+    const wasForcedDevBoss = isForcedDevBossRef.current;
+    isForcedDevBossRef.current = false;
+
     if (isBossMatch) {
-      setArchive(prev => recordBossVictory(prev, bossState.type));
-      setStage(prev => prev + 1);
-      setLevel(1);
+      if (!wasForcedDevBoss) {
+        setArchive(prev => recordBossVictory(prev, bossState.type));
+        setStage(prev => prev + 1);
+        setLevel(1);
+      }
     } else {
       // Within a stage, level/depth advances with each regular encounter
       setLevel(prev => prev + 1);
@@ -4448,8 +4456,8 @@ export default function App() {
       setConsecutiveOneTurnWins(0);
     }
 
-    // Final Boss Victory triggers the Ritual Completion Screen
-    if (isBossMatch && bossState.type === 'BoneLord') {
+    // Final Boss Victory triggers the Ritual Completion Screen (skipped in Dev Sandbox)
+    if (isBossMatch && bossState.type === 'BoneLord' && !wasForcedDevBoss) {
       setBossState(prev => ({ ...prev, isRitualComplete: true }));
       return;
     }
@@ -4473,7 +4481,7 @@ export default function App() {
       btnText: "Press Forward",
       onAction: () => {
         setModalAlert(null);
-        if (isBossMatch) {
+        if (isBossMatch && !wasForcedDevBoss) {
           setActMap(prev => {
             const updated = prev ? { ...prev, completedBoss: true } : prev;
             actMapRef.current = updated;
@@ -4481,6 +4489,9 @@ export default function App() {
           });
           initCardChoice();
         } else {
+          if (wasForcedDevBoss) {
+            addLog("[DEV] Sandbox boss cleared — Act map & Ledger preserved.");
+          }
           returnToMap();
         }
       }
@@ -4488,6 +4499,7 @@ export default function App() {
   };
 
   const handleLossMatch = () => {
+    isForcedDevBossRef.current = false;
     clearRunSave();
     setModalAlert(null);
     setBossState(prev => ({
@@ -4587,9 +4599,10 @@ export default function App() {
     forcedBoss?: boolean | 'Zealot' | 'The Begotten' | 'BoneLord' | 'The Weaver' | 'Goobert' | 'Woodcarver',
     deckOverride?: CardDef[],
     totemOverride?: Totem | null,
-    progressOverride?: { duelsCompleted?: number; bossesDefeated?: number; forceEnemyTotem?: boolean }
+    progressOverride?: { duelsCompleted?: number; bossesDefeated?: number; forceEnemyTotem?: boolean; isDevSandboxBoss?: boolean }
   ) => {
     // When advancing directly from an active duel, close curtains before swapping the board
+    isForcedDevBossRef.current = Boolean(progressOverride?.isDevSandboxBoss);
     if (prevScreenRef.current === 'DUEL') {
       triggerBattleWipe();
       await new Promise(res => setTimeout(res, 320));
@@ -6078,18 +6091,16 @@ export default function App() {
   const handleDevForce = (type: string) => {
     setScreen('DUEL');
     addLog(`[DEV] Overriding sequence -> ${type.toUpperCase()}`);
-    if (type === 'combat') startNextDuel(false);
-    else if (type === 'boss' || type === 'boss-zealot') {
-      setDuelsCompleted(5);
-      startNextDuel('Zealot');
+    if (type === 'combat') {
+      startNextDuel(false);
+    } else if (type === 'boss' || type === 'boss-zealot') {
+      startNextDuel('Zealot', undefined, undefined, { isDevSandboxBoss: true });
     } else if (type === 'boss-goobert') {
-      setDuelsCompleted(11);
-      startNextDuel('The Begotten');
+      startNextDuel('The Begotten', undefined, undefined, { isDevSandboxBoss: true });
     } else if (type === 'boss-bonelord') {
-      setDuelsCompleted(17);
-      startNextDuel('BoneLord');
+      startNextDuel('BoneLord', undefined, undefined, { isDevSandboxBoss: true });
     } else if (type === 'boss-woodcarver') {
-      startNextDuel('The Weaver');
+      startNextDuel('The Weaver', undefined, undefined, { isDevSandboxBoss: true });
     }
     else if (type === 'items') startItemEvent();
     else if (type === 'campfire') initCampfire();
@@ -7861,98 +7872,136 @@ export default function App() {
          ========================================================================= */}
       {screen === 'EVENT_ITEMS' && (
         <div
-          className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-center p-6 select-none font-mono"
+          className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto select-none font-mono animate-fade-up"
           style={getScreenBgStyle('merchant_event.jpg')}
         >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+
           {cacheConsolationCard ? (
-            /* Consolation Card Showcase Modal */
-            <div className="flex flex-col items-center justify-center max-w-md w-full text-center animate-menu-fade-in">
-              <div className="text-amber-600/80 font-mono text-[10px] uppercase tracking-[0.25em] mb-1">
-                Barter Exhausted
+            /* Consolation Card Showcase Plaque */
+            <div className="relative z-10 flex flex-col items-center justify-center max-w-md w-full text-center my-auto animate-menu-fade-in">
+              <div className="flex items-center gap-3.5 mb-1">
+                <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                  Barter Exhausted
+                </span>
+                <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
               </div>
-              <h3 className="text-xl font-['Cinzel',_serif] font-bold text-amber-100 uppercase tracking-widest mb-1 drop-shadow-md">
+              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold text-[#efe0be] uppercase tracking-[0.2em] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                 Peddler's Token
-              </h3>
-              <p className="text-xs text-stone-400 mb-6 font-mono">
-                Unable to trade further, the peddler slides a card across the wood:
+              </h1>
+              <p className="mt-2 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] text-[#d4bfa0]/85 font-mono leading-relaxed shadow-md">
+                Unable to trade further, the peddler slides a card across the wood.
               </p>
 
-              {/* Standard Game Card Display */}
-              <div className="my-6 transform scale-110 sm:scale-125 transition-transform duration-200 filter drop-shadow-[0_16px_30px_rgba(0,0,0,0.9)] select-none pointer-events-none">
-                {renderCard(cacheConsolationCard)}
+              <div className="relative my-7 p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#442c1c]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/75" />
+                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/75" />
+                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/75" />
+                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/75" />
+                <div className="transform scale-110 transition-transform duration-200 pointer-events-none">
+                  {renderCard(cacheConsolationCard, { isClickable: false, disableHoverScale: true })}
+                </div>
               </div>
 
-              {/* Accept & Advance Button */}
               <button
                 onClick={handleConfirmConsolation}
-                className="mt-8 px-7 py-2.5 bg-[#1a100b] hover:bg-[#2b1910] active:bg-[#120a06] border border-amber-600/80 hover:border-amber-400 text-amber-200 hover:text-white rounded-sm font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest cursor-pointer shadow-[0_4px_16px_rgba(0,0,0,0.8)] transition-all"
+                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,230,180,0.14)] transition-all"
               >
                 Claim Card & Press Forward
               </button>
             </div>
           ) : (
             /* Standard Shelf Display */
-            <>
-              <div className="text-amber-200 text-lg uppercase tracking-widest font-bold mb-1">
-                Surplus Cache
+            <div className="relative z-10 flex flex-col items-center justify-center max-w-3xl w-full text-center my-auto">
+              <div className="flex items-center gap-3.5 mb-1">
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                  The Peddler's Cart
+                </span>
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
               </div>
-              <p className="text-xs text-neutral-400 mb-3">
-                Exchange your overkill blood harvest for field relics:
+              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                Surplus Cache
+              </h1>
+              <p className="mt-2 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/68 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-lg leading-relaxed shadow-md">
+                Exchange your overkill blood harvest for field relics before the trail resumes.
               </p>
 
-              {/* Blood Bank Balance Indicator */}
-              <div className="flex items-center gap-2 mb-8 px-4 py-1.5 bg-[#140e0b] border border-[#3a2215] rounded-sm shadow-inner">
-                <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">Blood Bank:</span>
-                <span className="font-['Cinzel',_serif] text-sm font-black text-red-400 tracking-wider">
-                  {totalOverkillDamage}
-                </span>
-                <span className="text-[10px] uppercase font-bold text-amber-800">OZ</span>
+              {/* Blood Bank & Satchel Telemetry Strip */}
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-5 mb-6">
+                <div className="flex items-center gap-2 px-4 py-1.5 bg-[#120b08]/90 border border-[#4a261b] rounded-[2px] shadow-[0_6px_16px_rgba(0,0,0,0.75)]">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#b59c80] font-bold">Blood Bank</span>
+                  <span className="h-3 w-px bg-[#4a261b]" />
+                  <span className="font-['Cinzel',_serif] text-sm font-black text-red-400 tracking-wider">
+                    {totalOverkillDamage}
+                  </span>
+                  <span className="text-[9px] uppercase font-bold text-red-400/70">OZ</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-1.5 bg-[#120b08]/90 border border-[#3e2a1c] rounded-[2px] shadow-[0_6px_16px_rgba(0,0,0,0.75)]">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#b59c80] font-bold">Satchel</span>
+                  <span className="h-3 w-px bg-[#3e2a1c]" />
+                  <span className="font-['Cinzel',_serif] text-sm font-bold text-[#ead4ac]">
+                    {items.filter(s => s !== null).length} / {items.length}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex gap-6 items-center justify-center max-w-xl">
-                {itemChoices.length === 0 ? (
-                  <div className="text-xs text-neutral-500 italic py-8">
-                    The cache shelves have been emptied.
-                  </div>
-                ) : (
-                  itemChoices.map(itemId => {
-                    const def = ALL_ITEMS[itemId];
-                    const cost = ITEM_COSTS[itemId] ?? 3;
-                    const satchelFull = items.findIndex(s => s === null) === -1;
-                    const canAfford = totalOverkillDamage >= cost && !satchelFull;
+              {/* Smoked-Wood Relic Tray */}
+              <div className="relative w-full p-5 sm:p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
+                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
-                    return (
-                      <button
-                        key={itemId}
-                        disabled={!canAfford}
-                        onClick={() => handleSelectItem(itemId)}
-                        className={`w-44 p-4 border rounded-sm flex flex-col items-center text-center transition-all duration-150 relative ${
-                          canAfford
-                            ? 'bg-[#140d09] border-[#3e2316] hover:border-amber-400 hover:scale-105 group cursor-pointer'
-                            : 'bg-[#0d0907] border-[#20150f] opacity-45 cursor-not-allowed'
-                        }`}
-                      >
-                        <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                          {def.emoji}
-                        </div>
-                        <div className="text-xs font-bold text-amber-100 uppercase mb-2">
-                          {def.name}
-                        </div>
-                        <div className="text-[10px] text-neutral-400 leading-relaxed mb-4">
-                          {def.description}
-                        </div>
+                <div className="flex flex-wrap gap-5 items-stretch justify-center">
+                  {itemChoices.length === 0 ? (
+                    <div className="text-xs text-[#a58e74]/75 italic py-10 font-mono">
+                      The cache shelves have been picked clean.
+                    </div>
+                  ) : (
+                    itemChoices.map(itemId => {
+                      const def = ALL_ITEMS[itemId];
+                      const cost = ITEM_COSTS[itemId] ?? 3;
+                      const satchelFull = items.findIndex(s => s === null) === -1;
+                      const canAfford = totalOverkillDamage >= cost && !satchelFull;
 
-                        <div className={`mt-auto px-2.5 py-1 rounded-xs border text-[11px] font-bold tracking-wider ${
-                          totalOverkillDamage >= cost
-                            ? 'border-red-900/80 bg-red-950/40 text-red-300'
-                            : 'border-neutral-800 bg-neutral-900/60 text-neutral-600'
-                        }`}>
-                          🩸 {cost} OZ
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
+                      return (
+                        <button
+                          key={itemId}
+                          disabled={!canAfford}
+                          onClick={() => handleSelectItem(itemId)}
+                          className={`w-48 p-4 rounded-[3px] border flex flex-col items-center text-center transition-all duration-200 relative ${
+                            canAfford
+                              ? 'bg-gradient-to-b from-[#1a110c] to-[#0f0906] border-[#4e3220] hover:border-[#d4af37]/90 hover:-translate-y-1 shadow-[0_10px_24px_rgba(0,0,0,0.85)] hover:shadow-[0_14px_28px_rgba(212,175,55,0.18)] group cursor-pointer'
+                              : 'bg-[#0c0806]/80 border-[#281a12] opacity-45 cursor-not-allowed'
+                          }`}
+                        >
+                          <div className="w-14 h-14 mb-3 rounded-[2px] bg-[#100a07] border border-[#3c2719] group-hover:border-[#9e743c]/80 flex items-center justify-center text-3xl shadow-inner transition-colors">
+                            <span className="group-hover:scale-110 transition-transform">{def.emoji}</span>
+                          </div>
+                          <div className="font-['Cinzel',_serif] text-xs font-bold text-[#f0dab2] uppercase tracking-[0.14em] mb-2">
+                            {def.name}
+                          </div>
+                          <div className="w-8 h-px bg-gradient-to-r from-transparent via-[#7a5a36]/70 to-transparent mb-2.5" />
+                          <div className="text-[10px] text-[#baa68c]/85 leading-relaxed mb-4">
+                            {def.description}
+                          </div>
+
+                          <div
+                            className={`mt-auto w-full py-1.5 rounded-[2px] border text-[10px] font-bold uppercase tracking-[0.18em] ${
+                              totalOverkillDamage >= cost
+                                ? 'border-red-900/80 bg-red-950/45 text-red-300'
+                                : 'border-[#2d2119] bg-[#120d0a] text-[#706052]'
+                            }`}
+                          >
+                            🩸 {cost} OZ
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               {(() => {
@@ -7961,81 +8010,128 @@ export default function App() {
                 const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
 
                 return (
-                  <div className="flex flex-col items-center mt-10">
+                  <div className="flex flex-col items-center mt-7">
                     <button
                       onClick={handleLeaveCache}
-                      className={`px-6 py-2.5 border rounded-sm text-xs uppercase tracking-wider cursor-pointer transition-all ${
+                      className={
                         cannotBuyMore
-                          ? 'border-amber-700/80 bg-[#1c120b] text-amber-200 hover:border-amber-500 hover:text-white shadow-[0_0_12px_rgba(217,119,6,0.2)] hover:scale-[1.02]'
-                          : 'border-[#3e2316] text-[#8c7662] hover:text-neutral-200'
-                      }`}
+                          ? "px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all"
+                          : "px-6 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] border border-[#4a3322]/80 hover:border-[#8c6742] text-[#bfa788] hover:text-[#efe0be] font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all"
+                      }
                     >
                       {cannotBuyMore ? 'Venture Forth' : 'Leave Cache'}
                     </button>
                     {cannotBuyMore && (
-                      <span className="mt-2 text-[10px] text-amber-600/70 font-mono tracking-wide">
+                      <span className="mt-2.5 text-[10px] text-[#c79d5a]/80 font-mono tracking-wider">
                         The Merchant gives you a wicked grin...
                       </span>
                     )}
                   </div>
                 );
               })()}
-            </>
+            </div>
           )}
         </div>
       )}
+
       {/* =========================================================================
           CAMPFIRE EVENT SCREEN
          ========================================================================= */}
       {screen === 'EVENT_CAMPFIRE' && (
-        <div 
+        <div
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('campfireevent.jpg')}
         >
-          <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- DIVINE BLESSING --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">BABTISM OF BOILIING BLOOD</h1>
-            <p className="text-amber-400/70 text-xs mb-14 text-center max-w-lg leading-relaxed">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,8,5,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+
+          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#d69758]">
+                Divine Blessing
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              Baptism of Boiling Blood
+            </h1>
+            <p className="mt-2 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#442518]/75 text-[11px] font-mono text-[#d8be9f]/85 max-w-lg leading-relaxed shadow-md">
               {campfireStage === 0
-                ? "The Zealot's wicked smile sickens you. Select a creature to babtize in the boiling blood."
+                ? "The Zealot's wicked smile sickens you. Select a creature to baptize in the boiling blood."
                 : isCampfireSafe
-                ? "The chapel is deserted. You may bathe your Creatures in blood an additional time."
-                : "The Zealot murmurs about the hunger growing in his Flock..."}
+                  ? "The chapel is deserted. You may bathe your Creature in blood an additional time without peril."
+                  : "The Zealot murmurs about the hunger growing in his Flock... bathing again risks losing your Creature."}
             </p>
 
-            <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
-              {masterDeck.map((c, idx) => {
-                const isSelected = campfireCardIdx === idx;
-                return (
-                  <div
-                    key={c.id || `camp-${c.name}-${idx}`}
-                    onClick={() => campfireStage === 0 && setCampfireCardIdx(idx)}
-                    className={`cursor-pointer transform transition-all duration-200 ${
-                      isSelected ? "scale-105 -translate-y-3.5 z-30" : "hover:scale-105"
-                    }`}
-                  >
-                    {renderCard(c, { isSelected })}
-                  </div>
-                );
-              })}
+            {/* Blessing Type Pill */}
+            <div className="mt-4 mb-5 flex items-center gap-3">
+              <span className="px-3.5 py-1 rounded-[2px] bg-[#1a0d09]/90 border border-[#783422]/80 text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#f2b886]">
+                Font Grants: {campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'}
+              </span>
+              {campfireStage > 0 && (
+                <span
+                  className={`px-3 py-1 rounded-[2px] border text-[10px] font-mono font-bold uppercase tracking-[0.2em] ${
+                    isCampfireSafe
+                      ? 'bg-[#101c13]/90 border-emerald-700/70 text-emerald-300'
+                      : 'bg-[#210b09]/90 border-red-700/80 text-red-300'
+                  }`}
+                >
+                  {isCampfireSafe ? 'Flock Slain — Safe' : 'Perilous Second Bath'}
+                </span>
+              )}
             </div>
 
-            <div className="flex items-center gap-4">
+            {/* Deck Selection Tray */}
+            <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#0d0806]/78 border border-[#422719]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,220,180,0.06)] backdrop-blur-[2px]">
+              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9c643b]/70" />
+              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9c643b]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c643b]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c643b]/70" />
+
+              <div className="flex flex-wrap gap-4 justify-center pt-2">
+                {masterDeck.map((c, idx) => {
+                  const isSelected = campfireCardIdx === idx;
+                  const lockedOut = campfireStage > 0 && !isSelected;
+                  return (
+                    <div
+                      key={c.id || `camp-${c.name}-${idx}`}
+                      onClick={() => campfireStage === 0 && setCampfireCardIdx(idx)}
+                      className={`relative transform origin-center transition-all duration-200 ${
+                        lockedOut
+                          ? 'opacity-35 grayscale-[40%] cursor-default scale-[0.95]'
+                          : isSelected
+                            ? 'scale-[1.05] -translate-y-2.5 z-30 cursor-pointer'
+                            : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1 cursor-pointer'
+                      }`}
+                    >
+                      {isSelected && (
+                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1c0c08]/95 border border-[#c88a42]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f5d38d] whitespace-nowrap shadow-md">
+                          {campfireStage === 0 ? 'Selected' : 'Baptized'}
+                        </span>
+                      )}
+                      {renderCard(c, { isSelected, isClickable: !lockedOut, disableHoverScale: true })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-4">
               <button
                 onClick={applyCampfireWarm}
                 disabled={campfireCardIdx === null || isEventBusy}
-                className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                className="px-6 py-2.5 rounded-[2px] bg-gradient-to-b from-[#351510] to-[#1a0a07] hover:from-[#471c15] hover:to-[#240e0a] active:translate-y-[1px] border border-[#b45a3c]/85 hover:border-[#e68762] text-[#f6d5be] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,210,180,0.14)] transition-all select-none"
               >
                 {campfireStage === 0
-                  ? `BABPTIZE CREATURE (${campfireBuffType === 'attack' ? '+1 POWER' : '+2 HEALTH'})`
-                  : `BATHE IN THE BLOOD (${campfireBuffType === 'attack' ? '+1 POWER' : '+2 HEALTH'})`}
+                  ? `Baptize Creature (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`
+                  : `Bathe Again (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`}
               </button>
               {campfireStage > 0 && (
                 <button
                   onClick={() => returnToMap()}
-                  className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                  className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
                 >
-                  FLEE
+                  Flee the Chapel
                 </button>
               )}
             </div>
@@ -8047,82 +8143,146 @@ export default function App() {
           ALTAR EVENT SCREEN
          ========================================================================= */}
       {screen === 'EVENT_ALTAR' && (
-        <div 
+        <div
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('altarevent.jpg')}
         >
-          <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- CRESTFALLEN ALTAR --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Sigil Transfer</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
-              Select a Host to receive the Crests of a chosen Sacrifice. Greed begets you.
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.38)_0%,rgba(5,3,2,0.89)_100%)] pointer-events-none" />
+
+          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                Crestfallen Altar
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              Sigil Transfer
+            </h1>
+            <p className="mt-2 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-lg leading-relaxed shadow-md">
+              Select a Host to inherit the Crests of a chosen Sacrifice. Greed begets you.
             </p>
 
-            <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
-              {masterDeck.map(c => {
-                const isHost = altarHostId === c.id;
-                const isSac = altarSacrificeId === c.id;
-                const hostCard = masterDeck.find(m => m.id === altarHostId);
-                const cannotBeHost = hasMoreSigilsThanOriginal(c);
-                
-                let wouldExceedFive = false;
-                if (hostCard && !isHost && c.sigils && c.sigils.length > 0) {
-                  const merged = new Set(hostCard.sigils || []);
-                  c.sigils.forEach(s => merged.add(s));
-                  if (merged.size >= 5) wouldExceedFive = true;
-                }
+            {/* Two-Step Ritual Indicator */}
+            <div className="mt-4 mb-5 flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.2em]">
+              <span
+                className={`px-3 py-1 rounded-[2px] border ${
+                  altarHostId
+                    ? 'bg-[#1f160c]/90 border-[#d4af37]/85 text-[#f4d78b]'
+                    : 'bg-[#140e0a]/90 border-[#8c673c]/80 text-[#e8cca0]'
+                }`}
+              >
+                1. Host {altarHostId ? '✓' : '— Choose'}
+              </span>
+              <span className="text-[#8a6a44]">→</span>
+              <span
+                className={`px-3 py-1 rounded-[2px] border ${
+                  altarSacrificeId
+                    ? 'bg-[#260d0b]/90 border-red-500/85 text-red-200'
+                    : altarHostId
+                      ? 'bg-[#1c0c0a]/90 border-red-800/80 text-red-300'
+                      : 'bg-[#100b08]/80 border-[#2e2017] text-[#7a6856]'
+                }`}
+              >
+                2. Sacrifice {altarSacrificeId ? '✓' : altarHostId ? '— Choose' : '— Pending'}
+              </span>
+            </div>
 
-                const isDisabled = (!altarHostId && cannotBeHost) || (altarHostId && !isHost && (wouldExceedFive || !c.sigils || c.sigils.length === 0));
+            <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
+              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
-                return (
-                  <div
-                    key={c.id}
-                    onClick={() => {
-                      if (!altarHostId) {
-                        if (cannotBeHost) {
-                          addLog(`${c.name} cannot receive more crests: it already bears more than its original nature allows.`);
-                          return;
+              <div className="flex flex-wrap gap-4 justify-center pt-2">
+                {masterDeck.map(c => {
+                  const isHost = altarHostId === c.id;
+                  const isSac = altarSacrificeId === c.id;
+                  const hostCard = masterDeck.find(m => m.id === altarHostId);
+                  const cannotBeHost = hasMoreSigilsThanOriginal(c);
+
+                  let wouldExceedFive = false;
+                  if (hostCard && !isHost && c.sigils && c.sigils.length > 0) {
+                    const merged = new Set(hostCard.sigils || []);
+                    c.sigils.forEach(s => merged.add(s));
+                    if (merged.size >= 5) wouldExceedFive = true;
+                  }
+
+                  const isDisabled = (!altarHostId && cannotBeHost) || (altarHostId && !isHost && (wouldExceedFive || !c.sigils || c.sigils.length === 0));
+
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        if (!altarHostId) {
+                          if (cannotBeHost) {
+                            addLog(`${c.name} cannot receive more crests: it already bears more than its original nature allows.`);
+                            return;
+                          }
+                          setAltarHostId(c.id || null);
+                        } else if (altarHostId === c.id) {
+                          setAltarHostId(null);
+                          setAltarSacrificeId(null);
+                        } else if (!altarSacrificeId) {
+                          if (wouldExceedFive) {
+                            addLog(`Cannot sacrifice ${c.name}: ${hostCard?.name} would have 5 or more crests (max 4 allowed).`);
+                            return;
+                          }
+                          if (c.sigils && c.sigils.length > 0) {
+                            setAltarSacrificeId(c.id || null);
+                          }
+                        } else if (altarSacrificeId === c.id) {
+                          setAltarSacrificeId(null);
                         }
-                        setAltarHostId(c.id || null);
-                      } else if (altarHostId === c.id) {
-                        setAltarHostId(null);
-                        setAltarSacrificeId(null);
-                      } else if (!altarSacrificeId) {
-                        if (wouldExceedFive) {
-                          addLog(`Cannot sacrifice ${c.name}: ${hostCard?.name} would have 5 or more crests (max 4 allowed).`);
-                          return;
-                        }
-                        if (c.sigils && c.sigils.length > 0) {
-                          setAltarSacrificeId(c.id || null);
-                        }
-                      } else if (altarSacrificeId === c.id) {
-                        setAltarSacrificeId(null);
-                      }
-                    }}
-                    className={`cursor-pointer flex flex-col items-center transition ${isDisabled ? 'opacity-40 grayscale-[50%]' : 'hover:scale-105'}`}
-                  >
-                    {renderCard(c, {
-                      isSelected: isHost,
-                      isMarkedSacrifice: isSac
-                    })}
-                    {!altarHostId && cannotBeHost && (
-                      <span className="text-[9px] font-mono text-amber-500 font-bold mt-1 uppercase">Cannot Host</span>
-                    )}
-                    {altarHostId && !isHost && wouldExceedFive && (
-                      <span className="text-[9px] font-mono text-red-400 font-bold mt-1 uppercase">Exceeds 5</span>
-                    )}
-                  </div>
-                );
-              })}
+                      }}
+                      className={`relative flex flex-col items-center transform origin-center transition-all duration-200 ${
+                        isDisabled
+                          ? 'opacity-35 grayscale-[55%] cursor-not-allowed scale-[0.95]'
+                          : isHost || isSac
+                            ? 'scale-[1.05] -translate-y-2.5 z-30 cursor-pointer'
+                            : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1 cursor-pointer'
+                      }`}
+                    >
+                      {isHost && (
+                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
+                          Host
+                        </span>
+                      )}
+                      {isSac && (
+                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#210b0a]/95 border border-red-500/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-red-200 whitespace-nowrap shadow-md">
+                          Sacrifice
+                        </span>
+                      )}
+                      {renderCard(c, {
+                        isSelected: isHost,
+                        isMarkedSacrifice: isSac,
+                        isClickable: !isDisabled,
+                        disableHoverScale: true,
+                      })}
+                      {!altarHostId && cannotBeHost && (
+                        <span className="text-[8.5px] font-mono text-amber-400/90 font-bold mt-1 uppercase tracking-wider">
+                          Cannot Host
+                        </span>
+                      )}
+                      {altarHostId && !isHost && wouldExceedFive && (
+                        <span className="text-[8.5px] font-mono text-red-400/90 font-bold mt-1 uppercase tracking-wider">
+                          Exceeds 4
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex items-center gap-4">
               <button
                 onClick={applyAltarTransfer}
                 disabled={!altarHostId || !altarSacrificeId || isEventBusy}
-                className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#35120f] to-[#1b0907] hover:from-[#471814] hover:to-[#240c09] active:translate-y-[1px] border border-[#a84236]/85 hover:border-[#e06a5c] text-[#f5c8be] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
               >
-                SACRIFICE TO THE MAKER
+                Sacrifice to the Maker
               </button>
             </div>
           </div>
@@ -8137,38 +8297,58 @@ export default function App() {
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('tribeeventbg.jpg')}
         >
-          <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE WEAVER'S WEFT --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Tribal Patches</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+
+          <div className="relative z-10 max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                The Weaver's Weft
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              Tribal Patches
+            </h1>
+            <p className="mt-2 mb-7 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
               Threadbare swatches rest upon a lone loom. Claiming a Tribal Patch will summon a creature of its Tribe.
             </p>
 
-            <div className="flex flex-wrap gap-6 justify-center max-w-2xl mb-8">
-              {(carvingTribes.length > 0 ? carvingTribes : (["Reptile", "Canine", "Avian"] as Tribe[])).map(tribe => (
-                <div
-                  key={tribe}
-                  onClick={() => !isEventBusy && claimCarvingTribe(tribe)}
-                  className={`p-4 text-center transition-all flex flex-col items-center border border-dashed border-[#8c6747]/70 bg-[#150f0a] shadow-[0_4px_14px_rgba(0,0,0,0.85)] rounded-[3px] w-36 select-none ${
-                    isEventBusy
-                      ? 'opacity-40 cursor-not-allowed pointer-events-none'
-                      : 'cursor-pointer group hover:border-amber-400/90 hover:shadow-[0_0_18px_rgba(245,158,11,0.25)] hover:-translate-y-1'
-                  }`}
-                >
-                  <div className="text-[8px] font-mono uppercase tracking-[0.2em] text-[#ab8a68] mb-1.5">
-                    Patch
-                  </div>
-                  <div className="p-2 mb-2 bg-[#221811] border border-[#4a3422] rounded-[2px] group-hover:border-amber-700/70 transition-colors">
-                    {TRIBE_EMBROIDERY[tribe] || <span className="text-xl">🧵</span>}
-                  </div>
-                  <div className="font-mono font-bold text-amber-200 group-hover:text-amber-100 text-sm uppercase tracking-widest">
-                    {tribe}
-                  </div>
-                  <div className="mt-3 font-mono text-[9px] uppercase tracking-widest text-amber-200/50 group-hover:text-amber-100 group-hover:tracking-[0.2em] transition-all">
-                    CLAIM PATCH
-                  </div>
-                </div>
-              ))}
+            <div className="relative w-full p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+
+              <div className="flex flex-wrap gap-6 justify-center">
+                {(carvingTribes.length > 0 ? carvingTribes : (["Reptile", "Canine", "Avian"] as Tribe[])).map(tribe => (
+                  <button
+                    key={tribe}
+                    type="button"
+                    disabled={isEventBusy}
+                    onClick={() => !isEventBusy && claimCarvingTribe(tribe)}
+                    className={`w-44 p-5 text-center transition-all duration-200 flex flex-col items-center border border-dashed rounded-[3px] bg-gradient-to-b from-[#1a120c] to-[#100a07] shadow-[0_10px_24px_rgba(0,0,0,0.85)] select-none ${
+                      isEventBusy
+                        ? 'opacity-40 cursor-not-allowed border-[#5e442c]/40'
+                        : 'cursor-pointer group border-[#8c6747]/80 hover:border-[#e5c16b] hover:shadow-[0_12px_28px_rgba(212,175,55,0.22)] hover:-translate-y-1.5'
+                    }`}
+                  >
+                    <div className="text-[8.5px] font-mono uppercase tracking-[0.24em] text-[#b39169] mb-2">
+                      Stitched Patch
+                    </div>
+                    <div className="w-16 h-16 mb-3 bg-[#20160f] border border-[#4f3824] rounded-[2px] flex items-center justify-center group-hover:border-[#c89e4c]/80 shadow-inner transition-colors">
+                      {TRIBE_EMBROIDERY[tribe] || <span className="text-2xl">🧵</span>}
+                    </div>
+                    <div className="font-['Cinzel',_serif] font-bold text-[#f0dab2] group-hover:text-white text-sm uppercase tracking-[0.18em]">
+                      {tribe}
+                    </div>
+                    <div className="w-8 h-px bg-gradient-to-r from-transparent via-[#8a6539]/70 to-transparent my-2.5" />
+                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#bfa073]/70 group-hover:text-[#f4d78b] transition-colors">
+                      › Claim Patch ‹
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -8178,43 +8358,70 @@ export default function App() {
           COSTLY BARGAIN SCREEN
          ========================================================================= */}
       {screen === 'EVENT_COST_BARGAIN' && (
-        <div 
+        <div
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('costeventbg.jpg')}
         >
-          <div className="max-w-xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- FREE OF COST --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Blood & Bone Pact</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
-              The Merchant's dozed off. Try helping yourself to an unlabeled freebie.
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+
+          <div className="relative z-10 max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                Free of Cost
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              Blood & Bone Pact
+            </h1>
+            <p className="mt-2 mb-7 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
+              The Merchant's dozed off. Help yourself to one unlabeled creature by its summon cost.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full mb-8">
-                {(costChoices.length > 0 ? costChoices : (['1 Blood', '2 Blood', 'Bones'] as const)).map(costType => (
-                  <div
-                    key={costType}
-                    onClick={() => {
-                      if (isEventBusy) return;
-                      claimCostBargain(costType);
-                    }}
-                    className={`p-5 text-center transition-all flex flex-col items-center justify-center gap-2 border border-amber-950/40 hover:border-amber-600/70 select-none ${
-                      isEventBusy
-                        ? 'opacity-30 cursor-not-allowed pointer-events-none'
-                        : 'cursor-pointer group'
-                    }`}
-                  >
-                    <span className="text-3xl filter sepia-[0.4] group-hover:scale-110 transition-transform">
-                      {costType === 'Bones' ? '🦴' : '🩸'}
-                    </span>
-                    <span className="font-mono font-bold text-amber-200 group-hover:text-amber-100 uppercase tracking-widest text-xs">
-                      {costType}
-                    </span>
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-amber-200/50 group-hover:text-amber-100 group-hover:tracking-[0.2em] transition-all">
-                      ACCEPT
-                    </span>
-                  </div>
-                ))}
+            <div className="relative w-full p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full">
+                {(costChoices.length > 0 ? costChoices : (['1 Blood', '2 Blood', 'Bones'] as const)).map(costType => {
+                  const isBones = costType === 'Bones';
+                  return (
+                    <button
+                      key={costType}
+                      type="button"
+                      disabled={isEventBusy}
+                      onClick={() => {
+                        if (isEventBusy) return;
+                        claimCostBargain(costType);
+                      }}
+                      className={`p-6 rounded-[3px] text-center transition-all duration-200 flex flex-col items-center justify-center gap-2 border bg-gradient-to-b from-[#1a110c] to-[#0f0906] shadow-[0_10px_24px_rgba(0,0,0,0.85)] select-none ${
+                        isEventBusy
+                          ? 'opacity-35 cursor-not-allowed border-[#2c1e15]'
+                          : isBones
+                            ? 'cursor-pointer group border-[#544738]/85 hover:border-[#dfd3bc] hover:-translate-y-1.5 hover:shadow-[0_12px_28px_rgba(220,208,185,0.16)]'
+                            : 'cursor-pointer group border-[#5e251d]/85 hover:border-[#dc6152] hover:-translate-y-1.5 hover:shadow-[0_12px_28px_rgba(210,60,48,0.2)]'
+                      }`}
+                    >
+                      <div className="w-14 h-14 rounded-full bg-[#120b08] border border-[#3c2719] flex items-center justify-center mb-1 shadow-inner">
+                        <span className="text-3xl filter sepia-[0.25] group-hover:scale-110 transition-transform">
+                          {isBones ? '🦴' : '🩸'}
+                        </span>
+                      </div>
+                      <span className="font-['Cinzel',_serif] font-bold text-[#f0dab2] group-hover:text-white uppercase tracking-[0.18em] text-sm">
+                        {costType}
+                      </span>
+                      <div className="w-8 h-px bg-gradient-to-r from-transparent via-[#7a5a36]/70 to-transparent my-1" />
+                      <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.22em] text-[#bfa073]/70 group-hover:text-[#f4d78b] transition-colors">
+                        › Pilfer ‹
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+            </div>
           </div>
         </div>
       )}
@@ -8223,32 +8430,65 @@ export default function App() {
           BONE LORD SCREEN
          ========================================================================= */}
       {screen === 'EVENT_BONE_LORD' && (
-        <div 
+        <div
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('bonelordevent.jpg')}
         >
-          <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE BONE LORD --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-stone-200 mb-1">Ancient Altar of Bones</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
-              A sudden flooding darkness envelopes the world around you. You must offer a Sacrifice from your deck to receive his eternal favor.
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,10,9,0.42)_0%,rgba(4,3,3,0.92)_100%)] pointer-events-none" />
+
+          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c7beb0]">
+                The Bone Lord
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ece5d8] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              Ancient Altar of Bones
+            </h1>
+            <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0908]/75 border border-[#3d3730]/75 text-[11px] font-mono text-[#cfc5b6]/85 max-w-lg leading-relaxed shadow-md">
+              A flooding darkness envelops the world around you. Offer a Sacrifice from your deck to earn his eternal favor.
             </p>
 
-            <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
-              {masterDeck.map((c, idx) => (
-                <div key={c.id || `bl-${c.name}-${idx}`} onClick={() => setBoneLordSelectedIdx(idx)} className="cursor-pointer">
-                  {renderCard(c, { isSelected: boneLordSelectedIdx === idx })}
-                </div>
-              ))}
+            <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#0c0a09]/82 border border-[#3f3830]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92)] backdrop-blur-[2px]">
+              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9c9282]/70" />
+              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9c9282]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c9282]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c9282]/70" />
+
+              <div className="flex flex-wrap gap-4 justify-center pt-2">
+                {masterDeck.map((c, idx) => {
+                  const isSelected = boneLordSelectedIdx === idx;
+                  return (
+                    <div
+                      key={c.id || `bl-${c.name}-${idx}`}
+                      onClick={() => setBoneLordSelectedIdx(idx)}
+                      className={`relative cursor-pointer transform origin-center transition-all duration-200 ${
+                        isSelected
+                          ? 'scale-[1.05] -translate-y-2.5 z-30'
+                          : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1'
+                      }`}
+                    >
+                      {isSelected && (
+                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#210b0a]/95 border border-red-500/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-red-200 whitespace-nowrap shadow-md">
+                          Offering
+                        </span>
+                      )}
+                      {renderCard(c, { isMarkedSacrifice: isSelected, isClickable: true, disableHoverScale: true })}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex items-center gap-4">
               <button
                 onClick={confirmBoneLordOffering}
                 disabled={boneLordSelectedIdx === null || isEventBusy}
-                className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2e2620] to-[#171310] hover:from-[#3d322a] hover:to-[#211b17] active:translate-y-[1px] border border-[#b5a994]/85 hover:border-[#efe5d5] text-[#f2eadc] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.88)] transition-all select-none"
               >
-                OFFER SACRIFICE
+                Offer Sacrifice
               </button>
             </div>
           </div>
@@ -8261,64 +8501,93 @@ export default function App() {
       {screen === 'EVENT_MYCOLOGIST' && (
         <div
           style={getScreenBgStyle('weaverevent.jpg')}
-          className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
+          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
         >
-          <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE WEAVER SCOFFS --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">SLEIGHT OF HAND</h1>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+
+          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                The Weaver Scoffs
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              Sleight of Hand
+            </h1>
 
             {!mycoHasDuplicates ? (
               <div className="flex flex-col items-center text-center max-w-lg my-auto">
-                <p className="text-amber-400/70 text-xs mb-8 leading-relaxed">
-                  The Weaver rummages through your satchel... <span className="text-amber-300 font-bold uppercase">No twin creatures with you?</span><br />
-                  Yet the threads whisper to her... a flick of the wrist and a twin card appears in her hand, before being stuffed back into your satchel:
+                <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 leading-relaxed shadow-md">
+                  The Weaver rummages through your satchel... <span className="text-amber-300 font-bold uppercase">No twin creatures?</span>{' '}
+                  With a flick of her wrist, a duplicate materializes and slips into your pack.
                 </p>
                 {mycoOfferedCard && (
-                  <div className="mb-8 scale-110">
-                    {renderCard(mycoOfferedCard)}
+                  <div className="relative mb-7 p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#442c1c]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                    <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/75" />
+                    <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/75" />
+                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/75" />
+                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/75" />
+                    <div className="transform scale-110 pointer-events-none">
+                      {renderCard(mycoOfferedCard, { isClickable: false, disableHoverScale: true })}
+                    </div>
                   </div>
                 )}
                 <button
                   onClick={claimMycologistDuplicate}
                   disabled={!mycoOfferedCard}
-                  className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                  className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
                 >
-                  COMMIT TO YOUR ACTIONS
+                  Commit to Your Actions
                 </button>
               </div>
             ) : (
               <>
-                  <p className="text-amber-400/70 text-xs mb-14 text-center max-w-lg leading-relaxed shrink-0">
-                    The wretched Weaver glances over her shoulder without halting her spinning loom. She beckons you closer, hand outstretched and palm open.
-                  </p>
+                <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-lg leading-relaxed shadow-md">
+                  The wretched Weaver glances over her shoulder without halting her loom. Select two identical Creatures to stitch into one.
+                </p>
 
-                  <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8 pt-4">
-                  {masterDeck.map((c, idx) => {
-                    const isSelected = mycoSelectedIndices.includes(idx);
-                    const isDuplicateCard = masterDeck.filter(card => card.name === c.name).length >= 2;
-                    return (
-                      <div
-                        key={c.id || `myco-${c.name}-${idx}`}
-                        onClick={() => {
-                          if (!isDuplicateCard) return;
-                          if (mycoSelectedIndices.includes(idx)) {
-                            setMycoSelectedIndices(prev => prev.filter(i => i !== idx));
-                          } else if (mycoSelectedIndices.length < 2) {
-                            setMycoSelectedIndices(prev => [...prev, idx]);
-                          }
-                        }}
-                        className={`transition-all duration-200 transform ${
-                          !isDuplicateCard
-                            ? "opacity-30 cursor-not-allowed"
-                            : "cursor-pointer"
-                        } ${
-                          isSelected ? "scale-105 -translate-y-3.5 z-30" : "hover:scale-105"
-                        }`}
-                      >
-                        {renderCard(c, { isSelected })}
-                      </div>
-                    );
-                  })}
+                <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+
+                  <div className="flex flex-wrap gap-4 justify-center pt-2">
+                    {masterDeck.map((c, idx) => {
+                      const selPos = mycoSelectedIndices.indexOf(idx);
+                      const isSelected = selPos !== -1;
+                      const isDuplicateCard = masterDeck.filter(card => card.name === c.name).length >= 2;
+                      return (
+                        <div
+                          key={c.id || `myco-${c.name}-${idx}`}
+                          onClick={() => {
+                            if (!isDuplicateCard) return;
+                            if (mycoSelectedIndices.includes(idx)) {
+                              setMycoSelectedIndices(prev => prev.filter(i => i !== idx));
+                            } else if (mycoSelectedIndices.length < 2) {
+                              setMycoSelectedIndices(prev => [...prev, idx]);
+                            }
+                          }}
+                          className={`relative transform origin-center transition-all duration-200 ${
+                            !isDuplicateCard
+                              ? 'opacity-30 grayscale-[55%] cursor-not-allowed scale-[0.95]'
+                              : isSelected
+                                ? 'scale-[1.05] -translate-y-2.5 z-30 cursor-pointer'
+                                : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1 cursor-pointer'
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1e1224]/95 border border-purple-400/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 whitespace-nowrap shadow-md">
+                              Twin {selPos === 0 ? 'I' : 'II'}
+                            </span>
+                          )}
+                          {renderCard(c, { isSelected, isClickable: isDuplicateCard, disableHoverScale: true })}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -8328,9 +8597,9 @@ export default function App() {
                       mycoSelectedIndices.length !== 2 ||
                       masterDeck[mycoSelectedIndices[0]]?.name !== masterDeck[mycoSelectedIndices[1]]?.name
                     }
-                    className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                    className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2f1d36] to-[#180f1c] hover:from-[#3e2647] hover:to-[#221528] active:translate-y-[1px] border border-purple-400/75 hover:border-purple-300 text-purple-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
                   >
-                    SEW CREATURES
+                    Sew Creatures
                   </button>
                 </div>
               </>
@@ -8343,38 +8612,60 @@ export default function App() {
           GOO MAGE GOOBERT EVENT SCREEN
          ========================================================================= */}
       {screen === 'EVENT_GOOBERT' && (
-        <div className="absolute inset-0 bg-[#0d0906] bg-[radial-gradient(circle_at_50%_45%,#1c130c_0%,#0f0b07_55%,#050403_100%)] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none">
-          <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- PRINTING PRESS --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-teal-300 mb-1">STAMP-a-TWIN</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
-              The Begotten jeers and scoffs at any who question his Stamps and the quality of his Press. Allow him to demonstrate.
+        <div className="absolute inset-0 bg-[#090d0b] bg-[radial-gradient(circle_at_50%_40%,#17241e_0%,#0c120f_55%,#040605_100%)] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none">
+          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-teal-600/70 to-teal-300/80" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-teal-400/90">
+                Printing Press
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-teal-600/70 to-teal-300/80" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-teal-200 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              Stamp-a-Twin
+            </h1>
+            <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#070c0a]/75 border border-teal-900/70 text-[11px] font-mono text-teal-100/80 max-w-lg leading-relaxed shadow-md">
+              The Begotten jeers and scoffs at any who question his Stamps and the quality of his Press. Select a Creature to copy.
             </p>
 
-            <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
-              {masterDeck.map((c, idx) => {
-                const isSelected = goobertSelectedIdx === idx;
-                return (
-                  <div
-                    key={c.id || `goo-${c.name}-${idx}`}
-                    onClick={() => setGoobertSelectedIdx(idx)}
-                    className={`cursor-pointer transform transition-all duration-200 ${
-                      isSelected ? "scale-105 -translate-y-3.5 z-30" : "hover:scale-105"
-                    }`}
-                  >
-                    {renderCard(c, { isSelected })}
-                  </div>
-                );
-              })}
+            <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#080e0c]/82 border border-teal-900/75 shadow-[0_18px_44px_rgba(0,0,0,0.92)] backdrop-blur-[2px]">
+              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-teal-500/65" />
+              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-teal-500/65" />
+              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-teal-500/65" />
+              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-teal-500/65" />
+
+              <div className="flex flex-wrap gap-4 justify-center pt-2">
+                {masterDeck.map((c, idx) => {
+                  const isSelected = goobertSelectedIdx === idx;
+                  return (
+                    <div
+                      key={c.id || `goo-${c.name}-${idx}`}
+                      onClick={() => setGoobertSelectedIdx(idx)}
+                      className={`relative cursor-pointer transform origin-center transition-all duration-200 ${
+                        isSelected
+                          ? 'scale-[1.05] -translate-y-2.5 z-30'
+                          : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1'
+                      }`}
+                    >
+                      {isSelected && (
+                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#091c18]/95 border border-teal-400/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-teal-200 whitespace-nowrap shadow-md">
+                          Original
+                        </span>
+                      )}
+                      {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex items-center gap-4">
               <button
                 onClick={confirmGoobertClone}
                 disabled={goobertSelectedIdx === null || isEventBusy}
-                className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#13332b] to-[#0a1c17] hover:from-[#1b463b] hover:to-[#0f2922] active:translate-y-[1px] border border-teal-500/80 hover:border-teal-300 text-teal-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.88)] transition-all select-none"
               >
-                STAMP YOUR CARD
+                Stamp Your Card
               </button>
             </div>
           </div>
@@ -8385,88 +8676,145 @@ export default function App() {
           CAVE TRIAL SCREEN
          ========================================================================= */}
       {screen === 'EVENT_CAVE_TRIAL' && (
-        <div 
+        <div
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('trialevent.jpg')}
         >
-          <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE CAVE TRIAL --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-stone-200 mb-1">The Cavern Trials</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
-              The Zealot lays out the Trials of the Flock. 3 Creatures will be tested for their devotion, and Blessing imparted if they succeed.
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,9,7,0.38)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
+
+          <div className="relative z-10 max-w-3xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                The Steeple Ordeal
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ece5d8] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              The Cavern Trials
+            </h1>
+            <p className="mt-2 mb-7 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
+              The Zealot lays out the Trials of the Flock. Three Creatures will be drawn and weighed for their devotion.
             </p>
 
             {!caveSelectedTrial ? (
-              <div className="flex flex-col gap-3 max-w-md w-full mb-8">
-                {caveTrials.map(t => {
+              <div className="relative w-full max-w-xl p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+
+                <div className="flex flex-col gap-3.5 w-full">
+                  {caveTrials.map((t, idx) => {
                     const isDisabled = isEventBusy || Boolean(caveSelectedTrial);
                     return (
-                      <div
+                      <button
                         key={t}
+                        type="button"
+                        disabled={isDisabled}
                         onClick={() => !isDisabled && evaluateCaveTrial(t)}
-                        className={`p-4 text-center transition-all border border-dashed rounded-[3px] select-none ${
+                        className={`p-4 rounded-[3px] text-center transition-all duration-200 border flex items-center justify-between px-5 select-none ${
                           isDisabled
-                            ? 'opacity-40 cursor-not-allowed pointer-events-none border-[#8c6747]/30 bg-[#150f0a]'
-                            : 'cursor-pointer group border-amber-950/40 hover:border-amber-600/70 bg-[#150f0a]/60 hover:bg-[#150f0a]'
+                            ? 'opacity-40 cursor-not-allowed border-[#3d2d20]/40 bg-[#120d0a]'
+                            : 'cursor-pointer group border-[#4d3523]/85 hover:border-[#d4af37]/90 bg-gradient-to-r from-[#17100b] via-[#1c130d] to-[#17100b] hover:translate-x-1 shadow-[0_6px_18px_rgba(0,0,0,0.75)]'
                         }`}
                       >
-                        <div className={`font-mono font-bold text-sm uppercase tracking-widest ${
-                          isDisabled ? 'text-stone-500' : 'text-amber-200 group-hover:text-amber-100'
-                        }`}>
-                          {t}
+                        <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#9e7c51]">
+                          {['I', 'II', 'III'][idx] || idx + 1}
+                        </span>
+                        <div className="flex flex-col items-center">
+                          <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#f0dab2] group-hover:text-white">
+                            {t}
+                          </div>
+                          <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-[#b49b7d]/70 mt-0.5">
+                            Trial of the Flock
+                          </div>
                         </div>
-                        <div className={`font-mono text-[10px] uppercase tracking-widest mt-1 transition-all ${
-                          isDisabled ? 'text-stone-600' : 'text-amber-200/50 group-hover:text-amber-100 group-hover:tracking-[0.2em]'
-                        }`}>
-                          TRIAL OF THE FLOCK
-                        </div>
-                      </div>
+                        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#bfa073]/65 group-hover:text-[#f4d78b]">
+                          ›
+                        </span>
+                      </button>
                     );
                   })}
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center max-w-2xl w-full">
-                <h2 className={`text-xl font-mono font-bold uppercase tracking-widest mb-4 ${cavePassed ? 'text-amber-300' : 'text-red-400'}`}>
-                  {cavePassed ? 'TRIAL PASSED' : 'TRIAL FAILED'}
-                </h2>
-                <div className="flex gap-4 justify-center mb-6">
-                  {caveDrawnCards.map((c, i) => (
-                    <div key={c.id || `cave-drawn-${i}`}>{renderCard(c)}</div>
-                  ))}
+              <div className="flex flex-col items-center w-full">
+                <div
+                  className={`mb-5 px-5 py-1.5 rounded-[2px] border font-['Cinzel',_serif] text-base font-bold uppercase tracking-[0.24em] shadow-md ${
+                    cavePassed
+                      ? 'bg-[#1a1309]/90 border-[#d4af37]/85 text-[#f4d78b]'
+                      : 'bg-[#210b09]/90 border-red-700/85 text-red-300'
+                  }`}
+                >
+                  {cavePassed ? 'Trial Passed' : 'Trial Failed'}
+                </div>
+
+                {/* Drawn Witness Cards */}
+                <div className="relative w-full p-5 mb-5 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_14px_34px_rgba(0,0,0,0.88)] backdrop-blur-[2px]">
+                  <div className="text-[9px] font-mono uppercase tracking-[0.26em] text-[#b48f5a] mb-4">
+                    Weighed Upon the Scales
+                  </div>
+                  <div className="flex flex-wrap gap-4 justify-center">
+                    {caveDrawnCards.map((c, i) => (
+                      <div key={c.id || `cave-drawn-${i}`} className="scale-[0.94] pointer-events-none">
+                        {renderCard(c, { isClickable: false, disableHoverScale: true })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {cavePassed && (
-                  <div className="w-full flex flex-col items-center mb-6">
-                    <p className="text-xs font-mono text-amber-400/70 mb-4 uppercase tracking-wider">The Zealot offers a Blessed Creature:</p>
-                    <div className="flex gap-4 justify-center">
-                      {caveRewardCards.map((c, idx) => (
-                        <div
-                          key={c.id || `cave-rew-${idx}`}
-                          onClick={() => setCaveSelectedRewardIdx(idx)}
-                          className="cursor-pointer"
-                        >
-                          {renderCard(c, { isSelected: caveSelectedRewardIdx === idx })}
-                        </div>
-                      ))}
+                  <div className="relative w-full p-5 mb-6 rounded-[3px] bg-[#100b07]/84 border border-[#5a3d24]/85 shadow-[0_16px_38px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                    <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#d4af37]/75" />
+                    <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#d4af37]/75" />
+                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#d4af37]/75" />
+                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#d4af37]/75" />
+
+                    <p className="text-[10px] font-mono font-bold text-[#d6b174] mb-4 uppercase tracking-[0.24em]">
+                      The Zealot Offers a Blessed Creature — Choose One
+                    </p>
+                    <div className="flex flex-wrap gap-5 justify-center pt-2">
+                      {caveRewardCards.map((c, idx) => {
+                        const isSelected = caveSelectedRewardIdx === idx;
+                        return (
+                          <div
+                            key={c.id || `cave-rew-${idx}`}
+                            onClick={() => setCaveSelectedRewardIdx(idx)}
+                            className={`relative cursor-pointer transform origin-center transition-all duration-200 ${
+                              isSelected
+                                ? 'scale-[1.06] -translate-y-2.5 z-30'
+                                : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1'
+                            }`}
+                          >
+                            {isSelected && (
+                              <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
+                                Claimed
+                              </span>
+                            )}
+                            {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
                 <button
-                    onClick={() => {
-                      setIsEventBusy(false);
-                      let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
-                      if (cavePassed && caveSelectedRewardIdx !== null) {
-                        updatedDeck = [...updatedDeck, cloneCard(caveRewardCards[caveSelectedRewardIdx])];
-                        setMasterDeck(updatedDeck);
-                        masterDeckRef.current = updatedDeck;
-                      }
-                      returnToMap(updatedDeck);
-                    }}
-                    disabled={cavePassed && caveSelectedRewardIdx === null}
-                  className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                  onClick={() => {
+                    setIsEventBusy(false);
+                    let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
+                    if (cavePassed && caveSelectedRewardIdx !== null) {
+                      updatedDeck = [...updatedDeck, cloneCard(caveRewardCards[caveSelectedRewardIdx])];
+                      setMasterDeck(updatedDeck);
+                      masterDeckRef.current = updatedDeck;
+                    }
+                    returnToMap(updatedDeck);
+                  }}
+                  disabled={cavePassed && caveSelectedRewardIdx === null}
+                  className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
                 >
-                  PROCEED
+                  {cavePassed ? 'Claim & Proceed' : 'Depart the Steeple'}
                 </button>
               </div>
             )}
@@ -8478,95 +8826,124 @@ export default function App() {
           WOODCARVER TOTEM SCREEN
          ========================================================================= */}
       {screen === 'EVENT_BUILD_TOTEM' && (
-        <div 
+        <div
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('weaverevent.jpg')}
         >
-          <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE WEAVER'S LOOM --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Needle & Threadcraft</h1>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+
+          <div className="relative z-10 max-w-3xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                The Weaver's Loom
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              Needle & Threadcraft
+            </h1>
 
             {totemStage === 'REWARD' ? (
               <>
-                <p className={`text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
-                  Claim an Tribal Patch or Threadbound Crest to bind to your Effigy.
+                <p
+                  className={`mt-2 mb-7 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md transition-opacity duration-300 ${
+                    isTotemFadingOut ? 'opacity-0' : ''
+                  }`}
+                >
+                  Claim a Tribal Patch or Threadbound Crest to bind to your Effigy.
                 </p>
 
                 {!totemChoicesHidden && (
-                  <div className="flex gap-6 justify-center max-w-2xl mb-8">
-                    {totemRewardChoices.map((tc, idx) => {
-                      const isSelected = selectedTotemRewardIdx === idx;
-                      const fadeAnim = isTotemFadingOut
-                        ? isSelected
-                          ? 'animate-swipe-up-fade pointer-events-none'
-                          : 'opacity-0 transition-opacity duration-300 pointer-events-none'
-                        : '';
+                  <div className="relative w-full p-6 mb-7 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                    <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+                    <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
-                      return (
-                        <div
-                          key={`totem-rew-${idx}`}
-                          onClick={() => !isEventBusy && !isTotemFadingOut && setSelectedTotemRewardIdx(idx)}
-                          className={`p-4 border border-dashed rounded-[3px] transition text-center select-none w-40 flex flex-col items-center justify-between ${fadeAnim} ${
-                            isSelected
-                              ? 'border-amber-400 bg-[#1f150e] text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.3)] -translate-y-1'
-                              : 'border-[#8c6747]/70 hover:border-amber-500/80 bg-[#140d08] text-stone-300'
-                          } ${isEventBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                        >
-                          <div className="text-[9px] text-[#ab8a68] uppercase font-mono tracking-widest mb-1.5">
-                            {tc.type === 'head' ? 'Tribal Patch' : 'Threaded Crest'}
-                          </div>
+                    <div className="flex flex-wrap gap-5 justify-center">
+                      {totemRewardChoices.map((tc, idx) => {
+                        const isSelected = selectedTotemRewardIdx === idx;
+                        const fadeAnim = isTotemFadingOut
+                          ? isSelected
+                            ? 'animate-swipe-up-fade pointer-events-none'
+                            : 'opacity-0 transition-opacity duration-300 pointer-events-none'
+                          : '';
 
-                          <div className="w-14 h-14 bg-[#20150d] border border-[#4a3422] rounded-[2px] flex items-center justify-center p-1.5 mb-2">
-                            {tc.type === 'head' ? (
-                              TRIBE_EMBROIDERY[tc.value] || <span className="text-2xl">🧵</span>
-                            ) : (
-                              <img
-                                src={getSigilArtUrl(tc.value)}
-                                alt={tc.value}
-                                className="w-10 h-10 object-contain filter drop-shadow brightness-90 contrast-125 pointer-events-none"
-                                onError={(e) => {
-                                  (e.currentTarget as HTMLElement).style.display = 'none';
-                                }}
-                              />
+                        return (
+                          <div
+                            key={`totem-rew-${idx}`}
+                            onClick={() => !isEventBusy && !isTotemFadingOut && setSelectedTotemRewardIdx(idx)}
+                            className={`p-4 border border-dashed rounded-[3px] transition-all duration-200 text-center select-none w-44 flex flex-col items-center justify-between ${fadeAnim} ${
+                              isEventBusy || isTotemFadingOut
+                                ? 'opacity-40 cursor-not-allowed border-[#5e442c]/40 bg-[#140e0a]'
+                                : isSelected
+                                  ? 'border-[#e5c16b] bg-gradient-to-b from-[#281b11] to-[#160e09] scale-105 -translate-y-1 shadow-[0_0_24px_rgba(212,175,55,0.28)] cursor-pointer'
+                                  : 'border-[#8c6747]/75 hover:border-[#cfa159] bg-gradient-to-b from-[#1a120c] to-[#100a07] shadow-[0_8px_20px_rgba(0,0,0,0.85)] hover:-translate-y-1 cursor-pointer'
+                            }`}
+                          >
+                            <div className="text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#b48f5a] mb-2.5">
+                              {tc.type === 'head' ? 'Tribal Patch' : 'Threadbound Crest'}
+                            </div>
+
+                            <div className="flex items-center justify-center w-16 h-16 mb-3 bg-[#1e140e] border border-[#4f3824] rounded-[2px] shadow-inner">
+                              {tc.type === 'head' ? (
+                                TRIBE_EMBROIDERY[tc.value as Tribe] || <span className="text-2xl">🧵</span>
+                              ) : (
+                                <img
+                                  src={getSigilArtUrl(tc.value)}
+                                  alt={tc.value}
+                                  className="w-10 h-10 object-contain"
+                                  style={{ imageRendering: 'pixelated' }}
+                                />
+                              )}
+                            </div>
+
+                            <div className="font-['Cinzel',_serif] font-bold text-[#f0dab2] text-xs uppercase tracking-[0.16em] mb-1">
+                              {tc.value}
+                            </div>
+
+                            {tc.type === 'body' && (
+                              <div className="text-[9.5px] text-[#c7ad87]/80 italic leading-snug mt-1">
+                                {SIGIL_DESCRIPTIONS[tc.value]}
+                              </div>
                             )}
                           </div>
-
-                          <div className="text-sm font-mono font-bold text-amber-200 truncate w-full">
-                            {tc.value}
-                          </div>
-
-                          <div className="mt-3 font-mono text-[9px] uppercase tracking-widest text-amber-200/50">
-                            {selectedTotemRewardIdx === idx ? 'SELECTED' : 'SELECT'}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
                 {!totemChoicesHidden && (
                   <button
                     onClick={async () => {
-                      if (isEventBusy || selectedTotemRewardIdx === null) return;
+                      if (selectedTotemRewardIdx === null || isEventBusy) return;
                       setIsEventBusy(true);
 
-                      const choice = totemRewardChoices[selectedTotemRewardIdx];
-                      const nextPieces = [...totemPieces, choice];
+                      const chosen = totemRewardChoices[selectedTotemRewardIdx];
+                      const nextPieces = [...totemPieces, chosen];
                       setTotemPieces(nextPieces);
                       triggerSfx('play');
 
-                      if (nextPieces.length >= 2) {
+                      if (nextPieces.length >= 7) {
+                        const sigils = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
+                        const randSigil = sigils[Math.floor(Math.random() * sigils.length)];
+                        const amalgam = cloneCard(ALL_CARD_LOOKUP["Amalgam"]);
+                        amalgam.sigils = [randSigil];
+                        const nextDeck = [...masterDeck, amalgam];
+                        setMasterDeck(nextDeck);
+                        masterDeckRef.current = nextDeck;
+                        addLog(`Your satchel overflowed with 7 effigy scraps! The Weaver gifted an Amalgam (${randSigil})!`);
+                      }
+
+                      const hasHead = nextPieces.some(p => p.type === 'head');
+                      const hasBody = nextPieces.some(p => p.type === 'body');
+
+                      if (hasHead && hasBody) {
                         setTotemStage('ASSEMBLE');
-                        const hIdx = nextPieces.findIndex(p => p.type === 'head');
-                        const bIdx = nextPieces.findIndex(p => p.type === 'body');
-                        setAssemblyHeadIdx(hIdx !== -1 ? hIdx : null);
-                        setAssemblyBodyIdx(bIdx !== -1 ? bIdx : null);
                         setIsEventBusy(false);
                       } else {
-                        if (choice.type === 'head') setActiveTotem(prev => ({ ...prev, head: choice.value as Tribe }));
-                        else setActiveTotem(prev => ({ ...prev, body: choice.value }));
-                        addLog(`Totem piece acquired: ${choice.value}`);
-
                         // 1. Chosen piece floats upward and fades out
                         setIsTotemFadingOut(true);
                         await new Promise(res => setTimeout(res, 500));
@@ -8581,118 +8958,86 @@ export default function App() {
                       }
                     }}
                     disabled={selectedTotemRewardIdx === null || isEventBusy}
-                    className={`bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-300 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none ${
+                    className={`px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all duration-300 select-none ${
                       isTotemFadingOut ? 'opacity-0 pointer-events-none' : ''
                     }`}
                   >
-                    BIND TO EFFIGY
+                    Bind to Effigy
                   </button>
                 )}
               </>
             ) : (
-              <div className="flex flex-col items-center max-w-2xl w-full my-auto text-center">
-                <p className="text-amber-400/70 text-xs mb-8 max-w-md uppercase tracking-wider">
-                  Multiple remnants rest within your kit. Bind your active Effigy by choosing one Tribal Patch and one Threadbound Crest:
+              <div className="flex flex-col items-center w-full">
+                <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
+                  Stitch a Tribal Patch and Threadbound Crest together to activate your Effigy.
                 </p>
 
-                <div className="w-full border-t border-b border-amber-950/40 py-6 mb-8 flex flex-col gap-6">
-                  {/* Available Head Patches */}
-                  <div>
-                    <div className="text-xs uppercase font-mono font-bold text-amber-400/80 tracking-widest mb-3">Available Head Patches:</div>
-                    <div className="flex flex-wrap gap-3 justify-center">
-                      {totemPieces.filter(p => p.type === 'head').length > 0 ? (
-                        totemPieces.map((p, pIdx) => {
-                          if (p.type !== 'head') return null;
-                          const isChosen = assemblyHeadIdx === pIdx;
-                          return (
-                            <button
-                              key={`asm-h-${pIdx}`}
-                              onClick={() => setAssemblyHeadIdx(pIdx)}
-                              className={`font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-dashed rounded-[3px] transition cursor-pointer flex items-center gap-2 ${
-                                isChosen
-                                  ? 'border-amber-400 text-amber-100 bg-[#241810] shadow-[0_0_12px_rgba(245,158,11,0.25)]'
-                                  : 'border-[#8c6747]/60 text-stone-400 bg-[#140d08] hover:text-stone-200 hover:border-amber-600/70'
-                              }`}
-                            >
-                              <div className="w-4 h-4 flex items-center justify-center">
-                                {TRIBE_EMBROIDERY[p.value] || <span>🧵</span>}
-                              </div>
-                              <span>{p.value}</span>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <span className="text-xs font-mono text-stone-600 italic">No Tribal Patches collected yet.</span>
-                      )}
-                    </div>
-                  </div>
+                <div className="relative w-full p-5 sm:p-6 mb-6 rounded-[3px] bg-[#0d0806]/82 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
-                  {/* Available Torso Sigils */}
-                  <div>
-                    <div className="text-xs uppercase font-mono font-bold text-amber-400/80 tracking-widest mb-3">Available Threadbound Crests:</div>
-                    <div className="flex flex-wrap gap-3 justify-center">
-                      {totemPieces.filter(p => p.type === 'body').length > 0 ? (
-                        totemPieces.map((p, pIdx) => {
-                          if (p.type !== 'body') return null;
-                          const isChosen = assemblyBodyIdx === pIdx;
-                          return (
-                            <button
-                              key={`asm-b-${pIdx}`}
-                              onClick={() => setAssemblyBodyIdx(pIdx)}
-                              className={`font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-dashed rounded-[3px] transition cursor-pointer flex items-center gap-2 ${
-                                isChosen
-                                  ? 'border-amber-400 text-amber-100 bg-[#241810] shadow-[0_0_12px_rgba(245,158,11,0.25)]'
-                                  : 'border-[#8c6747]/60 text-stone-400 bg-[#140d08] hover:text-stone-200 hover:border-amber-600/70'
-                              }`}
-                            >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full">
+                    <div className="border border-dashed border-[#8c6747]/60 p-4 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
+                      <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-3 border-b border-[#3a271a] pb-1.5">
+                        1. Tribal Patches ({totemPieces.filter(p => p.type === 'head').length})
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {totemPieces.map((p, idx) => p.type === 'head' && (
+                          <button
+                            key={`head-${idx}`}
+                            onClick={() => setAssemblyHeadIdx(idx)}
+                            className={`px-2.5 py-2 border border-dashed rounded-[2px] text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+                              assemblyHeadIdx === idx
+                                ? 'border-[#e5c16b] bg-[#281b12] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
+                                : 'border-[#7a5a3c]/65 bg-[#1a130d] text-[#cbb697]/80 hover:border-[#c89e4c]'
+                            }`}
+                          >
+                            <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                              {TRIBE_EMBROIDERY[p.value as Tribe] || <span>🧵</span>}
+                            </div>
+                            <span>{p.value}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="border border-dashed border-[#8c6747]/60 p-4 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
+                      <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-3 border-b border-[#3a271a] pb-1.5">
+                        2. Threadbound Crests ({totemPieces.filter(p => p.type === 'body').length})
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {totemPieces.map((p, idx) => p.type === 'body' && (
+                          <button
+                            key={`body-${idx}`}
+                            onClick={() => setAssemblyBodyIdx(idx)}
+                            className={`px-2.5 py-2 border border-dashed rounded-[2px] text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+                              assemblyBodyIdx === idx
+                                ? 'border-[#e5c16b] bg-[#281b12] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
+                                : 'border-[#7a5a3c]/65 bg-[#1a130d] text-[#cbb697]/80 hover:border-[#c89e4c]'
+                            }`}
+                          >
+                            <div className="w-6 h-6 flex items-center justify-center shrink-0">
                               <img
                                 src={getSigilArtUrl(p.value)}
                                 alt={p.value}
-                                className="w-4 h-4 object-contain filter drop-shadow brightness-90 contrast-125 pointer-events-none"
-                                onError={(e) => {
-                                  (e.currentTarget as HTMLElement).style.display = 'none';
-                                }}
+                                className="w-5 h-5 object-contain"
+                                style={{ imageRendering: 'pixelated' }}
                               />
-                              <span>{p.value}</span>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <span className="text-xs font-mono text-stone-600 italic">No Threadbound Crests collected yet.</span>
-                      )}
+                            </div>
+                            <span>{p.value}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Constructed Effigy Preview */}
-                  <div className="flex items-center justify-center gap-4 text-xs font-mono bg-[#160f0a] border border-dashed border-[#8c6747]/60 rounded-[3px] px-4 py-2.5 max-w-md mx-auto">
-                    <span className="text-[#ab8a68] uppercase tracking-wider text-[10px]">Stitched Effigy:</span>
-                    <div className="flex items-center gap-1.5 text-amber-200 font-bold uppercase">
-                      {assemblyHeadIdx !== null ? (
-                        <>
-                          <span className="w-4 h-4 flex items-center justify-center">{TRIBE_EMBROIDERY[totemPieces[assemblyHeadIdx]?.value]}</span>
-                          <span>{totemPieces[assemblyHeadIdx]?.value}</span>
-                        </>
-                      ) : (
-                        <span className="text-stone-600">—</span>
-                      )}
+                  {activeTotem.head && activeTotem.body && (
+                    <div className="mt-4 pt-3 border-t border-[#2f2015] text-[10px] text-[#bfa073]/85 font-mono uppercase tracking-[0.18em]">
+                      Currently Stitched: <span className="text-[#f4d78b] font-bold">{activeTotem.head}</span> + <span className="text-[#f4d78b] font-bold">{activeTotem.body}</span>
                     </div>
-                    <span className="text-[#8c6747] font-mono">✕</span>
-                    <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase">
-                      {assemblyBodyIdx !== null ? (
-                        <>
-                          <img
-                            src={getSigilArtUrl(totemPieces[assemblyBodyIdx]?.value || '')}
-                            alt=""
-                            className="w-4 h-4 object-contain pointer-events-none"
-                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
-                          />
-                          <span>{totemPieces[assemblyBodyIdx]?.value}</span>
-                        </>
-                      ) : (
-                        <span className="text-stone-600">—</span>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -8706,9 +9051,9 @@ export default function App() {
                         addLog(`Effigy stitched: ${hVal} + ${bVal}`);
                         returnToMap(undefined, newTotem);
                       }}
-                      className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                      className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
                     >
-                      STITCH EFFIGY
+                      Stitch Effigy
                     </button>
                   ) : (
                     <button
@@ -8721,9 +9066,9 @@ export default function App() {
                         setActiveTotem(newTotem);
                         returnToMap(undefined, newTotem);
                       }}
-                      className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                      className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
                     >
-                      STORE PIECES & PROCEED
+                      Store Pieces & Proceed
                     </button>
                   )}
                 </div>
@@ -8734,26 +9079,43 @@ export default function App() {
       )}
 
       {/* =========================================================================
-          CARD CHOICE (WILD BEASTS) SCREEN
+          CARD CHOICE EVENT SCREEN
          ========================================================================= */}
       {screen === 'EVENT_CARD_CHOICE' && (
-        <div 
+        <div
           className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('choiceevent.jpg')}
         >
-          <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- DECK REINFORCEMENT --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Wild Beasts</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">A trio of feral denizens emerge. Select one Creature to accompany you.</p>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.34)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
 
-            {/* Handheld 3-card fanning spread directly on the dark surface */}
-            <div className="relative flex items-center justify-center w-full h-[220px] mb-8 select-none group">
+          <div className="relative z-10 max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
+            <div className="flex items-center gap-3.5 mb-1">
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                Deck Reinforcement
+              </span>
+              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+              Wild Beasts
+            </h1>
+            <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
+              A trio of feral denizens emerge from the thicket. Select one Creature to accompany you.
+            </p>
+
+            {/* Handheld 3-card fanning spread inside a subtle tabletop spotlight */}
+            <div className="relative flex items-center justify-center w-full h-[250px] mb-7 rounded-[3px] bg-[#0d0806]/65 border border-[#3e291b]/75 shadow-[0_18px_44px_rgba(0,0,0,0.88)] backdrop-blur-[2px] select-none group">
+              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+
               {choiceCards.map((c, idx) => {
                 const isSelected = choiceSelectedIdx === idx;
                 const fanTransforms = [
-                  'rotate-[-9deg] -translate-x-[85px] group-hover:-translate-x-[115px] group-hover:rotate-[-12deg] z-0',
+                  'rotate-[-9deg] -translate-x-[88px] group-hover:-translate-x-[118px] group-hover:rotate-[-12deg] z-0',
                   'rotate-0 -translate-y-2 group-hover:-translate-y-4 z-10',
-                  'rotate-[9deg] translate-x-[85px] group-hover:translate-x-[115px] group-hover:rotate-[12deg] z-20'
+                  'rotate-[9deg] translate-x-[88px] group-hover:translate-x-[118px] group-hover:rotate-[12deg] z-20',
                 ];
                 return (
                   <div
@@ -8761,17 +9123,22 @@ export default function App() {
                     onClick={() => setChoiceSelectedIdx(idx)}
                     className={`absolute cursor-pointer transform origin-bottom transition-all duration-300 ease-out ${fanTransforms[idx] || ''} ${
                       isSelected
-                        ? '!z-30 -translate-y-8 scale-110 rotate-0 shadow-[0_20px_35px_rgba(0,0,0,0.95)]'
-                        : 'hover:-translate-y-3 hover:scale-105 hover:!z-25'
+                        ? '!z-30 -translate-y-7 scale-[1.09] rotate-0'
+                        : 'hover:-translate-y-3 hover:scale-[1.04] hover:!z-25'
                     }`}
                   >
-                    {renderCard(c, { isSelected })}
+                    {isSelected && (
+                      <span className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
+                        Selected
+                      </span>
+                    )}
+                    {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-4">
               <button
                 onClick={() => {
                   let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
@@ -8783,16 +9150,16 @@ export default function App() {
                   returnToMap(updatedDeck);
                 }}
                 disabled={choiceSelectedIdx === null}
-                className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
               >
-                TAKE CREATURE
+                Take Creature
               </button>
               {choiceRerollsLeft > 0 && (
                 <button
                   onClick={rerollCardChoice}
-                  className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                  className="px-5 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
                 >
-                  RUB YOUR EYES ({choiceRerollsLeft} LEFT)
+                  Reroll ({choiceRerollsLeft})
                 </button>
               )}
             </div>
@@ -9228,8 +9595,8 @@ export default function App() {
             )}
 
             {/* Game Directories (List All Cards & List All Sigils) */}
-            <div className="text-[10px] font-mono uppercase tracking-widest text-amber-600 mb-2">--- COMPENDIUM DIRECTORIES ---</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div className="text-[10px] font-mono uppercase tracking-widest text-amber-600 mb-2">--- COMPENDIUM DIRECTORIES & ARCHIVE ---</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <button
                 onClick={() => setDevTab(devTab === 'CARDS' ? 'ACTIONS' : 'CARDS')}
                 className="py-2 px-3 border border-amber-950/60 hover:border-amber-700/70 font-mono text-xs uppercase tracking-widest text-amber-200/80 hover:text-amber-100 hover:tracking-[0.15em] transition-all cursor-pointer text-center"
@@ -9242,6 +9609,44 @@ export default function App() {
               >
                 [ LIST ALL SIGILS ({Object.keys(SIGIL_MAPPING).length}) ]
               </button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 mb-4 border border-red-950/60 bg-[#140908]/80 rounded-sm">
+              <div className="text-[10px] font-mono text-stone-400 uppercase tracking-wider">
+                Archive: <span className="text-amber-200/90">{archive.seenCards.length}</span> Cards ·{' '}
+                <span className="text-amber-200/90">{archive.seenSigils.length}</span> Sigils ·{' '}
+                <span className="text-amber-200/90">{archive.defeatedBosses.length}</span> Bosses ·{' '}
+                <span className="text-amber-200/90">{archive.runsStarted}</span> Runs
+              </div>
+              {!devConfirmWipeArchive ? (
+                <button
+                  onClick={() => setDevConfirmWipeArchive(true)}
+                  className="py-1.5 px-3 bg-[#1d0b0a] hover:bg-[#2d100e] border border-red-900/70 hover:border-red-500 font-mono text-[10px] font-bold uppercase tracking-widest text-red-300 hover:text-red-100 transition cursor-pointer"
+                >
+                  CLEAR COMPENDIUM & LEDGER
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const wiped = resetArchive();
+                      setArchive(wiped);
+                      setDevConfirmWipeArchive(false);
+                      triggerSfx('sacrifice');
+                      addLog('[DEV] Compendium & Ledger wiped clean.');
+                    }}
+                    className="py-1.5 px-3 bg-red-950/90 hover:bg-red-900 border border-red-500 font-mono text-[10px] font-bold uppercase tracking-widest text-red-100 transition cursor-pointer"
+                  >
+                    CONFIRM FULL WIPE
+                  </button>
+                  <button
+                    onClick={() => setDevConfirmWipeArchive(false)}
+                    className="py-1.5 px-2.5 border border-stone-700 hover:border-stone-500 font-mono text-[10px] uppercase tracking-widest text-stone-400 hover:text-stone-200 transition cursor-pointer"
+                  >
+                    CANCEL
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Visual Card Art Inspector with Search */}

@@ -152,3 +152,18 @@ export function recordRunCompletion(
   saveArchive(next);
   return next;
 }
+
+export function resetArchive(): PersistentArchive {
+  try {
+    localStorage.removeItem(ARCHIVE_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+  return {
+    ...DEFAULT_ARCHIVE,
+    seenCards: [],
+    seenSigils: [],
+    defeatedBosses: [],
+    clearedLineages: [],
+  };
+}
