@@ -8336,7 +8336,7 @@ export default function App() {
                     <div className="text-[8.5px] font-mono uppercase tracking-[0.24em] text-[#b39169] mb-2">
                       Stitched Patch
                     </div>
-                    <div className="w-16 h-16 mb-3 bg-[#20160f] border border-[#4f3824] rounded-[2px] flex items-center justify-center group-hover:border-[#c89e4c]/80 shadow-inner transition-colors">
+                    <div className="w-16 h-16 mb-3 bg-[#20160f] border border-[#4f3824] rounded-[2px] flex items-center justify-center group-hover:border-[#c89e4c]/80 shadow-inner transition-colors [&>*]:scale-[2.35]">
                       {TRIBE_EMBROIDERY[tribe] || <span className="text-2xl">🧵</span>}
                     </div>
                     <div className="font-['Cinzel',_serif] font-bold text-[#f0dab2] group-hover:text-white text-sm uppercase tracking-[0.18em]">
@@ -8612,7 +8612,11 @@ export default function App() {
           GOO MAGE GOOBERT EVENT SCREEN
          ========================================================================= */}
       {screen === 'EVENT_GOOBERT' && (
-        <div className="absolute inset-0 bg-[#090d0b] bg-[radial-gradient(circle_at_50%_40%,#17241e_0%,#0c120f_55%,#040605_100%)] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none">
+        <div
+          className="absolute inset-0 bg-[#090d0b] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
+          style={getScreenBgStyle('begottenboss.jpg')}
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,26,21,0.44)_0%,rgba(4,8,7,0.92)_100%)] pointer-events-none" />
           <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="flex items-center gap-3.5 mb-1">
               <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-teal-600/70 to-teal-300/80" />
@@ -8874,7 +8878,7 @@ export default function App() {
                           <div
                             key={`totem-rew-${idx}`}
                             onClick={() => !isEventBusy && !isTotemFadingOut && setSelectedTotemRewardIdx(idx)}
-                            className={`p-4 border border-dashed rounded-[3px] transition-all duration-200 text-center select-none w-44 flex flex-col items-center justify-between ${fadeAnim} ${
+                            className={`p-4 border border-dashed rounded-[3px] transition-all duration-200 text-center select-none w-44 flex flex-col items-center justify-start ${fadeAnim} ${
                               isEventBusy || isTotemFadingOut
                                 ? 'opacity-40 cursor-not-allowed border-[#5e442c]/40 bg-[#140e0a]'
                                 : isSelected
@@ -8886,7 +8890,7 @@ export default function App() {
                               {tc.type === 'head' ? 'Tribal Patch' : 'Threadbound Crest'}
                             </div>
 
-                            <div className="flex items-center justify-center w-16 h-16 mb-3 bg-[#1e140e] border border-[#4f3824] rounded-[2px] shadow-inner">
+                            <div className="flex items-center justify-center w-16 h-16 mb-3 bg-[#1e140e] border border-[#4f3824] rounded-[2px] shadow-inner [&>*]:scale-[2.35]">
                               {tc.type === 'head' ? (
                                 TRIBE_EMBROIDERY[tc.value as Tribe] || <span className="text-2xl">🧵</span>
                               ) : (
@@ -8994,7 +8998,7 @@ export default function App() {
                                 : 'border-[#7a5a3c]/65 bg-[#1a130d] text-[#cbb697]/80 hover:border-[#c89e4c]'
                             }`}
                           >
-                            <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 flex items-center justify-center shrink-0 [&>*]:scale-[1.25]">
                               {TRIBE_EMBROIDERY[p.value as Tribe] || <span>🧵</span>}
                             </div>
                             <span>{p.value}</span>
