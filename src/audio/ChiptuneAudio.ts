@@ -1668,16 +1668,21 @@ export const playSound = (
       dryTone('sine', 196 * jitter, 188 * jitter, 0.34, 0.22, 0.068, 360);
       dryTone('triangle', 293.66 * jitter, 278 * jitter, 0.24, 0.12, 0.07, 480);
     } else if (type === 'victory') {
-      // Dark, modal minor survival cadence (Dm9)
-      dryTone('sine', 293.66, 292.8, 0.38, 0.42, 0.0);
-      dryTone('sine', 349.23, 348.2, 0.38, 0.4, 0.14);
-      dryTone('sine', 440.0, 438.8, 0.58, 0.42, 0.28);
-      dryTone('triangle', 329.63, 328.5, 0.82, 0.34, 0.42, 1300);
-      dryTone('sine', 146.83, 146.2, 0.88, 0.44, 0.42);
+      // Heavy occult seal-break & dark low brass/stone resonance (no chiptune arpeggio)
+      // 1. Deep chamber impact & stone crack
+      dryTone('sine', 112 * jitter, 34 * jitter, 0.36, 0.85, 0);
+      crispNoise(0.065, 'bandpass', 1400 * jitter, 380 * jitter, 1.8, 0.62, 0);
+      // 2. Dark filtered fifth swell (D2 + A2) with slow decay
+      dryTone('sawtooth', 73.42 * jitter, 72.8 * jitter, 0.95, 0.38, 0.025, 340);
+      dryTone('triangle', 110.0 * jitter, 109.2 * jitter, 0.88, 0.32, 0.04, 480);
+      dryTone('sine', 146.83 * jitter, 145.9 * jitter, 0.72, 0.26, 0.055, 520);
+      // 3. Subtle settling stone/ash tail
+      crispNoise(0.24, 'bandpass', 620 * jitter, 240 * jitter, 2.4, 0.26, 0.05);
     } else if (type === 'defeat') {
-      // Heavy analog tape-stop power-down droop
-      dryTone('triangle', 146.83, 46.0, 0.92, 0.58, 0, 480);
-      dryTone('sine', 73.42, 32.0, 0.98, 0.65);
+      // Snuffed flame hiss & hollow wooden/sub collapse
+      dryTone('sine', 82 * jitter, 28 * jitter, 0.55, 0.72, 0);
+      crispNoise(0.32, 'bandpass', 1800 * jitter, 320 * jitter, 1.6, 0.44, 0.01);
+      dryTone('triangle', 98 * jitter, 42 * jitter, 0.42, 0.38, 0.03, 280);
     }
   } catch {
     // Audio context may require user gesture

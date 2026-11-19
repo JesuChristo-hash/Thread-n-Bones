@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect, useRef, useCallback, type JSX } from 'react';
 import cardBaseImg from './assets/card/card_base.png';
+import MapScreen from './components/MapScreen';
+import { ActMapData, MapNode, generateActMap, getBossForAct, getOrInitBossOrder } from './data/mapGenerator';
 
 import {
   Skull,
@@ -906,6 +908,9 @@ export default function App() {
 
   // Crossroads & Event States
   const [crossroadsOptions, setCrossroadsOptions] = useState<string[]>([]);
+  const [actMap, setActMap] = useState<ActMapData | null>(null);
+  const actMapRef = useRef<ActMapData | null>(null);
+  useEffect(() => { actMapRef.current = actMap; }, [actMap]);
 
 // Event action lock to prevent double-clicks and spam
   const [isEventBusy, setIsEventBusy] = useState<boolean>(false);
@@ -1039,6 +1044,7 @@ export default function App() {
     permanentScaleDebuff?: number;
     consecutiveOneTurnWins?: number;
     otkCooldown?: number;
+    actMap?: ActMapData | null;
     savedAt: number;
   }
 
@@ -1087,6 +1093,7 @@ export default function App() {
           permanentScaleDebuff,
           consecutiveOneTurnWins,
           otkCooldown,
+          actMap: actMapRef.current,
           savedAt: Date.now(),
         };
         localStorage.setItem(RUN_SAVE_KEY, JSON.stringify(payload));
@@ -1095,7 +1102,7 @@ export default function App() {
         console.warn("Auto-save failed:", e);
       }
     }
-  }, [masterDeck, items, totalOverkillDamage, highestOverkill, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, screen]);
+  }, [masterDeck, items, totalOverkillDamage, highestOverkill, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, actMap, screen]);
 
   // --- Item Restock & Blood Bank Pricing ---
   const ITEM_COSTS: Record<ItemId, number> = {
@@ -1182,7 +1189,7 @@ export default function App() {
       addLog(`Peddler presents a token for the road: ${rewardCard.name}.`);
     } else {
       addLog("Departed the Surplus Cache.");
-      startNextDuel();
+      returnToMap();
     }
   };
 
@@ -1199,7 +1206,7 @@ export default function App() {
     triggerSfx('play');
     addLog(`${cacheConsolationCard.name} safely stowed into your deck.`);
     setCacheConsolationCard(null);
-    startNextDuel(undefined, updatedMasterDeck);
+    returnToMap(updatedMasterDeck);
   };
 
   useEffect(() => {
@@ -4467,14 +4474,14 @@ export default function App() {
       onAction: () => {
         setModalAlert(null);
         if (isBossMatch) {
+          setActMap(prev => {
+            const updated = prev ? { ...prev, completedBoss: true } : prev;
+            actMapRef.current = updated;
+            return updated;
+          });
           initCardChoice();
-        } else if (nextDuels % 2 !== 0) {
-          const allEvents = ['campfire', 'altar', 'carving', 'cost', 'bonelord', 'mycologist', 'goobert', 'cave', 'choice', 'totem', 'items'];
-          const shuffled = [...allEvents].sort(() => Math.random() - 0.5).slice(0, 3);
-          setCrossroadsOptions(shuffled);
-          setScreen('EVENT_CROSSROADS');
         } else {
-          startNextDuel();
+          returnToMap();
         }
       }
     });
@@ -4557,13 +4564,16 @@ export default function App() {
         setOtkCooldown(data.otkCooldown);
       }
 
+      const restoredAct = Math.max(1, Math.min(4, data.stage ?? 1));
+      const restoredMap = data.actMap || generateActMap(restoredAct, getBossForAct(restoredAct));
+      setActMap(restoredMap);
+      actMapRef.current = restoredMap;
+      setCurrentStageName(restoredMap.actTitle);
+
       setShowContinueModal(false);
       triggerSfx('play');
       addLog("Expedition restored from the occult seal.");
-      startNextDuel(undefined, data.masterDeck, undefined, {
-        duelsCompleted: restoredDuels,
-        bossesDefeated: inferredBossesDefeated,
-      });
+      setScreen('EVENT_CROSSROADS');
     } catch (err) {
       console.error("Failed to load save file:", err);
       clearRunSave();
@@ -4577,7 +4587,7 @@ export default function App() {
     forcedBoss?: boolean | 'Zealot' | 'The Begotten' | 'BoneLord' | 'The Weaver' | 'Goobert' | 'Woodcarver',
     deckOverride?: CardDef[],
     totemOverride?: Totem | null,
-    progressOverride?: { duelsCompleted?: number; bossesDefeated?: number }
+    progressOverride?: { duelsCompleted?: number; bossesDefeated?: number; forceEnemyTotem?: boolean }
   ) => {
     // When advancing directly from an active duel, close curtains before swapping the board
     if (prevScreenRef.current === 'DUEL') {
@@ -4664,7 +4674,7 @@ export default function App() {
       });
 
       // 35% chance for a standard encounter to field a random totem once The Weaver has been defeated
-      if (hasDefeatedWeaver && Math.random() < 0.35) {
+      if (progressOverride?.forceEnemyTotem || (hasDefeatedWeaver && Math.random() < 0.35)) {
         const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved"];
         const randomTotemSigils: string[] = [
           'Airborne',
@@ -5412,10 +5422,91 @@ export default function App() {
       finalBossesDefeated: 0,
     });
 
-    // After the Draft, only for the first event choice, the player is always only given 3 options: Altar, Campfire, or Bone Lord
-    const firstEvents = ['altar', 'campfire', 'bonelord'];
-    setCrossroadsOptions(firstEvents);
+    // Initialize shuffled boss order and Act I parchment map (Row 1 preserves Altar / Campfire / Bone Lord fork)
+    const bossOrder = getOrInitBossOrder();
+    const firstActMap = generateActMap(1, bossOrder[0]);
+    setActMap(firstActMap);
+    actMapRef.current = firstActMap;
+    setCurrentStageName(firstActMap.actTitle);
     setScreen('EVENT_CROSSROADS');
+  };
+
+  // --- Return to Branching Parchment Map ---
+  const returnToMap = (deckOverride?: CardDef[], totemOverride?: Totem | null) => {
+    if (deckOverride) {
+      setMasterDeck(deckOverride);
+      masterDeckRef.current = deckOverride;
+    }
+    if (totemOverride !== undefined && totemOverride !== null) {
+      setActiveTotem(totemOverride);
+    }
+
+    const currMap = actMapRef.current;
+    if (!currMap) {
+      const fallbackAct = Math.max(1, Math.min(4, stage));
+      const fresh = generateActMap(fallbackAct, getBossForAct(fallbackAct));
+      setActMap(fresh);
+      actMapRef.current = fresh;
+      setCurrentStageName(fresh.actTitle);
+      setScreen('EVENT_CROSSROADS');
+      return;
+    }
+
+    if (currMap.completedBoss) {
+      const nextAct = Math.min(4, currMap.act + 1);
+      const nextMap = generateActMap(nextAct, getBossForAct(nextAct));
+      setActMap(nextMap);
+      actMapRef.current = nextMap;
+      setCurrentStageName(nextMap.actTitle);
+      triggerSfx('draw');
+      addLog(`Unrolled parchment for ${nextMap.actSubtitle}: ${nextMap.actTitle}.`);
+      setScreen('EVENT_CROSSROADS');
+      return;
+    }
+
+    setScreen('EVENT_CROSSROADS');
+  };
+
+  // --- Advance Figurine Along Selected Map Node ---
+  const handleSelectMapNode = (node: MapNode) => {
+    const currMap = actMapRef.current;
+    if (!currMap) return;
+    const currNode = currMap.nodes.find(n => n.id === currMap.currentNodeId);
+    if (!currNode || !currNode.nextIds.includes(node.id)) return;
+
+    const updatedMap: ActMapData = {
+      ...currMap,
+      currentNodeId: node.id,
+      visitedNodeIds: currMap.visitedNodeIds.includes(node.id)
+        ? currMap.visitedNodeIds
+        : [...currMap.visitedNodeIds, node.id],
+    };
+    setActMap(updatedMap);
+    actMapRef.current = updatedMap;
+
+    if (node.type === 'combat') {
+      triggerSfx('bell');
+      startNextDuel(false);
+    } else if (node.type === 'elite_combat') {
+      triggerSfx('bell');
+      startNextDuel(false, undefined, undefined, { forceEnemyTotem: true });
+    } else if (node.type === 'boss') {
+      triggerSfx('bell');
+      startNextDuel(node.bossType || updatedMap.bossType);
+    } else {
+      triggerSfx('play');
+      if (node.type === 'items') startItemEvent();
+      else if (node.type === 'campfire') initCampfire();
+      else if (node.type === 'altar') initAltar();
+      else if (node.type === 'carving') initTotemCarving();
+      else if (node.type === 'cost') initCostBargain();
+      else if (node.type === 'bonelord') initBoneLord();
+      else if (node.type === 'mycologist') initMycologists();
+      else if (node.type === 'goobert') initGoobert();
+      else if (node.type === 'cave') initCaveTrial();
+      else if (node.type === 'choice') initCardChoice();
+      else if (node.type === 'totem') initBuildTotem();
+    }
   };
 
   // --- Campfire Event ---
@@ -5469,7 +5560,7 @@ export default function App() {
           onAction: () => {
             setModalAlert(null);
             setIsEventBusy(false);
-            startNextDuel(undefined, nextDeck);
+            returnToMap(nextDeck);
           }
         });
       } else {
@@ -5486,7 +5577,7 @@ export default function App() {
           onAction: () => {
             setModalAlert(null);
             setIsEventBusy(false);
-            startNextDuel(undefined, nextDeck);
+            returnToMap(nextDeck);
           }
         });
       }
@@ -5529,7 +5620,7 @@ export default function App() {
         onAction: () => {
           setModalAlert(null);
           setIsEventBusy(false);
-          startNextDuel();
+          returnToMap();
         }
       });
       return;
@@ -5587,7 +5678,7 @@ export default function App() {
       onAction: () => {
         setModalAlert(null);
         setIsEventBusy(false);
-        startNextDuel(undefined, nextDeck);
+        returnToMap(nextDeck);
       }
     });
   };
@@ -5619,7 +5710,7 @@ export default function App() {
       onAction: () => {
         setModalAlert(null);
         setIsEventBusy(false);
-        startNextDuel(undefined, nextDeck);
+        returnToMap(nextDeck);
       }
     });
   };
@@ -5655,7 +5746,7 @@ export default function App() {
       onAction: () => {
         setModalAlert(null);
         setIsEventBusy(false);
-        startNextDuel(undefined, nextDeck);
+        returnToMap(nextDeck);
       }
     });
   };
@@ -5700,7 +5791,7 @@ export default function App() {
       onAction: () => {
         setModalAlert(null);
         setIsEventBusy(false);
-        startNextDuel(undefined, nextDeck);
+        returnToMap(nextDeck);
       }
     });
   };
@@ -5761,7 +5852,7 @@ export default function App() {
         setModalAlert(null);
         setIsEventBusy(false);
         setMycoOfferedCard(null);
-        startNextDuel(undefined, nextDeck);
+        returnToMap(nextDeck);
       }
     });
   };
@@ -5802,7 +5893,7 @@ export default function App() {
       onAction: () => {
         setModalAlert(null);
         setIsEventBusy(false);
-        startNextDuel(undefined, nextDeck);
+        returnToMap(nextDeck);
       }
     });
   };
@@ -5856,7 +5947,7 @@ export default function App() {
       btnText: "VENTURE ONWARD",
       onAction: () => {
         setModalAlert(null);
-        startNextDuel(undefined, nextDeck);
+        returnToMap(nextDeck);
       }
     });
   };
@@ -7754,196 +7845,19 @@ export default function App() {
           CROSSROADS EVENT ROUTER SCREEN
          ========================================================================= */}
       {screen === 'EVENT_CROSSROADS' && (
-        <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('crossroads-select.jpg')}
-        >
-          {/* Subtle atmospheric vignette so stone pillars remain visible while foreground cards pop */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(10,7,5,0.42)_0%,rgba(5,4,3,0.84)_100%)] pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col items-center justify-center max-w-4xl w-full my-auto text-center">
-            {/* Header Block with soft focal shadow */}
-            <div className="mb-8 px-6 py-3 rounded-sm bg-[#0b0705]/55 backdrop-blur-[2px] border border-[#3a2416]/50 shadow-[0_10px_30px_rgba(0,0,0,0.75)]">
-              <div className="text-[10px] text-amber-500/80 font-bold tracking-[0.28em] uppercase mb-1">
-                +-- YOUR PATH DIVERGES --+
-              </div>
-              <h1 className="text-2xl sm:text-4xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-amber-200 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] mb-1.5">
-                Crossroads
-              </h1>
-              <p className="text-[#cfb794]/80 text-[11px] max-w-md mx-auto uppercase tracking-wider leading-relaxed">
-                The way ahead is shrouded in the gloom. Choose an omen to follow.
-              </p>
-            </div>
-
-            {/* Three Occult Shrine Plaques */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 w-full mb-4">
-              {crossroadsOptions.map((eId, idx) => {
-                const numerals = ['I', 'II', 'III'];
-                const details: Record<
-                  string,
-                  { title: string; tag: string; desc: string; accent: string; icon: React.ReactNode }
-                > = {
-                  campfire: {
-                    title: 'Divine Blessing',
-                    tag: 'Baptism',
-                    desc: 'Allow the Zealot to baptize a Creature, empowering its flesh.',
-                    accent: 'group-hover:border-amber-500/80 group-hover:shadow-[0_18px_40px_rgba(217,119,6,0.18)]',
-                    icon: <Flame className="w-5 h-5 text-amber-400" />,
-                  },
-                  altar: {
-                    title: 'Mystical Altar',
-                    tag: 'Sacrifice',
-                    desc: 'Surrender a Creature to the Maker to transfer its Crests.',
-                    accent: 'group-hover:border-red-500/75 group-hover:shadow-[0_18px_40px_rgba(220,38,38,0.18)]',
-                    icon: <Sparkles className="w-5 h-5 text-amber-300" />,
-                  },
-                  carving: {
-                    title: 'Woven Patches',
-                    tag: 'Kinship',
-                    desc: 'A Creature bearing the chosen Tribal Crest heeds your call.',
-                    accent: 'group-hover:border-amber-500/80 group-hover:shadow-[0_18px_40px_rgba(217,119,6,0.18)]',
-                    icon: <Award className="w-5 h-5 text-amber-400" />,
-                  },
-                  cost: {
-                    title: 'Five Finger Discount',
-                    tag: 'Pilfer',
-                    desc: 'You catch the Merchant dozing beside his unguarded wares.',
-                    accent: 'group-hover:border-amber-400/80 group-hover:shadow-[0_18px_40px_rgba(245,158,11,0.18)]',
-                    icon: <Zap className="w-5 h-5 text-amber-300" />,
-                  },
-                  bonelord: {
-                    title: 'Bloodrites',
-                    tag: 'Offering',
-                    desc: 'The Old One demands a sacrifice, granting an eternal Blessing.',
-                    accent: 'group-hover:border-red-500/75 group-hover:shadow-[0_18px_40px_rgba(185,28,28,0.2)]',
-                    icon: <Skull className="w-5 h-5 text-stone-200" />,
-                  },
-                  mycologist: {
-                    title: 'Stitched Anew',
-                    tag: 'Fusion',
-                    desc: 'Allow the Weaver to sew duplicate Creatures into one.',
-                    accent: 'group-hover:border-purple-400/75 group-hover:shadow-[0_18px_40px_rgba(168,85,247,0.18)]',
-                    icon: <Layers className="w-5 h-5 text-amber-400" />,
-                  },
-                  goobert: {
-                    title: 'Printing Press',
-                    tag: 'Forgery',
-                    desc: 'The Begotten offers to stamp a flawed replica of a card.',
-                    accent: 'group-hover:border-emerald-400/75 group-hover:shadow-[0_18px_40px_rgba(16,185,129,0.18)]',
-                    icon: <Sparkles className="w-5 h-5 text-teal-300" />,
-                  },
-                  cave: {
-                    title: 'The Steeple',
-                    tag: 'Ordeal',
-                    desc: 'The Zealot weighs your deck against a ritual trial.',
-                    accent: 'group-hover:border-stone-400/75 group-hover:shadow-[0_18px_40px_rgba(168,162,158,0.16)]',
-                    icon: <Eye className="w-5 h-5 text-stone-200" />,
-                  },
-                  choice: {
-                    title: 'Wild Creatures',
-                    tag: 'Encounter',
-                    desc: 'Three beasts emerge from the thicket awaiting recruitment.',
-                    accent: 'group-hover:border-amber-500/80 group-hover:shadow-[0_18px_40px_rgba(217,119,6,0.18)]',
-                    icon: <HelpCircle className="w-5 h-5 text-amber-300" />,
-                  },
-                  totem: {
-                    title: 'The Weaver',
-                    tag: 'Effigy',
-                    desc: 'Assemble an Effigy from a Tribe Patch and Crest.',
-                    accent: 'group-hover:border-amber-500/80 group-hover:shadow-[0_18px_40px_rgba(217,119,6,0.18)]',
-                    icon: <Wrench className="w-5 h-5 text-amber-400" />,
-                  },
-                  items: {
-                    title: 'Surplus Cache',
-                    tag: 'Barter',
-                    desc: 'Barter your overkill blood harvest for arcane relics.',
-                    accent: 'group-hover:border-red-400/80 group-hover:shadow-[0_18px_40px_rgba(220,38,38,0.18)]',
-                    icon: (
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="w-5 h-5 text-amber-400"
-                      >
-                        <path d="M6 7h12l1 13H5L6 7Z" />
-                        <path d="M9 7V5a3 3 0 0 1 6 0v2" />
-                        <path d="M10 12h4" />
-                      </svg>
-                    ),
-                  },
-                };
-
-                const d = details[eId] || {
-                  title: 'Unknown',
-                  tag: 'Omen',
-                  desc: 'The path ahead lies in darkness.',
-                  accent: 'group-hover:border-amber-500/75',
-                  icon: <Sparkles className="w-5 h-5 text-amber-300" />,
-                };
-
-                return (
-                  <button
-                    key={eId}
-                    type="button"
-                    onClick={() => {
-                      if (eId === 'items') startItemEvent();
-                      else if (eId === 'campfire') initCampfire();
-                      else if (eId === 'altar') initAltar();
-                      else if (eId === 'carving') initTotemCarving();
-                      else if (eId === 'cost') initCostBargain();
-                      else if (eId === 'bonelord') initBoneLord();
-                      else if (eId === 'mycologist') initMycologists();
-                      else if (eId === 'goobert') initGoobert();
-                      else if (eId === 'cave') initCaveTrial();
-                      else if (eId === 'choice') initCardChoice();
-                      else if (eId === 'totem') initBuildTotem();
-                    }}
-                    className={`relative flex flex-col justify-between text-center rounded-sm bg-gradient-to-b from-[#18100c]/95 via-[#120b08]/95 to-[#0b0705]/98 border border-[#3e2618] shadow-[0_14px_34px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,220,175,0.08)] backdrop-blur-sm transition-all duration-200 hover:-translate-y-1.5 active:translate-y-0 cursor-pointer group overflow-hidden ${d.accent}`}
-                  >
-                    {/* Top Waystone Header Strip */}
-                    <div className="w-full px-4 py-2 border-b border-[#2b1a10] bg-[#0d0806]/80 flex items-center justify-between text-[10px] uppercase tracking-[0.22em]">
-                      <span className="text-amber-700/90 font-bold">PATH {numerals[idx] || idx + 1}</span>
-                      <span className="text-stone-400/75 group-hover:text-amber-300/90 transition-colors">
-                        {d.tag}
-                      </span>
-                    </div>
-
-                    {/* Card Body */}
-                    <div className="px-5 pt-7 pb-6 flex flex-col items-center flex-1">
-                      {/* Diamond Occult Icon Socket */}
-                      <div className="w-11 h-11 rotate-45 mb-6 border border-[#4d301e] group-hover:border-amber-400/80 bg-[#0d0806] shadow-[0_4px_16px_rgba(0,0,0,0.85),inset_0_0_12px_rgba(217,119,6,0.12)] group-hover:shadow-[0_0_20px_rgba(217,119,6,0.3)] flex items-center justify-center transition-all duration-200">
-                        <div className="-rotate-45 transition-transform duration-200 group-hover:scale-110">
-                          {d.icon}
-                        </div>
-                      </div>
-
-                      <div className="font-['Cinzel',_serif] font-bold text-base text-amber-200 group-hover:text-white uppercase tracking-[0.14em] leading-snug">
-                        {d.title}
-                      </div>
-
-                      <div className="w-10 h-px bg-gradient-to-r from-transparent via-amber-700/60 to-transparent my-3" />
-
-                      <p className="text-[11px] text-stone-300/75 group-hover:text-stone-200/90 font-mono leading-relaxed">
-                        {d.desc}
-                      </p>
-                    </div>
-
-                    {/* Recessed Action Footer */}
-                    <div className="w-full py-2.5 px-4 border-t border-[#2d1c12] bg-[#0e0906] group-hover:bg-[#22140c] font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.22em] text-[#cfb794]/75 group-hover:text-amber-200 transition-colors">
-                      › PROCEED ‹
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <MapScreen
+          mapData={actMap || generateActMap(Math.max(1, Math.min(4, stage)), getBossForAct(Math.max(1, Math.min(4, stage))))}
+          bgStyle={getScreenBgStyle('crossroads-select.jpg')}
+          deckSize={masterDeck.length}
+          overkillBlood={totalOverkillDamage}
+          startingBones={startingBones}
+          activeTotem={activeTotem}
+          onSelectNode={handleSelectMapNode}
+        />
       )}
+
       {/* =========================================================================
-          ITEM RESTOCK EVENT SCREEN (SURPLUS CACHE)
+          EVENT: SURPLUS CACHE (ITEM BARTER)
          ========================================================================= */}
       {screen === 'EVENT_ITEMS' && (
         <div
@@ -8118,7 +8032,7 @@ export default function App() {
               </button>
               {campfireStage > 0 && (
                 <button
-                  onClick={() => startNextDuel()}
+                  onClick={() => returnToMap()}
                   className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                 >
                   FLEE
@@ -8547,7 +8461,7 @@ export default function App() {
                         setMasterDeck(updatedDeck);
                         masterDeckRef.current = updatedDeck;
                       }
-                      startNextDuel(undefined, updatedDeck);
+                      returnToMap(updatedDeck);
                     }}
                     disabled={cavePassed && caveSelectedRewardIdx === null}
                   className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
@@ -8663,7 +8577,7 @@ export default function App() {
                         // 3. Pause for an exact second on the empty loom
                         await new Promise(res => setTimeout(res, 1000));
 
-                        startNextDuel();
+                        returnToMap();
                       }
                     }}
                     disabled={selectedTotemRewardIdx === null || isEventBusy}
@@ -8790,7 +8704,7 @@ export default function App() {
                         const newTotem = { head: hVal, body: bVal };
                         setActiveTotem(newTotem);
                         addLog(`Effigy stitched: ${hVal} + ${bVal}`);
-                        startNextDuel();
+                        returnToMap(undefined, newTotem);
                       }}
                       className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                     >
@@ -8805,7 +8719,7 @@ export default function App() {
                         if (assemblyBodyIdx !== null) nextBody = totemPieces[assemblyBodyIdx!].value;
                         const newTotem = { head: nextHead, body: nextBody };
                         setActiveTotem(newTotem);
-                        startNextDuel(undefined, undefined, newTotem);
+                        returnToMap(undefined, newTotem);
                       }}
                       className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                     >
@@ -8866,7 +8780,7 @@ export default function App() {
                     setMasterDeck(updatedDeck);
                     masterDeckRef.current = updatedDeck;
                   }
-                  startNextDuel(undefined, updatedDeck);
+                  returnToMap(updatedDeck);
                 }}
                 disabled={choiceSelectedIdx === null}
                 className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
