@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, BookOpen, Award, Search } from 'lucide-react';
 import {
   ALL_CARD_LOOKUP,
@@ -87,12 +87,26 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
     );
   }, [allSigils, searchQuery]);
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   const discoveredCardCount = allCards.filter((c) => seenCardSet.has(c.name)).length;
   const discoveredSigilCount = allSigils.filter((s) => seenSigilSet.has(s)).length;
 
   return (
-    <div className="fixed inset-0 z-[140] bg-black/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 font-mono select-none animate-fade-up">
-      <div className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#0c0805] border border-amber-950/80 shadow-[0_0_50px_rgba(0,0,0,0.95)] overflow-hidden">
+    <div
+      onClick={onClose}
+      className="absolute inset-0 z-[140] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 font-mono select-none animate-fade-up"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-4xl h-[672px] max-h-[94%] flex flex-col bg-[#0c0805] border border-amber-950/80 shadow-[0_0_50px_rgba(0,0,0,0.95)] overflow-hidden"
+      >
         {/* Top Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-amber-950/70 bg-[#120b07]">
           <div className="flex items-center gap-2 sm:gap-4">

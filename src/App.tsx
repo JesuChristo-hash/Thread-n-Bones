@@ -7133,7 +7133,7 @@ export default function App() {
             style={{ animationDelay: '2.5s' }}
           />
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 sm:gap-x-8 gap-y-3 sm:gap-y-2 w-full pb-2 max-w-5xl scale-100 sm:scale-[1.20] origin-center my-auto overflow-y-auto max-h-[82vh] px-1">
+            <div className="grid grid-cols-3 gap-x-8 gap-y-2 w-full max-w-5xl scale-[1.14] origin-center my-auto overflow-hidden px-2">
               {[
                 { id: 'randomizer', name: 'Unformed', desc: 'Masochistic', cards: ["Trade Pelt", "Trade Pelt", "Geck"] },
                 { id: 'witchcraft', name: 'Taiga', desc: 'Reliable', cards: ["Mole", "Moose Buck", "Black Goat"] },
