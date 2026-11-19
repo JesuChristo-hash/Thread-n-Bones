@@ -256,7 +256,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
   return (
     <div
-      className="absolute inset-0 bg-[#0b0705] z-50 flex flex-col items-center justify-between px-6 py-4 overflow-hidden font-mono select-none animate-fade-up"
+      className="absolute inset-0 bg-[#0b0705] z-50 flex flex-col items-center justify-between px-4 sm:px-6 py-3 sm:py-4 overflow-y-auto md:overflow-hidden font-mono select-none animate-fade-up"
       style={bgStyle}
     >
       {/* Atmospheric Tabletop Vignette */}
@@ -339,9 +339,9 @@ const MapScreen: React.FC<MapScreenProps> = ({
       </div>
 
       {/* Main Split: Aged Parchment Scroll + Cartographer's Ledger */}
-      <div className="relative z-10 flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-6 w-full max-w-[1120px] flex-1 min-h-0 my-3">
+      <div className="relative z-10 flex flex-col md:flex-row items-center md:items-stretch justify-center gap-4 lg:gap-6 w-full max-w-[1120px] flex-1 min-h-0 my-2 sm:my-3">
         {/* CENTERPIECE: Unrolled Aged Parchment Map */}
-        <div className="relative flex flex-col w-full max-w-[560px] flex-1 min-h-0">
+        <div className="relative flex flex-col w-full max-w-[560px] flex-1 min-h-[380px] md:min-h-0">
           {/* Top Wooden Scroll Dowel */}
           <div className="relative z-20 h-4 w-[104%] -ml-[2%] rounded-full bg-gradient-to-b from-[#4c3320] via-[#2b1a0e] to-[#120a05] border border-[#6e4c2e]/70 shadow-[0_6px_14px_rgba(0,0,0,0.9)] flex items-center justify-between px-2 shrink-0">
             <span className="w-3 h-2.5 rounded-full bg-gradient-to-b from-[#d4af37] to-[#6e4e18] border border-[#2a1a07]" />
@@ -535,9 +535,9 @@ const MapScreen: React.FC<MapScreenProps> = ({
         </div>
 
         {/* RIGHT FLANK: Cartographer's Omen Inspector & Expedition Ledger */}
-        <div className="w-full lg:w-[320px] flex flex-col justify-between gap-4 shrink-0">
+        <div className="w-full max-w-[560px] md:max-w-none md:w-[270px] lg:w-[320px] grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-col justify-between gap-3 lg:gap-4 shrink-0">
           {/* Omen / Node Inspector Plaque */}
-          <div className="relative flex-1 flex flex-col justify-between p-5 rounded-[3px] bg-[#0e0a07]/84 border border-[#3e2b1d]/85 shadow-[0_16px_38px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
+          <div className="relative flex-1 flex flex-col justify-between p-3.5 lg:p-5 rounded-[3px] bg-[#0e0a07]/84 border border-[#3e2b1d]/85 shadow-[0_16px_38px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
             <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#86643f]/65" />
             <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#86643f]/65" />
             <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#86643f]/65" />
@@ -586,7 +586,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
               )}
             </div>
 
-            <div className="mt-5 pt-3 border-t border-[#2f2015]/80 text-center">
+            <div className="mt-3 lg:mt-5 pt-2.5 lg:pt-3 border-t border-[#2f2015]/80 text-center">
               <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-[#9f825b]/80">
                 {currentNode.nextIds.length === 1
                   ? 'Single path forward — click the lit seal on the scroll'
