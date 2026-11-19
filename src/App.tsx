@@ -2506,7 +2506,7 @@ export default function App() {
   };
   
   // --- End Turn & Combat Resolution ---
-  const handleEndTurn = async (forceForfeit: boolean = false) => {
+  const handleEndTurn = async (forceForfeit: boolean = false, skipSfx: boolean = false) => {
     if (phase !== 'PLAY' && !forceForfeit) return;
 
     setSelectedHandIndex(null);
@@ -2518,7 +2518,7 @@ export default function App() {
 
     setPhase('COMBAT');
     if (!forceForfeit) {
-      triggerSfx('bell');
+      if (!skipSfx) triggerSfx('bell');
       addLog("=== COMBAT: Player Assault ===");
     } else {
       addLog("=== TURN FORFEIT: Paralyzed by Divine Grace ===");
@@ -2527,13 +2527,13 @@ export default function App() {
     await executeCombatPhase(forceForfeit);
   };
 
-  // --- Diegetic Blood-Prick Talisman Trigger ---
+  // --- Diegetic Stone Glyph Trigger ---
   const handleTalismanPrick = () => {
     if (phase !== 'PLAY' || isTalismanPricked) return;
     setIsTalismanPricked(true);
-    triggerSfx('sacrifice');
+    triggerSfx('bell');
     setTimeout(() => {
-      handleEndTurn();
+      handleEndTurn(false, true);
     }, 220);
   };
 
@@ -7122,68 +7122,97 @@ export default function App() {
           STARTER DECK SELECTION SCREEN
          ========================================================================= */}
       {screen === 'DECK_SELECT' && (
-        <div 
-          className="absolute inset-0 z-50 flex flex-col items-center justify-between p-3 sm:p-4 overflow-hidden animate-fade-up font-mono select-none"
+        <div
+          className="absolute inset-0 z-50 flex flex-col items-center justify-between px-8 py-5 overflow-hidden animate-fade-up font-mono select-none"
           style={getScreenBgStyle('deck-selection.jpg')}
         >
-          {/* Ambient Candlelight Flickering Overlays */}
-          <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(245,158,11,0.22)_0%,rgba(180,83,9,0.08)_45%,transparent_70%)] pointer-events-none animate-[pulse_5s_infinite_ease-in-out] blur-2xl z-0" />
+          {/* Atmospheric Vignette & Candlelight Overlays */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(10,7,5,0.22)_0%,rgba(6,4,3,0.78)_100%)] pointer-events-none z-0" />
+          <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(245,158,11,0.2)_0%,rgba(180,83,9,0.07)_45%,transparent_70%)] pointer-events-none animate-[pulse_5s_infinite_ease-in-out] blur-2xl z-0" />
           <div
-            className="absolute -top-16 -right-16 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.2)_0%,rgba(217,119,6,0.07)_45%,transparent_70%)] pointer-events-none animate-[pulse_5s_infinite_ease-in-out] blur-2xl z-0"
+            className="absolute -top-16 -right-16 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.18)_0%,rgba(217,119,6,0.06)_45%,transparent_70%)] pointer-events-none animate-[pulse_5s_infinite_ease-in-out] blur-2xl z-0"
             style={{ animationDelay: '2.5s' }}
           />
 
-            <div className="grid grid-cols-3 gap-x-8 gap-y-2 w-full max-w-5xl scale-[1.14] origin-center my-auto overflow-hidden px-2">
-              {[
-                { id: 'randomizer', name: 'Unformed', desc: 'Masochistic', cards: ["Trade Pelt", "Trade Pelt", "Geck"] },
-                { id: 'witchcraft', name: 'Taiga', desc: 'Reliable', cards: ["Mole", "Moose Buck", "Black Goat"] },
-                { id: 'infestation', name: 'Colony', desc: 'Wretched', cards: ["Silkworm", "Flying Ant", "Ant Queen"] },
-                { id: 'skeleton', name: 'Scavengers', desc: 'Ravenous', cards: ["Warren", "Red Stray", "Dire Wolf Pup"] },
-                { id: 'eldritch', name: 'Eldritch', desc: 'Ordained', cards: ["Tadpole", "Mantis", "Raven"] },
-                { id: 'paleozoic', name: 'Paleozoic', desc: 'Deceitful', cards: ["Hyphae", "Mud Turtle", "Great White"] }
-              ].map(d => (
-                <div
-                  key={d.id}
-                  onClick={() => handleSelectLineage(d.id)}
-                  className="flex flex-col items-center justify-between group p-1 select-none cursor-pointer"
-                >
-                  {/* Natural Handheld 3-card spread directly on the timber plank surface */}
-                  <div
-                    className="relative flex items-center justify-center w-full h-[138px] my-0.5 pb-[25px]"
-                    style={{ paddingBottom: '25px' }}
-                  >
-                    {d.cards.map((cName, cIdx) => {
-                      const fanTransforms = [
-                        'rotate-[-7deg] -translate-x-[36px] group-hover:-translate-x-[78px] z-0',
-                        'rotate-[0deg] -translate-y-2 group-hover:-translate-y-3.5 z-10',
-                        'rotate-[7deg] translate-x-[36px] group-hover:translate-x-[78px] z-20'
-                      ];
-                      return (
-                        <div
-                          key={`${cName}-${cIdx}`}
-                          className={`absolute transform scale-[0.68] origin-bottom transition-all duration-300 ease-out group-hover:scale-[0.72] ${fanTransforms[cIdx] || ''}`}
-                        >
-                          {renderCard(ALL_CARD_LOOKUP[cName] || MAIN_DECK_POOL[0], { showCost: true })}
-                        </div>
-                      );
-                    })}
-                  </div>
+          {/* Engraved Ritual Header */}
+          <div className="relative z-10 flex flex-col items-center text-center pt-0.5 shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="h-px w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/80" />
+              <h1 className="text-xl sm:text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.28em] text-[#e7cda0] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                Choose Your Lineage
+              </h1>
+              <div className="h-px w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/80" />
+            </div>
+            <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-[#b89768]/75 mt-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+              Select a starting offering to carry into the dark
+            </p>
+          </div>
 
-                  {/* Lineage title rendered simply as plain, centered monospace text below the cards */}
-                  <div className="flex flex-col items-center text-center mt-1.5 w-full">
-                    <h2 className="text-sm font-mono font-bold text-amber-200 uppercase tracking-widest group-hover:text-stone-100 transition-colors">
-                      {d.name}
-                    </h2>
-                    <p className="text-[10px] font-mono text-amber-400/60 mt-0.5 tracking-wider uppercase">
-                      {d.desc}
-                    </p>
-                    <span className="mt-1 font-['Cinzel',_serif] text-xs font-bold uppercase tracking-widest text-amber-200/80 group-hover:text-stone-50 transition-all">
-                      START
+          {/* 3x2 Recessed Altar Plaques */}
+          <div className="relative z-10 grid grid-cols-3 gap-x-6 gap-y-4 w-full max-w-[1160px] my-auto">
+            {[
+              { id: 'randomizer', name: 'Unformed', desc: 'Masochistic', cards: ["Trade Pelt", "Trade Pelt", "Geck"] },
+              { id: 'witchcraft', name: 'Taiga', desc: 'Reliable', cards: ["Mole", "Moose Buck", "Black Goat"] },
+              { id: 'infestation', name: 'Colony', desc: 'Wretched', cards: ["Silkworm", "Flying Ant", "Ant Queen"] },
+              { id: 'skeleton', name: 'Scavengers', desc: 'Ravenous', cards: ["Warren", "Red Stray", "Dire Wolf Pup"] },
+              { id: 'eldritch', name: 'Eldritch', desc: 'Ordained', cards: ["Tadpole", "Mantis", "Raven"] },
+              { id: 'paleozoic', name: 'Paleozoic', desc: 'Deceitful', cards: ["Hyphae", "Mud Turtle", "Great White"] }
+            ].map(d => (
+              <div
+                key={d.id}
+                onClick={() => handleSelectLineage(d.id)}
+                className="relative flex flex-col items-center justify-between group px-4 pt-3 pb-3 rounded-[3px] bg-[#0d0907]/74 hover:bg-[#150e0a]/88 border border-[#3a2a1d]/85 hover:border-[#c69853]/75 shadow-[0_14px_30px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,228,185,0.06)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.92),0_0_24px_rgba(212,175,55,0.14),inset_0_1px_0_rgba(255,228,185,0.14)] backdrop-blur-[2px] transition-all duration-300 cursor-pointer select-none"
+              >
+                {/* Engraved Corner Brackets */}
+                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#7a5b39]/60 group-hover:border-[#e3bc73]/90 transition-colors" />
+                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#7a5b39]/60 group-hover:border-[#e3bc73]/90 transition-colors" />
+                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#7a5b39]/60 group-hover:border-[#e3bc73]/90 transition-colors" />
+                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#7a5b39]/60 group-hover:border-[#e3bc73]/90 transition-colors" />
+
+                {/* Warm Candlelit Hover Halo Behind Cards */}
+                <div className="pointer-events-none absolute top-4 inset-x-8 h-28 rounded-full bg-[radial-gradient(circle,rgba(217,156,64,0.16)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                {/* 3-Card Handheld Spread */}
+                <div className="relative flex items-end justify-center w-full h-[142px] pb-2">
+                  {d.cards.map((cName, cIdx) => {
+                    const fanTransforms = [
+                      'rotate-[-7deg] -translate-x-[56px] group-hover:-translate-x-[82px] group-hover:rotate-[-10deg] z-0',
+                      'rotate-[0deg] -translate-y-2 group-hover:-translate-y-4 z-10',
+                      'rotate-[7deg] translate-x-[56px] group-hover:translate-x-[82px] group-hover:rotate-[10deg] z-20'
+                    ];
+                    return (
+                      <div
+                        key={`${cName}-${cIdx}`}
+                        className={`absolute transform scale-[0.74] origin-bottom transition-all duration-300 ease-out group-hover:scale-[0.78] drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)] ${fanTransforms[cIdx] || ''}`}
+                      >
+                        {renderCard(ALL_CARD_LOOKUP[cName] || MAIN_DECK_POOL[0], { showCost: true })}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Engraved Hairline Divider */}
+                <div className="w-4/5 h-px bg-gradient-to-r from-transparent via-[#5e442c]/75 to-transparent group-hover:via-[#c69853]/80 transition-colors my-1" />
+
+                {/* Lineage Plaque Label & Tactile Start Plate */}
+                <div className="flex flex-col items-center text-center w-full pt-0.5">
+                  <h2 className="text-[15px] font-['Cinzel',_serif] font-bold text-[#ecd4a6] uppercase tracking-[0.22em] group-hover:text-[#fff4dc] transition-colors drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+                    {d.name}
+                  </h2>
+                  <p className="text-[10px] font-mono text-[#b98e57]/75 group-hover:text-[#d8b177] mt-0.5 tracking-[0.26em] uppercase transition-colors">
+                    {d.desc}
+                  </p>
+                  <div className="mt-2 px-5 py-1 rounded-[2px] border border-[#4a3524]/90 bg-[#17110d]/95 group-hover:bg-[#2a1c12] group-hover:border-[#cfa159]/85 shadow-[0_2px_0_#070504,inset_0_1px_0_rgba(255,235,200,0.06)] transition-all duration-200">
+                    <span className="font-['Cinzel',_serif] text-[10px] font-bold uppercase tracking-[0.26em] text-[#cbb084] group-hover:text-[#fff2d6] transition-colors">
+                      ◆ Start ◆
                     </span>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="h-1 shrink-0" />
         </div>
       )}
 
@@ -7441,240 +7470,265 @@ export default function App() {
       {/* =========================================================================
           DRAFT SCREEN (PELT TRADING)
          ========================================================================= */}
-      {screen === 'DRAFT' && (
-        <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-hidden font-mono select-none"
-          style={getScreenBgStyle('draft.jpg')}
-        >
-          <h1 className="text-2xl md:text-3xl font-serif text-[#d4af37] tracking-widest text-center italic drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] mb-8">
-            ...Take Two more Creatures along with you...
-          </h1>
+      {screen === 'DRAFT' && (() => {
+        const selectedPeltCard =
+          draftSelectedDeckIdx !== null ? draftPlayerDeck[draftSelectedDeckIdx] : null;
+        const selectedShopCard =
+          draftSelectedTradeIdx !== null ? draftTradePool[draftSelectedTradeIdx] : null;
+        const canConfirmTrade =
+          draftSelectedDeckIdx !== null &&
+          draftSelectedTradeIdx !== null &&
+          draftTradesLeft > 0 &&
+          !draftFlippingDown &&
+          !draftFlippingUp;
+        const canVentureOnward =
+          !draftPlayerDeck.some(c => c.name === "Trade Pelt") && draftTradesLeft <= 0;
 
-          <div className="grid grid-cols-2 gap-12 lg:gap-16 max-w-[1380px] w-full mb-8">
-            {/* Player's Starter Deck directly on the surface */}
-            <div className="flex flex-col items-center">
-              <h2 className="text-sm font-mono font-bold text-amber-300/80 uppercase tracking-widest mb-4">
-                Your Creatures
-              </h2>
-              <div className="flex flex-col items-center justify-center gap-4 w-full min-h-[160px]">
-                {/* Row 1: 3 Starter Creatures */}
-                <div className="flex justify-center items-center gap-4 w-full">
-                  {draftPlayerDeck.slice(0, 3).map((c, sliceIdx) => {
-                    const idx = sliceIdx;
-                    const isSelected = draftSelectedDeckIdx === idx;
-                    const canTradePelt =
-                      c.name === "Trade Pelt" &&
-                      draftTradesLeft > 0 &&
-                      !draftFlippingDown &&
-                      !draftFlippingUp;
-                    return (
-                      <div
-                        key={c.id || `draft-p-${c.name}-${idx}`}
-                        onClick={() => {
-                          if (canTradePelt) {
-                            setDraftSelectedDeckIdx(draftSelectedDeckIdx === idx ? null : idx);
-                          }
-                        }}
-                        className={`transform origin-center shrink-0 transition-all duration-200 ${
-                          !canTradePelt ? "opacity-50" : "cursor-pointer"
-                        } ${
-                          isSelected
-                            ? "scale-[1.20] -translate-y-4 z-30"
-                            : "scale-[1.10] hover:scale-[1.15]"
-                        }`}
-                      >
-                        {renderCard(c, { isSelected })}
-                      </div>
-                    );
-                  })}
+        const statusPrompt = canVentureOnward
+          ? 'Your offering is complete — step forward into the dark.'
+          : canConfirmTrade && selectedShopCard
+            ? `Exchange Trade Pelt for ${selectedShopCard.name}`
+            : selectedPeltCard
+              ? 'Choose a revealed Creature from the Merchant’s table'
+              : selectedShopCard
+                ? `Select a Trade Pelt from your hand to claim ${selectedShopCard.name}`
+                : 'Select a Trade Pelt from your creatures, then choose one from the Merchant';
+
+        const renderPlayerDraftSlot = (c: CardDef, idx: number) => {
+          const isSelected = draftSelectedDeckIdx === idx;
+          const canTradePelt =
+            c.name === "Trade Pelt" &&
+            draftTradesLeft > 0 &&
+            !draftFlippingDown &&
+            !draftFlippingUp;
+          return (
+            <div
+              key={c.id || `draft-p-${c.name}-${idx}`}
+              className="relative w-[116px] h-[164px] shrink-0 flex items-center justify-center"
+            >
+              <div
+                onClick={() => {
+                  if (canTradePelt) {
+                    setDraftSelectedDeckIdx(draftSelectedDeckIdx === idx ? null : idx);
+                  }
+                }}
+                className={`relative transform origin-center transition-all duration-200 ${
+                  canTradePelt
+                    ? "cursor-pointer"
+                    : "opacity-75 saturate-[0.82] cursor-default"
+                } ${
+                  isSelected
+                    ? "scale-[1.06] -translate-y-2.5 z-30"
+                    : canTradePelt
+                      ? "scale-[0.98] hover:scale-[1.03] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
+                      : "scale-[0.98]"
+                }`}
+              >
+                {isSelected && (
+                  <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#c89e4c]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
+                    Offering
+                  </span>
+                )}
+                {renderCard(c, { isSelected, isClickable: canTradePelt, disableHoverScale: true })}
+              </div>
+            </div>
+          );
+        };
+
+        const renderMerchantDraftSlot = (c: CardDef | null, idx: number) => {
+          if (c === null) {
+            return (
+              <div
+                key={`draft-slot-empty-${idx}`}
+                className="relative w-[116px] h-[164px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+              >
+                <div className="w-[108px] h-[154px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
+                  <span className="text-[9px] font-['Cinzel',_serif] uppercase tracking-[0.25em] text-[#6e5642]/70">
+                    Claimed
+                  </span>
+                </div>
+              </div>
+            );
+          }
+
+          const isRevealed = draftRevealedIndices.includes(idx);
+          const isSelected = draftSelectedTradeIdx === idx;
+
+          if (!isRevealed) {
+            return (
+              <div
+                key={`draft-back-${idx}`}
+                className="relative w-[116px] h-[164px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+              >
+                <div
+                  className={`w-[108px] h-[154px] rounded-[3px] transition-all duration-200 ${
+                    draftFlippingDown ? 'animate-flip-down' : 'opacity-65 filter brightness-75'
+                  }`}
+                >
+                  <div
+                    className="w-full h-full rounded-[3px] shadow-[0_8px_14px_rgba(0,0,0,0.9)] border border-[#2a1d13]"
+                    style={{
+                      backgroundImage: `url(${BASE}/assets/cardbases/cardbacks.png)`,
+                      backgroundSize: '100% 100%',
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={c.id || `draft-t-${c.name}-${idx}`}
+              className="relative w-[116px] h-[164px] shrink-0 flex items-center justify-center"
+            >
+              <div
+                onClick={() => {
+                  if (draftFlippingDown || draftFlippingUp) return;
+                  setDraftSelectedTradeIdx(draftSelectedTradeIdx === idx ? null : idx);
+                }}
+                className={`relative cursor-pointer transform origin-center transition-all duration-200 ${
+                  draftFlippingUp ? 'animate-flip-up' : ''
+                } ${
+                  isSelected
+                    ? "scale-[1.06] -translate-y-2.5 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
+                    : "scale-[0.98] hover:scale-[1.03] hover:-translate-y-1"
+                }`}
+              >
+                {isSelected && (
+                  <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1e0d0c]/95 border border-[#b95a4b]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4b0a4] whitespace-nowrap shadow-md">
+                    Claiming
+                  </span>
+                )}
+                {renderCard(c, { isSelected: false, isClickable: true, disableHoverScale: true })}
+              </div>
+            </div>
+          );
+        };
+
+        return (
+          <div
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-7 py-5 overflow-hidden font-mono select-none"
+            style={getScreenBgStyle('draft.jpg')}
+          >
+            {/* Atmospheric Dark Vignette */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(8,10,14,0.18)_0%,rgba(6,5,7,0.82)_100%)] pointer-events-none z-0" />
+
+            {/* Header & Dynamic Ritual Status */}
+            <div className="relative z-10 flex flex-col items-center text-center shrink-0">
+              <h1 className="text-2xl sm:text-[26px] font-['Cinzel',_serif] text-[#e5c57c] tracking-[0.16em] italic drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                ...Take Two more Creatures along with you...
+              </h1>
+              <div className="mt-1.5 flex items-center gap-3 px-4 py-1 rounded-[2px] bg-[#0b0807]/75 border border-[#3a2a1e]/75 backdrop-blur-[2px]">
+                <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-[#cfb794]/85">
+                  {statusPrompt}
+                </span>
+                <span className="h-3 w-px bg-[#4a3728]/80" />
+                <span className={`text-[10px] font-mono font-bold uppercase tracking-[0.2em] ${
+                  draftTradesLeft > 0 ? 'text-[#e5c16b]' : 'text-emerald-400/85'
+                }`}>
+                  {draftTradesLeft > 0 ? `${draftTradesLeft} ${draftTradesLeft === 1 ? 'Pelt' : 'Pelts'} Left` : 'Ready'}
+                </span>
+              </div>
+            </div>
+
+            {/* Dual Smoked-Wood & Iron Tabletop Trays */}
+            <div className="relative z-10 grid grid-cols-[minmax(0,1fr)_minmax(0,1.28fr)] gap-6 max-w-[1160px] w-full my-auto items-stretch">
+              {/* Left Tray: Player's Starter Deck */}
+              <div className="relative flex flex-col items-center justify-between px-5 pt-3.5 pb-4 rounded-[3px] bg-[#0c0908]/72 border border-[#3d2d20]/80 shadow-[0_16px_38px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
+                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#7c5d3b]/65" />
+                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#7c5d3b]/65" />
+                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#7c5d3b]/65" />
+                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#7c5d3b]/65" />
+
+                <div className="w-full flex items-center justify-between pb-2.5 mb-3 border-b border-[#3a2a1e]/75">
+                  <h2 className="text-xs font-['Cinzel',_serif] font-bold text-[#e5c78a] uppercase tracking-[0.26em]">
+                    Your Creatures
+                  </h2>
+                  <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#a98d68]/75">
+                    {draftPlayerDeck.filter(c => c.name === "Trade Pelt").length} Tradeable
+                  </span>
                 </div>
 
-                {/* Row 2: 2 Trade Pelts */}
-                <div className="flex justify-center items-center gap-4 w-full mt-2">
-                  {draftPlayerDeck.slice(3).map((c, sliceIdx) => {
-                    const idx = sliceIdx + 3;
-                    const isSelected = draftSelectedDeckIdx === idx;
-                    const canTradePelt =
-                      c.name === "Trade Pelt" &&
-                      draftTradesLeft > 0 &&
-                      !draftFlippingDown &&
-                      !draftFlippingUp;
-                    return (
-                      <div
-                        key={c.id || `draft-p-${c.name}-${idx}`}
-                        onClick={() => {
-                          if (canTradePelt) {
-                            setDraftSelectedDeckIdx(draftSelectedDeckIdx === idx ? null : idx);
-                          }
-                        }}
-                        className={`transform origin-center shrink-0 transition-all duration-200 ${
-                          !canTradePelt ? "opacity-50" : "cursor-pointer"
-                        } ${
-                          isSelected
-                            ? "scale-[1.20] -translate-y-4 z-30"
-                            : "scale-[1.10] hover:scale-[1.15]"
-                        }`}
-                      >
-                        {renderCard(c, { isSelected })}
-                      </div>
-                    );
-                  })}
+                <div className="flex flex-col items-center justify-center gap-3.5 w-full my-auto">
+                  {/* Row 1: 3 Starter Creatures */}
+                  <div className="flex justify-center items-center gap-3.5 w-full">
+                    {draftPlayerDeck.slice(0, 3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx))}
+                  </div>
+
+                  {/* Row 2: 2 Trade Pelts / Claimed Replacements */}
+                  <div className="flex justify-center items-center gap-3.5 w-full">
+                    {draftPlayerDeck.slice(3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx + 3))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Tray: Merchant's Shop */}
+              <div className="relative flex flex-col items-center justify-between px-5 pt-3.5 pb-4 rounded-[3px] bg-[#0c0908]/72 border border-[#422823]/80 shadow-[0_16px_38px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,205,190,0.05)] backdrop-blur-[2px]">
+                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#8a4c42]/65" />
+                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#8a4c42]/65" />
+                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#8a4c42]/65" />
+                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#8a4c42]/65" />
+
+                <div className="w-full flex items-center justify-between pb-2.5 mb-3 border-b border-[#3f2622]/75">
+                  <h2 className="text-xs font-['Cinzel',_serif] font-bold text-[#e2a498] uppercase tracking-[0.26em]">
+                    Merchant's Shop
+                  </h2>
+                  <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#b47c72]/80">
+                    {draftRevealedIndices.length} Revealed
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center justify-center gap-3.5 w-full my-auto">
+                  {/* Row 1: Top 4 Cards */}
+                  <div className="flex justify-center items-center gap-3.5 w-full">
+                    {draftTradePool.slice(0, 4).map((c, idx) => renderMerchantDraftSlot(c, idx))}
+                  </div>
+
+                  {/* Row 2: Bottom 4 Cards */}
+                  <div className="flex justify-center items-center gap-3.5 w-full">
+                    {draftTradePool.slice(4, 8).map((c, sliceIdx) => renderMerchantDraftSlot(c, sliceIdx + 4))}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Scavenge Trade Pool directly on the surface */}
-            <div className="flex flex-col items-center">
-              <h2 className="text-sm font-mono font-bold text-red-300/80 uppercase tracking-widest mb-4">
-                Merchant's Shop
-              </h2>
-              <div className="flex flex-col items-center justify-center gap-4 w-full min-h-[160px]">
-                {/* Row 1: Top 4 Cards */}
-                <div className="flex justify-center items-center gap-4 w-full">
-                  {draftTradePool.slice(0, 4).map((c, idx) => {
-                    if (c === null) {
-                      return (
-                        <div
-                          key={`draft-slot-empty-${idx}`}
-                          className="w-[112px] h-[160px] shrink-0 select-none scale-[1.10] origin-center rounded-[3px] border border-[#2b221b]/40 bg-[#0a0807]/30 shadow-inner pointer-events-none"
-                        />
-                      );
-                    }
+            {/* Grounded Tactile Action Bar */}
+            <div className="relative z-10 flex items-center gap-4 px-5 py-2.5 rounded-[3px] bg-[#0c0807]/85 border border-[#3a2a1e]/80 shadow-[0_10px_28px_rgba(0,0,0,0.88)] backdrop-blur-[2px] shrink-0">
+              <button
+                onClick={executeDraftTrade}
+                disabled={!canConfirmTrade}
+                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] px-6 py-2.5 select-none ${
+                  canConfirmTrade
+                    ? 'bg-[#2c1512] hover:bg-[#3c1b17] active:translate-y-[1px] border-[#c46c56] text-[#ffe8d6] shadow-[0_2px_0_#0b0504,0_0_18px_rgba(196,108,86,0.28),inset_0_1px_0_rgba(255,220,200,0.18)] cursor-pointer'
+                    : 'bg-[#15100d]/90 border-[#2f241c] text-[#7a6957] opacity-55 cursor-not-allowed'
+                }`}
+              >
+                Confirm Trade
+              </button>
 
-                    const isRevealed = draftRevealedIndices.includes(idx);
-                    const isSelected = draftSelectedTradeIdx === idx;
+              <div className="h-5 w-px bg-[#3a2a1e]/80" />
 
-                    if (!isRevealed) {
-                      return (
-                        <div
-                          key={`draft-back-${idx}`}
-                          className={`w-[112px] h-[160px] shrink-0 select-none scale-[1.10] origin-center rounded-[3px] pointer-events-none transition-all duration-200 ${
-                            draftFlippingDown ? 'animate-flip-down' : 'opacity-60 filter brightness-60'
-                          }`}
-                        >
-                          <div
-                            className="w-full h-full rounded-[3px] shadow-[0_4px_8px_rgba(0,0,0,0.85)] border border-[#1a120b]"
-                            style={{
-                              backgroundImage: `url(${BASE}/assets/cardbases/cardbacks.png)`,
-                              backgroundSize: '100% 100%',
-                            }}
-                          />
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div
-                        key={c.id || `draft-t-${c.name}-${idx}`}
-                        onClick={() => {
-                          if (draftFlippingDown || draftFlippingUp) return;
-                          setDraftSelectedTradeIdx(draftSelectedTradeIdx === idx ? null : idx);
-                        }}
-                        className={`cursor-pointer transform origin-center shrink-0 transition-all duration-200 ${
-                          draftFlippingUp ? 'animate-flip-up' : ''
-                        } ${
-                          isSelected
-                            ? "scale-[1.20] -translate-y-4 z-30"
-                            : "scale-[1.10] hover:scale-[1.15]"
-                        }`}
-                      >
-                        {renderCard(c, { isSelected })}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Row 2: Bottom 4 Cards */}
-                <div className="flex justify-center items-center gap-4 w-full mt-2">
-                  {draftTradePool.slice(4, 8).map((c, sliceIdx) => {
-                    const idx = sliceIdx + 4;
-
-                    if (c === null) {
-                      return (
-                        <div
-                          key={`draft-slot-empty-${idx}`}
-                          className="w-[112px] h-[160px] shrink-0 select-none scale-[1.10] origin-center rounded-[3px] border border-[#2b221b]/40 bg-[#0a0807]/30 shadow-inner pointer-events-none"
-                        />
-                      );
-                    }
-
-                    const isRevealed = draftRevealedIndices.includes(idx);
-                    const isSelected = draftSelectedTradeIdx === idx;
-
-                    if (!isRevealed) {
-                      return (
-                        <div
-                          key={`draft-back-${idx}`}
-                          className={`w-[112px] h-[160px] shrink-0 select-none scale-[1.10] origin-center rounded-[3px] pointer-events-none transition-all duration-200 ${
-                            draftFlippingDown ? 'animate-flip-down' : 'opacity-60 filter brightness-60'
-                          }`}
-                        >
-                          <div
-                            className="w-full h-full rounded-[3px] shadow-[0_4px_8px_rgba(0,0,0,0.85)] border border-[#1a120b]"
-                            style={{
-                              backgroundImage: `url(${BASE}/assets/cardbases/cardbacks.png)`,
-                              backgroundSize: '100% 100%',
-                            }}
-                          />
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div
-                        key={c.id || `draft-t-${c.name}-${idx}`}
-                        onClick={() => {
-                          if (draftFlippingDown || draftFlippingUp) return;
-                          setDraftSelectedTradeIdx(draftSelectedTradeIdx === idx ? null : idx);
-                        }}
-                        className={`cursor-pointer transform origin-center shrink-0 transition-all duration-200 ${
-                          draftFlippingUp ? 'animate-flip-up' : ''
-                        } ${
-                          isSelected
-                            ? "scale-[1.20] -translate-y-4 z-30"
-                            : "scale-[1.10] hover:scale-[1.15]"
-                        }`}
-                      >
-                        {renderCard(c, { isSelected })}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <button
+                onClick={finalizeDraft}
+                disabled={!canVentureOnward}
+                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] px-6 py-2.5 select-none ${
+                  canVentureOnward
+                    ? 'bg-[#271d12] hover:bg-[#362717] active:translate-y-[1px] border-[#d4af37]/90 text-[#fff2cf] shadow-[0_2px_0_#0b0704,0_0_20px_rgba(212,175,55,0.3),inset_0_1px_0_rgba(255,240,190,0.22)] cursor-pointer'
+                    : 'bg-[#15100d]/90 border-[#2f241c] text-[#7a6957] opacity-55 cursor-not-allowed'
+                }`}
+                title={
+                  !canVentureOnward
+                    ? "You must trade all of your Pelts before venturing further"
+                    : "Venture Onward"
+                }
+              >
+                Venture Onward
+              </button>
             </div>
           </div>
-
-          {/* Minimal Tactile Action Buttons */}
-          <div className="flex items-center gap-5 mt-2">
-            <button
-              onClick={executeDraftTrade}
-              disabled={
-                draftSelectedDeckIdx === null ||
-                draftSelectedTradeIdx === null ||
-                draftTradesLeft <= 0 ||
-                draftFlippingDown ||
-                draftFlippingUp
-              }
-              className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 select-none"
-            >
-              CONFIRM TRADE
-            </button>
-
-            <button
-              onClick={finalizeDraft}
-              disabled={draftPlayerDeck.some(c => c.name === "Trade Pelt") || draftTradesLeft > 0}
-              className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 select-none"
-              title={
-                draftPlayerDeck.some(c => c.name === "Trade Pelt") || draftTradesLeft > 0
-                  ? "You must trade all of your Pelts before venturing further"
-                  : "Venture Onward"
-              }
-            >
-              VENTURE ONWARD
-            </button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
       {/* Floating persistent Dev Tools & Deck access during all events */}
       {screen.startsWith('EVENT_') && (
         <div className="fixed top-3 right-4 z-[60] flex items-center gap-3 select-none">
