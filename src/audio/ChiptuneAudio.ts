@@ -1150,7 +1150,7 @@ export const ChiptuneAudio: any = {
 
   // 3A. THE ZEALOT — 72 BPM D Phrygian Liturgical Inquisition
   playTheZealot(fadeTime = 1.5) {
-    this.transitionTo('boss-Zealot', (inst: TrackInstance) => {
+    this.transitionToSample('boss-Zealot', 'assets/audio/boss_zealot.ogg', (inst: TrackInstance) => {
       if (!this.ctx) return;
       const cathedralEcho = this.createEchoBus(inst, 0.44, 0.36, 980);
       const bellPan = this.createPanNode(cathedralEcho, 0.3);
@@ -1211,7 +1211,7 @@ export const ChiptuneAudio: any = {
 
   // 3B. THE BEGOTTEN — 58 BPM Hollow Crypt Dirge (Clean, Stark, Uncluttered)
   playTheBegotten(fadeTime = 1.6) {
-    this.transitionTo('boss-The Begotten', (inst: TrackInstance) => {
+    this.transitionToSample('boss-The Begotten', 'assets/audio/boss_begotten.ogg', (inst: TrackInstance) => {
       if (!this.ctx) return;
       const cryptEcho = this.createEchoBus(inst, 0.44, 0.22, 780);
       const melodyPan = this.createPanNode(cryptEcho, -0.2);
@@ -1288,7 +1288,7 @@ export const ChiptuneAudio: any = {
 
   // 3C. THE WEAVER — Slow Swaying 6/8 Wooden Chamber Flute & Dark-Folk Loom
   playTheWeaver(fadeTime = 1.5) {
-    this.transitionTo('boss-The Weaver', (inst: TrackInstance) => {
+    this.transitionToSample('boss-The Weaver', 'assets/audio/boss_weaver.ogg', (inst: TrackInstance) => {
       if (!this.ctx) return;
       const loomEcho = this.createEchoBus(inst, 0.44, 0.34, 1300);
       const flutePan = this.createPanNode(loomEcho, -0.14);
@@ -1390,7 +1390,8 @@ export const ChiptuneAudio: any = {
   // 4. THE BONE LORD: DRAWN-OUT OSSUARY PROCESSION (52 BPM, 37s Full Arc)
   // =========================================================================
   playFinalBoss(fadeTime = 2.0) {
-    this.transitionTo('finalboss', (inst: TrackInstance) => {
+    void this.loadSampleBuffer('assets/audio/boss_bloodmoon.ogg');
+    this.transitionToSample('finalboss', 'assets/audio/boss_bonelord.ogg', (inst: TrackInstance) => {
       if (!this.ctx) return;
       const organEcho = this.createEchoBus(inst, 0.52, 0.26, 860);
       const bellPan = this.createPanNode(organEcho, -0.26);
@@ -1466,7 +1467,7 @@ export const ChiptuneAudio: any = {
   // 5. PHASE 3: THE BLOOD MOON (64 BPM Unified Slow-Burn Eclipse, 30s Arc)
   // =========================================================================
   playFinalBossPhase3(fadeTime = 0.8) {
-    this.transitionTo('bloodmoon-phase3', (inst: TrackInstance) => {
+    this.transitionToSample('bloodmoon-phase3', 'assets/audio/boss_bloodmoon.ogg', (inst: TrackInstance) => {
       if (!this.ctx) return;
       const cathedralEcho = this.createEchoBus(inst, 0.46, 0.26, 1020);
       const leadPan = this.createPanNode(cathedralEcho, -0.18);
