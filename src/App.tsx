@@ -851,7 +851,6 @@ export default function App() {
   const [hand, setHand] = useState<CardDef[]>([]);
   const [deck, setDeck] = useState<CardDef[]>([]);
   const [selectedHandIndex, setSelectedHandIndex] = useState<number | null>(null);
-  const [markedForSacrifice, setMarkedForSacrifice] = useState<number | null>(null);
   const [playerBoard, setPlayerBoard] = useState<(CardDef | null)[]>([null, null, null, null]);
   const [enemyBoard, setEnemyBoard] = useState<(CardDef | null)[]>([null, null, null, null]);
   const [enemyQueue, setEnemyQueue] = useState<(CardDef | null)[]>([null, null, null, null]);
@@ -1071,7 +1070,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (screen === 'SPLASH' || screen === 'DECK_SELECT' || screen === 'DRAFT' || screen === 'GAME_OVER') {
+    if (screen === 'SPLASH' || screen === 'DECK_SELECT' || screen === 'DRAFT' || screen === 'DUEL' || screen === 'GAME_OVER') {
       return;
     }
     if (masterDeck && masterDeck.length > 0) {
@@ -1731,23 +1730,25 @@ export default function App() {
   };
 
   // --- Hand Selection & Undo Backup ---
+  const cancelHandSelection = () => {
+    if (backupState && (blood > backupState.blood || bones > backupState.bones || JSON.stringify(playerBoard) !== JSON.stringify(backupState.playerBoard))) {
+      setPlayerBoard(backupState.playerBoard);
+      setBlood(backupState.blood);
+      setBones(backupState.bones);
+      setHand(backupState.hand);
+      setMorselStats(backupState.morselStats);
+      addLog("Sacrifice sequence cancelled. Sacrificed creatures restored to board.");
+    }
+    setSelectedHandIndex(null);
+    setBackupState(null);
+    setSacrificedUnkillableCardIds([]);
+  };
+
   const selectHandCard = (idx: number) => {
     if (phase !== 'PLAY') return;
 
     if (selectedHandIndex === idx) {
-      // Deselect and restore backup if any sacrifices occurred
-      if (backupState && (blood > backupState.blood || bones > backupState.bones || JSON.stringify(playerBoard) !== JSON.stringify(backupState.playerBoard))) {
-        setPlayerBoard(backupState.playerBoard);
-        setBlood(backupState.blood);
-        setBones(backupState.bones);
-        setHand(backupState.hand);
-        setMorselStats(backupState.morselStats);
-        addLog("Sacrifice sequence cancelled. Sacrificed creatures restored to board.");
-      }
-      setSelectedHandIndex(null);
-      setBackupState(null);
-      setMarkedForSacrifice(null);
-      setSacrificedUnkillableCardIds([]);
+      cancelHandSelection();
     } else {
       if (selectedHandIndex !== null && backupState && (blood > backupState.blood || bones > backupState.bones || JSON.stringify(playerBoard) !== JSON.stringify(backupState.playerBoard))) {
         setPlayerBoard(backupState.playerBoard);
@@ -1758,7 +1759,6 @@ export default function App() {
         addLog("Sacrifice sequence cancelled due to switching cards.");
         setSelectedHandIndex(null);
         setBackupState(null);
-        setMarkedForSacrifice(null);
         setSacrificedUnkillableCardIds([]);
         return;
       }
@@ -1770,7 +1770,6 @@ export default function App() {
         hand: JSON.parse(JSON.stringify(hand)),
         morselStats: { ...morselStats }
       });
-      setMarkedForSacrifice(null);
       setSacrificedUnkillableCardIds([]);
     }
   };
@@ -1792,7 +1791,8 @@ export default function App() {
 
     // SACRIFICE LOGIC
     if (existingCard) {
-      if (existingCard.id && sacrificedUnkillableCardIds.includes(existingCard.id)) {
+      const existingSacKey = existingCard.id || existingCard.name || '';
+      if (existingSacKey && sacrificedUnkillableCardIds.includes(existingSacKey)) {
         addLog(`${existingCard.name} has already been sacrificed for this summon.`);
         return;
       }
@@ -1824,7 +1824,21 @@ export default function App() {
         return;
       }
 
-      if (markedForSacrifice === laneIndex) {
+      // Ensure drag-to-sacrifice also anchors selection & undo backup cleanly
+      if (selectedHandIndex === null) {
+        setSelectedHandIndex(activeHandIndex);
+      }
+      if (!backupState) {
+        setBackupState({
+          playerBoard: JSON.parse(JSON.stringify(playerBoard)),
+          blood,
+          bones,
+          hand: JSON.parse(JSON.stringify(hand)),
+          morselStats: { ...morselStats }
+        });
+      }
+
+      {
         triggerSfx('sacrifice');
 
         if (existingCard.name === "Ouroboros") {
@@ -1868,7 +1882,6 @@ export default function App() {
           setDialogueQueue(["Commit to your actions."]);
         }
 
-        setMarkedForSacrifice(null);
 
           if (existingCard.sigils.includes('Many Lives')) {
             setSacrificedUnkillableCardIds(prev => [...prev, existingCard.id || existingCard.name || '']);
@@ -1912,10 +1925,6 @@ export default function App() {
             addLog(`${existingCard.name} returned to the bottom of your deck (Pack-Animal)!`);
           }
           return;
-      } else {
-        setMarkedForSacrifice(laneIndex);
-        addLog(`${existingCard.name} marked for sacrifice. Click again to confirm.`);
-        return;
       }
     }
 
@@ -1969,7 +1978,6 @@ export default function App() {
       setHand(prev => prev.filter((_, idx) => idx !== activeHandIndex));
       setSelectedHandIndex(null);
       setBackupState(null);
-      setMarkedForSacrifice(null);
       setSacrificedUnkillableCardIds([]);
       triggerSfx('play');
       addLog(`Played ${playedCard.name} in lane ${laneIndex + 1}.`);
@@ -2076,7 +2084,7 @@ export default function App() {
     bones,
     hand,
     deck.length,
-    markedForSacrifice,
+    backupState,
     sacrificedUnkillableCardIds,
     ouroborosBuffs,
     masterDeck,
@@ -2521,7 +2529,6 @@ export default function App() {
 
     setSelectedHandIndex(null);
     setBackupState(null);
-    setMarkedForSacrifice(null);
     setSacrificedUnkillableCardIds([]);
     setBlood(0);
     setMorselStats({ attack: 0, health: 0 });
@@ -2546,6 +2553,142 @@ export default function App() {
       handleEndTurn(false, true);
     }, 220);
   };
+
+  // --- Global Keyboard & Scroll Wheel Controls (Esc / Space / Draw Wheel) ---
+  const lastWheelDrawRef = React.useRef<number>(0);
+  const hotkeyRef = React.useRef({
+    screen,
+    phase,
+    showPauseMenu,
+    showAudioSettings,
+    selectedHandIndex,
+    sacrificingLane,
+    isTalismanPricked,
+    blood,
+    hasActiveDialogue: Boolean(bossState.activeDialogue),
+    setShowPauseMenu,
+    setShowAudioSettings,
+    cancelHandSelection,
+    handleTalismanPrick,
+    handleDraw,
+  });
+  hotkeyRef.current = {
+    screen,
+    phase,
+    showPauseMenu,
+    showAudioSettings,
+    selectedHandIndex,
+    sacrificingLane,
+    isTalismanPricked,
+    blood,
+    hasActiveDialogue: Boolean(bossState.activeDialogue),
+    setShowPauseMenu,
+    setShowAudioSettings,
+    cancelHandSelection,
+    handleTalismanPrick,
+    handleDraw,
+  };
+
+  useEffect(() => {
+    const isInsideScrollable = (el: HTMLElement | null): boolean => {
+      let node = el;
+      while (node && node !== document.body) {
+        const style = window.getComputedStyle(node);
+        const scrollableY = style.overflowY === 'auto' || style.overflowY === 'scroll';
+        if (scrollableY && node.scrollHeight > node.clientHeight + 2) {
+          return true;
+        }
+        node = node.parentElement;
+      }
+      return false;
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const s = hotkeyRef.current;
+      const target = e.target as HTMLElement | null;
+      const isTyping = Boolean(
+        target && (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable
+        )
+      );
+
+      if (e.key === 'Escape') {
+        if (e.repeat) return;
+        if (s.showAudioSettings) {
+          e.preventDefault();
+          s.setShowAudioSettings(false);
+          return;
+        }
+        if (s.showPauseMenu) {
+          e.preventDefault();
+          s.setShowPauseMenu(false);
+          return;
+        }
+        if (s.screen === 'DUEL' && s.phase === 'PLAY' && s.selectedHandIndex !== null) {
+          e.preventDefault();
+          s.cancelHandSelection();
+          return;
+        }
+        if (s.screen !== 'SPLASH' && s.screen !== 'GAME_OVER') {
+          e.preventDefault();
+          s.setShowPauseMenu(true);
+        }
+        return;
+      }
+
+      if (e.code === 'Space' || e.key === ' ') {
+        if (isTyping || e.repeat) return;
+        if (
+          s.screen === 'DUEL' &&
+          s.phase === 'PLAY' &&
+          !s.showPauseMenu &&
+          !s.showAudioSettings &&
+          !s.hasActiveDialogue &&
+          s.sacrificingLane === null &&
+          !s.isTalismanPricked &&
+          s.blood === 0
+        ) {
+          e.preventDefault();
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
+          s.handleTalismanPrick();
+        }
+      }
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      const s = hotkeyRef.current;
+      if (
+        s.screen !== 'DUEL' ||
+        s.phase !== 'DRAW' ||
+        s.showPauseMenu ||
+        s.showAudioSettings ||
+        s.hasActiveDialogue
+      ) {
+        return;
+      }
+      if (Math.abs(e.deltaY) < 12) return;
+      if (isInsideScrollable(e.target as HTMLElement | null)) return;
+
+      const now = Date.now();
+      if (now - lastWheelDrawRef.current < 450) return;
+      lastWheelDrawRef.current = now;
+
+      e.preventDefault();
+      s.handleDraw(e.deltaY < 0 ? 'main' : 'sacrifice');
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
   // --- Movement Resolution with Lateral Translation Animations ---
   const resolveMovements = async (isPlayer: boolean, board: (CardDef | null)[]): Promise<(CardDef | null)[]> => {
@@ -4631,7 +4774,6 @@ export default function App() {
     setBones(startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones);
     setHand([]);
     setSelectedHandIndex(null);
-    setMarkedForSacrifice(null);
     setSacrificedUnkillableCardIds([]);
     setPlayerBoard([null, null, null, null]);
     setEnemyBoard([null, null, null, null]);
@@ -7526,6 +7668,7 @@ export default function App() {
                         permanentScaleDebuff,
                         consecutiveOneTurnWins,
                         otkCooldown,
+                        actMap: actMapRef.current,
                         savedAt: Date.now(),
                       }));
                       setSavedRunExists(true);
@@ -10662,56 +10805,170 @@ export default function App() {
                      })()}
 
                  {/* Row 3: Player Active Board Slots */}
-                     <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 w-full overflow-visible">
-                       {playerBoard.map((card, idx) => {
-                     const isMarked = markedForSacrifice === idx;
-                     const isAttackingThisLane = activeAttacker?.isPlayer === true && activeAttacker?.lane === idx;
-                     const isDamagedThisLane = damagedCard?.isPlayer === true && damagedCard?.lane === idx;
-                     const isDestroyedThisLane = destroyedCard?.isPlayer === true && destroyedCard?.lane === idx;
-                     const isHpFlashingThisLane = hpFlashingCard?.isPlayer === true && hpFlashingCard?.lane === idx;
-                     const isSigilJitterThisLane = jitteringCard?.isPlayer === true && jitteringCard?.lane === idx;
-                     const isDefendingThisLane = activeDefendingLane?.isPlayer === true && activeDefendingLane?.lane === idx;
-                     const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === true && zeroPowerShakingCard?.lane === idx;
-                     return (
-                       <div
-                         key={`p-slot-${idx}`}
-                                  onClick={() => handlePlayerSlotClick(idx)}
-                                  className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 hover:border-[#cfb794]/50 bg-transparent hover:bg-white/[0.02] cursor-pointer overflow-visible ${
-                                    isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
-                                  }`}
-                                >
-                                  {(!card || isAttackingThisLane) && (
-                                    <span className="absolute text-[11px] font-mono text-amber-900/40 select-none pointer-events-none tracking-widest">
-                                      +
-                                    </span>
-                                  )}
-                         {card ? (
-                           renderCard(card, {
-                             laneIndex: idx,
-                             isMarkedSacrifice: isMarked,
-							 isSacrificing: sacrificingLane === idx,
-                             isClickable: true,
-                             disableHoverScale: true,
-                             isAttacking: isAttackingThisLane,
-                             attackDirection: isAttackingThisLane ? activeAttacker?.direction : undefined,
-                             isAirborneAttack: isAttackingThisLane ? activeAttacker?.isAirborne : undefined,
-                             isDirectAttack: isAttackingThisLane ? activeAttacker?.isDirect : undefined,
-                             isDamaged: isDamagedThisLane,
-                             isDestroyed: isDestroyedThisLane,
-                             isHpFlashing: isHpFlashingThisLane,
-                             isSigilJittering: isSigilJitterThisLane,
-                             isDefending: isDefendingThisLane,
-                             isZeroPowerShaking: isZeroPowerThisLane,
-                           })
-                         ) : null}
-                       </div>
-                     );
-                   })}
-                 </div>
+                  {(() => {
+                    const activeSelectedCard = phase === 'PLAY' && selectedHandIndex !== null ? hand[selectedHandIndex] : null;
+                    const reqBlood = activeSelectedCard?.cost || 0;
+                    const reqBones = activeSelectedCard?.boneCost || 0;
+                    const needsSacrifice = Boolean(activeSelectedCard && reqBlood > 0 && blood < reqBlood);
+                    const readyToPlace = Boolean(activeSelectedCard && blood >= reqBlood && bones >= reqBones);
+                    const hasCommittedSacrifices = Boolean(
+                      backupState && (
+                        blood > backupState.blood ||
+                        bones > backupState.bones ||
+                        JSON.stringify(playerBoard) !== JSON.stringify(backupState.playerBoard)
+                      )
+                    );
+                    const isCardSacrificable = (c: typeof playerBoard[number]) => {
+                      if (!c) return false;
+                      const isWorthyToken = (c.name === 'Chime' || c.name === 'Dam') && c.sigils.includes('Worthy Sacrifice');
+                      if (c.unsacrificable && !isWorthyToken) return false;
+                      const key = c.id || c.name || '';
+                      if (key && sacrificedUnkillableCardIds.includes(key)) return false;
+                      return true;
+                    };
+                    const availableBoardBlood = needsSacrifice
+                      ? playerBoard.reduce((sum, c) => sum + (isCardSacrificable(c) ? (c!.sigils.includes('Worthy Sacrifice') ? 3 : 1) : 0), 0)
+                      : 0;
+                    const shortOnBlood = needsSacrifice && blood + availableBoardBlood < reqBlood;
 
+                    return (
+                      <div
+                        className="relative w-full my-1 overflow-visible z-30"
+                        onContextMenu={(e) => {
+                          if (selectedHandIndex !== null) {
+                            e.preventDefault();
+                            cancelHandSelection();
+                          }
+                        }}
+                      >
+                        {activeSelectedCard && (
+                          <div
+                            className={`absolute -top-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-2.5 py-0.5 rounded-[2px] border backdrop-blur-sm shadow-[0_4px_14px_rgba(0,0,0,0.75)] whitespace-nowrap font-mono text-[10px] tracking-[0.14em] uppercase ${
+                              needsSacrifice
+                                ? 'bg-[#1b0808]/95 border-red-500/70'
+                                : readyToPlace
+                                ? 'bg-[#1a1309]/95 border-amber-400/70'
+                                : 'bg-[#14100d]/95 border-[#8c6747]/60'
+                            }`}
+                          >
+                            {needsSacrifice ? (
+                              <div className={`flex items-center gap-2 ${shortOnBlood ? 'text-red-300/80' : 'text-red-200'}`}>
+                                <span className="flex items-center gap-1">
+                                  {Array.from({ length: reqBlood }).map((_, i) => (
+                                    <span
+                                      key={i}
+                                      className={`inline-block w-2 h-2 rounded-full border ${
+                                        i < blood
+                                          ? 'bg-red-500 border-red-300 shadow-[0_0_6px_rgba(239,68,68,0.9)]'
+                                          : 'bg-transparent border-red-400/70'
+                                      }`}
+                                    />
+                                  ))}
+                                </span>
+                                <span>
+                                  {shortOnBlood
+                                    ? `Need ${reqBlood} Blood (Only ${blood + availableBoardBlood} Available)`
+                                    : `Sacrifice ${blood}/${reqBlood} Blood — Click Creatures`}
+                                </span>
+                              </div>
+                            ) : readyToPlace ? (
+                              <span className="text-amber-200">
+                                Place {activeSelectedCard.name} in an Open Lane
+                              </span>
+                            ) : (
+                              <span className="text-[#cfb794]">
+                                Needs {reqBones} Bones ({bones}/{reqBones})
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cancelHandSelection();
+                              }}
+                              className="ml-1 px-1.5 py-0.5 bg-black/60 hover:bg-red-950/80 border border-[#8c6747]/50 hover:border-red-400/70 text-[#e8d5b7] hover:text-red-100 rounded-[2px] text-[9px] tracking-[0.16em] transition-colors cursor-pointer"
+                            >
+                              {hasCommittedSacrifices ? 'Undo' : 'Cancel'}
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="flex justify-center items-center gap-2 sm:gap-4 w-full overflow-visible">
+                          {playerBoard.map((card, idx) => {
+                            const canSacrificeThis = Boolean(needsSacrifice && isCardSacrificable(card) && sacrificingLane === null);
+                            const canPlaceHere = Boolean(readyToPlace && !card && sacrificingLane === null);
+                            const isDimmedTarget = Boolean(
+                              (needsSacrifice && !canSacrificeThis && sacrificingLane !== idx) ||
+                              (readyToPlace && Boolean(card))
+                            );
+                            const isAttackingThisLane = activeAttacker?.isPlayer === true && activeAttacker?.lane === idx;
+                            const isDamagedThisLane = damagedCard?.isPlayer === true && damagedCard?.lane === idx;
+                            const isDestroyedThisLane = destroyedCard?.isPlayer === true && destroyedCard?.lane === idx;
+                            const isHpFlashingThisLane = hpFlashingCard?.isPlayer === true && hpFlashingCard?.lane === idx;
+                            const isSigilJitterThisLane = jitteringCard?.isPlayer === true && jitteringCard?.lane === idx;
+                            const isDefendingThisLane = activeDefendingLane?.isPlayer === true && activeDefendingLane?.lane === idx;
+                            const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === true && zeroPowerShakingCard?.lane === idx;
+
+                            const slotStyle = canSacrificeThis
+                              ? 'border-red-500/85 bg-red-950/25 hover:bg-red-900/40 hover:border-red-300 shadow-[0_0_16px_rgba(220,38,38,0.38)] cursor-pointer'
+                              : canPlaceHere
+                              ? 'border-amber-400/80 bg-amber-900/15 hover:bg-amber-700/30 hover:border-amber-200 shadow-[0_0_14px_rgba(217,119,6,0.32)] cursor-pointer'
+                              : isDimmedTarget
+                              ? 'border-[#8c6747]/15 bg-transparent opacity-45 cursor-not-allowed'
+                              : 'border-[#8c6747]/25 hover:border-[#cfb794]/50 bg-transparent hover:bg-white/[0.02] cursor-pointer';
+
+                            return (
+                              <div
+                                key={`p-slot-${idx}`}
+                                onClick={() => handlePlayerSlotClick(idx)}
+                                className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed transition-all duration-150 overflow-visible ${slotStyle} ${
+                                  isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
+                                }`}
+                              >
+                                {(!card || isAttackingThisLane) && (
+                                  <span
+                                    className={`absolute font-mono select-none pointer-events-none transition-colors ${
+                                      canPlaceHere
+                                        ? 'text-[10px] text-amber-300/90 tracking-[0.18em] animate-pulse font-bold'
+                                        : 'text-[11px] text-amber-900/40 tracking-widest'
+                                    }`}
+                                  >
+                                    {canPlaceHere ? 'PLACE' : '+'}
+                                  </span>
+                                )}
+                                {card ? (
+                                  renderCard(card, {
+                                    laneIndex: idx,
+                                    isSacrificing: sacrificingLane === idx,
+                                    isClickable: !isDimmedTarget,
+                                    disableHoverScale: true,
+                                    isAttacking: isAttackingThisLane,
+                                    attackDirection: isAttackingThisLane ? activeAttacker?.direction : undefined,
+                                    isAirborneAttack: isAttackingThisLane ? activeAttacker?.isAirborne : undefined,
+                                    isDirectAttack: isAttackingThisLane ? activeAttacker?.isDirect : undefined,
+                                    isDamaged: isDamagedThisLane,
+                                    isDestroyed: isDestroyedThisLane,
+                                    isHpFlashing: isHpFlashingThisLane,
+                                    isSigilJittering: isSigilJitterThisLane,
+                                    isDefending: isDefendingThisLane,
+                                    isZeroPowerShaking: isZeroPowerThisLane,
+                                  })
+                                ) : null}
+                                {canSacrificeThis && card && (
+                                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-1.5 py-0.5 rounded-[2px] bg-[#240606]/95 border border-red-400/80 text-red-100 font-mono text-[8px] sm:text-[9px] tracking-[0.14em] uppercase whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
+                                    {card.sigils.includes('Worthy Sacrifice') ? '† +3 BLOOD' : '† SACRIFICE'}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                       {/* Row 4: Player Hand */}
                 <div
-                  className="w-full flex items-center justify-center min-h-[140px] sm:min-h-[150px] mt-1 sm:mt-2 mb-0 px-1 overflow-visible z-30"
+                  className="w-full flex items-center justify-center min-h-[140px] sm:min-h-[150px] mt-2.5 sm:mt-3.5 mb-0 px-1 overflow-visible z-20"
                   style={{
                     transform: 'none',
                   }}
@@ -10758,7 +11015,7 @@ export default function App() {
                                   ? { transformStyle: 'preserve-3d' }
                                   : { backfaceVisibility: 'hidden' }),
                               }}
-                              className={`group/handcard relative shrink-0 cursor-pointer select-none hover:!rotate-0 hover:!translate-y-0 before:absolute before:-inset-x-3 before:-inset-y-6 before:z-0 before:content-[''] ${
+                              className={`group/handcard relative shrink-0 cursor-pointer select-none hover:!rotate-0 hover:!translate-y-0 before:absolute before:-inset-x-3 before:-top-1 before:-bottom-6 before:z-0 before:content-[''] ${
                                  isSelected ? 'z-40 !rotate-0 !translate-y-0' : 'hover:z-30 z-10'
                                }`}
                              >
@@ -10772,10 +11029,10 @@ export default function App() {
                                      ? { transformStyle: 'preserve-3d' }
                                      : { backfaceVisibility: 'hidden', transform: 'translateZ(0)' }),
                                  }}
-                                 className={`relative animate-card-draw group-hover/handcard:transition-delay-[0ms] ${
+                                 className={`relative origin-top animate-card-draw group-hover/handcard:transition-delay-[0ms] ${
                                    isSelected
-                                     ? 'z-40 -translate-y-4 scale-[1.06]'
-                                     : 'group-hover/handcard:z-30 group-hover/handcard:-translate-y-4 group-hover/handcard:scale-[1.06]'
+                                     ? 'z-40 -translate-y-1 scale-[1.03]'
+                                     : 'group-hover/handcard:z-30 group-hover/handcard:-translate-y-2 group-hover/handcard:scale-[1.04]'
                                  }`}
                                >
                           {renderCard(card, {
