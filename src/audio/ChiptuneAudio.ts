@@ -84,6 +84,7 @@ export const ChiptuneAudio: any = {
       if (this.ctx && !this.musicGain) {
         const now = this.ctx.currentTime;
         this.musicGain = this.ctx.createGain();
+        this.musicGain.gain.value = this.musicVolume;
         this.musicGain.gain.setValueAtTime(this.musicVolume, now);
 
         // Warm analog tape roll-off so upper partials never get piercing or brittle
@@ -120,6 +121,7 @@ export const ChiptuneAudio: any = {
       if (this.ctx && !this.sampleMusicGain) {
         const now = this.ctx.currentTime;
         const sampleBus = this.ctx.createGain();
+        sampleBus.gain.value = this.musicVolume;
         sampleBus.gain.setValueAtTime(this.musicVolume, now);
         sampleBus.connect(this.ctx.destination);
         this.sampleMusicGain = sampleBus;
@@ -208,10 +210,12 @@ export const ChiptuneAudio: any = {
     this.init();
     if (this.ctx && this.musicGain) {
       this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.musicGain.gain.value = clamped;
       this.musicGain.gain.setValueAtTime(clamped, this.ctx.currentTime);
     }
     if (this.ctx && this.sampleMusicGain) {
       this.sampleMusicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.sampleMusicGain.gain.value = clamped;
       this.sampleMusicGain.gain.setValueAtTime(clamped, this.ctx.currentTime);
     }
   },
@@ -341,6 +345,7 @@ export const ChiptuneAudio: any = {
     });
 
     const bus = this.ctx.createGain();
+    bus.gain.value = 0.0001;
     const inSteps = 64;
     const inCurve = new Float32Array(inSteps);
     for (let i = 0; i < inSteps; i++) {

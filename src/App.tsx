@@ -1499,14 +1499,14 @@ export default function App() {
       } else if (ChiptuneAudio.currentTrack !== 'battle') {
         ChiptuneAudio.playBattle();
       }
-    } else if (screen === 'GAME_OVER' || screen === 'SPLASH') {
+    } else if (screen === 'GAME_OVER' || (screen === 'SPLASH' && !showContinueModal)) {
       ChiptuneAudio.stop();
     } else {
       if (ChiptuneAudio.currentTrack !== 'cabin') {
         ChiptuneAudio.playCabin();
       }
     }
-  }, [screen, audioEnabled, isBossMatch, bossState.type, bossPhase, smokePhase]);
+  }, [screen, audioEnabled, isBossMatch, bossState.type, bossPhase, smokePhase, showContinueModal]);
 
   // Cleanup audio nodes on unmount
   useEffect(() => {
