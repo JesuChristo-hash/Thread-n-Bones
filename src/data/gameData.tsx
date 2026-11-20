@@ -384,7 +384,9 @@ export const TRIBE_EMBROIDERY: Record<string, JSX.Element> = {
   ),
   Reptile: (
     <svg className="w-5 h-5 mx-auto text-amber-200" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 3c-3 0-5 2-5 5 0 2 1 3 2 4l-4 4 2 2 4-4c1 1 2 1 3 1s2 0 3-1l4 4 2-2-4-4c1-1 2-2 2-4 0-3-2-5-5-5zm-2 4a1 1 0 110 2 1 1 0 010-2zm4 0a1 1 0 110 2 1 1 0 010-2z" />
+      <path d="M12 5C8.5 5 6.5 7 6.5 10c0 1.8.9 3.2 2.2 4.1L5 17.8l1.8 1.8 3.5-3.5c.5.3 1.1.4 1.7.4s1.2-.1 1.7-.4l3.5 3.5 1.8-1.8-3.7-3.7c1.3-.9 2.2-2.3 2.2-4.1 0-3-2-5-5.5-5z" />
+      <circle cx="9.8" cy="9.6" r="1.1" fill="#140d08" />
+      <circle cx="14.2" cy="9.6" r="1.1" fill="#140d08" />
     </svg>
   ),
   Hooved: (

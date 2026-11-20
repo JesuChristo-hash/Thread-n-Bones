@@ -862,8 +862,26 @@ export default function App() {
 
   // Boss State
   const [isBossMatch, setIsBossMatch] = useState<boolean>(false);
-  const [musicVol, setMusicVol] = useState<number>(0.3);
-  const [sfxVol, setSfxVol] = useState<number>(0.6);
+  const [musicVol, setMusicVol] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('sacrificial_scales_music_vol');
+      if (saved !== null) {
+        const parsed = parseFloat(saved);
+        if (Number.isFinite(parsed)) return Math.max(0, Math.min(1, parsed));
+      }
+    } catch {}
+    return 0.3;
+  });
+  const [sfxVol, setSfxVol] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('sacrificial_scales_sfx_vol');
+      if (saved !== null) {
+        const parsed = parseFloat(saved);
+        if (Number.isFinite(parsed)) return Math.max(0, Math.min(1, parsed));
+      }
+    } catch {}
+    return 0.5;
+  });
   const [bossPhase, setBossPhase] = useState<number>(1);
   const [bossTotem, setBossTotem] = useState<{ class: Tribe; sigil: string } | null>(null);
   const [hasDefeatedWeaver, setHasDefeatedWeaver] = useState<boolean>(false);
@@ -9044,14 +9062,14 @@ export default function App() {
                               {tc.type === 'head' ? 'Tribal Patch' : 'Threadbound Crest'}
                             </div>
 
-                            <div className="flex items-center justify-center w-16 h-16 mb-3 bg-[#1e140e] border border-[#4f3824] rounded-[2px] shadow-inner [&>*]:scale-[2.35]">
+                            <div className={`flex items-center justify-center w-16 h-16 mb-3 bg-[#1e140e] border border-[#4f3824] rounded-[2px] shadow-inner ${tc.type === 'head' ? '[&>*]:scale-[2.35]' : ''}`}>
                               {tc.type === 'head' ? (
                                 TRIBE_EMBROIDERY[tc.value as Tribe] || <span className="text-2xl">🧵</span>
                               ) : (
                                 <img
                                   src={getSigilArtUrl(tc.value)}
                                   alt={tc.value}
-                                  className="w-10 h-10 object-contain"
+                                  className="w-12 h-12 object-contain"
                                   style={{ imageRendering: 'pixelated' }}
                                 />
                               )}

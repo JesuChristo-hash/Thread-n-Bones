@@ -40,12 +40,26 @@ export interface ChiptuneAudioType {
   playFinalBossPhase3: (fadeTime?: number) => void;
 }
 
+const MUSIC_VOL_KEY = 'sacrificial_scales_music_vol';
+const SFX_VOL_KEY = 'sacrificial_scales_sfx_vol';
+const readSavedVol = (key: string, fallback: number): number => {
+  try {
+    if (typeof window === 'undefined') return fallback;
+    const raw = window.localStorage.getItem(key);
+    if (raw === null) return fallback;
+    const parsed = parseFloat(raw);
+    return Number.isFinite(parsed) ? Math.max(0, Math.min(1, parsed)) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 export const ChiptuneAudio: any = {
   ctx: null as AudioContext | null,
   currentTrack: null as string | null,
   activeInstance: null as TrackInstance | null,
-  musicVolume: 0.3,
-  sfxVolume: 0.6,
+  musicVolume: readSavedVol(MUSIC_VOL_KEY, 0.3),
+  sfxVolume: readSavedVol(SFX_VOL_KEY, 0.5),
   musicGain: null as GainNode | null,
   musicToneFilter: null as BiquadFilterNode | null,
   musicCompressor: null as DynamicsCompressorNode | null,
@@ -106,7 +120,7 @@ export const ChiptuneAudio: any = {
       if (this.ctx && !this.sampleMusicGain) {
         const now = this.ctx.currentTime;
         const sampleBus = this.ctx.createGain();
-        sampleBus.gain.setValueAtTime(this.musicVolume * 0.85, now);
+        sampleBus.gain.setValueAtTime(this.musicVolume, now);
         sampleBus.connect(this.ctx.destination);
         this.sampleMusicGain = sampleBus;
         void this.loadSampleBuffer('assets/audio/map_theme.ogg');
@@ -190,6 +204,7 @@ export const ChiptuneAudio: any = {
   setMusicVolume(val: number) {
     const clamped = Math.max(0, Math.min(1, val));
     this.musicVolume = clamped;
+    try { window.localStorage.setItem(MUSIC_VOL_KEY, String(clamped)); } catch {}
     this.init();
     if (this.ctx && this.musicGain) {
       this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
@@ -197,12 +212,14 @@ export const ChiptuneAudio: any = {
     }
     if (this.ctx && this.sampleMusicGain) {
       this.sampleMusicGain.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.sampleMusicGain.gain.setValueAtTime(clamped * 0.85, this.ctx.currentTime);
+      this.sampleMusicGain.gain.setValueAtTime(clamped, this.ctx.currentTime);
     }
   },
 
   setSfxVolume(val: number) {
-    this.sfxVolume = Math.max(0, Math.min(1, val));
+    const clamped = Math.max(0, Math.min(1, val));
+    this.sfxVolume = clamped;
+    try { window.localStorage.setItem(SFX_VOL_KEY, String(clamped)); } catch {}
   },
 
   playSfxPreview() {
@@ -330,10 +347,16 @@ export const ChiptuneAudio: any = {
       const t = i / (inSteps - 1);
       inCurve[i] = Math.max(0.0001, Math.sin(t * Math.PI * 0.5));
     }
-    bus.gain.setValueAtTime(0.0001, now);
+    if (this.musicGain) {
+      this.musicGain.gain.setValueAtTime(this.musicVolume, now);
+    }
+    if (this.sampleMusicGain) {
+      this.sampleMusicGain.gain.setValueAtTime(this.musicVolume, now);
+    }
     try {
       bus.gain.setValueCurveAtTime(inCurve, now, dur);
     } catch {
+      bus.gain.setValueAtTime(0.0001, now);
       bus.gain.linearRampToValueAtTime(1.0, now + dur);
     }
     const targetBus = useSampleBus
@@ -1618,7 +1641,7 @@ export const playSound = (
   type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone' | 'defeat' | 'victory' | 'armor' | 'blood_fill' | 'blood_drain'
 ) => {
   try {
-    const sfxMult = typeof ChiptuneAudio.sfxVolume === 'number' ? ChiptuneAudio.sfxVolume : 0.6;
+    const sfxMult = typeof ChiptuneAudio.sfxVolume === 'number' ? ChiptuneAudio.sfxVolume : 0.5;
     if (sfxMult <= 0) return;
 
     if (!ChiptuneAudio.ctx) ChiptuneAudio.init();
