@@ -275,6 +275,7 @@ export const ChiptuneAudio: any = {
   fadeOutInstance(old: TrackInstance, fadeOutSec: number) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
+    const dur = Math.max(0.05, fadeOutSec);
     // Halt all scheduled timers immediately so fading tracks cannot spawn new chimes/swells
     old.timers.forEach((t) => {
       clearInterval(t as unknown as number);
@@ -283,33 +284,58 @@ export const ChiptuneAudio: any = {
     old.timers = [];
 
     try {
+      const startGain = Math.max(0.0001, Math.min(1.0, old.bus.gain.value));
+      const steps = 64;
+      const curve = new Float32Array(steps);
+      for (let i = 0; i < steps; i++) {
+        const t = i / (steps - 1);
+        curve[i] = Math.max(0.0001, startGain * Math.cos(t * Math.PI * 0.5));
+      }
       old.bus.gain.cancelScheduledValues(now);
-      old.bus.gain.setValueAtTime(Math.max(0.0001, old.bus.gain.value), now);
-      old.bus.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(0.05, fadeOutSec));
-    } catch {}
+      old.bus.gain.setValueCurveAtTime(curve, now, dur);
+    } catch {
+      try {
+        old.bus.gain.cancelScheduledValues(now);
+        old.bus.gain.setValueAtTime(Math.max(0.0001, old.bus.gain.value), now);
+        old.bus.gain.linearRampToValueAtTime(0.0001, now + dur);
+      } catch {}
+    }
 
     setTimeout(() => {
       try { old.cleanup(); } catch {}
       this.liveInstances.delete(old);
-    }, Math.max(50, fadeOutSec * 1000) + 40);
+    }, Math.max(50, dur * 1000) + 60);
   },
 
   transitionTo(trackName: string, startFn: (inst: TrackInstance) => void, fadeTime = 1.4, useSampleBus = false) {
     this.init();
     if (!this.ctx) return;
-    if (this.currentTrack === trackName) return;
+    const state = this as unknown as { __txToken?: number; __pendingTrack?: string | null };
+    if (this.currentTrack === trackName && !state.__pendingTrack) return;
+    state.__txToken = (state.__txToken || 0) + 1;
+    state.__pendingTrack = null;
 
     const now = this.ctx.currentTime;
-    const fadeOutSec = Math.min(fadeTime, 0.65);
+    const dur = Math.max(0.05, fadeTime);
 
-    // Guarantee every prior instance is halted and cleaned up
+    // Crossfade out every prior instance over the full transition window
     Array.from(this.liveInstances as Set<TrackInstance>).forEach((old) => {
-      this.fadeOutInstance(old, fadeOutSec);
+      this.fadeOutInstance(old, dur);
     });
 
     const bus = this.ctx.createGain();
+    const inSteps = 64;
+    const inCurve = new Float32Array(inSteps);
+    for (let i = 0; i < inSteps; i++) {
+      const t = i / (inSteps - 1);
+      inCurve[i] = Math.max(0.0001, Math.sin(t * Math.PI * 0.5));
+    }
     bus.gain.setValueAtTime(0.0001, now);
-    bus.gain.linearRampToValueAtTime(1.0, now + fadeTime);
+    try {
+      bus.gain.setValueCurveAtTime(inCurve, now, dur);
+    } catch {
+      bus.gain.linearRampToValueAtTime(1.0, now + dur);
+    }
     const targetBus = useSampleBus
       ? (this.sampleMusicGain || this.musicGain || this.ctx.destination)
       : (this.musicGain || this.ctx.destination);
@@ -374,48 +400,49 @@ export const ChiptuneAudio: any = {
     fallbackFn: (inst: TrackInstance) => void,
     fadeTime = 1.4
   ) {
-    this.transitionTo(
-      trackName,
-      (inst: TrackInstance) => {
-        const startBuffer = (buf: AudioBuffer) => {
-          if (!this.ctx || this.activeInstance !== inst || !this.liveInstances.has(inst)) return;
-          const now = this.ctx.currentTime;
-          const src = this.ctx.createBufferSource();
-          src.buffer = buf;
-          src.loop = true;
+    this.init();
+    if (!this.ctx) return;
 
-          const entryGain = this.ctx.createGain();
-          entryGain.gain.setValueAtTime(0.0001, now);
-          entryGain.gain.linearRampToValueAtTime(1.0, now + 0.18);
+    const state = this as unknown as { __txToken?: number; __pendingTrack?: string | null };
+    if (state.__pendingTrack === trackName) return;
+    if (this.currentTrack === trackName && !state.__pendingTrack) return;
 
-          src.connect(entryGain);
-          entryGain.connect(inst.bus);
-          src.start(now);
-          inst.nodes.push(src, entryGain);
-        };
+    const playDecoded = (buf: AudioBuffer | null) => {
+      if (buf) {
+        this.transitionTo(
+          trackName,
+          (inst: TrackInstance) => {
+            if (!this.ctx || this.activeInstance !== inst || !this.liveInstances.has(inst)) return;
+            const src = this.ctx.createBufferSource();
+            src.buffer = buf;
+            src.loop = true;
+            src.connect(inst.bus);
+            src.start(this.ctx.currentTime);
+            inst.nodes.push(src);
+          },
+          fadeTime,
+          true
+        );
+      } else {
+        this.transitionTo(trackName, fallbackFn, fadeTime, false);
+      }
+    };
 
-        const cached = this.sampleBuffers.get(assetPath);
-        if (cached) {
-          startBuffer(cached);
-          return;
-        }
+    const cached = this.sampleBuffers.get(assetPath);
+    if (cached) {
+      playDecoded(cached);
+      return;
+    }
 
-        void this.loadSampleBuffer(assetPath).then((buf: AudioBuffer | null) => {
-          if (!this.ctx || this.activeInstance !== inst || !this.liveInstances.has(inst)) return;
-          if (buf) {
-            startBuffer(buf);
-          } else {
-            try {
-              inst.bus.disconnect();
-              inst.bus.connect(this.musicGain || this.ctx.destination);
-            } catch {}
-            fallbackFn(inst);
-          }
-        });
-      },
-      fadeTime,
-      true
-    );
+    const token = (state.__txToken || 0) + 1;
+    state.__txToken = token;
+    state.__pendingTrack = trackName;
+
+    void this.loadSampleBuffer(assetPath).then((buf: AudioBuffer | null) => {
+      if (state.__txToken !== token) return;
+      state.__pendingTrack = null;
+      playDecoded(buf);
+    });
   },
 
   stopAll(fadeTime = 0.5) {
@@ -423,6 +450,9 @@ export const ChiptuneAudio: any = {
   },
 
   stop(fadeTime = 0.65) {
+    const state = this as unknown as { __txToken?: number; __pendingTrack?: string | null };
+    state.__txToken = (state.__txToken || 0) + 1;
+    state.__pendingTrack = null;
     if (!this.ctx) return;
     Array.from(this.liveInstances as Set<TrackInstance>).forEach((old) => {
       this.fadeOutInstance(old, fadeTime);

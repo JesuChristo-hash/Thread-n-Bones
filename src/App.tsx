@@ -911,6 +911,7 @@ export default function App() {
   const [crossroadsOptions, setCrossroadsOptions] = useState<string[]>([]);
   const [actMap, setActMap] = useState<ActMapData | null>(null);
   const actMapRef = useRef<ActMapData | null>(null);
+  const preDuelMapRef = useRef<ActMapData | null>(null);
   useEffect(() => { actMapRef.current = actMap; }, [actMap]);
 
 // Event action lock to prevent double-clicks and spam
@@ -1061,6 +1062,7 @@ export default function App() {
   });
 
   const clearRunSave = () => {
+    preDuelMapRef.current = null;
     try {
       localStorage.removeItem(RUN_SAVE_KEY);
       setSavedRunExists(false);
@@ -1070,7 +1072,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (screen === 'SPLASH' || screen === 'DECK_SELECT' || screen === 'DRAFT' || screen === 'DUEL' || screen === 'GAME_OVER') {
+    if (screen === 'SPLASH' || screen === 'DECK_SELECT' || screen === 'DRAFT' || screen === 'DUEL' || screen === 'GAME_OVER' || preDuelMapRef.current !== null) {
       return;
     }
     if (masterDeck && masterDeck.length > 0) {
@@ -4509,6 +4511,7 @@ export default function App() {
       bgTransitionDuration: 1.5,
     }));
 
+    preDuelMapRef.current = null;
     const nextDuels = duelsCompleted + 1;
     setDuelsCompleted(nextDuels);
 
@@ -4721,6 +4724,7 @@ export default function App() {
 
       const restoredAct = Math.max(1, Math.min(4, data.stage ?? 1));
       const restoredMap = data.actMap || generateActMap(restoredAct, getBossForAct(restoredAct));
+      preDuelMapRef.current = null;
       setActMap(restoredMap);
       actMapRef.current = restoredMap;
       setCurrentStageName(restoredMap.actTitle);
@@ -5581,6 +5585,7 @@ export default function App() {
     const bossOrder = getOrInitBossOrder();
     const firstActMap = generateActMap(1, bossOrder[0]);
     setActMap(firstActMap);
+    preDuelMapRef.current = null;
     actMapRef.current = firstActMap;
     setCurrentStageName(firstActMap.actTitle);
     setScreen('EVENT_CROSSROADS');
@@ -5636,6 +5641,8 @@ export default function App() {
         ? currMap.visitedNodeIds
         : [...currMap.visitedNodeIds, node.id],
     };
+    const isBattleNode = node.type === 'combat' || node.type === 'elite_combat' || node.type === 'boss';
+    preDuelMapRef.current = isBattleNode ? currMap : null;
     setActMap(updatedMap);
     actMapRef.current = updatedMap;
 
@@ -7649,8 +7656,10 @@ export default function App() {
               <button
                 onClick={() => {
                   if (masterDeck && masterDeck.length > 0) {
-                    try {
-                      localStorage.setItem(RUN_SAVE_KEY, JSON.stringify({
+                    const isMidDuel = preDuelMapRef.current !== null;
+                    if (!isMidDuel || !localStorage.getItem(RUN_SAVE_KEY)) {
+                      try {
+                        localStorage.setItem(RUN_SAVE_KEY, JSON.stringify({
                         masterDeck,
                         items,
                         totalOverkillDamage,
@@ -7668,14 +7677,16 @@ export default function App() {
                         permanentScaleDebuff,
                         consecutiveOneTurnWins,
                         otkCooldown,
-                        actMap: actMapRef.current,
+                        actMap: preDuelMapRef.current ?? actMapRef.current,
                         savedAt: Date.now(),
                       }));
                       setSavedRunExists(true);
                     } catch (e) {
                       console.warn("Postpone save failed:", e);
                     }
+                    }
                   }
+                  preDuelMapRef.current = null;
                   try {
                     ChiptuneAudio.playAmbient();
                   } catch (e) {
