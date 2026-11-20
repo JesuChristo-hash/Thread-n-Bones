@@ -54,7 +54,10 @@ export const ChiptuneAudio: any = {
   sfxBus: null as GainNode | null,
   noiseBuffer: null as AudioBuffer | null,
   whiteNoiseBuffer: null as AudioBuffer | null,
-  liveInstances: new Set<TrackInstance>(), 
+  liveInstances: new Set<TrackInstance>(),
+  sampleMusicGain: null as GainNode | null,
+  sampleBuffers: new Map<string, AudioBuffer>(),
+  sampleFetches: new Map<string, Promise<AudioBuffer | null>>(), 
 
   init() {
     try {
@@ -99,6 +102,15 @@ export const ChiptuneAudio: any = {
         this.musicCompressor = comp;
         this.reverbNode = reverb;
         this.reverbWetGain = reverbWet;
+      }
+      if (this.ctx && !this.sampleMusicGain) {
+        const now = this.ctx.currentTime;
+        const sampleBus = this.ctx.createGain();
+        sampleBus.gain.setValueAtTime(this.musicVolume * 0.85, now);
+        sampleBus.connect(this.ctx.destination);
+        this.sampleMusicGain = sampleBus;
+        void this.loadSampleBuffer('assets/audio/map_theme.ogg');
+        void this.loadSampleBuffer('assets/audio/duel_theme.ogg');
       }
       if (this.ctx && !this.sfxBus) {
         const now = this.ctx.currentTime;
@@ -182,6 +194,10 @@ export const ChiptuneAudio: any = {
     if (this.ctx && this.musicGain) {
       this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
       this.musicGain.gain.setValueAtTime(clamped, this.ctx.currentTime);
+    }
+    if (this.ctx && this.sampleMusicGain) {
+      this.sampleMusicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.sampleMusicGain.gain.setValueAtTime(clamped * 0.85, this.ctx.currentTime);
     }
   },
 
@@ -278,7 +294,7 @@ export const ChiptuneAudio: any = {
     }, Math.max(50, fadeOutSec * 1000) + 40);
   },
 
-  transitionTo(trackName: string, startFn: (inst: TrackInstance) => void, fadeTime = 1.4) {
+  transitionTo(trackName: string, startFn: (inst: TrackInstance) => void, fadeTime = 1.4, useSampleBus = false) {
     this.init();
     if (!this.ctx) return;
     if (this.currentTrack === trackName) return;
@@ -294,7 +310,10 @@ export const ChiptuneAudio: any = {
     const bus = this.ctx.createGain();
     bus.gain.setValueAtTime(0.0001, now);
     bus.gain.linearRampToValueAtTime(1.0, now + fadeTime);
-    bus.connect(this.musicGain || this.ctx.destination);
+    const targetBus = useSampleBus
+      ? (this.sampleMusicGain || this.musicGain || this.ctx.destination)
+      : (this.musicGain || this.ctx.destination);
+    bus.connect(targetBus);
 
     const instance: TrackInstance = {
       name: trackName,
@@ -320,6 +339,83 @@ export const ChiptuneAudio: any = {
     this.activeInstance = instance;
     this.currentTrack = trackName;
     startFn(instance);
+  },
+
+  async loadSampleBuffer(assetPath: string): Promise<AudioBuffer | null> {
+    if (this.sampleBuffers.has(assetPath)) {
+      return this.sampleBuffers.get(assetPath) || null;
+    }
+    if (this.sampleFetches.has(assetPath)) {
+      return this.sampleFetches.get(assetPath)!;
+    }
+    const base = ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL || '/').replace(/\/?$/, '/');
+    const url = `${base}${assetPath.replace(/^\/+/, '')}`;
+    const p = (async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const arr = await res.arrayBuffer();
+        if (!this.ctx) this.init();
+        if (!this.ctx) return null;
+        const decoded = await this.ctx.decodeAudioData(arr.slice(0));
+        this.sampleBuffers.set(assetPath, decoded);
+        return decoded;
+      } catch {
+        return null;
+      }
+    })();
+    this.sampleFetches.set(assetPath, p);
+    return p;
+  },
+
+  transitionToSample(
+    trackName: string,
+    assetPath: string,
+    fallbackFn: (inst: TrackInstance) => void,
+    fadeTime = 1.4
+  ) {
+    this.transitionTo(
+      trackName,
+      (inst: TrackInstance) => {
+        const startBuffer = (buf: AudioBuffer) => {
+          if (!this.ctx || this.activeInstance !== inst || !this.liveInstances.has(inst)) return;
+          const now = this.ctx.currentTime;
+          const src = this.ctx.createBufferSource();
+          src.buffer = buf;
+          src.loop = true;
+
+          const entryGain = this.ctx.createGain();
+          entryGain.gain.setValueAtTime(0.0001, now);
+          entryGain.gain.linearRampToValueAtTime(1.0, now + 0.18);
+
+          src.connect(entryGain);
+          entryGain.connect(inst.bus);
+          src.start(now);
+          inst.nodes.push(src, entryGain);
+        };
+
+        const cached = this.sampleBuffers.get(assetPath);
+        if (cached) {
+          startBuffer(cached);
+          return;
+        }
+
+        void this.loadSampleBuffer(assetPath).then((buf: AudioBuffer | null) => {
+          if (!this.ctx || this.activeInstance !== inst || !this.liveInstances.has(inst)) return;
+          if (buf) {
+            startBuffer(buf);
+          } else {
+            try {
+              inst.bus.disconnect();
+              inst.bus.connect(this.musicGain || this.ctx.destination);
+            } catch {}
+            fallbackFn(inst);
+          }
+        });
+      },
+      fadeTime,
+      true
+    );
   },
 
   stopAll(fadeTime = 0.5) {
@@ -883,7 +979,7 @@ export const ChiptuneAudio: any = {
   },
 
   playCabin(fadeTime = 1.8) {
-    this.transitionTo('cabin', (inst: TrackInstance) => {
+    this.transitionToSample('cabin', 'assets/audio/map_theme.ogg', (inst: TrackInstance) => {
       if (!this.ctx) return;
 
       // Breathing low bowed chamber drone (D1 + detuned D2 + hollow A2)
@@ -978,7 +1074,7 @@ export const ChiptuneAudio: any = {
   // 2. STANDARD BATTLE — 68 BPM Cold Sub-Tension & Dark Felt Chamber Pulse
   // =========================================================================
   playBattle(fadeTime = 0.9) {
-    this.transitionTo('battle', (inst: TrackInstance) => {
+    this.transitionToSample('battle', 'assets/audio/duel_theme.ogg', (inst: TrackInstance) => {
       if (!this.ctx) return;
       const chamberEcho = this.createEchoBus(inst, 0.33, 0.24, 960);
       const pizzPanL = this.createPanNode(chamberEcho, -0.32);
