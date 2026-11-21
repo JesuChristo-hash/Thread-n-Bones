@@ -45,7 +45,8 @@ export interface ChiptuneAudioType {
 
 const MUSIC_VOL_KEY = 'sacrificial_scales_music_vol';
 const SFX_VOL_KEY = 'sacrificial_scales_sfx_vol';
-const MUSIC_HEADROOM = 0.65;
+const MUSIC_HEADROOM = 0.55;
+const SFX_HEADROOM = 0.48;
 const readSavedVol = (key: string, fallback: number): number => {
   try {
     if (typeof window === 'undefined') return fallback;
@@ -70,6 +71,7 @@ export const ChiptuneAudio: any = {
   reverbNode: null as ConvolverNode | null,
   reverbWetGain: null as GainNode | null,
   sfxBus: null as GainNode | null,
+  sfxMasterGain: null as GainNode | null,
   noiseBuffer: null as AudioBuffer | null,
   whiteNoiseBuffer: null as AudioBuffer | null,
   liveInstances: new Set<TrackInstance>(),
@@ -135,41 +137,35 @@ export const ChiptuneAudio: any = {
       if (this.ctx && !this.sfxBus) {
         const now = this.ctx.currentTime;
         const sfxIn = this.ctx.createGain();
-        sfxIn.gain.setValueAtTime(0.8, now);
+        sfxIn.gain.setValueAtTime(0.68, now);
 
-        // Strip sub-85Hz rumble that eats master headroom and trips OS/driver limiters
+        // Clear sub-95Hz rumble that triggers OS/driver AGC without thinning wood knock
         const sfxHp = this.ctx.createBiquadFilter();
         sfxHp.type = 'highpass';
-        sfxHp.frequency.setValueAtTime(85, now);
+        sfxHp.frequency.setValueAtTime(95, now);
         sfxHp.Q.setValueAtTime(0.7, now);
 
-        // Gentle soft-clipper preserves tabletop punch without slamming 0 dBFS
+        // Strictly bounded soft-clipper (<= 0.885 peak) — no compressor auto-makeup gain
         const shaper = this.ctx.createWaveShaper();
         const curve = new Float32Array(1024);
         for (let i = 0; i < 1024; i++) {
           const x = (i * 2) / 1024 - 1;
-          curve[i] = Math.tanh(x * 1.2) / Math.tanh(1.2);
+          curve[i] = Math.tanh(x * 1.4);
         }
         shaper.curve = curve;
         shaper.oversample = '2x';
 
-        const limiter = this.ctx.createDynamicsCompressor();
-        limiter.threshold.setValueAtTime(-8, now);
-        limiter.knee.setValueAtTime(4, now);
-        limiter.ratio.setValueAtTime(16, now);
-        limiter.attack.setValueAtTime(0.001, now);
-        limiter.release.setValueAtTime(0.06, now);
-
         const sfxOut = this.ctx.createGain();
-        sfxOut.gain.value = 0.42;
-        sfxOut.gain.setValueAtTime(0.42, now);
+        const outGain = this.sfxVolume * SFX_HEADROOM;
+        sfxOut.gain.value = outGain;
+        sfxOut.gain.setValueAtTime(outGain, now);
 
         sfxIn.connect(sfxHp);
         sfxHp.connect(shaper);
-        shaper.connect(limiter);
-        limiter.connect(sfxOut);
+        shaper.connect(sfxOut);
         sfxOut.connect(this.ctx.destination);
         this.sfxBus = sfxIn;
+        this.sfxMasterGain = sfxOut;
       }
       if (this.ctx && !this.noiseBuffer) {
         const len = Math.floor(this.ctx.sampleRate * 1.2);
@@ -240,6 +236,11 @@ export const ChiptuneAudio: any = {
     const clamped = Math.max(0, Math.min(1, val));
     this.sfxVolume = clamped;
     try { window.localStorage.setItem(SFX_VOL_KEY, String(clamped)); } catch {}
+    if (this.ctx && this.sfxMasterGain) {
+      this.sfxMasterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.sfxMasterGain.gain.value = clamped * SFX_HEADROOM;
+      this.sfxMasterGain.gain.setValueAtTime(clamped * SFX_HEADROOM, this.ctx.currentTime);
+    }
   },
 
   playSfxPreview() {
@@ -1904,7 +1905,7 @@ export const playSound = (
 
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(0.001, now + delay);
-      gain.gain.linearRampToValueAtTime(vol * sfxMult, now + delay + 0.002);
+      gain.gain.linearRampToValueAtTime(vol, now + delay + 0.002);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
 
       srcNode.connect(filter);
@@ -1929,7 +1930,7 @@ export const playSound = (
       osc.frequency.exponentialRampToValueAtTime(Math.max(24, freqEnd), now + delay + dur);
 
       gain.gain.setValueAtTime(0.001, now + delay);
-      gain.gain.linearRampToValueAtTime(vol * sfxMult, now + delay + 0.003);
+      gain.gain.linearRampToValueAtTime(vol, now + delay + 0.003);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
 
       if (lpCutoff) {
@@ -2002,7 +2003,7 @@ export const playSound = (
         lp.frequency.exponentialRampToValueAtTime(420, now + delay + dur);
 
         g.gain.setValueAtTime(0.001, now + delay);
-        g.gain.linearRampToValueAtTime(vol * sfxMult, now + delay + 0.003);
+        g.gain.linearRampToValueAtTime(vol, now + delay + 0.003);
         g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
 
         mod.connect(modGain);
