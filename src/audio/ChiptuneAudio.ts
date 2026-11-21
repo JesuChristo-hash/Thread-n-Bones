@@ -45,6 +45,7 @@ export interface ChiptuneAudioType {
 
 const MUSIC_VOL_KEY = 'sacrificial_scales_music_vol';
 const SFX_VOL_KEY = 'sacrificial_scales_sfx_vol';
+const MUSIC_HEADROOM = 0.65;
 const readSavedVol = (key: string, fallback: number): number => {
   try {
     if (typeof window === 'undefined') return fallback;
@@ -87,8 +88,8 @@ export const ChiptuneAudio: any = {
       if (this.ctx && !this.musicGain) {
         const now = this.ctx.currentTime;
         this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.value = this.musicVolume;
-        this.musicGain.gain.setValueAtTime(this.musicVolume, now);
+        this.musicGain.gain.value = this.musicVolume * MUSIC_HEADROOM;
+        this.musicGain.gain.setValueAtTime(this.musicVolume * MUSIC_HEADROOM, now);
 
         // Warm analog tape roll-off so upper partials never get piercing or brittle
         const tone = this.ctx.createBiquadFilter();
@@ -124,8 +125,8 @@ export const ChiptuneAudio: any = {
       if (this.ctx && !this.sampleMusicGain) {
         const now = this.ctx.currentTime;
         const sampleBus = this.ctx.createGain();
-        sampleBus.gain.value = this.musicVolume;
-        sampleBus.gain.setValueAtTime(this.musicVolume, now);
+        sampleBus.gain.value = this.musicVolume * MUSIC_HEADROOM;
+        sampleBus.gain.setValueAtTime(this.musicVolume * MUSIC_HEADROOM, now);
         sampleBus.connect(this.ctx.destination);
         this.sampleMusicGain = sampleBus;
         void this.loadSampleBuffer('assets/audio/map_theme.ogg');
@@ -134,30 +135,37 @@ export const ChiptuneAudio: any = {
       if (this.ctx && !this.sfxBus) {
         const now = this.ctx.currentTime;
         const sfxIn = this.ctx.createGain();
-        sfxIn.gain.setValueAtTime(0.9, now);
+        sfxIn.gain.setValueAtTime(0.8, now);
 
-        // Warm analog soft-clipper adds midrange density & perceived punch without harshness
+        // Strip sub-85Hz rumble that eats master headroom and trips OS/driver limiters
+        const sfxHp = this.ctx.createBiquadFilter();
+        sfxHp.type = 'highpass';
+        sfxHp.frequency.setValueAtTime(85, now);
+        sfxHp.Q.setValueAtTime(0.7, now);
+
+        // Gentle soft-clipper preserves tabletop punch without slamming 0 dBFS
         const shaper = this.ctx.createWaveShaper();
         const curve = new Float32Array(1024);
         for (let i = 0; i < 1024; i++) {
           const x = (i * 2) / 1024 - 1;
-          curve[i] = Math.tanh(x * 1.75) / Math.tanh(1.75);
+          curve[i] = Math.tanh(x * 1.2) / Math.tanh(1.2);
         }
         shaper.curve = curve;
         shaper.oversample = '2x';
 
         const limiter = this.ctx.createDynamicsCompressor();
-        limiter.threshold.setValueAtTime(-10, now);
+        limiter.threshold.setValueAtTime(-8, now);
         limiter.knee.setValueAtTime(4, now);
-        limiter.ratio.setValueAtTime(12, now);
-        limiter.attack.setValueAtTime(0.002, now);
-        limiter.release.setValueAtTime(0.08, now);
+        limiter.ratio.setValueAtTime(16, now);
+        limiter.attack.setValueAtTime(0.001, now);
+        limiter.release.setValueAtTime(0.06, now);
 
         const sfxOut = this.ctx.createGain();
-        sfxOut.gain.value = 0.55;
-        sfxOut.gain.setValueAtTime(0.55, now);
+        sfxOut.gain.value = 0.42;
+        sfxOut.gain.setValueAtTime(0.42, now);
 
-        sfxIn.connect(shaper);
+        sfxIn.connect(sfxHp);
+        sfxHp.connect(shaper);
         shaper.connect(limiter);
         limiter.connect(sfxOut);
         sfxOut.connect(this.ctx.destination);
@@ -218,13 +226,13 @@ export const ChiptuneAudio: any = {
     this.init();
     if (this.ctx && this.musicGain) {
       this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.musicGain.gain.value = clamped;
-      this.musicGain.gain.setValueAtTime(clamped, this.ctx.currentTime);
+      this.musicGain.gain.value = clamped * MUSIC_HEADROOM;
+      this.musicGain.gain.setValueAtTime(clamped * MUSIC_HEADROOM, this.ctx.currentTime);
     }
     if (this.ctx && this.sampleMusicGain) {
       this.sampleMusicGain.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.sampleMusicGain.gain.value = clamped;
-      this.sampleMusicGain.gain.setValueAtTime(clamped, this.ctx.currentTime);
+      this.sampleMusicGain.gain.value = clamped * MUSIC_HEADROOM;
+      this.sampleMusicGain.gain.setValueAtTime(clamped * MUSIC_HEADROOM, this.ctx.currentTime);
     }
   },
 
@@ -361,10 +369,10 @@ export const ChiptuneAudio: any = {
       inCurve[i] = Math.max(0.0001, Math.sin(t * Math.PI * 0.5));
     }
     if (this.musicGain) {
-      this.musicGain.gain.setValueAtTime(this.musicVolume, now);
+      this.musicGain.gain.setValueAtTime(this.musicVolume * MUSIC_HEADROOM, now);
     }
     if (this.sampleMusicGain) {
-      this.sampleMusicGain.gain.setValueAtTime(this.musicVolume, now);
+      this.sampleMusicGain.gain.setValueAtTime(this.musicVolume * MUSIC_HEADROOM, now);
     }
     try {
       bus.gain.setValueCurveAtTime(inCurve, now, dur);
@@ -434,7 +442,8 @@ export const ChiptuneAudio: any = {
     trackName: string,
     assetPath: string,
     fallbackFn: (inst: TrackInstance) => void,
-    fadeTime = 1.4
+    fadeTime = 1.4,
+    connectSource?: (src: AudioBufferSourceNode, inst: TrackInstance) => void
   ) {
     this.init();
     if (!this.ctx) return;
@@ -452,7 +461,11 @@ export const ChiptuneAudio: any = {
             const src = this.ctx.createBufferSource();
             src.buffer = buf;
             src.loop = true;
-            src.connect(inst.bus);
+            if (connectSource) {
+              connectSource(src, inst);
+            } else {
+              src.connect(inst.bus);
+            }
             src.start(this.ctx.currentTime);
             inst.nodes.push(src);
           },
@@ -1645,55 +1658,91 @@ export const ChiptuneAudio: any = {
   },
 
   // =========================================================================
-  // MAIN MENU — Minimal Candlelit Threshold (D Minor, ~56 BPM)
+  // MAIN MENU — Stripped-Down Map Theme (Heard Through the Cabin Threshold)
   // =========================================================================
   playMenu(fadeTime = 2.2) {
-    this.transitionTo('menu', (inst: TrackInstance) => {
-      if (!this.ctx) return;
-      const echo = this.createEchoBus(inst, 0.56, 0.42, 1150);
-      const pianoPan = this.createPanNode(echo, -0.22);
-      const chimePan = this.createPanNode(echo, 0.28);
-      const bellPan = this.createPanNode(inst.bus, -0.1);
+    this.transitionToSample(
+      'menu',
+      'assets/audio/map_theme.ogg',
+      (inst: TrackInstance) => {
+        if (!this.ctx) return;
+        // Stripped-down fallback matching playCabin's D-minor stillness
+        const droneFilter = this.ctx.createBiquadFilter();
+        droneFilter.type = 'lowpass';
+        droneFilter.frequency.value = 115;
 
-      const swells: Record<number, number> = {
-        0: 73.42,   // D2
-        16: 55.0,   // A1
-        24: 58.27,  // Bb1
-      };
+        const subGain = this.ctx.createGain();
+        subGain.gain.value = 0.085;
+        droneFilter.connect(subGain);
+        subGain.connect(inst.bus);
+        inst.nodes.push(droneFilter, subGain);
 
-      const feltNotes: Record<number, [number[], number]> = {
-        0:  [[146.83, 220.0], 3.8],   // D3 + A3
-        6:  [[261.63], 2.6],          // C4
-        10: [[293.66], 3.2],          // D4
-        16: [[110.0, 174.61], 3.8],   // A2 + F3
-        22: [[220.0], 2.8],           // A3
-        26: [[155.56], 2.9],          // Eb3 ghost tension
-        29: [[146.83], 3.0],          // D3 resolve
-      };
+        [73.42, 110.0].forEach((f) => {
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = f;
+          osc.connect(droneFilter);
+          osc.start();
+          inst.nodes.push(osc);
+        });
 
-      const boxWhispers: Record<number, number> = {
-        4:  587.33, // D5
-        12: 523.25, // C5
-        20: 440.0,  // A4
-        28: 659.25, // E5
-      };
+        const chimeEcho = this.createEchoBus(inst, 0.58, 0.38, 980);
+        const sparseNotes: Record<number, number> = {
+          0: 587.33,
+          10: 440.0,
+          18: 523.25,
+          26: 293.66,
+        };
+        this.scheduleLoop(inst, 0.62, 32, (step: number, when: number) => {
+          if (sparseNotes[step]) {
+            this.playMusicBox(sparseNotes[step], chimeEcho, 2.8, 0.055, when);
+          }
+        });
+      },
+      fadeTime,
+      (src: AudioBufferSourceNode, inst: TrackInstance) => {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
 
-      this.scheduleLoop(inst, 0.535, 32, (step: number, when: number) => {
-        if (swells[step]) {
-          this.playSwell(swells[step], inst.bus, 6.2, 0.14, when);
-        }
-        if (feltNotes[step]) {
-          const [freqs, dur] = feltNotes[step];
-          this.playSynthPiano(freqs, pianoPan, dur, 0.12, when);
-        }
-        if (boxWhispers[step]) {
-          this.playMusicBox(boxWhispers[step], chimePan, 2.8, 0.065, when);
-        }
-        if (step === 0) {
-          this.playBell(293.66, bellPan, 4.2, 0.055, when);
-        }
-      });
-    }, fadeTime);
+        // Strip low-end weight and veil upper sheen so it reads as a sparser prelude to map_theme.ogg
+        const hp = this.ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.setValueAtTime(155, now);
+        hp.Q.setValueAtTime(0.6, now);
+
+        const lp = this.ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(820, now);
+        lp.Q.setValueAtTime(0.75, now);
+
+        const lfo = this.ctx.createOscillator();
+        const lfoGain = this.ctx.createGain();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(0.07, now);
+        lfoGain.gain.setValueAtTime(140, now);
+        lfo.connect(lfoGain);
+        lfoGain.connect(lp.frequency);
+        lfo.start(now);
+
+        const dryTrim = this.ctx.createGain();
+        dryTrim.gain.setValueAtTime(0.78, now);
+
+        const echo = this.createEchoBus(inst, 0.54, 0.32, 850);
+        const wetSend = this.ctx.createGain();
+        wetSend.gain.setValueAtTime(0.24, now);
+
+        src.connect(hp);
+        hp.connect(lp);
+        lp.connect(dryTrim);
+        dryTrim.connect(inst.bus);
+
+        lp.connect(wetSend);
+        wetSend.connect(echo);
+
+        inst.nodes.push(hp, lp, lfo, lfoGain, dryTrim, wetSend);
+      }
+    );
   },
 
   // =========================================================================
