@@ -38,6 +38,9 @@ export interface ChiptuneAudioType {
   playTheBegotten: (fadeTime?: number) => void;
   playFinalBoss: (fadeTime?: number) => void;
   playFinalBossPhase3: (fadeTime?: number) => void;
+  playMenu: (fadeTime?: number) => void;
+  playGameOver: (fadeTime?: number) => void;
+  playVictory: (fadeTime?: number) => void;
 }
 
 const MUSIC_VOL_KEY = 'sacrificial_scales_music_vol';
@@ -1636,6 +1639,171 @@ export const ChiptuneAudio: any = {
           this.playImpact(44, inst.bus, 0.38, 0.34, when);
         } else if (inBar === 2 || inBar === 6) {
           this.playBoneClick(bonePan, 0.09, when, 2550);
+        }
+      });
+    }, fadeTime);
+  },
+
+  // =========================================================================
+  // MAIN MENU — Minimal Candlelit Threshold (D Minor, ~56 BPM)
+  // =========================================================================
+  playMenu(fadeTime = 2.2) {
+    this.transitionTo('menu', (inst: TrackInstance) => {
+      if (!this.ctx) return;
+      const echo = this.createEchoBus(inst, 0.56, 0.42, 1150);
+      const pianoPan = this.createPanNode(echo, -0.22);
+      const chimePan = this.createPanNode(echo, 0.28);
+      const bellPan = this.createPanNode(inst.bus, -0.1);
+
+      const swells: Record<number, number> = {
+        0: 73.42,   // D2
+        16: 55.0,   // A1
+        24: 58.27,  // Bb1
+      };
+
+      const feltNotes: Record<number, [number[], number]> = {
+        0:  [[146.83, 220.0], 3.8],   // D3 + A3
+        6:  [[261.63], 2.6],          // C4
+        10: [[293.66], 3.2],          // D4
+        16: [[110.0, 174.61], 3.8],   // A2 + F3
+        22: [[220.0], 2.8],           // A3
+        26: [[155.56], 2.9],          // Eb3 ghost tension
+        29: [[146.83], 3.0],          // D3 resolve
+      };
+
+      const boxWhispers: Record<number, number> = {
+        4:  587.33, // D5
+        12: 523.25, // C5
+        20: 440.0,  // A4
+        28: 659.25, // E5
+      };
+
+      this.scheduleLoop(inst, 0.535, 32, (step: number, when: number) => {
+        if (swells[step]) {
+          this.playSwell(swells[step], inst.bus, 6.2, 0.14, when);
+        }
+        if (feltNotes[step]) {
+          const [freqs, dur] = feltNotes[step];
+          this.playSynthPiano(freqs, pianoPan, dur, 0.12, when);
+        }
+        if (boxWhispers[step]) {
+          this.playMusicBox(boxWhispers[step], chimePan, 2.8, 0.065, when);
+        }
+        if (step === 0) {
+          this.playBell(293.66, bellPan, 4.2, 0.055, when);
+        }
+      });
+    }, fadeTime);
+  },
+
+  // =========================================================================
+  // GAME OVER — Extinguished Candle (Minimal D Phrygian / Minor Dirge, ~48 BPM)
+  // =========================================================================
+  playGameOver(fadeTime = 2.0) {
+    this.transitionTo('gameover', (inst: TrackInstance) => {
+      if (!this.ctx) return;
+      const echo = this.createEchoBus(inst, 0.62, 0.45, 920);
+      const pianoPan = this.createPanNode(echo, -0.18);
+      const bellPan = this.createPanNode(inst.bus, 0.14);
+
+      const darkPads: Record<number, number[]> = {
+        0:  [73.42, 146.83, 174.61],  // Dm
+        8:  [58.27, 116.54, 174.61],  // Bb
+        16: [65.41, 130.81, 155.56],  // Cm
+        24: [55.0, 110.0, 155.56],    // A(b5) hollow cadence
+      };
+
+      const fallingNotes: Record<number, number> = {
+        2:  349.23, // F4
+        5:  329.63, // E4
+        10: 293.66, // D4
+        14: 233.08, // Bb3
+        18: 261.63, // C4
+        21: 233.08, // Bb3
+        25: 220.0,  // A3
+        29: 146.83, // D3
+      };
+
+      this.scheduleLoop(inst, 0.625, 32, (step: number, when: number) => {
+        if (darkPads[step]) {
+          this.playStrings(darkPads[step], inst.bus, 5.4, 0.11, when);
+        }
+        if (fallingNotes[step]) {
+          this.playSynthPiano([fallingNotes[step]], pianoPan, 3.2, 0.105, when);
+        }
+        if (step === 0) {
+          this.playBell(146.83, bellPan, 4.8, 0.085, when);
+        } else if (step === 16) {
+          this.playBell(130.81, bellPan, 4.4, 0.06, when);
+        }
+      });
+    }, fadeTime);
+  },
+
+  // =========================================================================
+  // GAME WON — Ritual Concluded (Solemn D Major / Lydian Catharsis, ~66 BPM)
+  // =========================================================================
+  playVictory(fadeTime = 2.2) {
+    this.transitionTo('victory', (inst: TrackInstance) => {
+      if (!this.ctx) return;
+      const echo = this.createEchoBus(inst, 0.48, 0.36, 1550);
+      const chimePan = this.createPanNode(echo, 0.26);
+      const flutePan = this.createPanNode(echo, -0.24);
+      const bellPan = this.createPanNode(inst.bus, 0.08);
+
+      const organChords: Record<number, number[]> = {
+        0:  [146.83, 220.0, 293.66, 369.99],  // Dmaj
+        8:  [138.59, 220.0, 277.18, 329.63],  // A/C#
+        16: [123.47, 185.0, 246.94, 293.66],  // Bm
+        24: [98.0, 196.0, 246.94, 369.99],    // Gmaj7
+      };
+
+      const stringPads: Record<number, number[]> = {
+        0:  [146.83, 293.66, 440.0],          // D open fifth
+        16: [123.47, 246.94, 369.99],         // Bm open fifth
+        24: [110.0, 220.0, 329.63],           // A warm lift
+      };
+
+      const dawnFlute: Record<number, [number, number]> = {
+        2:  [369.99, 2.2], // F#4
+        6:  [440.0, 2.0],  // A4
+        10: [554.37, 2.4], // C#5
+        14: [493.88, 1.8], // B4
+        18: [440.0, 2.4],  // A4
+        22: [369.99, 2.0], // F#4
+        26: [329.63, 2.2], // E4
+        29: [293.66, 2.8], // D4
+      };
+
+      const harpArp: Record<number, number> = {
+        0:  587.33, // D5
+        4:  739.99, // F#5
+        8:  659.25, // E5
+        12: 554.37, // C#5
+        16: 587.33, // D5
+        20: 739.99, // F#5
+        24: 783.99, // G5
+        28: 659.25, // E5
+      };
+
+      this.scheduleLoop(inst, 0.454, 32, (step: number, when: number) => {
+        if (organChords[step]) {
+          this.playOrgan(organChords[step], inst.bus, 3.9, 0.085, when, 1450);
+        }
+        if (stringPads[step]) {
+          this.playStrings(stringPads[step], inst.bus, 5.2, 0.1, when);
+        }
+        if (dawnFlute[step]) {
+          const [freq, dur] = dawnFlute[step];
+          this.playFlute(freq, flutePan, dur, 0.105, when);
+        }
+        if (harpArp[step]) {
+          this.playMusicBox(harpArp[step], chimePan, 2.6, 0.075, when);
+        }
+        if (step === 0) {
+          this.playBell(587.33, bellPan, 3.8, 0.065, when);
+        } else if (step === 16) {
+          this.playBell(440.0, bellPan, 3.6, 0.055, when);
         }
       });
     }, fadeTime);

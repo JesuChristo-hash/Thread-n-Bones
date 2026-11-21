@@ -1499,14 +1499,46 @@ export default function App() {
       } else if (ChiptuneAudio.currentTrack !== 'battle') {
         ChiptuneAudio.playBattle();
       }
-    } else if (screen === 'GAME_OVER' || (screen === 'SPLASH' && !showContinueModal)) {
-      ChiptuneAudio.stop();
+    } else if (screen === 'GAME_OVER') {
+      if (bossState.ritualEndedVoluntarily) {
+        if (ChiptuneAudio.currentTrack !== 'victory') {
+          ChiptuneAudio.playVictory?.(2.2);
+        }
+      } else if (ChiptuneAudio.currentTrack !== 'gameover') {
+        ChiptuneAudio.playGameOver?.(2.0);
+      }
+    } else if (screen === 'SPLASH' && !showContinueModal) {
+      if (ChiptuneAudio.currentTrack !== 'menu') {
+        ChiptuneAudio.playMenu?.(2.2);
+      }
     } else {
       if (ChiptuneAudio.currentTrack !== 'cabin') {
         ChiptuneAudio.playCabin();
       }
     }
-  }, [screen, audioEnabled, isBossMatch, bossState.type, bossPhase, smokePhase, showContinueModal]);
+  }, [screen, audioEnabled, isBossMatch, bossState.type, bossState.ritualEndedVoluntarily, bossPhase, smokePhase, showContinueModal]);
+
+  // Wake suspended AudioContext on first user interaction so Main Menu BGM starts cleanly
+  useEffect(() => {
+    if (!audioEnabled || screen !== 'SPLASH') return;
+    const unlockMenuAudio = () => {
+      try {
+        if (!ChiptuneAudio.ctx) ChiptuneAudio.init();
+        if (ChiptuneAudio.ctx?.state === 'suspended') {
+          void ChiptuneAudio.ctx.resume();
+        }
+        if (!showContinueModal && ChiptuneAudio.currentTrack !== 'menu') {
+          ChiptuneAudio.playMenu?.(2.2);
+        }
+      } catch {}
+    };
+    window.addEventListener('pointerdown', unlockMenuAudio, { once: true });
+    window.addEventListener('keydown', unlockMenuAudio, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlockMenuAudio);
+      window.removeEventListener('keydown', unlockMenuAudio);
+    };
+  }, [audioEnabled, screen, showContinueModal]);
 
   // Cleanup audio nodes on unmount
   useEffect(() => {
