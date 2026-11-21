@@ -3488,7 +3488,7 @@ export default function App() {
             setBossState(prev => ({
               ...prev,
               phase: 2,
-              activeDialogue: 'THE ROTARY PRESS TURNS! Every impression stamped in lethal ink—let us see your flesh endure it!',
+              activeDialogue: "M-my Press! I won't be bested by the likes of you!",
             }));
             addLog("=== THE BEGOTTEN: PHASE 2 - ROTARY PRESS INITIALIZED ===");
             addLog(`The Press slams down: Mirror Print in lane ${targetCol + 1} and Stamped Amalgams flank the board!`);
@@ -3565,7 +3565,7 @@ export default function App() {
               setBossState(prev => ({
                 ...prev,
                 phase: 3,
-                activeDialogue: '....the Bone Lord’s gaze feels like it could rip the soul from your body….',
+                activeDialogue: '....the Bone Lord’s gaze intensifies….',
               }));
 
               addLog("=== THE BONE LORD: PHASE 3 - AN UNHOLY ECLIPSE GATHERS ===");
@@ -4941,7 +4941,7 @@ export default function App() {
           phase: 1,
           phase1CardsPlayed: 0,
           skipNextPlayerTurn: false,
-          activeDialogue: 'The Altar of the Old One remembers every drop spilled upon it... kneel before the your God, interloper.',
+          activeDialogue: 'The Altar of the Old One remembers every drop spilled upon it... kneel before your God, interloper.',
           bgHex: '#251c19',
           bgTransitionDuration: 3,
           isRitualComplete: false,

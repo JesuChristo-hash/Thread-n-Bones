@@ -131,7 +131,7 @@ export const ChiptuneAudio: any = {
       if (this.ctx && !this.sfxBus) {
         const now = this.ctx.currentTime;
         const sfxIn = this.ctx.createGain();
-        sfxIn.gain.setValueAtTime(1.35, now);
+        sfxIn.gain.setValueAtTime(0.9, now);
 
         // Warm analog soft-clipper adds midrange density & perceived punch without harshness
         const shaper = this.ctx.createWaveShaper();
@@ -144,15 +144,20 @@ export const ChiptuneAudio: any = {
         shaper.oversample = '2x';
 
         const limiter = this.ctx.createDynamicsCompressor();
-        limiter.threshold.setValueAtTime(-6, now);
-        limiter.knee.setValueAtTime(6, now);
-        limiter.ratio.setValueAtTime(8, now);
+        limiter.threshold.setValueAtTime(-10, now);
+        limiter.knee.setValueAtTime(4, now);
+        limiter.ratio.setValueAtTime(12, now);
         limiter.attack.setValueAtTime(0.002, now);
-        limiter.release.setValueAtTime(0.09, now);
+        limiter.release.setValueAtTime(0.08, now);
+
+        const sfxOut = this.ctx.createGain();
+        sfxOut.gain.value = 0.55;
+        sfxOut.gain.setValueAtTime(0.55, now);
 
         sfxIn.connect(shaper);
         shaper.connect(limiter);
-        limiter.connect(this.ctx.destination);
+        limiter.connect(sfxOut);
+        sfxOut.connect(this.ctx.destination);
         this.sfxBus = sfxIn;
       }
       if (this.ctx && !this.noiseBuffer) {
