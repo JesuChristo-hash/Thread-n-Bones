@@ -1639,11 +1639,13 @@ export default function App() {
     };
   }, [audioEnabled, screen, showContinueModal]);
 
+  const [showViewDeck, setShowViewDeck] = useState<boolean>(false);
+
   // Gently sweep music bus low-pass down (~900 Hz) while Pause or Deck overlay is open
   useEffect(() => {
-    const shouldDuck = Boolean(showPauseMenu || screen === 'VIEW_DECK' || screen === 'DEV_MENU');
+    const shouldDuck = Boolean(showPauseMenu || showViewDeck || screen === 'VIEW_DECK' || screen === 'DEV_MENU' || screen === 'EVENT_HOARDER_SEARCH');
     ChiptuneAudio.setOverlayDuck?.(shouldDuck);
-  }, [showPauseMenu, screen]);
+  }, [showPauseMenu, showViewDeck, screen]);
 
   // Cleanup audio nodes on unmount
   useEffect(() => {
@@ -1676,8 +1678,7 @@ export default function App() {
     return () => window.removeEventListener('resize', updateCanvasSize);
   }, []);
   const openViewDeck = () => {
-    setPreviousScreen(screen);
-    setScreen('VIEW_DECK');
+    setShowViewDeck(true);
   };
 
   const openDevMenu = () => {
@@ -7839,17 +7840,17 @@ export default function App() {
                 <div className="pointer-events-none absolute top-4 inset-x-8 h-28 rounded-full bg-[radial-gradient(circle,rgba(217,156,64,0.16)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 {/* 3-Card Handheld Spread */}
-                <div className="relative flex items-end justify-center w-full h-[142px] pb-2">
+                <div className="relative flex items-end justify-center w-full h-[144px] pt-4 pb-1">
                   {d.cards.map((cName, cIdx) => {
                     const fanTransforms = [
-                      'rotate-[-7deg] -translate-x-[56px] group-hover:-translate-x-[82px] group-hover:rotate-[-10deg] z-0',
-                      'rotate-[0deg] -translate-y-2 group-hover:-translate-y-4 z-10',
-                      'rotate-[7deg] translate-x-[56px] group-hover:translate-x-[82px] group-hover:rotate-[10deg] z-20'
+                      'rotate-[-7deg] -translate-x-[52px] group-hover:-translate-x-[76px] group-hover:rotate-[-10deg] z-0',
+                      'rotate-[0deg] -translate-y-1 group-hover:-translate-y-2.5 z-10',
+                      'rotate-[7deg] translate-x-[52px] group-hover:translate-x-[76px] group-hover:rotate-[10deg] z-20'
                     ];
                     return (
                       <div
                         key={`${cName}-${cIdx}`}
-                        className={`absolute transform scale-[0.74] origin-bottom transition-all duration-300 ease-out group-hover:scale-[0.78] drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)] ${fanTransforms[cIdx] || ''}`}
+                        className={`absolute transform scale-[0.67] origin-bottom transition-all duration-300 ease-out group-hover:scale-[0.71] drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)] ${fanTransforms[cIdx] || ''}`}
                       >
                         {renderCard(ALL_CARD_LOOKUP[cName] || MAIN_DECK_POOL[0], { showCost: true })}
                       </div>
@@ -9938,7 +9939,7 @@ export default function App() {
           HOARDER SEARCH SCREEN
          ========================================================================= */}
       {screen === 'EVENT_HOARDER_SEARCH' && (
-        <div className={`absolute inset-0 bg-[#0d0906] bg-[radial-gradient(circle_at_50%_45%,#1c130c_0%,#0f0b07_55%,#050403_100%)] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
+        <div className={`absolute inset-0 bg-[#090604]/55 backdrop-blur-md z-[110] flex flex-col items-center justify-center p-6 overflow-y-auto font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- SLEIGHT OF HAND --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Hoarder Search</h1>
@@ -9985,10 +9986,10 @@ export default function App() {
       {/* =========================================================================
           VIEW DECK SCREEN MODAL (BORDERLESS SIDE-BY-SIDE SPLIT)
          ========================================================================= */}
-      {screen === 'VIEW_DECK' && (() => {
+      {(showViewDeck || screen === 'VIEW_DECK') && (() => {
         const activeDetailCard = selectedDeckCardDetail || masterDeck[0] || null;
         return (
-          <div className={`absolute inset-0 bg-[#0a0705]/95 z-50 flex flex-col items-center p-6 overflow-y-auto font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
+          <div className={`absolute inset-0 bg-[#090604]/58 backdrop-blur-md z-[110] flex flex-col items-center p-6 overflow-y-auto font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
             {/* Header with Return Action */}
             <div className="relative flex flex-col items-center justify-center w-full max-w-5xl mb-6 border-b border-amber-950/40 pb-4">
               <div className="text-[10px] text-amber-700/80 uppercase tracking-widest mb-1">+-- DECK INSPECTION --+</div>
@@ -9999,7 +10000,10 @@ export default function App() {
                 {masterDeck.length} Creatures in your Deck
               </p>
               <button
-                onClick={() => setScreen(previousScreen || 'DUEL')}
+                onClick={() => {
+                  setShowViewDeck(false);
+                  if (screen === 'VIEW_DECK') setScreen(previousScreen || 'DUEL');
+                }}
                 className="absolute right-0 top-1 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer px-3 py-1.5"
               >
                 RETURN
@@ -10583,7 +10587,7 @@ export default function App() {
       {/* =========================================================================
           DUEL BATTLEFIELD SCREEN (WITH AUTHENTIC LAYOUT & BOTTOM CONTROLS)
          ========================================================================= */}
-      {screen === 'DUEL' && (
+      {(screen === 'DUEL' || screen === 'EVENT_HOARDER_SEARCH') && (
         <div
           ref={duelFieldRef}
           style={{

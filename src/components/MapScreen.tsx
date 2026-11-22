@@ -666,16 +666,13 @@ const MapScreen: React.FC<MapScreenProps> = ({
           {/* Top Wooden Scroll Dowel */}
           <div className="relative z-20 h-6 w-[104%] -ml-[2%] rounded-full bg-gradient-to-b from-[#4c3320] via-[#2b1a0e] to-[#120a05] border border-[#6e4c2e]/70 shadow-[0_6px_14px_rgba(0,0,0,0.9)] flex items-center justify-between px-2 shrink-0">
             <span className="w-3 h-2.5 rounded-full bg-gradient-to-b from-[#d4af37] to-[#6e4e18] border border-[#2a1a07] shrink-0" />
-            <span className="text-[8px] font-mono uppercase tracking-[0.28em] text-[#bfa072]/75 truncate px-2">
-              Ascend Toward {bossMeta.name}
-            </span>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={isAwayFromFigurine ? scrollToFigurine : scrollToBoss}
-                className="px-2 py-0.5 rounded-full bg-[#1e120a]/90 hover:bg-[#331e10] border border-[#9e773e]/75 hover:border-[#e6be72] text-[8px] font-mono font-bold uppercase tracking-[0.16em] text-[#e6c88e] hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+                className="px-2.5 py-0.5 rounded-full bg-[#1e120a]/90 hover:bg-[#331e10] border border-[#9e773e]/75 hover:border-[#e6be72] text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#e6c88e] hover:text-white transition-colors cursor-pointer whitespace-nowrap"
               >
-                {isAwayFromFigurine ? 'Figurine ↓' : 'Scout Boss ↑'}
+                {isAwayFromFigurine ? 'RETURN' : 'TOP'}
               </button>
               <span className="w-3 h-2.5 rounded-full bg-gradient-to-b from-[#d4af37] to-[#6e4e18] border border-[#2a1a07]" />
             </div>
@@ -1008,33 +1005,41 @@ const MapScreen: React.FC<MapScreenProps> = ({
           {/* Bottom Wooden Scroll Dowel */}
           <div className="relative z-20 h-4 w-[104%] -ml-[2%] rounded-full bg-gradient-to-b from-[#4c3320] via-[#2b1a0e] to-[#120a05] border border-[#6e4c2e]/70 shadow-[0_-4px_12px_rgba(0,0,0,0.85)] flex items-center justify-between px-2 shrink-0">
             <span className="w-3 h-2.5 rounded-full bg-gradient-to-b from-[#d4af37] to-[#6e4e18] border border-[#2a1a07]" />
-            <span className="text-[8px] font-mono uppercase tracking-[0.28em] text-[#bfa072]/65">
-              Click a Glowing Node to Advance
-            </span>
             <span className="w-3 h-2.5 rounded-full bg-gradient-to-b from-[#d4af37] to-[#6e4e18] border border-[#2a1a07]" />
           </div>
         </div>
 
         {/* RIGHT FLANK: Cartographer's Omen Inspector & Expedition Ledger */}
-        <div className="w-full max-w-[560px] md:max-w-none md:w-[270px] lg:w-[320px] grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-col justify-between gap-3 lg:gap-4 shrink-0">
+        <div className="w-full max-w-[560px] md:max-w-none md:w-[280px] lg:w-[330px] grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-col justify-between gap-3.5 lg:gap-4 shrink-0">
           {/* Omen / Node Inspector Plaque */}
-          <div className="relative flex-1 flex flex-col justify-between p-3.5 lg:p-5 rounded-[3px] bg-[#0e0a07]/84 border border-[#3e2b1d]/85 shadow-[0_16px_38px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
-            <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#86643f]/65" />
-            <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#86643f]/65" />
-            <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#86643f]/65" />
-            <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#86643f]/65" />
+          <div
+            className="relative flex-1 flex flex-col justify-between p-4 lg:p-5 rounded-[3px] border border-[#543a24]/90 shadow-[0_18px_42px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,228,185,0.12),inset_0_0_28px_rgba(0,0,0,0.65)] backdrop-blur-[3px] overflow-hidden"
+            style={{
+              background:
+                'radial-gradient(ellipse at 50% 0%, rgba(168,118,56,0.16) 0%, rgba(18,12,8,0.92) 55%, rgba(10,7,5,0.96) 100%)',
+            }}
+          >
+            {/* Inner Engraved Double-Rule Frame */}
+            <div className="pointer-events-none absolute inset-1.5 border border-[#735232]/30 rounded-[2px]" />
+            {/* Brass Corner Brackets */}
+            <span className="pointer-events-none absolute top-1.5 left-1.5 w-3 h-3 border-t-2 border-l-2 border-[#b88d4f]/80" />
+            <span className="pointer-events-none absolute top-1.5 right-1.5 w-3 h-3 border-t-2 border-r-2 border-[#b88d4f]/80" />
+            <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-3 h-3 border-b-2 border-l-2 border-[#b88d4f]/80" />
+            <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-3 h-3 border-b-2 border-r-2 border-[#b88d4f]/80" />
 
-            <div>
-              <div className="flex items-center justify-between pb-2 mb-4 border-b border-[#3a281c]/80">
-                <span className="text-[9px] font-mono uppercase tracking-[0.26em] text-[#b48f5a]">
+            <div className="relative z-10">
+              {/* Header Bar */}
+              <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-[#4a3321]/80">
+                <span className="flex items-center gap-1.5 text-[9px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.24em] text-[#d6ae6c]">
+                  <span className="text-[#9e773e]">◆</span>
                   {isInspectedReachable ? 'Reachable Omen' : 'Map Survey'}
                 </span>
                 {inspectedMeta && (
                   <span
-                    className={`text-[9px] font-mono font-bold uppercase tracking-[0.2em] ${
+                    className={`px-2 py-0.5 rounded-[2px] border text-[8.5px] font-mono font-bold uppercase tracking-[0.18em] ${
                       inspectedMeta.tone === 'boss' || inspectedMeta.tone === 'combat'
-                        ? 'text-red-400/90'
-                        : 'text-amber-300/85'
+                        ? 'bg-[#2a0d0b]/90 border-red-800/80 text-red-300'
+                        : 'bg-[#1f150c]/90 border-[#6e4e2a]/80 text-[#ecd19b]'
                     }`}
                   >
                     {inspectedMeta.tag}
@@ -1043,97 +1048,143 @@ const MapScreen: React.FC<MapScreenProps> = ({
               </div>
 
               {inspectedNode && inspectedMeta && (
-                <div className="flex flex-col items-center text-center">
-                  <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 border ${
-                      inspectedMeta.tone === 'boss'
-                        ? 'bg-[#36100d] border-[#d4af37]/80 text-[#f5d593]'
-                        : inspectedMeta.tone === 'combat'
-                          ? 'bg-[#26110e] border-[#96362b]/80 text-[#f1a498]'
-                          : 'bg-[#1b130c] border-[#7a5a36]/80 text-[#e8cba0]'
-                    }`}
-                  >
-                    {renderInkGlyph(inspectedNode.type, inspectedNode.type === 'boss')}
+                <div className="flex flex-col items-center text-center py-1">
+                  {/* Ornate Double-Ring Glyph Medallion */}
+                  <div className="relative mb-3.5">
+                    <div
+                      className={`w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_0_12px_rgba(0,0,0,0.75)] ${
+                        inspectedMeta.tone === 'boss'
+                          ? 'bg-gradient-to-b from-[#451410] to-[#1e0706] border-[#d4af37]/90 text-[#f5d593]'
+                          : inspectedMeta.tone === 'combat'
+                            ? 'bg-gradient-to-b from-[#301310] to-[#170907] border-[#a83e32]/85 text-[#f1a498]'
+                            : 'bg-gradient-to-b from-[#261a10] to-[#120c07] border-[#9a7140]/85 text-[#efd2a0]'
+                      }`}
+                    >
+                      {renderInkGlyph(inspectedNode.type, inspectedNode.type === 'boss')}
+                    </div>
+                    <span className="pointer-events-none absolute -inset-1.5 rounded-full border border-dashed border-[#8a6539]/40" />
                   </div>
 
-                  <h2 className="text-lg font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] text-[#f0dab2]">
+                  <h2 className="text-lg font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#f4dfb7] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                     {inspectedMeta.title}
                   </h2>
-                  <div className="w-12 h-px bg-gradient-to-r from-transparent via-[#8a6539]/75 to-transparent my-3" />
-                  <p className="text-[11px] font-mono text-[#cbb697]/85 leading-relaxed">
+
+                  <div className="flex items-center justify-center gap-2 w-full my-3">
+                    <span className="h-px flex-1 max-w-[54px] bg-gradient-to-r from-transparent to-[#9b7341]/75" />
+                    <span className="text-[8px] text-[#c79b56]">❖</span>
+                    <span className="h-px flex-1 max-w-[54px] bg-gradient-to-l from-transparent to-[#9b7341]/75" />
+                  </div>
+
+                  <p className="text-[11px] font-mono text-[#d4c0a1]/90 leading-relaxed px-1">
                     {inspectedMeta.desc}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="mt-3 lg:mt-5 pt-2.5 lg:pt-3 border-t border-[#2f2015]/80 text-center">
-              <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-[#9f825b]/80">
+            {/* Footer Status Strip */}
+            <div className="relative z-10 mt-3 lg:mt-4 pt-2.5 border-t border-[#3b281a]/85 text-center">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-[#160f0a]/90 border border-[#3d2a1c]/80 text-[8.5px] font-mono uppercase tracking-[0.2em] text-[#bfa072]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#c99748] opacity-80" />
                 {currentNode.nextIds.length === 1
-                  ? 'Single path forward — click the lit seal on the scroll'
+                  ? 'Single path forward'
                   : `${currentNode.nextIds.length} diverging branches ahead`}
               </div>
             </div>
           </div>
 
           {/* Expedition Status & Act Boss Telemetry */}
-          <div className="relative p-4 rounded-[3px] bg-[#0c0806]/84 border border-[#3a281b]/80 shadow-[0_14px_30px_rgba(0,0,0,0.84)] backdrop-blur-[2px]">
-            <div className="text-[9px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.26em] text-[#c79e5e] pb-2 mb-2.5 border-b border-[#332318]">
-              Expedition Ledger
-            </div>
+          <div
+            className="relative p-4 rounded-[3px] border border-[#543a24]/85 shadow-[0_16px_34px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,228,185,0.1),inset_0_0_24px_rgba(0,0,0,0.65)] backdrop-blur-[3px] overflow-hidden"
+            style={{
+              background:
+                'radial-gradient(ellipse at 50% 0%, rgba(145,98,44,0.13) 0%, rgba(15,10,7,0.93) 55%, rgba(9,6,4,0.97) 100%)',
+            }}
+          >
+            <div className="pointer-events-none absolute inset-1.5 border border-[#735232]/25 rounded-[2px]" />
+            <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#a37b45]/75" />
+            <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#a37b45]/75" />
+            <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#a37b45]/75" />
+            <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#a37b45]/75" />
 
-            <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-[10px] font-mono">
-              <div className="text-[#9e8669] uppercase tracking-wider">Act Boss</div>
-              <div className="text-right font-bold text-red-300/90 uppercase tracking-wider">
-                {bossMeta.name}
+            <div className="relative z-10">
+              <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-[#432e1e]/85">
+                <span className="flex items-center gap-1.5 text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.24em] text-[#d6ae6c]">
+                  <span className="text-[#9e773e]">◆</span>
+                  Expedition Ledger
+                </span>
+                <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-[#8d7152]">
+                  Act {mapData.act}
+                </span>
               </div>
 
-              <div className="text-[#9e8669] uppercase tracking-wider">Creatures</div>
-              <div className="text-right font-bold text-[#ead4ac]">{deckSize}</div>
+              <div className="divide-y divide-[#2a1d13]/85 text-[10px] font-mono">
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-[#a48b6d] uppercase tracking-wider">Act Boss</span>
+                  <span className="font-bold text-red-300 uppercase tracking-wider drop-shadow-[0_1px_4px_rgba(185,28,28,0.45)]">
+                    {bossMeta.name}
+                  </span>
+                </div>
 
-              <div className="text-[#9e8669] uppercase tracking-wider">Overkill Blood</div>
-              <div className="text-right font-bold text-red-400">{overkillBlood}</div>
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-[#a48b6d] uppercase tracking-wider">Creatures</span>
+                  <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1a120c] border border-[#3e2b1c] font-bold text-[#f0dab2]">
+                    {deckSize}
+                  </span>
+                </div>
 
-              <div className="text-[#9e8669] uppercase tracking-wider">Starting Bones</div>
-              <div className="text-right font-bold text-[#e2d4bc]">{startingBones}</div>
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-[#a48b6d] uppercase tracking-wider">Overkill Blood</span>
+                  <span className="px-1.5 py-0.5 rounded-[2px] bg-[#220a0a] border border-red-900/70 font-bold text-red-300">
+                    {overkillBlood} oz
+                  </span>
+                </div>
 
-              <div className="text-[#9e8669] uppercase tracking-wider">Effigy</div>
-              <div className="text-right font-bold text-amber-300/90 truncate">
-                {activeTotem?.head && activeTotem?.body
-                  ? `${activeTotem.head} / ${activeTotem.body}`
-                  : 'Unstitched'}
-              </div>
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-[#a48b6d] uppercase tracking-wider">Starting Bones</span>
+                  <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1a1510] border border-[#4a3a28] font-bold text-[#e8dcc7]">
+                    {startingBones}
+                  </span>
+                </div>
 
-              {displaySeed && (
-                <>
-                  <div className="text-[#9e8669] uppercase tracking-wider">Run Seed</div>
-                  <div className="text-right">
+                <div className="flex items-center justify-between gap-2 py-1.5">
+                  <span className="text-[#a48b6d] uppercase tracking-wider shrink-0">Effigy</span>
+                  <span className="font-bold text-amber-300/95 truncate text-right">
+                    {activeTotem?.head && activeTotem?.body
+                      ? `${activeTotem.head} / ${activeTotem.body}`
+                      : 'Unstitched'}
+                  </span>
+                </div>
+
+                {displaySeed && (
+                  <div className="flex items-center justify-between pt-2 pb-0.5">
+                    <span className="text-[#a48b6d] uppercase tracking-wider">Run Seed</span>
                     <button
                       type="button"
                       onClick={copySeed}
                       title="Click to copy run seed"
-                      className="font-mono font-bold text-[#e6c88e] hover:text-white tracking-[0.12em] underline decoration-dotted decoration-[#8a6a3f] underline-offset-2 cursor-pointer transition-colors"
+                      className="px-2 py-0.5 rounded-[2px] bg-[#1b120b] hover:bg-[#2a1c11] border border-[#6e4f2c]/80 hover:border-[#e6be72] font-mono font-bold text-[#ecd098] hover:text-white tracking-[0.14em] cursor-pointer transition-colors"
                     >
                       {copiedSeed ? 'COPIED ✓' : displaySeed}
                     </button>
                   </div>
-                </>
+                )}
+              </div>
+
+              {activeVows.length > 0 && (
+                <div className="mt-2.5 pt-2 border-t border-[#362417] flex flex-wrap gap-1">
+                  {activeVows.map(vId => (
+                    <span
+                      key={vId}
+                      title={RITUAL_VOW_MAP[vId]?.desc}
+                      className="px-1.5 py-0.5 rounded-[2px] bg-[#260c0a]/90 border border-red-800/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.1em] text-red-200/95"
+                    >
+                      ✦ {RITUAL_VOW_MAP[vId]?.shortTag || vId}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
-
-            {activeVows.length > 0 && (
-              <div className="mt-2.5 pt-2 border-t border-[#2d1f15] flex flex-wrap gap-1">
-                {activeVows.map(vId => (
-                  <span
-                    key={vId}
-                    title={RITUAL_VOW_MAP[vId]?.desc}
-                    className="px-1.5 py-0.5 rounded-[2px] bg-[#260c0a]/90 border border-red-800/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.1em] text-red-200/95"
-                  >
-                    ✦ {RITUAL_VOW_MAP[vId]?.shortTag || vId}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>
