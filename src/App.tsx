@@ -7067,7 +7067,7 @@ export default function App() {
             )}
 
             {/* Card Name: Center Header (Rich charcoal grey, retaining heavy stroke & depth) */}
-            <div className="absolute top-[7%] left-[7%] right-[11%] h-[17px] flex items-center justify-center overflow-hidden pointer-events-none z-10">
+            <div className="absolute top-[6.2%] left-[6.5%] right-[10.5%] h-[20px] flex items-center justify-center overflow-hidden pointer-events-none z-10">
               <span
                 style={{
                   color: '#262422',
@@ -7078,16 +7078,16 @@ export default function App() {
                 }}
                 className={`font-['Cinzel',_serif] font-black uppercase text-center whitespace-nowrap leading-none pointer-events-none select-none ${
                   card.name.length >= 15
-                    ? 'text-[7px] tracking-tighter'
+                    ? 'text-[8px] tracking-[-0.06em]'
                     : card.name.length >= 13
-                    ? 'text-[8px] tracking-tight'
+                    ? 'text-[9px] tracking-[-0.04em]'
                     : card.name.length >= 11
-                    ? 'text-[8.5px] tracking-tight'
+                    ? 'text-[9.5px] tracking-[-0.03em]'
                     : card.name.length >= 9
-                    ? 'text-[9.5px] tracking-normal'
+                    ? 'text-[11px] tracking-[-0.01em]'
                     : card.name.length >= 7
-                    ? 'text-[11px] tracking-normal'
-                    : 'text-[12px] tracking-[0.02em]'
+                    ? 'text-[12px] tracking-normal'
+                    : 'text-[13px] tracking-[0.01em]'
                 }`}
               >
                 {card.name}
@@ -7166,27 +7166,23 @@ export default function App() {
               }}
             />
           </div>
-          {/* --- ACTIVE SIGIL MEDALLIONS (Single row for 1–5, staggered 2-tier for 6–8) --- */}
-            <div
-              className={`absolute left-0 right-0 z-20 pointer-events-none flex justify-center items-center -translate-y-[2px] ${
-                displaySigils.length >= 6
-                  ? 'top-[65%] max-w-[88%] mx-auto flex-wrap gap-x-1 gap-y-0.5'
-                  : `top-[71%] ${displaySigils.length >= 4 ? 'gap-0.5' : displaySigils.length >= 2 ? 'gap-1' : ''}`
-              }`}
-            >
+          {/* --- ACTIVE SIGIL CRESTS (Large centered #1 between stats; flanking arc in 4 - 2 - 1 - 3 - 5 order) --- */}
+            <div className="absolute inset-0 z-20 pointer-events-none">
             {displaySigils.map((s, idx) => {
-              const medallionSizeClass =
-                displaySigils.length >= 6
-                  ? 'w-[15px] h-[15px]'
-                  : displaySigils.length === 5
-                  ? 'w-[15px] h-[15px]'
-                  : displaySigils.length === 4
-                  ? 'w-[17px] h-[17px]'
-                  : displaySigils.length === 3
-                  ? 'w-[20px] h-[20px]'
-                  : displaySigils.length === 2
-                  ? 'w-[24px] h-[24px]'
-                  : 'w-[26px] h-[26px]';
+              // Anchor positions (left%, top%) on 112x160 card:
+              // 0 -> #1 center lower; 1 -> #2 upper-left; 2 -> #3 upper-right; 3 -> #4 far-left; 4 -> #5 far-right
+              const crestSlots: Array<{ left: string; top: string; size: string; z: string }> = [
+                { left: '50%', top: '83.5%', size: 'w-[30px] h-[30px]', z: 'z-30' },
+                { left: '31%', top: '73%', size: 'w-[19px] h-[19px]', z: 'z-20' },
+                { left: '69%', top: '73%', size: 'w-[19px] h-[19px]', z: 'z-20' },
+                { left: '15%', top: '70%', size: 'w-[17px] h-[17px]', z: 'z-20' },
+                { left: '85%', top: '70%', size: 'w-[17px] h-[17px]', z: 'z-20' },
+                { left: '15%', top: '59.5%', size: 'w-[15px] h-[15px]', z: 'z-20' },
+                { left: '85%', top: '59.5%', size: 'w-[15px] h-[15px]', z: 'z-20' },
+                { left: '50%', top: '67.5%', size: 'w-[15px] h-[15px]', z: 'z-20' },
+              ];
+              const slot = crestSlots[idx] || crestSlots[crestSlots.length - 1];
+              const medallionSizeClass = slot.size;
 
               const isOnField = options?.laneIndex !== undefined && !options?.isQueue;
                 const isArmorSigil = s === 'Armored';
@@ -7209,6 +7205,7 @@ export default function App() {
                   <div
                     key={`sigil-${s}-${idx}`}
                     title={armorTitle}
+                    style={{ left: slot.left, top: slot.top }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSigilDetailModal({
@@ -7216,7 +7213,7 @@ export default function App() {
                         desc: isArmorSigil ? armorTitle : (SIGIL_DESCRIPTIONS[s] || 'A dark, inscrutable power.'),
                       });
                     }}
-                    className={`${medallionSizeClass} relative shrink-0 rounded-full border flex items-center justify-center overflow-hidden pointer-events-auto cursor-pointer transition-all duration-150 ease-out hover:scale-135 active:scale-125 hover:z-40 origin-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] touch-manipulation ${medallionBorderClass}`}
+                    className={`${medallionSizeClass} ${slot.z} absolute -translate-x-1/2 -translate-y-1/2 shrink-0 rounded-full border flex items-center justify-center overflow-hidden pointer-events-auto cursor-pointer transition-transform duration-150 ease-out hover:scale-135 active:scale-125 hover:z-40 origin-center drop-shadow-[0_2px_3px_rgba(0,0,0,0.85)] touch-manipulation ${medallionBorderClass}`}
                   >
                     <img
                       src={getSigilArtUrl(s)}
@@ -7228,7 +7225,7 @@ export default function App() {
                         target.style.display = 'none';
                         if (target.parentElement) {
                           const fallback = document.createElement('span');
-                          fallback.className = `${displaySigils.length >= 4 ? 'text-[8px]' : displaySigils.length >= 3 ? 'text-[9px]' : 'text-[11px]'} leading-none`;
+                          fallback.className = `${idx === 0 ? 'text-[12px]' : idx <= 2 ? 'text-[9px]' : 'text-[8px]'} leading-none`;
                           fallback.innerText = SIGIL_MAPPING[s] || '•';
                           target.parentElement.appendChild(fallback);
                         }
@@ -7250,6 +7247,7 @@ export default function App() {
           {/* Attack (Left Medallion) */}
           <div className="absolute bottom-[3.5%] left-[4.5%] w-[23%] h-[16%] flex items-center justify-center pointer-events-none z-20">
             <span
+              style={hasShadow ? undefined : { textShadow: '0 2px 3px rgba(0,0,0,1), 0 1px 1px rgba(0,0,0,1), 0 0 5px rgba(0,0,0,0.95)' }}
               className={`font-['Cinzel',_serif] font-black text-sm leading-none pointer-events-none ${
                 hasShadow
                   ? 'text-purple-950 drop-shadow-[0_0_6px_rgba(168,85,247,0.7)]'
@@ -7273,6 +7271,7 @@ export default function App() {
               }`}
             >
             <span
+              style={hasShadow ? undefined : { textShadow: '0 2px 3px rgba(0,0,0,1), 0 1px 1px rgba(0,0,0,1), 0 0 5px rgba(0,0,0,0.95)' }}
               className={`font-['Cinzel',_serif] font-black text-sm leading-none pointer-events-none ${
                 hasShadow
                   ? 'text-purple-950 drop-shadow-[0_0_6px_rgba(168,85,247,0.7)]'
@@ -10896,8 +10895,8 @@ export default function App() {
                                 : "The Weaver")
                         : currentStageName}
                     </h2>
-                    <div className="mt-1 px-2.5 py-0.5 rounded-[2px] bg-[#100e10]/88 border border-[#4a413b]/75 shadow-[inset_0_1px_6px_rgba(0,0,0,0.75)]">
-                      <span className="font-['Cinzel',_serif] font-semibold text-[10px] tracking-[0.22em] uppercase text-[#bfa78b]">
+                    <div className="mt-1 inline-flex items-center justify-center px-3 py-1.5 rounded-[2px] bg-[#100e10]/88 border border-[#4a413b]/75 shadow-[inset_0_1px_6px_rgba(0,0,0,0.75)]">
+                      <span className="font-['Cinzel',_serif] font-semibold text-[10px] leading-none tracking-[0.22em] pl-[0.22em] uppercase text-[#bfa78b]">
                         {isBossMatch ? `Stage ${stage} • Phase ${bossPhase}` : `Stage ${stage} • Depth ${level}`}
                       </span>
                     </div>
@@ -12224,7 +12223,7 @@ export default function App() {
                 </div>
 
   {/* Vertical 3-Slot Carved-Slate Item Rack */}
-  <div className="absolute left-[calc(50%+30px)] top-3 flex flex-col items-center justify-center gap-2 p-2 bg-[#100e10]/92 border border-[#4a413b]/80 rounded-[2px] shadow-[0_10px_24px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.06),inset_0_0_16px_rgba(0,0,0,0.75)] z-30">
+  <div className="absolute left-[calc(50%+44px)] top-10 flex flex-col items-center justify-center gap-2 p-2 bg-[#100e10]/92 border border-[#4a413b]/80 rounded-[2px] shadow-[0_10px_24px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.06),inset_0_0_16px_rgba(0,0,0,0.75)] z-30">
     <span className="pointer-events-none absolute top-1 left-1 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
     <span className="pointer-events-none absolute top-1 right-1 w-1.5 h-1.5 border-t border-r border-[#8f7960]/65" />
     <span className="pointer-events-none absolute bottom-1 left-1 w-1.5 h-1.5 border-b border-l border-[#8f7960]/65" />
