@@ -4773,7 +4773,7 @@ export default function App() {
       }
 
       const restoredAct = Math.max(1, Math.min(4, data.stage ?? 1));
-      const restoredMap = data.actMap || generateActMap(restoredAct, getBossForAct(restoredAct));
+      const restoredMap = data.actMap || generateActMap(restoredAct, getBossForAct(restoredAct), data.masterDeck?.length);
       preDuelMapRef.current = null;
       setActMap(restoredMap);
       actMapRef.current = restoredMap;
@@ -5633,7 +5633,7 @@ export default function App() {
 
     // Initialize shuffled boss order and Act I parchment map (Row 1 preserves Altar / Campfire / Bone Lord fork)
     const bossOrder = getOrInitBossOrder();
-    const firstActMap = generateActMap(1, bossOrder[0]);
+    const firstActMap = generateActMap(1, bossOrder[0], draftPlayerDeck.length);
     setActMap(firstActMap);
     preDuelMapRef.current = null;
     actMapRef.current = firstActMap;
@@ -5643,6 +5643,7 @@ export default function App() {
 
   // --- Return to Branching Parchment Map ---
   const returnToMap = (deckOverride?: CardDef[], totemOverride?: Totem | null) => {
+    preDuelMapRef.current = null;
     if (deckOverride) {
       setMasterDeck(deckOverride);
       masterDeckRef.current = deckOverride;
@@ -5651,10 +5652,11 @@ export default function App() {
       setActiveTotem(totemOverride);
     }
 
+    const currentDeckSize = deckOverride ? deckOverride.length : (masterDeckRef.current.length || masterDeck.length);
     const currMap = actMapRef.current;
     if (!currMap) {
       const fallbackAct = Math.max(1, Math.min(4, stage));
-      const fresh = generateActMap(fallbackAct, getBossForAct(fallbackAct));
+      const fresh = generateActMap(fallbackAct, getBossForAct(fallbackAct), currentDeckSize);
       setActMap(fresh);
       actMapRef.current = fresh;
       setCurrentStageName(fresh.actTitle);
@@ -5664,7 +5666,7 @@ export default function App() {
 
     if (currMap.completedBoss) {
       const nextAct = Math.min(4, currMap.act + 1);
-      const nextMap = generateActMap(nextAct, getBossForAct(nextAct));
+      const nextMap = generateActMap(nextAct, getBossForAct(nextAct), currentDeckSize);
       setActMap(nextMap);
       actMapRef.current = nextMap;
       setCurrentStageName(nextMap.actTitle);
@@ -5691,8 +5693,8 @@ export default function App() {
         ? currMap.visitedNodeIds
         : [...currMap.visitedNodeIds, node.id],
     };
-    const isBattleNode = node.type === 'combat' || node.type === 'elite_combat' || node.type === 'boss';
-    preDuelMapRef.current = isBattleNode ? currMap : null;
+    // Lock save state to pre-node map until the battle or event completes
+    preDuelMapRef.current = currMap;
     setActMap(updatedMap);
     actMapRef.current = updatedMap;
 
@@ -6178,29 +6180,70 @@ export default function App() {
       setScreen('EVENT_CAVE_TRIAL');
     };
 
+  const CAVE_TRIAL_RULES: Record<
+    string,
+    { requirement: string; evaluate: (drawn: CardDef[]) => { passed: boolean; detail: string } }
+  > = {
+    'Trial of Bones': {
+      requirement: 'Combined Bone Cost ≥ 5',
+      evaluate: (drawn) => {
+        const total = drawn.reduce((acc, c) => acc + (c.boneCost || 0), 0);
+        return { passed: total >= 5, detail: `Total Bone Cost: ${total} / 5` };
+      },
+    },
+    'Trial of Blood': {
+      requirement: 'Combined Blood Cost ≥ 4',
+      evaluate: (drawn) => {
+        const total = drawn.reduce((acc, c) => acc + (c.cost || 0), 0);
+        return { passed: total >= 4, detail: `Total Blood Cost: ${total} / 4` };
+      },
+    },
+    'Trial of Power': {
+      requirement: 'Combined Attack ≥ 4',
+      evaluate: (drawn) => {
+        const total = drawn.reduce((acc, c) => acc + (c.attack || 0), 0);
+        return { passed: total >= 4, detail: `Total Attack: ${total} / 4` };
+      },
+    },
+    'Trial of Health': {
+      requirement: 'Combined Health ≥ 6',
+      evaluate: (drawn) => {
+        const total = drawn.reduce((acc, c) => acc + (c.health || 0), 0);
+        return { passed: total >= 6, detail: `Total Health: ${total} / 6` };
+      },
+    },
+    'Trial of Wisdom': {
+      requirement: 'Combined Sigils ≥ 3',
+      evaluate: (drawn) => {
+        const total = drawn.reduce((acc, c) => acc + (c.sigils?.length || 0), 0);
+        return { passed: total >= 3, detail: `Total Sigils: ${total} / 3` };
+      },
+    },
+    'Trial of Kin': {
+      requirement: '2+ Drawn Cards Share a Tribe',
+      evaluate: (drawn) => {
+        const tribes = drawn.map(c => c.class).filter(cl => cl !== 'No Class' && cl !== 'ALL Classes');
+        const counts = new Map<string, number>();
+        tribes.forEach(cl => counts.set(cl, (counts.get(cl) || 0) + 1));
+        const matched = Array.from(counts.entries()).find(([, n]) => n >= 2);
+        return {
+          passed: Boolean(matched),
+          detail: matched ? `Matched Tribe: ${matched[0]} (${matched[1]})` : 'No Matching Tribe',
+        };
+      },
+    },
+  };
+
   const evaluateCaveTrial = (trialName: string) => {
-      if (isEventBusy || caveSelectedTrial) return;
-      setIsEventBusy(true);
-      setCaveSelectedTrial(trialName);
-      const shuffled = [...masterDeck].sort(() => Math.random() - 0.5);
+    if (isEventBusy || caveSelectedTrial) return;
+    setIsEventBusy(true);
+    setCaveSelectedTrial(trialName);
+    const shuffled = [...masterDeck].sort(() => Math.random() - 0.5);
     const drawn = shuffled.slice(0, 3);
     setCaveDrawnCards(drawn);
 
-    let passed = false;
-    if (trialName === 'Trial of Bones') {
-      passed = drawn.reduce((acc, c) => acc + (c.boneCost || 0), 0) >= 5;
-    } else if (trialName === 'Trial of Blood') {
-      passed = drawn.reduce((acc, c) => acc + (c.cost || 0), 0) >= 4;
-    } else if (trialName === 'Trial of Power') {
-      passed = drawn.reduce((acc, c) => acc + (c.attack || 0), 0) >= 4;
-    } else if (trialName === 'Trial of Health') {
-      passed = drawn.reduce((acc, c) => acc + (c.health || 0), 0) >= 6;
-    } else if (trialName === 'Trial of Wisdom') {
-      passed = drawn.reduce((acc, c) => acc + (c.sigils?.length || 0), 0) >= 3;
-    } else if (trialName === 'Trial of Kin') {
-      const tribes = drawn.map(c => c.class).filter(cl => cl !== 'No Class' && cl !== 'ALL Classes');
-      passed = new Set(tribes).size < tribes.length && tribes.length >= 2;
-    }
+    const rule = CAVE_TRIAL_RULES[trialName];
+    const passed = rule ? rule.evaluate(drawn).passed : false;
 
     setCavePassed(passed);
     if (passed) {
@@ -8061,7 +8104,7 @@ export default function App() {
          ========================================================================= */}
       {screen === 'EVENT_CROSSROADS' && (
         <MapScreen
-          mapData={actMap || generateActMap(Math.max(1, Math.min(4, stage)), getBossForAct(Math.max(1, Math.min(4, stage))))}
+          mapData={actMap || generateActMap(Math.max(1, Math.min(4, stage)), getBossForAct(Math.max(1, Math.min(4, stage))), masterDeck.length)}
           bgStyle={getScreenBgStyle('crossroads-select.jpg')}
           deckSize={masterDeck.length}
           overkillBlood={totalOverkillDamage}
@@ -8885,147 +8928,163 @@ export default function App() {
          ========================================================================= */}
       {screen === 'EVENT_CAVE_TRIAL' && (
         <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
+          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-start px-4 py-4 sm:p-6 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('trialevent.jpg')}
         >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,9,7,0.38)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
+          <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,9,7,0.38)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
-          <div className="relative z-10 max-w-3xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+          <div className="relative z-10 max-w-3xl w-full flex flex-col items-center text-center my-auto py-1">
+            <div className="flex items-center gap-3.5 mb-0.5">
+              <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
               <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
                 The Steeple Ordeal
               </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ece5d8] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+            <h1 className="text-xl sm:text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ece5d8] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
               The Cavern Trials
             </h1>
-            <p className="mt-2 mb-7 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
-              The Zealot lays out the Trials of the Flock. Three Creatures will be drawn and weighed for their devotion.
-            </p>
 
             {!caveSelectedTrial ? (
-              <div className="relative w-full max-w-xl p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+              <>
+                <p className="mt-2 mb-5 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
+                  The Zealot lays out the Trials of the Flock. Three random Creatures from your deck will be drawn and weighed against your chosen condition.
+                </p>
 
-                <div className="flex flex-col gap-3.5 w-full">
-                  {caveTrials.map((t, idx) => {
-                    const isDisabled = isEventBusy || Boolean(caveSelectedTrial);
-                    return (
-                      <button
-                        key={t}
-                        type="button"
-                        disabled={isDisabled}
-                        onClick={() => !isDisabled && evaluateCaveTrial(t)}
-                        className={`p-4 rounded-[3px] text-center transition-all duration-200 border flex items-center justify-between px-5 select-none ${
-                          isDisabled
-                            ? 'opacity-40 cursor-not-allowed border-[#3d2d20]/40 bg-[#120d0a]'
-                            : 'cursor-pointer group border-[#4d3523]/85 hover:border-[#d4af37]/90 bg-gradient-to-r from-[#17100b] via-[#1c130d] to-[#17100b] hover:translate-x-1 shadow-[0_6px_18px_rgba(0,0,0,0.75)]'
-                        }`}
-                      >
-                        <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#9e7c51]">
-                          {['I', 'II', 'III'][idx] || idx + 1}
-                        </span>
-                        <div className="flex flex-col items-center">
-                          <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#f0dab2] group-hover:text-white">
-                            {t}
-                          </div>
-                          <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-[#b49b7d]/70 mt-0.5">
-                            Trial of the Flock
-                          </div>
-                        </div>
-                        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#bfa073]/65 group-hover:text-[#f4d78b]">
-                          ›
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center w-full">
-                <div
-                  className={`mb-5 px-5 py-1.5 rounded-[2px] border font-['Cinzel',_serif] text-base font-bold uppercase tracking-[0.24em] shadow-md ${
-                    cavePassed
-                      ? 'bg-[#1a1309]/90 border-[#d4af37]/85 text-[#f4d78b]'
-                      : 'bg-[#210b09]/90 border-red-700/85 text-red-300'
-                  }`}
-                >
-                  {cavePassed ? 'Trial Passed' : 'Trial Failed'}
-                </div>
+                <div className="relative w-full max-w-xl p-5 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
-                {/* Drawn Witness Cards */}
-                <div className="relative w-full p-5 mb-5 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_14px_34px_rgba(0,0,0,0.88)] backdrop-blur-[2px]">
-                  <div className="text-[9px] font-mono uppercase tracking-[0.26em] text-[#b48f5a] mb-4">
-                    Weighed Upon the Scales
+                  <div className="flex flex-col gap-3 w-full">
+                    {caveTrials.map((t, idx) => {
+                      const isDisabled = isEventBusy || Boolean(caveSelectedTrial);
+                      const reqText = CAVE_TRIAL_RULES[t]?.requirement || 'Trial of the Flock';
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          disabled={isDisabled}
+                          onClick={() => !isDisabled && evaluateCaveTrial(t)}
+                          className={`p-3.5 rounded-[3px] text-center transition-all duration-200 border flex items-center justify-between px-5 select-none ${
+                            isDisabled
+                              ? 'opacity-40 cursor-not-allowed border-[#3d2d20]/40 bg-[#120d0a]'
+                              : 'cursor-pointer group border-[#4d3523]/85 hover:border-[#d4af37]/90 bg-gradient-to-r from-[#17100b] via-[#1c130d] to-[#17100b] hover:translate-x-1 shadow-[0_6px_18px_rgba(0,0,0,0.75)]'
+                          }`}
+                        >
+                          <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#9e7c51]">
+                            {['I', 'II', 'III'][idx] || idx + 1}
+                          </span>
+                          <div className="flex flex-col items-center">
+                            <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#f0dab2] group-hover:text-white">
+                              {t}
+                            </div>
+                            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#d6b37a]/90 mt-1">
+                              {reqText}
+                            </div>
+                          </div>
+                          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#bfa073]/65 group-hover:text-[#f4d78b]">
+                            ›
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="flex flex-wrap gap-4 justify-center">
-                    {caveDrawnCards.map((c, i) => (
-                      <div key={c.id || `cave-drawn-${i}`} className="scale-[0.94] pointer-events-none">
-                        {renderCard(c, { isClickable: false, disableHoverScale: true })}
+                </div>
+              </>
+            ) : (() => {
+              const rule = CAVE_TRIAL_RULES[caveSelectedTrial];
+              const evalResult = rule ? rule.evaluate(caveDrawnCards) : null;
+              return (
+                <div className="flex flex-col items-center w-full mt-2">
+                  {/* Verdict + Condition Breakdown */}
+                  <div
+                    className={`mb-3 px-4 py-2 rounded-[2px] border shadow-md flex flex-col items-center gap-0.5 ${
+                      cavePassed
+                        ? 'bg-[#1a1309]/92 border-[#d4af37]/85 text-[#f4d78b]'
+                        : 'bg-[#210b09]/92 border-red-700/85 text-red-300'
+                    }`}
+                  >
+                    <div className="font-['Cinzel',_serif] text-sm sm:text-base font-bold uppercase tracking-[0.22em]">
+                      {caveSelectedTrial} — {cavePassed ? 'Passed' : 'Failed'}
+                    </div>
+                    {rule && evalResult && (
+                      <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#e6d2b3]/90">
+                        {evalResult.detail} <span className="text-[#9e825f] mx-1.5">•</span> Need: {rule.requirement}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
 
-                {cavePassed && (
-                  <div className="relative w-full p-5 mb-6 rounded-[3px] bg-[#100b07]/84 border border-[#5a3d24]/85 shadow-[0_16px_38px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-                    <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#d4af37]/75" />
-                    <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#d4af37]/75" />
-                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#d4af37]/75" />
-                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#d4af37]/75" />
-
-                    <p className="text-[10px] font-mono font-bold text-[#d6b174] mb-4 uppercase tracking-[0.24em]">
-                      The Zealot Offers a Blessed Creature — Choose One
-                    </p>
-                    <div className="flex flex-wrap gap-5 justify-center pt-2">
-                      {caveRewardCards.map((c, idx) => {
-                        const isSelected = caveSelectedRewardIdx === idx;
-                        return (
-                          <div
-                            key={c.id || `cave-rew-${idx}`}
-                            onClick={() => setCaveSelectedRewardIdx(idx)}
-                            className={`relative cursor-pointer transform origin-center transition-all duration-200 ${
-                              isSelected
-                                ? 'scale-[1.06] -translate-y-2.5 z-30'
-                                : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1'
-                            }`}
-                          >
-                            {isSelected && (
-                              <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
-                                Claimed
-                              </span>
-                            )}
-                            {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
-                          </div>
-                        );
-                      })}
+                  {/* Drawn Witness Cards */}
+                  <div className="relative w-full px-4 py-3 mb-3 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_14px_34px_rgba(0,0,0,0.88)] backdrop-blur-[2px]">
+                    <div className="text-[9px] font-mono uppercase tracking-[0.26em] text-[#b48f5a] mb-1">
+                      Weighed Upon the Scales
+                    </div>
+                    <div className="flex flex-wrap gap-2 sm:gap-3 justify-center items-center">
+                      {caveDrawnCards.map((c, i) => (
+                        <div key={c.id || `cave-drawn-${i}`} className="scale-[0.82] -my-4 pointer-events-none">
+                          {renderCard(c, { isClickable: false, disableHoverScale: true })}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )}
 
-                <button
-                  onClick={() => {
-                    setIsEventBusy(false);
-                    let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
-                    if (cavePassed && caveSelectedRewardIdx !== null) {
-                      updatedDeck = [...updatedDeck, cloneCard(caveRewardCards[caveSelectedRewardIdx])];
-                      setMasterDeck(updatedDeck);
-                      masterDeckRef.current = updatedDeck;
-                    }
-                    returnToMap(updatedDeck);
-                  }}
-                  disabled={cavePassed && caveSelectedRewardIdx === null}
-                  className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
-                >
-                  {cavePassed ? 'Claim & Proceed' : 'Depart the Steeple'}
-                </button>
-              </div>
-            )}
+                  {cavePassed && (
+                    <div className="relative w-full px-4 py-3 mb-4 rounded-[3px] bg-[#100b07]/84 border border-[#5a3d24]/85 shadow-[0_16px_38px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                      <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#d4af37]/75" />
+                      <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#d4af37]/75" />
+                      <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#d4af37]/75" />
+                      <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#d4af37]/75" />
+
+                      <p className="text-[10px] font-mono font-bold text-[#d6b174] mb-1.5 uppercase tracking-[0.22em]">
+                        The Zealot Offers a Blessed Creature — Choose One
+                      </p>
+                      <div className="flex flex-wrap gap-3 sm:gap-4 justify-center items-center py-1">
+                        {caveRewardCards.map((c, idx) => {
+                          const isSelected = caveSelectedRewardIdx === idx;
+                          return (
+                            <div
+                              key={c.id || `cave-rew-${idx}`}
+                              onClick={() => setCaveSelectedRewardIdx(idx)}
+                              className={`relative cursor-pointer transform origin-center transition-all duration-200 -my-2 ${
+                                isSelected
+                                  ? 'scale-[0.95] -translate-y-1.5 z-30'
+                                  : 'scale-[0.86] hover:scale-[0.91] hover:-translate-y-1'
+                              }`}
+                            >
+                              {isSelected && (
+                                <span className="pointer-events-none absolute -top-3.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
+                                  Claimed
+                                </span>
+                              )}
+                              {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setIsEventBusy(false);
+                      let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
+                      if (cavePassed && caveSelectedRewardIdx !== null) {
+                        updatedDeck = [...updatedDeck, cloneCard(caveRewardCards[caveSelectedRewardIdx])];
+                        setMasterDeck(updatedDeck);
+                        masterDeckRef.current = updatedDeck;
+                      }
+                      returnToMap(updatedDeck);
+                    }}
+                    disabled={cavePassed && caveSelectedRewardIdx === null}
+                    className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
+                  >
+                    {cavePassed ? 'Claim & Proceed' : 'Depart the Steeple'}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

@@ -179,16 +179,17 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
+  const parchmentHeight = Math.max(760, (mapData.rows || 9) * 96);
+
   // Scroll parchment smoothly so current figurine & next choices stay centered
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || !currentNode) return;
-    const parchmentHeight = 760;
-    // Aim slightly above currentNode so reachable choices above are in clear sight
-    const targetY = (Math.max(0, currentNode.y - 10) / 100) * parchmentHeight;
+    // Aim ~1 row above currentNode so reachable choices above stay in clear sight
+    const targetY = Math.max(0, (currentNode.y / 100) * parchmentHeight - 88);
     const scrollTop = Math.max(0, targetY - el.clientHeight * 0.56);
     el.scrollTo({ top: scrollTop, behavior: 'smooth' });
-  }, [mapData.currentNodeId, mapData.act, currentNode]);
+  }, [mapData.currentNodeId, mapData.act, currentNode, parchmentHeight]);
 
   const inspectedNode =
     (hoveredNodeId ? nodeMap.get(hoveredNodeId) : null) ||
@@ -366,8 +367,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
               scrollbarColor: '#5c4026 #22160d',
             }}
           >
-            {/* Inner Cartographic Canvas (Fixed Tall Scroll Height for Inscryption Pacing) */}
-            <div className="relative w-full h-[760px]">
+            {/* Inner Cartographic Canvas (Scaled Dynamically to Act Row Count) */}
+            <div className="relative w-full" style={{ height: `${parchmentHeight}px` }}>
               {/* Faint Hand-Ruled Border & Compass Watermark */}
               <div className="pointer-events-none absolute inset-3 border border-[#4a321b]/35" />
               <div className="pointer-events-none absolute inset-4 border border-dashed border-[#4a321b]/20" />
