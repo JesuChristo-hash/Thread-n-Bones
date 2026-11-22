@@ -439,21 +439,25 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   ? { title: bossMeta.name, tag: 'Boss' }
                   : MAP_NODE_META[node.type];
 
+                const isHovered = hoveredNodeId === node.id;
+
                 return (
                   <div
                     key={node.id}
                     style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                    onMouseEnter={() => setHoveredNodeId(node.id)}
+                    onMouseLeave={() => setHoveredNodeId(prev => (prev === node.id ? null : prev))}
                     className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center ${
-                      isCurrent ? 'z-30' : isReachable ? 'z-20' : 'z-10'
+                      isHovered ? 'z-40' : isCurrent ? 'z-30' : isReachable ? 'z-20' : 'z-10'
                     }`}
                   >
 
                     {/* Node Stamp Button */}
                     <button
                       type="button"
-                      disabled={!isReachable}
-                      onMouseEnter={() => setHoveredNodeId(node.id)}
-                      onMouseLeave={() => setHoveredNodeId(null)}
+                      aria-disabled={!isReachable}
+                      onFocus={() => setHoveredNodeId(node.id)}
+                      onBlur={() => setHoveredNodeId(prev => (prev === node.id ? null : prev))}
                       onClick={() => isReachable && onSelectNode(node)}
                       aria-label={meta.title}
                       className={`relative flex items-center justify-center rounded-full transition-all duration-200 ${
@@ -470,10 +474,10 @@ const MapScreen: React.FC<MapScreenProps> = ({
                                 ? 'bg-[#e6c99b] hover:bg-[#f2dfb7] border-2 border-[#8a1f16] text-[#6d1610] shadow-[0_0_18px_rgba(166,34,24,0.48),0_3px_8px_rgba(0,0,0,0.45)] hover:scale-115 cursor-pointer'
                                 : 'bg-[#e8d2a6] hover:bg-[#f6e6c2] border-2 border-[#6c441c] text-[#28180c] shadow-[0_0_16px_rgba(176,120,38,0.45),0_3px_8px_rgba(0,0,0,0.42)] hover:scale-115 cursor-pointer'
                               : isVisited
-                                ? 'bg-[#b3986c]/75 border border-[#543c24]/60 text-[#4a3520]/55 cursor-default'
+                                ? 'bg-[#b3986c]/75 border border-[#543c24]/60 text-[#4a3520]/55 hover:brightness-110 hover:scale-105 cursor-help'
                                 : isCombat
-                                  ? 'bg-[#c9ae80]/85 border border-[#6e2d24]/70 text-[#5e1f18]/80 cursor-default'
-                                  : 'bg-[#ceb589]/85 border border-[#5c4227]/65 text-[#332214]/75 cursor-default'
+                                  ? 'bg-[#c9ae80]/85 border border-[#6e2d24]/70 text-[#5e1f18]/80 hover:brightness-110 hover:scale-105 cursor-help'
+                                  : 'bg-[#ceb589]/85 border border-[#5c4227]/65 text-[#332214]/75 hover:brightness-110 hover:scale-105 cursor-help'
                       }`}
                     >
                       {/* Pulsing Outer Wax Ring for Reachable Choices */}
@@ -508,7 +512,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                         You
                       </span>
                     )}
-                    {(isBoss || isReachable) && (
+                    {(isBoss || isReachable || isHovered) && (
                       <span
                         className={`mt-1 px-1.5 py-0.5 rounded-[2px] text-[8.5px] font-bold uppercase tracking-[0.14em] whitespace-nowrap shadow-sm ${
                           isBoss

@@ -7966,7 +7966,7 @@ export default function App() {
             {/* Header & Dynamic Ritual Status */}
             <div className="relative z-10 flex flex-col items-center text-center shrink-0">
               <h1 className="text-2xl sm:text-[26px] font-['Cinzel',_serif] text-[#e5c57c] tracking-[0.16em] italic drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-                ...Take Two more Creatures along with you...
+                · Fortasse propositum facultates tuas superat ·
               </h1>
               <div className="mt-1.5 flex items-center gap-3 px-4 py-1 rounded-[2px] bg-[#0b0807]/75 border border-[#3a2a1e]/75 backdrop-blur-[2px]">
                 <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-[#cfb794]/85">
