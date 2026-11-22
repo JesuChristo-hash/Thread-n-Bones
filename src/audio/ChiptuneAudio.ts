@@ -67,6 +67,8 @@ export const ChiptuneAudio: any = {
   sfxVolume: readSavedVol(SFX_VOL_KEY, 0.5),
   musicGain: null as GainNode | null,
   musicToneFilter: null as BiquadFilterNode | null,
+  musicDuckFilter: null as BiquadFilterNode | null,
+  isOverlayDucked: false,
   musicCompressor: null as DynamicsCompressorNode | null,
   reverbNode: null as ConvolverNode | null,
   reverbWetGain: null as GainNode | null,
@@ -112,12 +114,19 @@ export const ChiptuneAudio: any = {
         const reverbWet = this.ctx.createGain();
         reverbWet.gain.setValueAtTime(0.36, now);
 
+        const duckFilter = this.ctx.createBiquadFilter();
+        duckFilter.type = 'lowpass';
+        duckFilter.frequency.setValueAtTime(this.isOverlayDucked ? 900 : 22000, now);
+        duckFilter.Q.setValueAtTime(0.65, now);
+        duckFilter.connect(this.ctx.destination);
+        this.musicDuckFilter = duckFilter;
+
         this.musicGain.connect(tone);
         tone.connect(comp);
         tone.connect(reverb);
         reverb.connect(reverbWet);
         reverbWet.connect(comp);
-        comp.connect(this.ctx.destination);
+        comp.connect(duckFilter);
 
         this.musicToneFilter = tone;
         this.musicCompressor = comp;
@@ -129,7 +138,7 @@ export const ChiptuneAudio: any = {
         const sampleBus = this.ctx.createGain();
         sampleBus.gain.value = this.musicVolume * MUSIC_HEADROOM;
         sampleBus.gain.setValueAtTime(this.musicVolume * MUSIC_HEADROOM, now);
-        sampleBus.connect(this.ctx.destination);
+        sampleBus.connect(this.musicDuckFilter || this.ctx.destination);
         this.sampleMusicGain = sampleBus;
         void this.loadSampleBuffer('assets/audio/map_theme.ogg');
         void this.loadSampleBuffer('assets/audio/duel_theme.ogg');
@@ -245,6 +254,53 @@ export const ChiptuneAudio: any = {
 
   playSfxPreview() {
     playSound('bone');
+  },
+
+  setOverlayDuck(ducked: boolean) {
+    this.isOverlayDucked = ducked;
+    if (!this.ctx || !this.musicDuckFilter) return;
+    const now = this.ctx.currentTime;
+    const targetHz = ducked ? 900 : 22000;
+    const freq = this.musicDuckFilter.frequency;
+    try {
+      freq.cancelScheduledValues(now);
+      freq.setValueAtTime(Math.max(120, freq.value || (ducked ? 22000 : 900)), now);
+      freq.exponentialRampToValueAtTime(targetHz, now + (ducked ? 0.16 : 0.22));
+    } catch {
+      freq.setValueAtTime(targetHz, now);
+    }
+  },
+
+  playWoodTick(pitchRatio = 1) {
+    if (this.sfxVolume <= 0.001) return;
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    const dest = this.sfxBus || this.ctx.destination;
+    const now = this.ctx.currentTime;
+    const clampedPitch = Math.max(0.7, Math.min(1.55, pitchRatio));
+
+    // Short resonant tabletop wood tap
+    const osc = this.ctx.createOscillator();
+    const filt = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    const baseFreq = 520 * clampedPitch;
+    osc.frequency.setValueAtTime(baseFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.48, now + 0.032);
+
+    filt.type = 'bandpass';
+    filt.frequency.setValueAtTime(1150 * clampedPitch, now);
+    filt.Q.setValueAtTime(2.4, now);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.22, now + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.038);
+
+    osc.connect(filt);
+    filt.connect(gain);
+    gain.connect(dest);
+    osc.start(now);
+    osc.stop(now + 0.044);
   },
 
   createPanNode(dest: AudioNode, pan = 0): AudioNode {

@@ -740,3 +740,44 @@
 .anim-blood-moon-drop {
   animation: bloodMoonDescent 1.5s cubic-bezier(0.18, 0.9, 0.32, 1) forwards !important;
 }
+/* Micro-hitstop & heavy impact board recoil */
+@keyframes heavy-board-recoil {
+  0%   { transform: translate(-50%, 0) scale(0.96); filter: brightness(1); }
+  14%  { transform: translate(calc(-50% - 7px), 5px) scale(0.955); filter: brightness(1.16) contrast(1.06); }
+  32%  { transform: translate(calc(-50% + 6px), -4px) scale(0.966); filter: brightness(1.05); }
+  52%  { transform: translate(calc(-50% - 4px), 2px) scale(0.958); filter: brightness(1); }
+  74%  { transform: translate(calc(-50% + 2px), -1px) scale(0.961); }
+  100% { transform: translate(-50%, 0) scale(0.96); filter: brightness(1); }
+}
+
+.animate-heavy-recoil {
+  animation: heavy-board-recoil 0.34s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+}
+
+@keyframes scale-heavy-slam {
+  0%   { transform: scale(1) translateY(0); }
+  22%  { transform: scale(1.09, 0.96) translateY(-5px); }
+  48%  { transform: scale(0.97, 1.03) translateY(3px); }
+  72%  { transform: scale(1.02, 0.99) translateY(-1px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+.animate-scale-heavy-slam {
+  animation: scale-heavy-slam 0.42s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+}
+
+.hitstop-freeze {
+  filter: contrast(1.12) brightness(1.08);
+}
+
+/* Floating Sigil Chain Callout Badges */
+@keyframes sigil-badge-float {
+  0%   { opacity: 0; transform: translate(-50%, 10px) scale(0.84); }
+  18%  { opacity: 1; transform: translate(-50%, -4px) scale(1.04); }
+  76%  { opacity: 1; transform: translate(-50%, -22px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -36px) scale(0.94); }
+}
+
+.animate-sigil-badge {
+  animation: sigil-badge-float 0.92s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

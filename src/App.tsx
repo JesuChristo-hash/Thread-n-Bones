@@ -7,6 +7,14 @@ import React, { useState, useEffect, useRef, useCallback, type JSX } from 'react
 import cardBaseImg from './assets/card/card_base.png';
 import MapScreen from './components/MapScreen';
 import { ActMapData, MapNode, generateActMap, getBossForAct, getOrInitBossOrder } from './data/mapGenerator';
+import {
+  RITUAL_VOWS,
+  RITUAL_VOW_MAP,
+  createSeededRng,
+  generateRandomSeed,
+  normalizeSeed,
+  type VowId,
+} from './utils/seededRng';
 
 import {
   Skull,
@@ -932,6 +940,25 @@ export default function App() {
   const preDuelMapRef = useRef<ActMapData | null>(null);
   useEffect(() => { actMapRef.current = actMap; }, [actMap]);
 
+  // Deterministic Run Seed & Post-Clear Ritual Vows (Penances)
+  const [runSeed, setRunSeed] = useState<string>('');
+  const runSeedRef = useRef<string>('');
+  const [runSeedInput, setRunSeedInput] = useState<string>('');
+  const [activeVows, setActiveVows] = useState<VowId[]>([]);
+  const activeVowsRef = useRef<VowId[]>([]);
+  const [copiedEndSeed, setCopiedEndSeed] = useState<boolean>(false);
+  useEffect(() => { runSeedRef.current = runSeed; }, [runSeed]);
+  useEffect(() => { activeVowsRef.current = activeVows; }, [activeVows]);
+
+  const toggleRitualVow = (vowId: VowId) => {
+    setActiveVows(prev => {
+      const next = prev.includes(vowId) ? prev.filter(id => id !== vowId) : [...prev, vowId];
+      activeVowsRef.current = next;
+      return next;
+    });
+    triggerSfx('draw');
+  };
+
 // Event action lock to prevent double-clicks and spam
   const [isEventBusy, setIsEventBusy] = useState<boolean>(false);
   const [isTotemFadingOut, setIsTotemFadingOut] = useState<boolean>(false);
@@ -961,6 +988,24 @@ export default function App() {
   // Cave Trial Event
   const [caveTrials, setCaveTrials] = useState<string[]>([]);
   const [caveSelectedTrial, setCaveSelectedTrial] = useState<string | null>(null);
+  const [caveRevealCount, setCaveRevealCount] = useState<number>(0);
+  const [caveVerdictReady, setCaveVerdictReady] = useState<boolean>(false);
+  const [campfireHolding, setCampfireHolding] = useState<boolean>(false);
+  const [goobertStamping, setGoobertStamping] = useState<boolean>(false);
+  const eventTimersRef = useRef<number[]>([]);
+
+  const clearEventTimers = () => {
+    eventTimersRef.current.forEach(id => window.clearTimeout(id));
+    eventTimersRef.current = [];
+  };
+
+  const scheduleEventTimer = (fn: () => void, ms: number) => {
+    const id = window.setTimeout(() => {
+      eventTimersRef.current = eventTimersRef.current.filter(t => t !== id);
+      fn();
+    }, ms);
+    eventTimersRef.current.push(id);
+  };
   const [caveDrawnCards, setCaveDrawnCards] = useState<CardDef[]>([]);
   const [cavePassed, setCavePassed] = useState<boolean>(false);
   const [caveRewardCards, setCaveRewardCards] = useState<CardDef[]>([]);
@@ -1003,6 +1048,17 @@ export default function App() {
   const [droppingQueueLane, setDroppingQueueLane] = useState<number | null>(null);
   const [lateralMovements, setLateralMovements] = useState<Record<string, number>>({});
   const [isBoardRumbling, setIsBoardRumbling] = useState<boolean>(false);
+  const [isHeavyRecoil, setIsHeavyRecoil] = useState<boolean>(false);
+  const [isHitStop, setIsHitStop] = useState<boolean>(false);
+  const [isScaleHeavySlam, setIsScaleHeavySlam] = useState<boolean>(false);
+  const [sigilBadges, setSigilBadges] = useState<Array<{
+    id: number;
+    isPlayer: boolean;
+    lane: number;
+    text: string;
+    tone: 'gold' | 'bone' | 'blood' | 'emerald' | 'violet';
+  }>>([]);
+  const sigilBadgeIdRef = useRef<number>(1);
   const [summonedCardIds, setSummonedCardIds] = useState<Set<string>>(new Set());
 
   const [boneShaking, setBoneShaking] = useState<boolean>(false);
@@ -1065,6 +1121,8 @@ export default function App() {
     consecutiveOneTurnWins?: number;
     otkCooldown?: number;
     actMap?: ActMapData | null;
+    runSeed?: string;
+    activeVows?: VowId[];
     savedAt: number;
   }
 
@@ -1115,6 +1173,8 @@ export default function App() {
           consecutiveOneTurnWins,
           otkCooldown,
           actMap: actMapRef.current,
+          runSeed: runSeedRef.current,
+          activeVows: activeVowsRef.current,
           savedAt: Date.now(),
         };
         localStorage.setItem(RUN_SAVE_KEY, JSON.stringify(payload));
@@ -1123,7 +1183,7 @@ export default function App() {
         console.warn("Auto-save failed:", e);
       }
     }
-  }, [masterDeck, items, totalOverkillDamage, highestOverkill, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, actMap, screen]);
+  }, [masterDeck, items, totalOverkillDamage, highestOverkill, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, actMap, runSeed, activeVows, screen]);
 
   // --- Item Restock & Blood Bank Pricing ---
   const ITEM_COSTS: Record<ItemId, number> = {
@@ -1261,9 +1321,39 @@ export default function App() {
     setTimeout(() => setBoneShaking(false), 350);
   };
 
-  const animateCardDamage = async (isPlayer: boolean, lane: number) => {
-    setDamagedCard({ isPlayer, lane });
+  const spawnSigilBadge = (
+    isPlayer: boolean,
+    lane: number,
+    text: string,
+    tone: 'gold' | 'bone' | 'blood' | 'emerald' | 'violet' = 'gold'
+  ) => {
+    const id = sigilBadgeIdRef.current++;
+    setSigilBadges(prev => [...prev.slice(-10), { id, isPlayer, lane, text, tone }]);
+    window.setTimeout(() => {
+      setSigilBadges(prev => prev.filter(b => b.id !== id));
+    }, 950);
+  };
+
+  const triggerMicroHitstop = async (ms = 55) => {
+    setIsHitStop(true);
+    await new Promise(res => setTimeout(res, ms));
+    setIsHitStop(false);
+  };
+
+  const triggerScaleHeavySlam = () => {
+    setIsScaleHeavySlam(true);
+    window.setTimeout(() => setIsScaleHeavySlam(false), 430);
+  };
+
+  const animateCardDamage = async (isPlayer: boolean, lane: number, dmgAmount = 1, isLethal = false) => {
+    const isHeavy = dmgAmount >= 4 || isLethal;
     triggerSfx('hit');
+    if (isHeavy) {
+      setIsHeavyRecoil(true);
+      await triggerMicroHitstop(dmgAmount >= 5 ? 65 : 50);
+      window.setTimeout(() => setIsHeavyRecoil(false), 340);
+    }
+    setDamagedCard({ isPlayer, lane });
     await new Promise(res => setTimeout(res, 150));
     setDamagedCard(null);
   };
@@ -1274,11 +1364,20 @@ export default function App() {
     setDestroyedCard(null);
   };
 
-  const animateDirectDamageRumble = async () => {
-    setIsBoardRumbling(true);
+  const animateDirectDamageRumble = async (dmgAmount = 1, isLethalSwing = false) => {
+    const isHeavy = dmgAmount >= 4 || isLethalSwing;
     triggerSfx('hit');
-    await new Promise(res => setTimeout(res, 200));
-    setIsBoardRumbling(false);
+    if (isHeavy) {
+      setIsHeavyRecoil(true);
+      triggerScaleHeavySlam();
+      await triggerMicroHitstop(isLethalSwing ? 65 : 52);
+      await new Promise(res => setTimeout(res, 220));
+      setIsHeavyRecoil(false);
+    } else {
+      setIsBoardRumbling(true);
+      await new Promise(res => setTimeout(res, 200));
+      setIsBoardRumbling(false);
+    }
   };
 
   const triggerSigilJitter = async (isPlayer: boolean, lane: number) => {
@@ -1540,6 +1639,12 @@ export default function App() {
     };
   }, [audioEnabled, screen, showContinueModal]);
 
+  // Gently sweep music bus low-pass down (~900 Hz) while Pause or Deck overlay is open
+  useEffect(() => {
+    const shouldDuck = Boolean(showPauseMenu || screen === 'VIEW_DECK' || screen === 'DEV_MENU');
+    ChiptuneAudio.setOverlayDuck?.(shouldDuck);
+  }, [showPauseMenu, screen]);
+
   // Cleanup audio nodes on unmount
   useEffect(() => {
     return () => {
@@ -1580,9 +1685,11 @@ export default function App() {
     setScreen('DEV_MENU');
   };
 
-  const handleRestartRun = () => {
+  const handleRestartRun = (replaySeed?: unknown) => {
+    const seedToReplay = typeof replaySeed === 'string' ? normalizeSeed(replaySeed) : '';
     isForcedDevBossRef.current = false;
-    setScreen('SPLASH');
+    setRunSeedInput(seedToReplay);
+    setScreen(seedToReplay ? 'DECK_SELECT' : 'SPLASH');
     setScale(0);
     setBlood(0);
     setTotalOverkillDamage(0);
@@ -2017,10 +2124,14 @@ export default function App() {
       if (morselStats.attack > 0 || morselStats.health > 0) {
         playedCard.attack = (playedCard.attack || 0) + morselStats.attack;
         playedCard.health = (playedCard.health || 0) + morselStats.health;
+        spawnSigilBadge(true, laneIndex, `MORSEL +${morselStats.attack}/+${morselStats.health}`, 'emerald');
         addLog(`${playedCard.name} consumed the Morsel, gaining +${morselStats.attack}/+${morselStats.health}!`);
         setMorselStats({ attack: 0, health: 0 });
       }
 
+      if (activeTotem.head && activeTotem.body && (playedCard.class === activeTotem.head || activeTotem.head === 'ALL Classes')) {
+        spawnSigilBadge(true, laneIndex, `EFFIGY: ${activeTotem.body.toUpperCase()}`, 'violet');
+      }
       setPlayerBoard(prev => {
         const copy = [...prev];
         copy[laneIndex] = playedCard;
@@ -2954,6 +3065,7 @@ export default function App() {
     });
 
     if (evolvingLanes.length > 0) {
+      evolvingLanes.forEach(evLane => spawnSigilBadge(isPlayer, evLane, 'EVOLVED', 'gold'));
       // Update board state mid-flip so the card reveals its evolved art
       if (isPlayer) {
         setPlayerBoard(nextBoard);
@@ -3121,19 +3233,20 @@ export default function App() {
             await triggerSigilJitter(false, effectiveEnemyLane);
             eCard.shieldBroken = true;
             triggerSfx('armor');
+            spawnSigilBadge(false, effectiveEnemyLane, 'ARMOR BLOCKED', 'bone');
             addLog(`Enemy ${eCard.name}'s armor absorbed the attack!`);
             setEnemyBoard([...currEBoard]);
           } else {
-            // Damage Reaction:
-            // "Card Damaged: Target card applies a 0.15s shake animation and red hue flash. Displayed Health value must flash and decrement ONLY after the shake completes."
-            await animateCardDamage(false, effectiveEnemyLane);
+            const isTouchOfDeathLethal = pCard.sigils.includes('Touch of Death') && !eCard.sigils.includes('Made of Stone');
+            const willKillEnemy = isTouchOfDeathLethal || eCard.health - pAtk <= 0;
+            // Damage Reaction with micro-hitstop on heavy/lethal blows
+            await animateCardDamage(false, effectiveEnemyLane, pAtk, willKillEnemy && pAtk >= 3);
 
             const prevEHealth = eCard.health;
 
-            // Triggered INSIDE the resolved Promise of the damage shake:
-            const isTouchOfDeathLethal = pCard.sigils.includes('Touch of Death') && !eCard.sigils.includes('Made of Stone');
             if (isTouchOfDeathLethal) {
               await triggerSigilJitter(true, lane);
+              spawnSigilBadge(false, effectiveEnemyLane, 'DEATHTOUCH', 'blood');
               eCard.health = 0;
               addLog(`Touch of Death! Enemy ${eCard.name} perishes instantly.`);
             } else {
@@ -3146,6 +3259,7 @@ export default function App() {
             if (pCard.sigils.includes('Leech') && eCard.health <= 0 && stolenHealth > 0 && pCard.health > 0) {
               await triggerSigilJitter(true, lane);
               pCard.health += stolenHealth;
+              spawnSigilBadge(true, lane, `LEECH +${stolenHealth} HP`, 'emerald');
               triggerHpFlash(true, lane);
               setPlayerBoard([...currPBoard]);
               addLog(`${pCard.name}'s Leech drained ${stolenHealth} Health from ${eCard.name}!`);
@@ -3164,7 +3278,8 @@ export default function App() {
             // Sharp Quills counterattack from enemy
             if (eCard.sigils.includes('Sharp Quills')) {
               await triggerSigilJitter(false, effectiveEnemyLane);
-              await animateCardDamage(true, lane);
+              spawnSigilBadge(false, effectiveEnemyLane, 'QUILLS', 'blood');
+              await animateCardDamage(true, lane, 1, false);
               pCard.health -= 1;
               triggerHpFlash(true, lane);
               setPlayerBoard([...currPBoard]);
@@ -3285,8 +3400,8 @@ export default function App() {
             }
           }
         } else {
-          // Direct Player/Enemy Damage: Screen-rumble shake applied across all board zones for 0.2s
-          await animateDirectDamageRumble();
+          // Direct Player Damage with scaled hitstop & blood-runnel weight
+          await animateDirectDamageRumble(pAtk, currentScale + pAtk >= 5);
 
           // Step gauge 1 point at a time with tick sound
           let ventedThisStrike = 0;
@@ -3321,6 +3436,7 @@ export default function App() {
               const processedCard = transformAmorphous(applyPlayerTotem(drawnCard, activeTotem));
               handAdditions.push(processedCard);
               setDeck([...currDeck]);
+              spawnSigilBadge(true, lane, 'FORAGER +1', 'gold');
               addLog(`${pCard.name}'s Forager drew ${processedCard.name} from your deck!`);
             } else {
               addLog(`${pCard.name}'s Forager searched your deck, but it was empty.`);
@@ -3337,7 +3453,7 @@ export default function App() {
 
         if (matchStatus === 'PHASE_SHIFT' || isBoneLordPhase2Shift) {
           const nextPhase = bossPhase + 1;
-          setScale(-permanentScaleDebuff);
+          setScale(-permanentScaleDebuff - (activeVowsRef.current.includes('heavier_scale_debt') ? 1 : 0));
           setBossPhase(nextPhase);
           setIsPhaseTransition(true);
           triggerSfx('victory');
@@ -3630,11 +3746,13 @@ export default function App() {
       if (card && card.sigils.includes('Bone Digger')) {
         bonesDug += 1;
         currBones += 1;
+        spawnSigilBadge(true, c, '+1 BONE', 'bone');
         addLog(`${card.name}'s Bone Digger unearthed 1 Bone.`);
       }
       if (card && card.sigils.includes('Brittle') && card.hasAttackedThisTurn) {
         currBones += 2;
         currPBoard[c] = null;
+        spawnSigilBadge(true, c, 'BRITTLE +2 BONES', 'bone');
         addLog(`Your ${card.name} perished from Brittle (+2 Bones).`);
       } else if (card) {
         card.hasAttackedThisTurn = false;
@@ -3980,6 +4098,7 @@ export default function App() {
                   setHand(h => h.filter(c => c.id !== ceCard.id));
                   triggerSummonWipe(ceCard.id);
                   currPBoard[effectivePlayerLane] = ceCard;
+                  spawnSigilBadge(true, effectivePlayerLane, 'CORPSE EATER', 'violet');
                   addLog(`Corpse Eater triggered! ${ceCard.name} leaped into the fray!`);
                 } else {
                   currPBoard[effectivePlayerLane] = null;
@@ -3988,8 +4107,8 @@ export default function App() {
             }
           }
         } else {
-          // Direct Player/Enemy Damage: Screen-rumble shake applied across all board zones for 0.2s
-          await animateDirectDamageRumble();
+          // Direct Enemy Damage with scaled hitstop & blood-runnel weight
+          await animateDirectDamageRumble(eAtk, currentScale - eAtk <= -5);
           currentScale -= eAtk;
           setRunStats(s => ({ ...s, scaleDamageTaken: s.scaleDamageTaken + eAtk }));
           setScale(currentScale);
@@ -4772,8 +4891,21 @@ export default function App() {
         setOtkCooldown(data.otkCooldown);
       }
 
+      const restoredSeed = data.runSeed || data.actMap?.seed || '';
+      const restoredVows: VowId[] = Array.isArray(data.activeVows) ? data.activeVows : [];
+      setRunSeed(restoredSeed);
+      runSeedRef.current = restoredSeed;
+      setRunSeedInput(restoredSeed);
+      setActiveVows(restoredVows);
+      activeVowsRef.current = restoredVows;
+
       const restoredAct = Math.max(1, Math.min(4, data.stage ?? 1));
-      const restoredMap = data.actMap || generateActMap(restoredAct, getBossForAct(restoredAct), data.masterDeck?.length);
+      const restoredMap =
+        data.actMap ||
+        generateActMap(restoredAct, getBossForAct(restoredAct, restoredSeed), data.masterDeck?.length, {
+          seed: restoredSeed,
+          allEliteRow2: restoredVows.includes('all_elite_row2'),
+        });
       preDuelMapRef.current = null;
       setActMap(restoredMap);
       actMapRef.current = restoredMap;
@@ -5493,10 +5625,22 @@ export default function App() {
       isRandomizer = true;
     }
 
+    const resolvedSeed = normalizeSeed(runSeedInput) || generateRandomSeed();
+    setRunSeed(resolvedSeed);
+    runSeedRef.current = resolvedSeed;
+    setRunSeedInput(resolvedSeed);
+    delete (window as any).__standardBossOrder;
+
+    const draftRng = createSeededRng(`${resolvedSeed}:draft:${lineageId}`);
+    const isThinnerDraft = activeVowsRef.current.includes('thinner_draft');
+
     const pDeck = starters.map(name => cloneCard(ALL_CARD_LOOKUP[name] || MAIN_DECK_POOL[0]));
     pDeck.push(cloneCard(TOKEN_PELT));
-    pDeck.push(cloneCard(TOKEN_PELT));
+    if (!isThinnerDraft) {
+      pDeck.push(cloneCard(TOKEN_PELT));
+    }
 
+    const poolTarget = isThinnerDraft ? 5 : 8;
     const pool: CardDef[] = [];
     const seen = new Set<string>();
     const eligiblePool = MAIN_DECK_POOL.filter(isStarterDraftEligible);
@@ -5504,9 +5648,9 @@ export default function App() {
     let threeBloodCount = 0;
     let attempts = 0;
 
-    while (pool.length < 8 && attempts < 500) {
+    while (pool.length < poolTarget && attempts < 500) {
       attempts++;
-      const c = cloneCard(eligiblePool[Math.floor(Math.random() * eligiblePool.length)]);
+      const c = cloneCard(eligiblePool[Math.floor(draftRng() * eligiblePool.length)]);
       if (seen.has(c.name)) continue;
 
       const isBoneCard = (c.boneCost ?? 0) > 0;
@@ -5523,10 +5667,10 @@ export default function App() {
 
     setDraftPlayerDeck(pDeck);
     setDraftTradePool(pool);
-    setDraftTradesLeft(isRandomizer ? 4 : 2);
+    setDraftTradesLeft(isRandomizer ? (isThinnerDraft ? 3 : 4) : (isThinnerDraft ? 1 : 2));
     setDraftSelectedDeckIdx(null);
     setDraftSelectedTradeIdx(null);
-    setDraftRevealedIndices([0, 1, 2, 3, 4, 5, 6, 7]);
+    setDraftRevealedIndices(Array.from({ length: pool.length }, (_, idx) => idx));
     setDraftFlippingDown(false);
     setDraftFlippingUp(false);
     setScreen('DRAFT');
@@ -5632,8 +5776,16 @@ export default function App() {
     });
 
     // Initialize shuffled boss order and Act I parchment map (Row 1 preserves Altar / Campfire / Bone Lord fork)
-    const bossOrder = getOrInitBossOrder();
-    const firstActMap = generateActMap(1, bossOrder[0], draftPlayerDeck.length);
+    const seedForRun = runSeedRef.current || generateRandomSeed();
+    if (!runSeedRef.current) {
+      setRunSeed(seedForRun);
+      runSeedRef.current = seedForRun;
+    }
+    const bossOrder = getOrInitBossOrder(seedForRun);
+    const firstActMap = generateActMap(1, bossOrder[0], draftPlayerDeck.length, {
+      seed: seedForRun,
+      allEliteRow2: activeVowsRef.current.includes('all_elite_row2'),
+    });
     setActMap(firstActMap);
     preDuelMapRef.current = null;
     actMapRef.current = firstActMap;
@@ -5644,6 +5796,9 @@ export default function App() {
   // --- Return to Branching Parchment Map ---
   const returnToMap = (deckOverride?: CardDef[], totemOverride?: Totem | null) => {
     preDuelMapRef.current = null;
+    clearEventTimers();
+    setCampfireHolding(false);
+    setGoobertStamping(false);
     if (deckOverride) {
       setMasterDeck(deckOverride);
       masterDeckRef.current = deckOverride;
@@ -5654,9 +5809,13 @@ export default function App() {
 
     const currentDeckSize = deckOverride ? deckOverride.length : (masterDeckRef.current.length || masterDeck.length);
     const currMap = actMapRef.current;
+    const mapOpts = {
+      seed: runSeedRef.current || undefined,
+      allEliteRow2: activeVowsRef.current.includes('all_elite_row2'),
+    };
     if (!currMap) {
       const fallbackAct = Math.max(1, Math.min(4, stage));
-      const fresh = generateActMap(fallbackAct, getBossForAct(fallbackAct), currentDeckSize);
+      const fresh = generateActMap(fallbackAct, getBossForAct(fallbackAct, mapOpts.seed), currentDeckSize, mapOpts);
       setActMap(fresh);
       actMapRef.current = fresh;
       setCurrentStageName(fresh.actTitle);
@@ -5666,7 +5825,7 @@ export default function App() {
 
     if (currMap.completedBoss) {
       const nextAct = Math.min(4, currMap.act + 1);
-      const nextMap = generateActMap(nextAct, getBossForAct(nextAct), currentDeckSize);
+      const nextMap = generateActMap(nextAct, getBossForAct(nextAct, mapOpts.seed), currentDeckSize, mapOpts);
       setActMap(nextMap);
       actMapRef.current = nextMap;
       setCurrentStageName(nextMap.actTitle);
@@ -5725,7 +5884,9 @@ export default function App() {
 
   // --- Campfire Event ---
   const initCampfire = () => {
+    clearEventTimers();
     setIsEventBusy(false);
+    setCampfireHolding(false);
     setCampfireCardIdx(null);
     setCampfireBuffType(Math.random() < 0.5 ? 'attack' : 'health');
     setCampfireStage(0);
@@ -5736,14 +5897,16 @@ export default function App() {
     if (isEventBusy || campfireCardIdx === null) return;
     setIsEventBusy(true);
 
+    const selectedIdx = campfireCardIdx;
     const nextDeck = [...masterDeck];
-    const targetCard = nextDeck[campfireCardIdx];
+    const targetCard = nextDeck[selectedIdx];
     if (!targetCard) {
       setIsEventBusy(false);
       return;
     }
 
-    if (campfireStage === 0) {
+    const noSafeCampfire = activeVowsRef.current.includes('no_safe_campfire');
+    if (campfireStage === 0 && (!noSafeCampfire || isCampfireSafe)) {
       if (campfireBuffType === 'attack') targetCard.attack = (targetCard.attack || 0) + 1;
       else targetCard.health = (targetCard.health || 0) + 2;
       setMasterDeck(nextDeck);
@@ -5752,49 +5915,95 @@ export default function App() {
       triggerSfx('play');
       addLog(`Warmed ${targetCard.name} safely.`);
       setIsEventBusy(false);
-    } else {
-      const willDevour = !isCampfireSafe && Math.random() < 0.50;
-      if (willDevour) {
-        const poisonedSurvivors = Boolean(targetCard.sigils?.includes('Touch of Death'));
-        if (poisonedSurvivors) {
-          setIsCampfireSafe(true);
+    } else if (campfireStage === 0 && noSafeCampfire && !isCampfireSafe) {
+      setCampfireHolding(true);
+      triggerSfx('bone');
+      const buffType = campfireBuffType;
+      scheduleEventTimer(() => {
+        setCampfireHolding(false);
+        const willDevour = Math.random() < 0.35;
+        if (willDevour) {
+          const poisonedSurvivors = Boolean(targetCard.sigils?.includes('Touch of Death'));
+          if (poisonedSurvivors) setIsCampfireSafe(true);
+          nextDeck.splice(selectedIdx, 1);
+          setCampfireCardIdx(null);
+          setMasterDeck(nextDeck);
+          masterDeckRef.current = nextDeck;
+          triggerSfx('defeat');
+          setModalAlert({
+            title: "DROWNED BY THE ZEALOT",
+            message: poisonedSurvivors
+              ? `Under the Vow of Boiling Zeal, the Zealot plunged ${targetCard.name} into the font on the first dip—yet its Unholy Crest poisoned the flock!`
+              : `Under the Vow of Boiling Zeal, the Zealot snatched ${targetCard.name} into the boiling blood on the very first dip!`,
+            isWin: false,
+            btnText: "Flee the Chapel",
+            onAction: () => {
+              setModalAlert(null);
+              setIsEventBusy(false);
+              returnToMap(nextDeck);
+            }
+          });
+        } else {
+          if (buffType === 'attack') targetCard.attack = (targetCard.attack || 0) + 1;
+          else targetCard.health = (targetCard.health || 0) + 2;
+          setMasterDeck(nextDeck);
+          masterDeckRef.current = nextDeck;
+          setCampfireStage(1);
+          triggerSfx('play');
+          addLog(`${targetCard.name} survived the perilous first baptism.`);
+          setIsEventBusy(false);
         }
-        nextDeck.splice(campfireCardIdx, 1);
-        setCampfireCardIdx(null);
-        setMasterDeck(nextDeck);
-        masterDeckRef.current = nextDeck;
-        triggerSfx('defeat');
-        setModalAlert({
-          title: "DROWNED BY THE ZEALOT",
-          message: poisonedSurvivors
-            ? `The Zealot plunged the ${targetCard.name} into the boiling blood! In its demise, its Unholy Crest cursed the Zealot's flock.`
-            : `The Zealot plunged the ${targetCard.name} into the boiling blood! You watch helplessly...`,
-          isWin: false,
-          btnText: "Flee the Chapel",
-          onAction: () => {
-            setModalAlert(null);
-            setIsEventBusy(false);
-            returnToMap(nextDeck);
+      }, 620);
+    } else {
+      setCampfireHolding(true);
+      triggerSfx('bone');
+      const buffType = campfireBuffType;
+      const safe = isCampfireSafe;
+      scheduleEventTimer(() => {
+        setCampfireHolding(false);
+        const willDevour = !safe && Math.random() < 0.50;
+        if (willDevour) {
+          const poisonedSurvivors = Boolean(targetCard.sigils?.includes('Touch of Death'));
+          if (poisonedSurvivors) {
+            setIsCampfireSafe(true);
           }
-        });
-      } else {
-        if (campfireBuffType === 'attack') targetCard.attack = (targetCard.attack || 0) + 1;
-        else targetCard.health = (targetCard.health || 0) + 2;
-        setMasterDeck(nextDeck);
-        masterDeckRef.current = nextDeck;
-        triggerSfx('victory');
-        setModalAlert({
-          title: "BATHED AGAIN",
-          message: `${targetCard.name} absorbs the blood blessing, you shudder at its abnormal growth...`,
-          isWin: true,
-          btnText: "Leave the Chapel",
-          onAction: () => {
-            setModalAlert(null);
-            setIsEventBusy(false);
-            returnToMap(nextDeck);
-          }
-        });
-      }
+          nextDeck.splice(selectedIdx, 1);
+          setCampfireCardIdx(null);
+          setMasterDeck(nextDeck);
+          masterDeckRef.current = nextDeck;
+          triggerSfx('defeat');
+          setModalAlert({
+            title: "DROWNED BY THE ZEALOT",
+            message: poisonedSurvivors
+              ? `The Zealot plunged the ${targetCard.name} into the boiling blood! In its demise, its Unholy Crest cursed the Zealot's flock.`
+              : `The Zealot plunged the ${targetCard.name} into the boiling blood! You watch helplessly...`,
+            isWin: false,
+            btnText: "Flee the Chapel",
+            onAction: () => {
+              setModalAlert(null);
+              setIsEventBusy(false);
+              returnToMap(nextDeck);
+            }
+          });
+        } else {
+          if (buffType === 'attack') targetCard.attack = (targetCard.attack || 0) + 1;
+          else targetCard.health = (targetCard.health || 0) + 2;
+          setMasterDeck(nextDeck);
+          masterDeckRef.current = nextDeck;
+          triggerSfx('victory');
+          setModalAlert({
+            title: "BATHED AGAIN",
+            message: `${targetCard.name} absorbs the blood blessing, you shudder at its abnormal growth...`,
+            isWin: true,
+            btnText: "Leave the Chapel",
+            onAction: () => {
+              setModalAlert(null);
+              setIsEventBusy(false);
+              returnToMap(nextDeck);
+            }
+          });
+        }
+      }, 620);
     }
   };
 
@@ -6113,7 +6322,9 @@ export default function App() {
   };
 
   const initGoobert = () => {
+    clearEventTimers();
     setIsEventBusy(false);
+    setGoobertStamping(false);
     setGoobertSelectedIdx(null);
     setScreen('EVENT_GOOBERT');
   };
@@ -6127,53 +6338,61 @@ export default function App() {
       setIsEventBusy(false);
       return;
     }
-    setGoobertSelectedIdx(null);
 
-    const clone = cloneCard(original);
+    setGoobertStamping(true);
+    triggerSfx('bell');
 
-    // Flag as Goobert creation
-    clone.isGoobertClone = true;
-    clone.id = `goobert-${Date.now()}`;
+    scheduleEventTimer(() => {
+      setGoobertStamping(false);
+      setGoobertSelectedIdx(null);
 
-    const mutated = Math.random() < 0.5;
-    let desc = `The Press did indeed Stamp a pristine ${original.name}!`;
+      const clone = cloneCard(original);
+      clone.isGoobertClone = true;
+      clone.id = `goobert-${Date.now()}`;
 
-    if (mutated) {
-      if (Math.random() < 0.5) {
-        const delta = Math.random() < 0.5 ? 1 : -1;
-        clone.attack = Math.max(0, (clone.attack || 0) + delta);
-        desc = `The Begotten slammed the Press shut. The Stamped ${original.name}'s attack shifted by ${delta > 0 ? '+1' : '-1'}.`;
-      } else {
-        const pool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
-        clone.sigils = [pool[Math.floor(Math.random() * pool.length)]];
-        desc = `The Begotten's carelessness cut ${original.name}'s crest in the Press, he Stamped it with ${clone.sigils[0]} to "compensate!"`;
+      const mutated = Math.random() < 0.5;
+      let desc = `The Press did indeed Stamp a pristine ${original.name}!`;
+
+      if (mutated) {
+        if (Math.random() < 0.5) {
+          const delta = Math.random() < 0.5 ? 1 : -1;
+          clone.attack = Math.max(0, (clone.attack || 0) + delta);
+          desc = `The Begotten slammed the Press shut. The Stamped ${original.name}'s attack shifted by ${delta > 0 ? '+1' : '-1'}.`;
+        } else {
+          const pool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
+          clone.sigils = [pool[Math.floor(Math.random() * pool.length)]];
+          desc = `The Begotten's carelessness cut ${original.name}'s crest in the Press, he Stamped it with ${clone.sigils[0]} to "compensate!"`;
+        }
       }
-    }
 
-    const nextDeck = [...masterDeck, clone];
-    setMasterDeck(nextDeck);
-    masterDeckRef.current = nextDeck;
-    triggerSfx('play');
-    setModalAlert({
-      title: "THE BEGOTTEN SNEERS",
-      message: desc,
-      isWin: true,
-      btnText: "VENTURE ONWARD",
-      onAction: () => {
-        setModalAlert(null);
-        returnToMap(nextDeck);
-      }
-    });
+      const nextDeck = [...masterDeck, clone];
+      setMasterDeck(nextDeck);
+      masterDeckRef.current = nextDeck;
+      triggerSfx('play');
+      setModalAlert({
+        title: "THE BEGOTTEN SNEERS",
+        message: desc,
+        isWin: true,
+        btnText: "VENTURE ONWARD",
+        onAction: () => {
+          setModalAlert(null);
+          returnToMap(nextDeck);
+        }
+      });
+    }, 580);
   };
 
   // --- Cave Trials Event ---
     const initCaveTrial = () => {
+      clearEventTimers();
       setIsEventBusy(false);
       const trialTypes = ['Trial of Bones', 'Trial of Blood', 'Trial of Power', 'Trial of Health', 'Trial of Wisdom', 'Trial of Kin'];
       const chosen = [...trialTypes].sort(() => Math.random() - 0.5).slice(0, 3);
       setCaveTrials(chosen);
       setCaveSelectedTrial(null);
       setCaveDrawnCards([]);
+      setCaveRevealCount(0);
+      setCaveVerdictReady(false);
       setCavePassed(false);
       setCaveRewardCards([]);
       setCaveSelectedRewardIdx(null);
@@ -6236,30 +6455,51 @@ export default function App() {
 
   const evaluateCaveTrial = (trialName: string) => {
     if (isEventBusy || caveSelectedTrial) return;
+    clearEventTimers();
     setIsEventBusy(true);
     setCaveSelectedTrial(trialName);
     const shuffled = [...masterDeck].sort(() => Math.random() - 0.5);
     const drawn = shuffled.slice(0, 3);
     setCaveDrawnCards(drawn);
+    setCaveRevealCount(0);
+    setCaveVerdictReady(false);
+    setCaveRewardCards([]);
+    setCaveSelectedRewardIdx(null);
 
     const rule = CAVE_TRIAL_RULES[trialName];
     const passed = rule ? rule.evaluate(drawn).passed : false;
-
     setCavePassed(passed);
+
+    const rewards: CardDef[] = [];
     if (passed) {
-      triggerSfx('victory');
       const sigilPool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
-      const rewards: CardDef[] = [];
       while (rewards.length < 3) {
         const base = cloneCard(EVENT_CARD_POOL[Math.floor(Math.random() * EVENT_CARD_POOL.length)]);
         const extraSigil = sigilPool[Math.floor(Math.random() * sigilPool.length)];
         if (!base.sigils.includes(extraSigil)) base.sigils.push(extraSigil);
         rewards.push(base);
       }
-      setCaveRewardCards(rewards);
-    } else {
-      triggerSfx('defeat');
     }
+
+    // Stagger each witness card draw with cardstock foley
+    drawn.forEach((_, idx) => {
+      scheduleEventTimer(() => {
+        setCaveRevealCount(idx + 1);
+        triggerSfx('draw');
+      }, 180 + idx * 240);
+    });
+
+    // Slam verdict + rewards after the final card lands
+    const verdictDelay = 180 + Math.max(1, drawn.length) * 240 + 260;
+    scheduleEventTimer(() => {
+      setCaveVerdictReady(true);
+      if (passed) {
+        setCaveRewardCards(rewards);
+        triggerSfx('victory');
+      } else {
+        triggerSfx('defeat');
+      }
+    }, verdictDelay);
   };
 
   // --- Card Choice Event ---
@@ -7467,7 +7707,7 @@ export default function App() {
          ========================================================================= */}
       {screen === 'DECK_SELECT' && (
         <div
-          className="absolute inset-0 z-50 flex flex-col items-center justify-between px-8 py-5 overflow-hidden animate-fade-up font-mono select-none"
+          className="absolute inset-0 z-50 flex flex-col items-center justify-between px-6 sm:px-8 py-4 overflow-y-auto animate-fade-up font-mono select-none"
           style={getScreenBgStyle('deck-selection.jpg')}
         >
           {/* Atmospheric Vignette & Candlelight Overlays */}
@@ -7490,6 +7730,88 @@ export default function App() {
             <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-[#b89768]/75 mt-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
               Select a starting offering to carry into the dark
             </p>
+
+            {/* Run Seed & Post-Clear Ritual Vows Bar */}
+            {(() => {
+              const vowsUnlocked =
+                (archive.runsWon || 0) > 0 || (archive.defeatedBosses || []).includes('BoneLord');
+              return (
+                <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2.5 px-3 py-1.5 rounded-[3px] bg-[#0c0806]/82 border border-[#3e2a1b]/85 shadow-[0_10px_26px_rgba(0,0,0,0.85)] backdrop-blur-[2px]">
+                  {/* Deterministic Run Seed Input */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] uppercase tracking-[0.22em] text-[#b5905c] font-bold">
+                      Seed
+                    </span>
+                    <input
+                      type="text"
+                      value={runSeedInput}
+                      onChange={e => setRunSeedInput(normalizeSeed(e.target.value))}
+                      placeholder="RANDOM"
+                      maxLength={14}
+                      aria-label="Run Seed"
+                      className="w-28 px-2 py-0.5 rounded-[2px] bg-[#160f0a] border border-[#4e3622] focus:border-[#d4af37] outline-none text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#f3dfb6] placeholder:text-[#6f573d]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRunSeedInput(generateRandomSeed());
+                        triggerSfx('draw');
+                      }}
+                      title="Roll a fresh deterministic seed"
+                      className="px-2 py-0.5 rounded-[2px] bg-[#1d140d] hover:bg-[#2c1e13] border border-[#6e4e2c]/80 hover:border-[#d4af37] text-[9px] font-mono font-bold uppercase tracking-[0.14em] text-[#e5c994] hover:text-white cursor-pointer transition-colors"
+                    >
+                      Roll
+                    </button>
+                    {runSeedInput && (
+                      <button
+                        type="button"
+                        onClick={() => setRunSeedInput('')}
+                        title="Clear custom seed"
+                        className="px-1.5 py-0.5 rounded-[2px] text-[9px] text-[#9c8162] hover:text-[#f0dab2] cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="hidden sm:block h-4 w-px bg-[#3c291b]" />
+
+                  {/* Unlockable Ritual Vows (Penances) */}
+                  {vowsUnlocked ? (
+                    <div className="flex flex-wrap items-center justify-center gap-1.5">
+                      <span className="text-[9px] uppercase tracking-[0.22em] text-red-400/90 font-bold mr-0.5">
+                        Vows
+                      </span>
+                      {RITUAL_VOWS.map(vow => {
+                        const isActive = activeVows.includes(vow.id);
+                        return (
+                          <button
+                            key={vow.id}
+                            type="button"
+                            onClick={() => toggleRitualVow(vow.id)}
+                            title={`${vow.name}: ${vow.desc}`}
+                            className={`px-2 py-0.5 rounded-[2px] border text-[9px] font-mono font-bold uppercase tracking-[0.12em] cursor-pointer transition-all ${
+                              isActive
+                                ? 'bg-[#36100d] border-red-400/90 text-red-100 shadow-[0_0_10px_rgba(220,38,38,0.45)]'
+                                : 'bg-[#140d09] border-[#453020] text-[#b89d79] hover:border-[#9e7342] hover:text-[#f0dab2]'
+                            }`}
+                          >
+                            {isActive ? '✦ ' : ''}{vow.shortTag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <span
+                      title="Defeat the Bone Lord once to unbind optional Ritual Vows (Penances)."
+                      className="text-[9px] font-mono uppercase tracking-[0.16em] text-[#8d7253]/85"
+                    >
+                      🔒 Ritual Vows — Seal the Bone Lord to Unlock
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* 3x2 Recessed Altar Plaques */}
@@ -7565,10 +7887,10 @@ export default function App() {
          ========================================================================= */}
       {screen === 'GAME_OVER' && (
         <div
-          className="absolute inset-0 bg-[#080204] z-50 flex flex-col items-center justify-center p-6 text-center select-none animate-fade-up font-mono"
+          className="absolute inset-0 bg-[#080204] z-50 flex flex-col items-center justify-start p-4 sm:p-6 text-center select-none overflow-y-auto animate-fade-up font-mono"
           style={getScreenBgStyle('gameover.jpg')}
         >
-          <div className="max-w-xl w-full flex flex-col items-center bg-[#0d0806]/92 border border-[#3e2316] rounded-sm p-8 shadow-[0_22px_55px_rgba(0,0,0,0.95)] backdrop-blur-[2px]">
+          <div className="max-w-3xl w-full my-auto flex flex-col items-center bg-[#0d0806]/92 border border-[#3e2316] rounded-sm p-6 sm:p-7 shadow-[0_22px_55px_rgba(0,0,0,0.95)] backdrop-blur-[2px]">
             <div className="text-4xl mb-2 filter sepia-[0.4]">
               {bossState.ritualEndedVoluntarily ? '🕯️' : bossState.ritualSurrendered ? '🕯️' : '💀'}
             </div>
@@ -7638,12 +7960,134 @@ export default function App() {
               </div>
             </div>
 
-            <button
-              onClick={handleRestartRun}
-              className="bg-[#1e1510] hover:bg-[#2c1e16] active:bg-[#140e0b] border border-[#482c1d] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.08)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e8d7be] hover:text-[#fff] px-8 py-3 select-none cursor-pointer"
-            >
-              COMMENCE ANOTHER RITUAL
-            </button>
+            {/* Run Seed & Active Vows Strip */}
+            {(runSeed || activeVows.length > 0) && (
+              <div className="w-full mb-4 px-4 py-2 rounded-sm bg-[#120b08]/88 border border-[#362015] flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono">
+                {runSeed && (
+                  <div className="flex items-center gap-2">
+                    <span className="uppercase tracking-[0.2em] text-[#9b8265]">Run Seed</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try { navigator.clipboard?.writeText(runSeed); } catch {}
+                        setCopiedEndSeed(true);
+                        window.setTimeout(() => setCopiedEndSeed(false), 1400);
+                      }}
+                      title="Click to copy seed"
+                      className="px-2 py-0.5 rounded-[2px] bg-[#1c130c] border border-[#6e4d2b] text-[#f0d39a] hover:text-white font-bold tracking-[0.14em] cursor-pointer transition-colors"
+                    >
+                      {copiedEndSeed ? 'COPIED ✓' : runSeed}
+                    </button>
+                  </div>
+                )}
+                {activeVows.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="uppercase tracking-[0.18em] text-red-400/85">Vows</span>
+                    {activeVows.map(vId => (
+                      <span
+                        key={vId}
+                        className="px-2 py-0.5 rounded-[2px] bg-[#2a0c0a] border border-red-800/80 text-[9px] font-bold uppercase tracking-[0.1em] text-red-200"
+                      >
+                        ✦ {RITUAL_VOW_MAP[vId]?.shortTag || vId}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* End-Screen Deck Trophy Strip */}
+            {masterDeck.length > 0 && (() => {
+              const annotated = masterDeck.map((c, idx) => {
+                const base = ALL_CARD_LOOKUP[c.name];
+                const isFused = Boolean((c as any).isMycologistCombined);
+                const isForged = Boolean((c as any).isGoobertClone);
+                const atkDelta = base ? (c.attack || 0) - (base.attack || 0) : 0;
+                const hpDelta = base ? (c.health || 0) - (base.health || 0) : 0;
+                const sigilDelta = base ? (c.sigils?.length || 0) - (base.sigils?.length || 0) : 0;
+                const isBuffed = atkDelta > 0 || hpDelta > 0;
+                const isGrafted = sigilDelta > 0;
+
+                let badge: { label: string; cls: string; rank: number } | null = null;
+                if (isFused) {
+                  badge = {
+                    label: 'FUSED',
+                    cls: 'bg-[#21102a]/95 border-purple-400/85 text-purple-200',
+                    rank: 4,
+                  };
+                } else if (isForged) {
+                  badge = {
+                    label: 'FORGED',
+                    cls: 'bg-[#09201c]/95 border-teal-400/85 text-teal-200',
+                    rank: 3,
+                  };
+                } else if (isBuffed) {
+                  badge = {
+                    label: `+${Math.max(0, atkDelta)}/+${Math.max(0, hpDelta)}`,
+                    cls: 'bg-[#2a110a]/95 border-amber-400/85 text-amber-200',
+                    rank: 2,
+                  };
+                } else if (isGrafted) {
+                  badge = {
+                    label: 'GRAFTED',
+                    cls: 'bg-[#1f1709]/95 border-[#d4af37]/85 text-[#f4d78b]',
+                    rank: 1,
+                  };
+                }
+                return { card: c, idx, badge, rank: badge?.rank || 0 };
+              });
+
+              const sorted = [...annotated].sort((a, b) => b.rank - a.rank);
+
+              return (
+                <div className="w-full mb-5 p-3.5 rounded-sm bg-[#120b08]/85 border border-[#3a2317] text-left">
+                  <div className="flex items-center justify-between border-b border-[#2e1c12] pb-1.5 mb-2.5">
+                    <span className="text-[10px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#d6b377]">
+                      Final Grimoire ({masterDeck.length} Creatures)
+                    </span>
+                    <span className="text-[9px] font-mono uppercase tracking-[0.16em] text-[#8d7458]">
+                      Fusions • Forgeries • Blessings
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 max-h-[225px] overflow-y-auto pt-3 pb-1 px-1">
+                    {sorted.map(({ card, idx, badge }) => (
+                      <div
+                        key={card.id || `trophy-${card.name}-${idx}`}
+                        className="relative flex flex-col items-center pointer-events-none"
+                      >
+                        {badge && (
+                          <span
+                            className={`absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 px-1.5 py-0.5 rounded-[2px] border text-[7.5px] font-mono font-bold uppercase tracking-[0.16em] whitespace-nowrap shadow-md ${badge.cls}`}
+                          >
+                            {badge.label}
+                          </span>
+                        )}
+                        <div className="scale-[0.72] -mx-3 -my-5">
+                          {renderCard(card, { isClickable: false, disableHoverScale: true })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {runSeed && (
+                <button
+                  onClick={() => handleRestartRun(runSeed)}
+                  className="bg-[#18110c] hover:bg-[#261b12] active:translate-y-[1px] border border-[#8e6a3c]/80 hover:border-[#e5c16b] rounded-sm shadow-[0_2px_0_#0a0807] transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e6c88e] hover:text-white px-6 py-3 select-none cursor-pointer"
+                >
+                  REPLAY THIS SEED
+                </button>
+              )}
+              <button
+                onClick={() => handleRestartRun()}
+                className="bg-[#1e1510] hover:bg-[#2c1e16] active:bg-[#140e0b] border border-[#482c1d] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.08)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e8d7be] hover:text-[#fff] px-8 py-3 select-none cursor-pointer"
+              >
+                COMMENCE ANOTHER RITUAL
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -8104,12 +8548,22 @@ export default function App() {
          ========================================================================= */}
       {screen === 'EVENT_CROSSROADS' && (
         <MapScreen
-          mapData={actMap || generateActMap(Math.max(1, Math.min(4, stage)), getBossForAct(Math.max(1, Math.min(4, stage))), masterDeck.length)}
+          mapData={
+            actMap ||
+            generateActMap(
+              Math.max(1, Math.min(4, stage)),
+              getBossForAct(Math.max(1, Math.min(4, stage)), runSeed || undefined),
+              masterDeck.length,
+              { seed: runSeed || undefined, allEliteRow2: activeVows.includes('all_elite_row2') }
+            )
+          }
           bgStyle={getScreenBgStyle('crossroads-select.jpg')}
           deckSize={masterDeck.length}
           overkillBlood={totalOverkillDamage}
           startingBones={startingBones}
           activeTotem={activeTotem}
+          runSeed={runSeed}
+          activeVows={activeVows}
           onSelectNode={handleSelectMapNode}
         />
       )}
@@ -8315,6 +8769,11 @@ export default function App() {
               <span className="px-3.5 py-1 rounded-[2px] bg-[#1a0d09]/90 border border-[#783422]/80 text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#f2b886]">
                 Font Grants: {campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'}
               </span>
+              {campfireStage === 0 && activeVows.includes('no_safe_campfire') && !isCampfireSafe && (
+                <span className="px-3 py-1 rounded-[2px] border bg-[#240b09]/90 border-red-700/80 text-red-300 text-[10px] font-mono font-bold uppercase tracking-[0.2em]">
+                  Vow Active — 35% First-Dip Risk
+                </span>
+              )}
               {campfireStage > 0 && (
                 <span
                   className={`px-3 py-1 rounded-[2px] border text-[10px] font-mono font-bold uppercase tracking-[0.2em] ${
@@ -8369,14 +8828,17 @@ export default function App() {
                 disabled={campfireCardIdx === null || isEventBusy}
                 className="px-6 py-2.5 rounded-[2px] bg-gradient-to-b from-[#351510] to-[#1a0a07] hover:from-[#471c15] hover:to-[#240e0a] active:translate-y-[1px] border border-[#b45a3c]/85 hover:border-[#e68762] text-[#f6d5be] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,210,180,0.14)] transition-all select-none"
               >
-                {campfireStage === 0
-                  ? `Baptize Creature (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`
-                  : `Bathe Again (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`}
+                {campfireHolding
+                  ? 'Submerging...'
+                  : campfireStage === 0
+                    ? `Baptize Creature (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`
+                    : `Bathe Again (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`}
               </button>
               {campfireStage > 0 && (
                 <button
                   onClick={() => returnToMap()}
-                  className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
+                  disabled={campfireHolding || isEventBusy}
+                  className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
                 >
                   Flee the Chapel
                 </button>
@@ -8916,7 +9378,7 @@ export default function App() {
                 disabled={goobertSelectedIdx === null || isEventBusy}
                 className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#13332b] to-[#0a1c17] hover:from-[#1b463b] hover:to-[#0f2922] active:translate-y-[1px] border border-teal-500/80 hover:border-teal-300 text-teal-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.88)] transition-all select-none"
               >
-                Stamp Your Card
+                {goobertStamping ? 'Pressing Plate...' : 'Stamp Your Card'}
               </button>
             </div>
           </div>
@@ -8995,42 +9457,64 @@ export default function App() {
               </>
             ) : (() => {
               const rule = CAVE_TRIAL_RULES[caveSelectedTrial];
-              const evalResult = rule ? rule.evaluate(caveDrawnCards) : null;
+              const revealedCards = caveDrawnCards.slice(0, caveRevealCount);
+              const liveResult = rule ? rule.evaluate(revealedCards) : null;
               return (
                 <div className="flex flex-col items-center w-full mt-2">
-                  {/* Verdict + Condition Breakdown */}
+                  {/* Live Tally -> Final Verdict Stamp */}
                   <div
-                    className={`mb-3 px-4 py-2 rounded-[2px] border shadow-md flex flex-col items-center gap-0.5 ${
-                      cavePassed
-                        ? 'bg-[#1a1309]/92 border-[#d4af37]/85 text-[#f4d78b]'
-                        : 'bg-[#210b09]/92 border-red-700/85 text-red-300'
+                    className={`mb-3 px-4 py-2 rounded-[2px] border shadow-md flex flex-col items-center gap-0.5 transition-all duration-300 ${
+                      !caveVerdictReady
+                        ? 'bg-[#140e09]/92 border-[#8c6a3d]/80 text-[#e4c896]'
+                        : cavePassed
+                          ? 'bg-[#1a1309]/92 border-[#d4af37]/85 text-[#f4d78b] scale-[1.03]'
+                          : 'bg-[#210b09]/92 border-red-700/85 text-red-300 scale-[1.03]'
                     }`}
                   >
                     <div className="font-['Cinzel',_serif] text-sm sm:text-base font-bold uppercase tracking-[0.22em]">
-                      {caveSelectedTrial} — {cavePassed ? 'Passed' : 'Failed'}
+                      {caveSelectedTrial} — {!caveVerdictReady ? 'Weighing...' : cavePassed ? 'Passed' : 'Failed'}
                     </div>
-                    {rule && evalResult && (
+                    {rule && liveResult && (
                       <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#e6d2b3]/90">
-                        {evalResult.detail} <span className="text-[#9e825f] mx-1.5">•</span> Need: {rule.requirement}
+                        {liveResult.detail} <span className="text-[#9e825f] mx-1.5">•</span> Need: {rule.requirement}
                       </div>
                     )}
                   </div>
 
-                  {/* Drawn Witness Cards */}
+                  {/* Staggered Drawn Witness Cards */}
                   <div className="relative w-full px-4 py-3 mb-3 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_14px_34px_rgba(0,0,0,0.88)] backdrop-blur-[2px]">
                     <div className="text-[9px] font-mono uppercase tracking-[0.26em] text-[#b48f5a] mb-1">
-                      Weighed Upon the Scales
+                      Weighed Upon the Scales ({Math.min(caveRevealCount, caveDrawnCards.length)} / {caveDrawnCards.length})
                     </div>
-                    <div className="flex flex-wrap gap-2 sm:gap-3 justify-center items-center">
-                      {caveDrawnCards.map((c, i) => (
-                        <div key={c.id || `cave-drawn-${i}`} className="scale-[0.82] -my-4 pointer-events-none">
-                          {renderCard(c, { isClickable: false, disableHoverScale: true })}
-                        </div>
-                      ))}
+                    <div className="flex flex-wrap gap-2 sm:gap-3 justify-center items-center min-h-[168px]">
+                      {caveDrawnCards.map((c, i) => {
+                        const isShown = i < caveRevealCount;
+                        return (
+                          <div
+                            key={c.id || `cave-drawn-${i}`}
+                            className="scale-[0.82] -my-4 pointer-events-none transition-all duration-200"
+                          >
+                            {isShown ? (
+                              <div className="animate-fade-up">
+                                {renderCard(c, { isClickable: false, disableHoverScale: true })}
+                              </div>
+                            ) : (
+                              <div className="w-[120px] h-[176px] rounded-[4px] bg-gradient-to-b from-[#1a110b] to-[#0c0805] border border-[#5a3d24]/75 shadow-inner flex flex-col items-center justify-center gap-1.5 opacity-80">
+                                <span className="w-6 h-6 rounded-full border border-[#8e6a3c]/60 flex items-center justify-center text-[10px] font-['Cinzel',_serif] text-[#b48f5a]">
+                                  {['I', 'II', 'III'][i] || i + 1}
+                                </span>
+                                <span className="text-[8px] font-mono uppercase tracking-[0.22em] text-[#7c6142]">
+                                  Drawing
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {cavePassed && (
+                  {caveVerdictReady && cavePassed && (
                     <div className="relative w-full px-4 py-3 mb-4 rounded-[3px] bg-[#100b07]/84 border border-[#5a3d24]/85 shadow-[0_16px_38px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
                       <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#d4af37]/75" />
                       <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#d4af37]/75" />
@@ -9066,22 +9550,24 @@ export default function App() {
                     </div>
                   )}
 
-                  <button
-                    onClick={() => {
-                      setIsEventBusy(false);
-                      let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
-                      if (cavePassed && caveSelectedRewardIdx !== null) {
-                        updatedDeck = [...updatedDeck, cloneCard(caveRewardCards[caveSelectedRewardIdx])];
-                        setMasterDeck(updatedDeck);
-                        masterDeckRef.current = updatedDeck;
-                      }
-                      returnToMap(updatedDeck);
-                    }}
-                    disabled={cavePassed && caveSelectedRewardIdx === null}
-                    className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
-                  >
-                    {cavePassed ? 'Claim & Proceed' : 'Depart the Steeple'}
-                  </button>
+                  {caveVerdictReady && (
+                    <button
+                      onClick={() => {
+                        setIsEventBusy(false);
+                        let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
+                        if (cavePassed && caveSelectedRewardIdx !== null) {
+                          updatedDeck = [...updatedDeck, cloneCard(caveRewardCards[caveSelectedRewardIdx])];
+                          setMasterDeck(updatedDeck);
+                          masterDeckRef.current = updatedDeck;
+                        }
+                        returnToMap(updatedDeck);
+                      }}
+                      disabled={cavePassed && caveSelectedRewardIdx === null}
+                      className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none animate-fade-up"
+                    >
+                      {cavePassed ? 'Claim & Proceed' : 'Depart the Steeple'}
+                    </button>
+                  )}
                 </div>
               );
             })()}
@@ -10628,7 +11114,7 @@ export default function App() {
               </div> {/* Closes FIXED LEFT FLANK */}
 
               {/* FIXED-WIDTH CENTER BATTLEFIELD: Absolute dead-center in the arena */}
-                    <div className={`absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center justify-start w-[500px] sm:w-[512px] max-w-full z-10 origin-top scale-[0.96] ${isBoardRumbling ? 'animate-board-rumble' : ''}`}>
+                    <div className={`absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center justify-start w-[500px] sm:w-[512px] max-w-full z-10 origin-top scale-[0.96] ${isHeavyRecoil ? 'animate-heavy-recoil' : isBoardRumbling ? 'animate-board-rumble' : ''} ${isHitStop ? 'hitstop-freeze' : ''}`}>
                       {/* Opponent Field: Massive Boss 8-Zone Monolith OR Standard Rows 1 & 2 */}
                     {(() => {
                       const massiveBoss = enemyBoard.find(c => c?.isMassive);
@@ -10916,6 +11402,27 @@ export default function App() {
                                        })}
                                      </div>
                                    ) : null}
+                                      {sigilBadges
+                                        .filter(b => b.isPlayer === false && b.lane === idx)
+                                        .map((b, bIdx) => (
+                                          <div
+                                            key={b.id}
+                                            style={{ top: `${6 - bIdx * 18}px` }}
+                                            className={`pointer-events-none absolute left-1/2 z-[60] px-2 py-0.5 rounded-[2px] border font-mono font-bold text-[9px] uppercase tracking-[0.16em] whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.92)] animate-sigil-badge ${
+                                              b.tone === 'bone'
+                                                ? 'bg-[#1c1813]/95 border-[#cbb794]/90 text-[#f3e6cf]'
+                                                : b.tone === 'blood'
+                                                  ? 'bg-[#2a0909]/95 border-red-400/90 text-red-100'
+                                                  : b.tone === 'emerald'
+                                                    ? 'bg-[#092116]/95 border-emerald-400/90 text-emerald-100'
+                                                    : b.tone === 'violet'
+                                                      ? 'bg-[#1b0f26]/95 border-purple-400/90 text-purple-100'
+                                                      : 'bg-[#211608]/95 border-[#e5c16b]/90 text-[#f7dfa0]'
+                                            }`}
+                                          >
+                                            {b.text}
+                                          </div>
+                                        ))}
                                  </div>
                                );
                              })}
@@ -11079,6 +11586,27 @@ export default function App() {
                                     {card.sigils.includes('Worthy Sacrifice') ? '† +3 BLOOD' : '† SACRIFICE'}
                                   </div>
                                 )}
+                                      {sigilBadges
+                                        .filter(b => b.isPlayer === true && b.lane === idx)
+                                        .map((b, bIdx) => (
+                                          <div
+                                            key={b.id}
+                                            style={{ top: `${6 - bIdx * 18}px` }}
+                                            className={`pointer-events-none absolute left-1/2 z-[60] px-2 py-0.5 rounded-[2px] border font-mono font-bold text-[9px] uppercase tracking-[0.16em] whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.92)] animate-sigil-badge ${
+                                              b.tone === 'bone'
+                                                ? 'bg-[#1c1813]/95 border-[#cbb794]/90 text-[#f3e6cf]'
+                                                : b.tone === 'blood'
+                                                  ? 'bg-[#2a0909]/95 border-red-400/90 text-red-100'
+                                                  : b.tone === 'emerald'
+                                                    ? 'bg-[#092116]/95 border-emerald-400/90 text-emerald-100'
+                                                    : b.tone === 'violet'
+                                                      ? 'bg-[#1b0f26]/95 border-purple-400/90 text-purple-100'
+                                                      : 'bg-[#211608]/95 border-[#e5c16b]/90 text-[#f7dfa0]'
+                                            }`}
+                                          >
+                                            {b.text}
+                                          </div>
+                                        ))}
                               </div>
                             );
                           })}
@@ -11179,7 +11707,7 @@ export default function App() {
     {/* 1. THE BLEEDING STONE RUNNEL (Replaces Brass Balance Scale) */}
     <div
     className={`w-12 h-80 bg-[#120f0d] border border-[#2b221b] rounded-sm relative flex flex-col items-center justify-between py-2.5 shadow-[inset_0_3px_10px_rgba(0,0,0,0.95),0_2px_5px_rgba(0,0,0,0.8)] select-none transition-all ${
-      scaleRumble ? 'animate-scale-rumble shadow-[0_0_20px_rgba(220,38,38,0.55)]' : ''
+      isScaleHeavySlam ? 'animate-scale-heavy-slam shadow-[0_0_28px_rgba(220,38,38,0.85)]' : scaleRumble ? 'animate-scale-rumble shadow-[0_0_20px_rgba(220,38,38,0.55)]' : ''
     }`}
     title={`Runnel Balance: ${scale === 0 ? '0 (Balanced)' : scale > 0 ? `+${scale}` : `${scale}`}`}
   >

@@ -1,3 +1,5 @@
+import { createSeededRng } from '../utils/seededRng';
+
 export type StandardBossType = 'Zealot' | 'The Begotten' | 'The Weaver';
 export type ActBossType = StandardBossType | 'BoneLord';
 
@@ -39,6 +41,12 @@ export interface ActMapData {
   currentNodeId: string;
   visitedNodeIds: string[];
   completedBoss: boolean;
+  seed?: string;
+}
+
+export interface MapGenOptions {
+  seed?: string;
+  allEliteRow2?: boolean;
 }
 
 export interface NodeMeta {
@@ -171,23 +179,32 @@ const ACT_THEMES: Record<number, { title: string; subtitle: string }> = {
   4: { title: 'The End of the World', subtitle: 'Act IV — Uzumaki' },
 };
 
-const pickOne = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const pickOne = <T,>(arr: T[], rng: () => number = Math.random): T =>
+  arr[Math.floor(rng() * arr.length)];
 
-const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+const shuffle = <T,>(arr: T[], rng: () => number = Math.random): T[] => {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};
 
-export const getOrInitBossOrder = (): StandardBossType[] => {
+export const getOrInitBossOrder = (seed?: string): StandardBossType[] => {
   const existing = (window as any).__standardBossOrder as StandardBossType[] | undefined;
   if (Array.isArray(existing) && existing.length === 3) {
     return existing;
   }
-  const fresh = shuffle<StandardBossType>(['Zealot', 'The Begotten', 'The Weaver']);
+  const rng = seed ? createSeededRng(`${seed}:boss-order`) : Math.random;
+  const fresh = shuffle<StandardBossType>(['Zealot', 'The Begotten', 'The Weaver'], rng);
   (window as any).__standardBossOrder = fresh;
   return fresh;
 };
 
-export const getBossForAct = (act: number): ActBossType => {
+export const getBossForAct = (act: number, seed?: string): ActBossType => {
   if (act >= 4) return 'BoneLord';
-  const order = getOrInitBossOrder();
+  const order = getOrInitBossOrder(seed);
   return order[Math.max(0, Math.min(2, act - 1))] || order[0];
 };
 
@@ -254,7 +271,8 @@ const pickWeightedDistinctEvents = (
   poolWeights: WeightedEventPool,
   count: number,
   avoid: Set<MapNodeType>,
-  deckSize: number
+  deckSize: number,
+  rng: () => number = Math.random
 ): MapNodeType[] => {
   const entries = (Object.entries(poolWeights) as [MapNodeType, number][]).filter(([, w]) => w > 0);
   const chosen: MapNodeType[] = [];
@@ -278,7 +296,7 @@ const pickWeightedDistinctEvents = (
       weight: getEffectiveEventWeight(type, baseWeight, avoid, deckSize),
     }));
     const totalWeight = scored.reduce((sum, item) => sum + item.weight, 0);
-    let roll = Math.random() * totalWeight;
+    let roll = rng() * totalWeight;
     let picked = scored[scored.length - 1].type;
     for (const item of scored) {
       roll -= item.weight;
@@ -301,9 +319,19 @@ const pickWeightedDistinctEvents = (
  * Act I = 9 rows, Act II = 12 rows, Act III = 15 rows, Act IV = 18 rows.
  * Edges are strictly planar (no crossing lines) and every node is reachable and leads to the Boss.
  */
-export const generateActMap = (act: number, bossOverride?: ActBossType, deckSize = 7): ActMapData => {
+export const generateActMap = (
+  act: number,
+  bossOverride?: ActBossType,
+  deckSize = 7,
+  options?: MapGenOptions
+): ActMapData => {
   const clampedAct = Math.max(1, Math.min(4, act));
-  const bossType = bossOverride || getBossForAct(clampedAct);
+  const effectiveDeckSize = Math.max(1, deckSize);
+  const seed = options?.seed?.trim() || undefined;
+  const allEliteRow2 = Boolean(options?.allEliteRow2);
+  const rng = seed ? createSeededRng(`${seed}:act-${clampedAct}:deck-${effectiveDeckSize}`) : Math.random;
+
+  const bossType = bossOverride || getBossForAct(clampedAct, seed);
   const theme = ACT_THEMES[clampedAct] || ACT_THEMES[1];
 
   const totalRows = 9 + (clampedAct - 1) * 3; // 9, 12, 15, 18
@@ -314,14 +342,12 @@ export const generateActMap = (act: number, bossOverride?: ActBossType, deckSize
   const rowCounts: number[] = Array.from({ length: totalRows }, (_, r) => {
     if (r === 0 || r === totalRows - 1) return 1;
     if (r === 1 || r === prepRow || r === preLateEventRow) return 3;
-    if (r === lateCombatRow) return Math.random() < 0.55 ? 3 : 2;
+    if (r === lateCombatRow) return rng() < 0.55 ? 3 : 2;
     const cycle = (r - 2) % 3;
-    if (cycle === 0) return Math.random() < 0.55 ? 3 : 2; // Combat
+    if (cycle === 0) return rng() < 0.55 ? 3 : 2; // Combat
     if (cycle === 1) return 3; // Event
-    return Math.random() < 0.5 ? 3 : 2; // Mixed
+    return rng() < 0.5 ? 3 : 2; // Mixed
   });
-
-  const effectiveDeckSize = Math.max(1, deckSize);
 
   const rowNodeGrid: MapNode[][] = [];
   const prevRowTypes = new Set<MapNodeType>();
@@ -346,39 +372,39 @@ export const generateActMap = (act: number, bossOverride?: ActBossType, deckSize
         // Preserve signature Act 1 post-draft three-way opening fork
         types = ['altar', 'campfire', 'bonelord'];
       } else {
-        types = pickWeightedDistinctEvents(EARLY_EVENT_WEIGHTS, count, prevRowTypes, effectiveDeckSize);
+        types = pickWeightedDistinctEvents(EARLY_EVENT_WEIGHTS, count, prevRowTypes, effectiveDeckSize, rng);
       }
     } else if (r === prepRow) {
-      types = pickWeightedDistinctEvents(PREP_EVENT_WEIGHTS, count, prevRowTypes, effectiveDeckSize);
+      types = pickWeightedDistinctEvents(PREP_EVENT_WEIGHTS, count, prevRowTypes, effectiveDeckSize, rng);
     } else if (r === lateCombatRow) {
       types = Array.from({ length: count }, (_, i) =>
-        clampedAct >= 2 && (i === count - 1 || Math.random() < 0.4) ? 'elite_combat' : 'combat'
+        clampedAct >= 2 && (i === count - 1 || rng() < 0.4) ? 'elite_combat' : 'combat'
       );
     } else if (r === preLateEventRow) {
-      types = pickWeightedDistinctEvents(MID_EVENT_WEIGHTS, count, prevRowTypes, effectiveDeckSize);
+      types = pickWeightedDistinctEvents(MID_EVENT_WEIGHTS, count, prevRowTypes, effectiveDeckSize, rng);
     } else {
       const cycle = (r - 2) % 3;
       const progress = r / (totalRows - 1);
       if (cycle === 0) {
-        // Mandatory combat row (early row stays milder; deeper rows ramp elite frequency)
+        // Mandatory combat row (Bloodied Vanguard Vow forces all Row 2 battles to Totem Elites)
         if (r === 2) {
           types = Array.from({ length: count }, (_, i) =>
-            clampedAct >= 3 && i === 1 && Math.random() < 0.45 ? 'elite_combat' : 'combat'
+            allEliteRow2 || (clampedAct >= 3 && i === 1 && rng() < 0.45) ? 'elite_combat' : 'combat'
           );
         } else {
           const eliteChance = clampedAct >= 2 ? Math.min(0.55, 0.22 + progress * 0.32) : 0;
           types = Array.from({ length: count }, () =>
-            Math.random() < eliteChance ? 'elite_combat' : 'combat'
+            rng() < eliteChance ? 'elite_combat' : 'combat'
           );
         }
       } else if (cycle === 1) {
-        types = pickWeightedDistinctEvents(MID_EVENT_WEIGHTS, count, prevRowTypes, effectiveDeckSize);
+        types = pickWeightedDistinctEvents(MID_EVENT_WEIGHTS, count, prevRowTypes, effectiveDeckSize, rng);
       } else {
         // Mixed row: 1 battle + 1–2 events for risk/reward pathing
         const eventSlotCount = count === 3 ? 2 : 1;
-        const evs = pickWeightedDistinctEvents(MID_EVENT_WEIGHTS, eventSlotCount, prevRowTypes, effectiveDeckSize);
-        const battleType: MapNodeType = clampedAct >= 2 && Math.random() < 0.5 ? 'elite_combat' : 'combat';
-        types = shuffle([...evs, battleType]);
+        const evs = pickWeightedDistinctEvents(MID_EVENT_WEIGHTS, eventSlotCount, prevRowTypes, effectiveDeckSize, rng);
+        const battleType: MapNodeType = clampedAct >= 2 && rng() < 0.5 ? 'elite_combat' : 'combat';
+        types = shuffle([...evs, battleType], rng);
       }
     }
 
@@ -402,8 +428,8 @@ export const generateActMap = (act: number, bossOverride?: ActBossType, deckSize
                 : 80;
 
       // Subtle hand-drawn organic jitter scaled to row spacing so tall maps stay legible
-      const jitterX = r === 0 || r === totalRows - 1 ? 0 : (Math.random() - 0.5) * 7.5;
-      const jitterY = r === 0 || r === totalRows - 1 ? 0 : (Math.random() - 0.5) * (rowGapPct * 0.22);
+      const jitterX = r === 0 || r === totalRows - 1 ? 0 : (rng() - 0.5) * 7.5;
+      const jitterY = r === 0 || r === totalRows - 1 ? 0 : (rng() - 0.5) * (rowGapPct * 0.22);
 
       return {
         id: `a${clampedAct}-r${r}-c${c}`,
@@ -451,12 +477,12 @@ export const generateActMap = (act: number, bossOverride?: ActBossType, deckSize
       hasIncoming[primary] = true;
 
       // Occasionally branch to an adjacent lane without crossing previous node's rightmost edge
-      if (Math.random() < 0.48) {
+      if (rng() < 0.48) {
         const candidates: number[] = [];
         if (primary + 1 < next.length) candidates.push(primary + 1);
         if (primary - 1 >= maxAssignedTarget) candidates.push(primary - 1);
         if (candidates.length > 0) {
-          const extra = pickOne(candidates);
+          const extra = pickOne(candidates, rng);
           targets.add(extra);
           hasIncoming[extra] = true;
         }
@@ -492,5 +518,6 @@ export const generateActMap = (act: number, bossOverride?: ActBossType, deckSize
     currentNodeId: startNode.id,
     visitedNodeIds: [startNode.id],
     completedBoss: false,
+    seed,
   };
 };

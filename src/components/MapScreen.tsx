@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ChiptuneAudio } from '../audio/ChiptuneAudio';
+import { RITUAL_VOW_MAP, createSeededRng, type VowId } from '../utils/seededRng';
 import {
   ActMapData,
   BOSS_DISPLAY_META,
@@ -14,6 +16,8 @@ interface MapScreenProps {
   overkillBlood: number;
   startingBones: number;
   activeTotem: { head: string | null; body: string | null };
+  runSeed?: string;
+  activeVows?: VowId[];
   onSelectNode: (node: MapNode) => void;
 }
 
@@ -142,6 +146,127 @@ const renderInkGlyph = (type: MapNodeType, isBoss?: boolean) => {
   }
 };
 
+type DecorKind =
+  | 'pine'
+  | 'deadtree'
+  | 'reeds'
+  | 'ribcage'
+  | 'skull'
+  | 'cairn'
+  | 'arch'
+  | 'cobweb'
+  | 'candle'
+  | 'spiral'
+  | 'fissure'
+  | 'eclipse';
+
+interface ParchmentDecor {
+  id: string;
+  x: number;
+  y: number;
+  scale: number;
+  rot: number;
+  opacity: number;
+  kind: DecorKind;
+}
+
+const renderCartographyProp = (d: ParchmentDecor) => {
+  const transform = `translate(${d.x} ${d.y}) rotate(${d.rot}) scale(${d.scale})`;
+  const ink = '#362313';
+  switch (d.kind) {
+    case 'pine':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M0 -14 L-6 -4 L-2 -4 L-8 5 L-3 5 L-9 13 L9 13 L3 5 L8 5 L2 -4 L6 -4 Z" fill="rgba(54,35,19,0.14)" />
+          <path d="M0 13 L0 18 M-5 18 Q0 16.5 5 18" />
+        </g>
+      );
+    case 'deadtree':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.3" strokeLinecap="round">
+          <path d="M0 16 Q-1 6 0 -2 M0 4 L-9 -4 M-5 0 L-10 2 M0 -2 L8 -10 M4 -6 L10 -5 M0 -2 L-4 -12" />
+          <path d="M-6 16 Q0 14.5 6 16" strokeWidth="0.9" />
+        </g>
+      );
+    case 'reeds':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.1" strokeLinecap="round">
+          <path d="M-5 10 Q-7 0 -4 -10 M0 10 Q1 -2 0 -13 M5 10 Q7 1 5 -8" />
+          <path d="M-9 10 Q0 8 9 10 M-7 13 Q0 11.5 7 13" strokeWidth="0.8" />
+        </g>
+      );
+    case 'ribcage':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.25" strokeLinecap="round">
+          <path d="M0 -12 L0 12" />
+          <path d="M-9 -8 Q0 -11 9 -8 M-10 -3 Q0 -6 10 -3 M-9 2 Q0 -1 9 2 M-7 7 Q0 4 7 7" />
+        </g>
+      );
+    case 'skull':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M-7 1 C-8 -8 8 -8 7 1 C7 5 4 6 4 9 L-4 9 C-4 6 -7 5 -7 1 Z" fill="rgba(54,35,19,0.1)" />
+          <circle cx="-2.6" cy="0.5" r="1.4" fill={ink} />
+          <circle cx="2.6" cy="0.5" r="1.4" fill={ink} />
+          <path d="M0 3.2 L-0.8 4.8 L0.8 4.8 Z M-2 9 L-2 6.8 M0 9 L0 6.8 M2 9 L2 6.8" />
+        </g>
+      );
+    case 'cairn':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="rgba(54,35,19,0.12)" strokeWidth="1.15">
+          <ellipse cx="0" cy="8" rx="9" ry="3.5" />
+          <ellipse cx="-0.5" cy="3" rx="6.5" ry="2.8" />
+          <ellipse cx="0.5" cy="-1.5" rx="4.2" ry="2.1" />
+          <ellipse cx="0" cy="-5" rx="2.3" ry="1.4" />
+        </g>
+      );
+    case 'arch':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.2" strokeLinecap="round">
+          <path d="M-9 13 L-9 -1 Q-9 -10 0 -14 Q9 -10 9 -1 L9 13" />
+          <path d="M-6 13 L-6 0 Q-6 -7 0 -10 Q6 -7 6 0 L6 13" strokeWidth="0.8" />
+          <path d="M-12 13 L12 13" />
+        </g>
+      );
+    case 'cobweb':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="0.85">
+          <path d="M0 0 L16 0 M0 0 L14 8 M0 0 L8 14 M0 0 L0 16" />
+          <path d="M5 0 Q4.5 4.5 0 5 M10 0 Q9 9 0 10 M15 0 Q13.5 13.5 0 15" />
+        </g>
+      );
+    case 'candle':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.1" strokeLinecap="round">
+          <rect x="-3" y="-2" width="6" height="14" rx="1" fill="rgba(54,35,19,0.1)" />
+          <path d="M0 -4 Q2.8 -8 0 -12 Q-2.8 -8 0 -4 Z" fill="rgba(140,42,20,0.22)" />
+          <path d="M-7 12 L7 12" />
+        </g>
+      );
+    case 'spiral':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15" strokeLinecap="round">
+          <path d="M0 0 C2 0 2 3 0 3 C-4 3 -4 -4 0 -4 C6 -4 6 6 0 6 C-8 6 -8 -8 0 -8 C10 -8 10 10 0 10 C-12 10 -12 -12 0 -12" />
+        </g>
+      );
+    case 'fissure':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.2" strokeLinecap="round">
+          <path d="M-14 -4 L-6 -1 L-2 -6 L5 1 L13 -2 M-2 -6 L1 -12 M5 1 L7 8" />
+        </g>
+      );
+    case 'eclipse':
+      return (
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15">
+          <circle cx="0" cy="0" r="8" fill="rgba(54,35,19,0.18)" />
+          <circle cx="3" cy="-1.5" r="7" fill="#d9c298" stroke="none" />
+          <circle cx="0" cy="0" r="8" />
+          <path d="M0 -12 L0 -10 M0 10 L0 12 M-12 0 L-10 0 M10 0 L12 0" strokeWidth="0.9" />
+        </g>
+      );
+  }
+};
+
 const MapScreen: React.FC<MapScreenProps> = ({
   mapData,
   bgStyle,
@@ -149,8 +274,21 @@ const MapScreen: React.FC<MapScreenProps> = ({
   overkillBlood,
   startingBones,
   activeTotem,
+  runSeed,
+  activeVows = [],
   onSelectNode,
 }) => {
+  const [copiedSeed, setCopiedSeed] = useState(false);
+  const displaySeed = runSeed || mapData.seed || '';
+
+  const copySeed = () => {
+    if (!displaySeed) return;
+    try {
+      navigator.clipboard?.writeText(displaySeed);
+    } catch {}
+    setCopiedSeed(true);
+    window.setTimeout(() => setCopiedSeed(false), 1400);
+  };
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const nodeMap = useMemo(() => {
     const m = new Map<string, MapNode>();
@@ -178,17 +316,199 @@ const MapScreen: React.FC<MapScreenProps> = ({
   }, [mapData.visitedNodeIds]);
 
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const lastTickNodeRef = useRef<string | null>(null);
+
+  const handleHoverNode = (node: MapNode) => {
+    setHoveredNodeId(node.id);
+    if (lastTickNodeRef.current !== node.id) {
+      lastTickNodeRef.current = node.id;
+      const ratio = 0.86 + (node.row / Math.max(1, mapData.rows - 1)) * 0.36 + (node.col - 1) * 0.04;
+      ChiptuneAudio.playWoodTick?.(ratio);
+    }
+  };
+  const [isAwayFromFigurine, setIsAwayFromFigurine] = useState(false);
 
   const parchmentHeight = Math.max(760, (mapData.rows || 9) * 96);
+
+  // Deterministic Act-themed cartography (landmarks, elevation rings, ink stains)
+  const cartography = useMemo(() => {
+    const rng = createSeededRng(`${mapData.seed || 'scroll'}:carto:${mapData.act}:${mapData.rows}`);
+    const actPools: Record<number, DecorKind[]> = {
+      1: ['pine', 'pine', 'deadtree', 'reeds'],
+      2: ['ribcage', 'skull', 'cairn', 'deadtree'],
+      3: ['arch', 'candle', 'cobweb', 'skull'],
+      4: ['spiral', 'fissure', 'eclipse', 'spiral'],
+    };
+    const pool = actPools[mapData.act] || actPools[1];
+    const vw = 500;
+    const vh = parchmentHeight;
+
+    const isClearOfNodes = (px: number, py: number, minDist = 48) => {
+      for (const n of mapData.nodes) {
+        const nx = (n.x / 100) * vw;
+        const ny = (n.y / 100) * vh;
+        const dx = px - nx;
+        const dy = py - ny;
+        if (dx * dx + dy * dy < minDist * minDist) return false;
+      }
+      return true;
+    };
+
+    const props: ParchmentDecor[] = [];
+    const targetCount = Math.min(42, Math.max(18, mapData.rows * 2 + 4));
+    let tries = 0;
+    while (props.length < targetCount && tries < 260) {
+      tries++;
+      // Bias strongly toward left/right margins so the center trails stay uncluttered
+      const sideRoll = rng();
+      const x =
+        sideRoll < 0.44
+          ? 26 + rng() * 54
+          : sideRoll < 0.88
+            ? vw - 80 + rng() * 54
+            : 110 + rng() * (vw - 220);
+      const y = 78 + rng() * (vh - 156);
+      if (!isClearOfNodes(x, y, sideRoll < 0.88 ? 42 : 56)) continue;
+      if (props.some(p => (p.x - x) ** 2 + (p.y - y) ** 2 < 38 * 38)) continue;
+
+      const kind = pool[Math.floor(rng() * pool.length)];
+      props.push({
+        id: `dec-${props.length}`,
+        x: Math.round(x),
+        y: Math.round(y),
+        scale: Number((0.78 + rng() * 0.55).toFixed(2)),
+        rot: kind === 'arch' || kind === 'candle' || kind === 'pine' ? Math.round((rng() - 0.5) * 10) : Math.round((rng() - 0.5) * 32),
+        opacity: Number((0.24 + rng() * 0.18).toFixed(2)),
+        kind,
+      });
+    }
+
+    // Subtle elevation contour loops
+    const contours = Array.from({ length: Math.max(4, Math.floor(mapData.rows / 2)) }, (_, i) => ({
+      id: `ct-${i}`,
+      cx: Math.round(60 + rng() * (vw - 120)),
+      cy: Math.round(120 + (i / Math.max(1, Math.floor(mapData.rows / 2))) * (vh - 240) + (rng() - 0.5) * 60),
+      rx: Math.round(55 + rng() * 65),
+      ry: Math.round(28 + rng() * 38),
+      rot: Math.round((rng() - 0.5) * 40),
+    }));
+
+    // Faint aged ink/water stains
+    const stains = Array.from({ length: Math.max(4, Math.floor(mapData.rows / 2.5)) }, (_, i) => ({
+      id: `st-${i}`,
+      cx: Math.round(45 + rng() * (vw - 90)),
+      cy: Math.round(90 + rng() * (vh - 180)),
+      r: Math.round(18 + rng() * 32),
+      isBlood: rng() < 0.35,
+    }));
+
+    // Horizontal scroll-fold creases
+    const folds: number[] = [];
+    for (let y = 240; y < vh - 120; y += 260) {
+      folds.push(y);
+    }
+
+    const bossNode = mapData.nodes.find(n => n.type === 'boss');
+    const bossPx = bossNode
+      ? { x: (bossNode.x / 100) * vw, y: (bossNode.y / 100) * vh }
+      : { x: vw / 2, y: 76 };
+
+    return { vw, vh, props, contours, stains, folds, bossPx };
+  }, [mapData.seed, mapData.act, mapData.rows, mapData.nodes, parchmentHeight]);
+
+  // All nodes still reachable forward from the player's current position
+  const futureReachableIds = useMemo(() => {
+    const seen = new Set<string>();
+    if (!currentNode) return seen;
+    const queue: string[] = [currentNode.id];
+    seen.add(currentNode.id);
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      const n = nodeMap.get(id);
+      if (!n) continue;
+      for (const nextId of n.nextIds) {
+        if (!seen.has(nextId)) {
+          seen.add(nextId);
+          queue.push(nextId);
+        }
+      }
+    }
+    return seen;
+  }, [currentNode, nodeMap]);
+
+  // Reverse adjacency map for tracing all forward paths to a hovered target
+  const prevMap = useMemo(() => {
+    const m = new Map<string, string[]>();
+    mapData.nodes.forEach(n => {
+      n.nextIds.forEach(nextId => {
+        const list = m.get(nextId);
+        if (list) list.push(n.id);
+        else m.set(nextId, [n.id]);
+      });
+    });
+    return m;
+  }, [mapData.nodes]);
+
+  const tracedPath = useMemo(() => {
+    const nodes = new Set<string>();
+    const edges = new Set<string>();
+    if (!hoveredNodeId || !currentNode || hoveredNodeId === currentNode.id) {
+      return { nodes, edges };
+    }
+    if (!futureReachableIds.has(hoveredNodeId)) {
+      return { nodes, edges };
+    }
+    const queue: string[] = [hoveredNodeId];
+    nodes.add(hoveredNodeId);
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      if (id === currentNode.id) continue;
+      const parents = prevMap.get(id) || [];
+      for (const pId of parents) {
+        if (futureReachableIds.has(pId)) {
+          edges.add(`${pId}->${id}`);
+          if (!nodes.has(pId)) {
+            nodes.add(pId);
+            queue.push(pId);
+          }
+        }
+      }
+    }
+    return { nodes, edges };
+  }, [hoveredNodeId, currentNode, futureReachableIds, prevMap]);
+
+  const getFigurineScrollTop = (el: HTMLDivElement) => {
+    if (!currentNode) return 0;
+    const targetY = Math.max(0, (currentNode.y / 100) * parchmentHeight - 88);
+    const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+    return Math.max(0, Math.min(maxScroll, targetY - el.clientHeight * 0.56));
+  };
+
+  const scrollToFigurine = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: getFigurineScrollTop(el), behavior: 'smooth' });
+  };
+
+  const scrollToBoss = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleParchmentScroll = () => {
+    const el = scrollRef.current;
+    if (!el || !currentNode) return;
+    const figTop = getFigurineScrollTop(el);
+    setIsAwayFromFigurine(Math.abs(el.scrollTop - figTop) > 110);
+  };
 
   // Scroll parchment smoothly so current figurine & next choices stay centered
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || !currentNode) return;
-    // Aim ~1 row above currentNode so reachable choices above stay in clear sight
-    const targetY = Math.max(0, (currentNode.y / 100) * parchmentHeight - 88);
-    const scrollTop = Math.max(0, targetY - el.clientHeight * 0.56);
-    el.scrollTo({ top: scrollTop, behavior: 'smooth' });
+    el.scrollTo({ top: getFigurineScrollTop(el), behavior: 'smooth' });
+    setIsAwayFromFigurine(false);
   }, [mapData.currentNodeId, mapData.act, currentNode, parchmentHeight]);
 
   const inspectedNode =
@@ -344,17 +664,27 @@ const MapScreen: React.FC<MapScreenProps> = ({
         {/* CENTERPIECE: Unrolled Aged Parchment Map */}
         <div className="relative flex flex-col w-full max-w-[560px] flex-1 min-h-[380px] md:min-h-0">
           {/* Top Wooden Scroll Dowel */}
-          <div className="relative z-20 h-4 w-[104%] -ml-[2%] rounded-full bg-gradient-to-b from-[#4c3320] via-[#2b1a0e] to-[#120a05] border border-[#6e4c2e]/70 shadow-[0_6px_14px_rgba(0,0,0,0.9)] flex items-center justify-between px-2 shrink-0">
-            <span className="w-3 h-2.5 rounded-full bg-gradient-to-b from-[#d4af37] to-[#6e4e18] border border-[#2a1a07]" />
-            <span className="text-[8px] font-mono uppercase tracking-[0.32em] text-[#bfa072]/70">
+          <div className="relative z-20 h-6 w-[104%] -ml-[2%] rounded-full bg-gradient-to-b from-[#4c3320] via-[#2b1a0e] to-[#120a05] border border-[#6e4c2e]/70 shadow-[0_6px_14px_rgba(0,0,0,0.9)] flex items-center justify-between px-2 shrink-0">
+            <span className="w-3 h-2.5 rounded-full bg-gradient-to-b from-[#d4af37] to-[#6e4e18] border border-[#2a1a07] shrink-0" />
+            <span className="text-[8px] font-mono uppercase tracking-[0.28em] text-[#bfa072]/75 truncate px-2">
               Ascend Toward {bossMeta.name}
             </span>
-            <span className="w-3 h-2.5 rounded-full bg-gradient-to-b from-[#d4af37] to-[#6e4e18] border border-[#2a1a07]" />
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={isAwayFromFigurine ? scrollToFigurine : scrollToBoss}
+                className="px-2 py-0.5 rounded-full bg-[#1e120a]/90 hover:bg-[#331e10] border border-[#9e773e]/75 hover:border-[#e6be72] text-[8px] font-mono font-bold uppercase tracking-[0.16em] text-[#e6c88e] hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+              >
+                {isAwayFromFigurine ? 'Figurine ↓' : 'Scout Boss ↑'}
+              </button>
+              <span className="w-3 h-2.5 rounded-full bg-gradient-to-b from-[#d4af37] to-[#6e4e18] border border-[#2a1a07]" />
+            </div>
           </div>
 
           {/* Scrollable Weathered Paper Viewport */}
           <div
             ref={scrollRef}
+            onScroll={handleParchmentScroll}
             className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden border-x-2 border-[#3c2716] shadow-[0_22px_50px_rgba(0,0,0,0.92),inset_0_0_48px_rgba(45,26,11,0.72)]"
             style={{
               backgroundColor: '#c7ae82',
@@ -376,6 +706,120 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 ACT {['I', 'II', 'III', 'IV'][mapData.act - 1] || mapData.act}
               </div>
 
+              {/* Hand-Inked Cartographic Backdrop (Borders, Folds, Topography, Act Landmarks & Compass) */}
+              <svg
+                viewBox={`0 0 ${cartography.vw} ${cartography.vh}`}
+                preserveAspectRatio="none"
+                className="absolute inset-0 w-full h-full pointer-events-none z-0"
+              >
+                {/* Double-Lined Cartographer's Frame & Corner Flourishes */}
+                <rect
+                  x="10"
+                  y="10"
+                  width={cartography.vw - 20}
+                  height={cartography.vh - 20}
+                  fill="none"
+                  stroke="#3b2615"
+                  strokeOpacity="0.34"
+                  strokeWidth="1.4"
+                />
+                <rect
+                  x="15"
+                  y="15"
+                  width={cartography.vw - 30}
+                  height={cartography.vh - 30}
+                  fill="none"
+                  stroke="#3b2615"
+                  strokeOpacity="0.22"
+                  strokeWidth="0.9"
+                  strokeDasharray="6 4"
+                />
+                {/* Ornate Corner Ticks */}
+                <path
+                  d={`M 10 28 L 28 10 M ${cartography.vw - 10} 28 L ${cartography.vw - 28} 10 M 10 ${cartography.vh - 28} L 28 ${cartography.vh - 10} M ${cartography.vw - 10} ${cartography.vh - 28} L ${cartography.vw - 28} ${cartography.vh - 10}`}
+                  stroke="#3b2615"
+                  strokeOpacity="0.38"
+                  strokeWidth="1.2"
+                />
+
+                {/* Aged Water & Blood Ring Stains */}
+                {cartography.stains.map(st => (
+                  <g key={st.id} opacity={st.isBlood ? 0.11 : 0.1}>
+                    <circle
+                      cx={st.cx}
+                      cy={st.cy}
+                      r={st.r}
+                      fill={st.isBlood ? '#6e1712' : '#5e4022'}
+                    />
+                    <circle
+                      cx={st.cx}
+                      cy={st.cy}
+                      r={st.r * 0.92}
+                      fill="none"
+                      stroke={st.isBlood ? '#4d0e0a' : '#3d2814'}
+                      strokeWidth="1.1"
+                    />
+                  </g>
+                ))}
+
+                {/* Horizontal Scroll-Fold Creases */}
+                {cartography.folds.map((fy, idx) => (
+                  <g key={`fold-${idx}`}>
+                    <line x1="12" y1={fy} x2={cartography.vw - 12} y2={fy} stroke="#2a1a0d" strokeOpacity="0.14" strokeWidth="1.2" />
+                    <line x1="12" y1={fy + 1.5} x2={cartography.vw - 12} y2={fy + 1.5} stroke="#f7e8c8" strokeOpacity="0.18" strokeWidth="1" />
+                  </g>
+                ))}
+
+                {/* Topographic Elevation Contours */}
+                {cartography.contours.map(ct => (
+                  <g key={ct.id} transform={`translate(${ct.cx} ${ct.cy}) rotate(${ct.rot})`} fill="none" stroke="#3b2615" strokeOpacity="0.14">
+                    <ellipse cx="0" cy="0" rx={ct.rx} ry={ct.ry} strokeWidth="1" strokeDasharray="5 4" />
+                    <ellipse cx="0" cy="0" rx={ct.rx * 0.66} ry={ct.ry * 0.66} strokeWidth="0.85" />
+                    <ellipse cx="0" cy="0" rx={ct.rx * 0.34} ry={ct.ry * 0.34} strokeWidth="0.7" strokeDasharray="3 3" />
+                  </g>
+                ))}
+
+                {/* Boss Sanctum Arcane Halo at the Top Apex */}
+                <g transform={`translate(${cartography.bossPx.x} ${cartography.bossPx.y})`} opacity="0.28" stroke="#4f1610" fill="none">
+                  <circle cx="0" cy="0" r="46" strokeWidth="1.2" strokeDasharray="4 3" />
+                  <circle cx="0" cy="0" r="56" strokeWidth="0.85" />
+                  <path d="M-64 0 L-48 0 M48 0 L64 0 M0 -64 L0 -48 M0 48 L0 64" strokeWidth="1.1" />
+                  <path d="M-42 -42 L-33 -33 M42 -42 L33 -33 M-42 42 L-33 33 M42 42 L33 33" strokeWidth="0.9" />
+                </g>
+
+                {/* Act-Themed Margin Illustrations */}
+                {cartography.props.map(renderCartographyProp)}
+
+                {/* Left-Margin Mile-Marker Ticks */}
+                {Array.from({ length: mapData.rows }, (_, r) => {
+                  const rowNode = mapData.nodes.find(n => n.row === r);
+                  if (!rowNode) return null;
+                  const ry = (rowNode.y / 100) * cartography.vh;
+                  return (
+                    <g key={`tick-${r}`} opacity="0.32" stroke="#3b2615" fill="#3b2615">
+                      <line x1="15" y1={ry} x2="23" y2={ry} strokeWidth="1" />
+                      <text x="26" y={ry + 3} fontSize="7.5" fontFamily="monospace" letterSpacing="0.8">
+                        {r === 0 ? 'START' : r === mapData.rows - 1 ? 'APEX' : String(r).padStart(2, '0')}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Hand-Inked Compass Rose (Bottom-Right near Trailhead) */}
+                <g
+                  transform={`translate(${cartography.vw - 64} ${cartography.vh - 68})`}
+                  opacity="0.36"
+                  stroke="#362212"
+                  fill="none"
+                >
+                  <circle cx="0" cy="0" r="24" strokeWidth="1" />
+                  <circle cx="0" cy="0" r="20" strokeWidth="0.7" strokeDasharray="2 2" />
+                  <path d="M0 -28 L4 -4 L28 0 L4 4 L0 28 L-4 4 L-28 0 L-4 -4 Z" fill="rgba(54,34,18,0.16)" strokeWidth="1" />
+                  <path d="M0 -28 L0 0 L4 -4 Z M28 0 L0 0 L4 4 Z M0 28 L0 0 L-4 4 Z M-28 0 L0 0 L-4 -4 Z" fill="#362212" stroke="none" opacity="0.55" />
+                  <text x="-3.2" y="-31" fontSize="8" fontFamily="serif" fontWeight="bold" fill="#362212" stroke="none">N</text>
+                </g>
+              </svg>
+
               {/* Hand-Inked Branching SVG Trails */}
               <svg
                 viewBox="0 0 100 100"
@@ -390,6 +834,10 @@ const MapScreen: React.FC<MapScreenProps> = ({
                     const edgeKey = `${node.id}->${target.id}`;
                     const isWalked = walkedEdgeKeys.has(edgeKey);
                     const isActiveChoice = node.id === mapData.currentNodeId && reachableIds.has(target.id);
+                    const isTraced = tracedPath.edges.has(edgeKey);
+                    const hasActiveTrace = tracedPath.edges.size > 0;
+                    const isEdgeLockedOut =
+                      !isWalked && (!futureReachableIds.has(node.id) || !futureReachableIds.has(target.id));
 
                     const midX = (node.x + target.x) / 2 + (node.col % 2 === 0 ? 1.8 : -1.8);
                     const midY = (node.y + target.y) / 2;
@@ -397,12 +845,12 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
                     return (
                       <g key={edgeKey}>
-                        {isActiveChoice && (
+                        {(isActiveChoice || isTraced) && (
                           <path
                             d={pathD}
                             fill="none"
-                            stroke="rgba(165, 36, 26, 0.32)"
-                            strokeWidth="1.45"
+                            stroke={isTraced ? 'rgba(212, 165, 62, 0.48)' : 'rgba(165, 36, 26, 0.32)'}
+                            strokeWidth={isTraced ? '4.8' : '3.6'}
                             vectorEffect="non-scaling-stroke"
                             strokeLinecap="round"
                           />
@@ -411,14 +859,34 @@ const MapScreen: React.FC<MapScreenProps> = ({
                           d={pathD}
                           fill="none"
                           stroke={
-                            isWalked
-                              ? '#5f1812'
-                              : isActiveChoice
-                                ? '#8c2218'
-                                : 'rgba(54, 36, 20, 0.45)'
+                            isTraced
+                              ? '#a82317'
+                              : isWalked
+                                ? '#5f1812'
+                                : isEdgeLockedOut
+                                  ? 'rgba(54, 36, 20, 0.16)'
+                                  : isActiveChoice
+                                    ? hasActiveTrace
+                                      ? 'rgba(140, 34, 24, 0.35)'
+                                      : '#8c2218'
+                                    : hasActiveTrace
+                                      ? 'rgba(54, 36, 20, 0.2)'
+                                      : 'rgba(54, 36, 20, 0.45)'
                           }
-                          strokeWidth={isWalked ? 2.6 : isActiveChoice ? 2.1 : 1.45}
-                          strokeDasharray={isWalked ? undefined : isActiveChoice ? '4 3' : '2.5 3.5'}
+                          strokeWidth={
+                            isTraced
+                              ? 2.6
+                              : isWalked
+                                ? 2.6
+                                : isEdgeLockedOut
+                                  ? 1.15
+                                  : isActiveChoice
+                                    ? 2.1
+                                    : 1.45
+                          }
+                          strokeDasharray={
+                            isWalked || isTraced ? undefined : isActiveChoice ? '4 3' : '2.5 3.5'
+                          }
                           vectorEffect="non-scaling-stroke"
                           strokeLinecap="round"
                         />
@@ -435,21 +903,25 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 const isVisited = visitedSet.has(node.id) && !isCurrent;
                 const isBoss = node.type === 'boss';
                 const isCombat = node.type === 'combat' || node.type === 'elite_combat';
+                const isHovered = hoveredNodeId === node.id;
+                const isLockedOut = !isCurrent && !isVisited && !futureReachableIds.has(node.id);
+                const isOnTracedPath = tracedPath.nodes.has(node.id) && !isCurrent;
                 const meta = isBoss
                   ? { title: bossMeta.name, tag: 'Boss' }
                   : MAP_NODE_META[node.type];
-
-                const isHovered = hoveredNodeId === node.id;
 
                 return (
                   <div
                     key={node.id}
                     style={{ left: `${node.x}%`, top: `${node.y}%` }}
-                    onMouseEnter={() => setHoveredNodeId(node.id)}
-                    onMouseLeave={() => setHoveredNodeId(prev => (prev === node.id ? null : prev))}
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center ${
-                      isHovered ? 'z-40' : isCurrent ? 'z-30' : isReachable ? 'z-20' : 'z-10'
-                    }`}
+                    onMouseEnter={() => handleHoverNode(node)}
+                    onMouseLeave={() => {
+                      lastTickNodeRef.current = null;
+                      setHoveredNodeId(prev => (prev === node.id ? null : prev));
+                    }}
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-opacity duration-200 ${
+                      isHovered ? 'z-40' : isOnTracedPath ? 'z-30' : isCurrent ? 'z-30' : isReachable ? 'z-20' : 'z-10'
+                    } ${isLockedOut && !isHovered ? 'opacity-40 saturate-50' : 'opacity-100'}`}
                   >
 
                     {/* Node Stamp Button */}
@@ -463,10 +935,14 @@ const MapScreen: React.FC<MapScreenProps> = ({
                       className={`relative flex items-center justify-center rounded-full transition-all duration-200 ${
                         isBoss ? 'w-14 h-14' : 'w-11 h-11'
                       } ${
+                        isOnTracedPath && !isBoss
+                          ? 'ring-2 ring-[#d4af37]/90 shadow-[0_0_16px_rgba(212,175,55,0.55)] scale-105 '
+                          : ''
+                      }${
                         isBoss
                           ? isReachable
                             ? 'bg-[#4f1310] border-2 border-[#f1ca79] shadow-[0_0_22px_rgba(145,25,18,0.85),0_4px_12px_rgba(0,0,0,0.6)] hover:scale-115 cursor-pointer animate-pulse'
-                            : 'bg-[#36110e] border-2 border-[#8c6438] shadow-[0_4px_12px_rgba(0,0,0,0.55)] cursor-default'
+                            : 'bg-[#36110e] border-2 border-[#8c6438] shadow-[0_4px_12px_rgba(0,0,0,0.55)] hover:border-[#e6be72] hover:scale-105 cursor-help'
                           : isCurrent
                             ? 'bg-[#e9d5aa] border-2 border-[#6e1c14] text-[#3a120d] shadow-[0_0_16px_rgba(110,28,20,0.45)] cursor-default'
                             : isReachable
@@ -506,7 +982,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                       )}
                     </button>
 
-                    {/* Compact Ink Caption Under Current / Boss / Reachable Nodes */}
+                    {/* Compact Ink Caption Under Current / Boss / Reachable / Hovered Nodes */}
                     {isCurrent && !isBoss && (
                       <span className="mt-1 px-1.5 py-0.5 rounded-[2px] bg-[#160e09]/92 border border-[#cfa159]/85 text-[7.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#f4d793] shadow-sm whitespace-nowrap">
                         You
@@ -627,7 +1103,37 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   ? `${activeTotem.head} / ${activeTotem.body}`
                   : 'Unstitched'}
               </div>
+
+              {displaySeed && (
+                <>
+                  <div className="text-[#9e8669] uppercase tracking-wider">Run Seed</div>
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={copySeed}
+                      title="Click to copy run seed"
+                      className="font-mono font-bold text-[#e6c88e] hover:text-white tracking-[0.12em] underline decoration-dotted decoration-[#8a6a3f] underline-offset-2 cursor-pointer transition-colors"
+                    >
+                      {copiedSeed ? 'COPIED ✓' : displaySeed}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
+
+            {activeVows.length > 0 && (
+              <div className="mt-2.5 pt-2 border-t border-[#2d1f15] flex flex-wrap gap-1">
+                {activeVows.map(vId => (
+                  <span
+                    key={vId}
+                    title={RITUAL_VOW_MAP[vId]?.desc}
+                    className="px-1.5 py-0.5 rounded-[2px] bg-[#260c0a]/90 border border-red-800/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.1em] text-red-200/95"
+                  >
+                    ✦ {RITUAL_VOW_MAP[vId]?.shortTag || vId}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
