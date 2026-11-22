@@ -2735,6 +2735,7 @@ export default function App() {
     phase,
     showPauseMenu,
     showAudioSettings,
+    showViewDeck,
     selectedHandIndex,
     sacrificingLane,
     isTalismanPricked,
@@ -2742,6 +2743,7 @@ export default function App() {
     hasActiveDialogue: Boolean(bossState.activeDialogue),
     setShowPauseMenu,
     setShowAudioSettings,
+    setShowViewDeck,
     cancelHandSelection,
     handleTalismanPrick,
     handleDraw,
@@ -2751,6 +2753,7 @@ export default function App() {
     phase,
     showPauseMenu,
     showAudioSettings,
+    showViewDeck,
     selectedHandIndex,
     sacrificingLane,
     isTalismanPricked,
@@ -2758,6 +2761,7 @@ export default function App() {
     hasActiveDialogue: Boolean(bossState.activeDialogue),
     setShowPauseMenu,
     setShowAudioSettings,
+    setShowViewDeck,
     cancelHandSelection,
     handleTalismanPrick,
     handleDraw,
@@ -2796,6 +2800,11 @@ export default function App() {
           s.setShowAudioSettings(false);
           return;
         }
+        if (s.showViewDeck) {
+          e.preventDefault();
+          s.setShowViewDeck(false);
+          return;
+        }
         if (s.showPauseMenu) {
           e.preventDefault();
           s.setShowPauseMenu(false);
@@ -2813,6 +2822,27 @@ export default function App() {
         return;
       }
 
+      if ((e.key === 'd' || e.key === 'D') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (isTyping || e.repeat) return;
+        if (s.showViewDeck) {
+          e.preventDefault();
+          s.setShowViewDeck(false);
+          return;
+        }
+        if (
+          !s.showPauseMenu &&
+          !s.showAudioSettings &&
+          s.screen !== 'SPLASH' &&
+          s.screen !== 'DECK_SELECT' &&
+          s.screen !== 'GAME_OVER' &&
+          s.screen !== 'DEV_MENU'
+        ) {
+          e.preventDefault();
+          s.setShowViewDeck(true);
+        }
+        return;
+      }
+
       if (e.code === 'Space' || e.key === ' ') {
         if (isTyping || e.repeat) return;
         if (
@@ -2820,6 +2850,7 @@ export default function App() {
           s.phase === 'PLAY' &&
           !s.showPauseMenu &&
           !s.showAudioSettings &&
+          !s.showViewDeck &&
           !s.hasActiveDialogue &&
           s.sacrificingLane === null &&
           !s.isTalismanPricked &&
@@ -2841,6 +2872,7 @@ export default function App() {
         s.phase !== 'DRAW' ||
         s.showPauseMenu ||
         s.showAudioSettings ||
+        s.showViewDeck ||
         s.hasActiveDialogue
       ) {
         return;
@@ -2856,11 +2888,30 @@ export default function App() {
       s.handleDraw(e.deltaY < 0 ? 'main' : 'sacrifice');
     };
 
+    const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      const s = hotkeyRef.current;
+      if (
+        s.screen === 'DUEL' &&
+        s.phase === 'PLAY' &&
+        !s.showPauseMenu &&
+        !s.showAudioSettings &&
+        !s.showViewDeck &&
+        !s.hasActiveDialogue &&
+        s.sacrificingLane === null &&
+        s.selectedHandIndex !== null
+      ) {
+        s.cancelHandSelection();
+      }
+    };
+
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('contextmenu', onContextMenu);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('contextmenu', onContextMenu);
     };
   }, []);
 
@@ -11322,16 +11373,14 @@ export default function App() {
                       return (
                         <>
                           {/* Row 1: Opponent Queue Row */}
-                           <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 opacity-90 w-full overflow-visible">
+                           <div className={`relative flex justify-center items-center gap-2 sm:gap-4 my-1 w-full overflow-visible ${droppingQueueLane !== null ? 'z-40' : ''}`}>
                              {enemyQueue.map((rawCard, idx) => {
                                const card = hideBossCards ? null : rawCard;
                                const isDropping = droppingQueueLane === idx;
                                return (
                                  <div
                                    key={`e-queue-slot-${idx}`}
-                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#5e564f]/28 bg-[#0b0a0c]/42 shadow-[inset_0_2px_12px_rgba(0,0,0,0.72)] overflow-visible ${
-                                      card || isDropping ? 'z-20' : 'z-0'
-                                    } ${isDropping ? 'z-30' : 'z-10'}`}
+                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#5e564f]/28 bg-[#0b0a0c]/42 shadow-[inset_0_2px_12px_rgba(0,0,0,0.72)] overflow-visible ${isDropping ? 'z-40' : card ? 'z-20' : 'z-0'}`}
                                   >
                                     {(!card || isDropping) && (
                                       <svg
@@ -11356,8 +11405,8 @@ export default function App() {
                                            : isEnemyRetracting
                                            ? 'transition-all duration-700 ease-in-out -translate-y-28 opacity-0 pointer-events-none'
                                            : isDropping
-                                             ? 'transition-transform duration-300 ease-in-out translate-y-[calc(100%+8px)] z-30 pointer-events-none'
-                                             : 'animate-queue-slide-in'
+                                             ? 'transition-transform duration-300 ease-in-out translate-y-[calc(100%+8px)] z-40 opacity-100 pointer-events-none'
+                                             : 'animate-queue-slide-in opacity-90'
                                        }`}
                                      >
                                        {renderCard(card, {
@@ -11515,13 +11564,6 @@ export default function App() {
                     const reqBones = activeSelectedCard?.boneCost || 0;
                     const needsSacrifice = Boolean(activeSelectedCard && reqBlood > 0 && blood < reqBlood);
                     const readyToPlace = Boolean(activeSelectedCard && blood >= reqBlood && bones >= reqBones);
-                    const hasCommittedSacrifices = Boolean(
-                      backupState && (
-                        blood > backupState.blood ||
-                        bones > backupState.bones ||
-                        JSON.stringify(playerBoard) !== JSON.stringify(backupState.playerBoard)
-                      )
-                    );
                     const isCardSacrificable = (c: typeof playerBoard[number]) => {
                       if (!c) return false;
                       const isWorthyToken = (c.name === 'Chime' || c.name === 'Dam') && c.sigils.includes('Worthy Sacrifice');
@@ -11535,40 +11577,26 @@ export default function App() {
                       : 0;
                     const shortOnBlood = needsSacrifice && blood + availableBoardBlood < reqBlood;
 
+                    const showPlacePrompt = readyToPlace && !hasCompletedFirstRun && duelsCompleted === 0;
+                    const showSelectionBanner = Boolean(
+                      activeSelectedCard && (needsSacrifice || showPlacePrompt || !readyToPlace)
+                    );
+
                     return (
-                      <div
-                        className="relative w-full my-1 overflow-visible z-30"
-                        onContextMenu={(e) => {
-                          if (selectedHandIndex !== null) {
-                            e.preventDefault();
-                            cancelHandSelection();
-                          }
-                        }}
-                      >
-                        {activeSelectedCard && (
+                      <div className="relative w-full my-1 overflow-visible z-30">
+                        {showSelectionBanner && activeSelectedCard && (
                           <div
                             className={`absolute -top-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-2.5 py-0.5 rounded-[2px] border backdrop-blur-sm shadow-[0_4px_14px_rgba(0,0,0,0.75)] whitespace-nowrap font-mono text-[10px] tracking-[0.14em] uppercase ${
                               needsSacrifice
                                 ? 'bg-[#1b0808]/95 border-red-500/70'
-                                : readyToPlace
+                                : showPlacePrompt
                                 ? 'bg-[#1a1309]/95 border-amber-400/70'
                                 : 'bg-[#14100d]/95 border-[#8c6747]/60'
                             }`}
                           >
                             {needsSacrifice ? (
                               <div className={`flex items-center gap-2 ${shortOnBlood ? 'text-red-300/80' : 'text-red-200'}`}>
-                                
-                                     
-                                     {/* Carved Flagstone Corner Chisel Ticks */}
-                                     <span className="pointer-events-none absolute top-1 left-1 w-2 h-2 border-t border-l border-[#9c8c78]/40" />
-                                     <span className="pointer-events-none absolute top-1 right-1 w-2 h-2 border-t border-r border-[#9c8c78]/40" />
-                                     <span className="pointer-events-none absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#9c8c78]/40" />
-                                     <span className="pointer-events-none absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#9c8c78]/40" />
-                                     {/* Etched Stone Queue Channel */}
-                                     <span className="pointer-events-none absolute top-1 left-1 w-2 h-2 border-t border-l border-[#8f8070]/35" />
-                                     <span className="pointer-events-none absolute top-1 right-1 w-2 h-2 border-t border-r border-[#8f8070]/35" />
-                                     <span className="pointer-events-none absolute -bottom-2 left-1/2 -translate-x-1/2 w-px h-2 bg-gradient-to-b from-[#8f8070]/45 to-transparent" />
-                                     <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-1">
                                   {Array.from({ length: reqBlood }).map((_, i) => (
                                     <span
                                       key={i}
@@ -11586,31 +11614,15 @@ export default function App() {
                                     : `Sacrifice ${blood}/${reqBlood} Blood — Click Creatures`}
                                 </span>
                               </div>
-                            ) : readyToPlace ? (
-                              !hasCompletedFirstRun && duelsCompleted === 0 ? (
-                                <span className="text-amber-200">
-                                  Place {activeSelectedCard.name} in an Open Lane
-                                </span>
-                              ) : null
+                            ) : showPlacePrompt ? (
+                              <span className="text-amber-200">
+                                Place {activeSelectedCard.name} in an Open Lane
+                              </span>
                             ) : (
                               <span className="text-[#cfb794]">
                                 Needs {reqBones} Bones ({bones}/{reqBones})
                               </span>
                             )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                cancelHandSelection();
-                              }}
-                              className={`${readyToPlace && (hasCompletedFirstRun || duelsCompleted > 0) ? '' : 'ml-1 '}px-2 py-0.5 bg-black/70 hover:bg-red-950/85 border border-[#8c6747]/65 hover:border-red-400/80 text-[#e8d5b7] hover:text-red-100 rounded-[2px] text-[9px] font-bold tracking-[0.18em] uppercase transition-colors cursor-pointer`}
-                            >
-                              {readyToPlace && (hasCompletedFirstRun || duelsCompleted > 0)
-                                ? 'Undo'
-                                : hasCommittedSacrifices
-                                  ? 'Undo'
-                                  : 'Cancel'}
-                            </button>
                           </div>
                         )}
 
