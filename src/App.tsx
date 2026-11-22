@@ -947,6 +947,13 @@ export default function App() {
   const [activeVows, setActiveVows] = useState<VowId[]>([]);
   const activeVowsRef = useRef<VowId[]>([]);
   const [copiedEndSeed, setCopiedEndSeed] = useState<boolean>(false);
+  const [hasCompletedFirstRun, setHasCompletedFirstRun] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' && localStorage.getItem('sacrificial_scales_completed_first_run') === '1';
+    } catch {
+      return false;
+    }
+  });
   useEffect(() => { runSeedRef.current = runSeed; }, [runSeed]);
   useEffect(() => { activeVowsRef.current = activeVows; }, [activeVows]);
 
@@ -1079,6 +1086,12 @@ export default function App() {
   // Persist run completion stats once per GAME_OVER transition
   useEffect(() => {
     if (screen === 'GAME_OVER') {
+      if (!hasCompletedFirstRun) {
+        setHasCompletedFirstRun(true);
+        try {
+          localStorage.setItem('sacrificial_scales_completed_first_run', '1');
+        } catch {}
+      }
       if (!recordedGameOverRef.current) {
         recordedGameOverRef.current = true;
         const won = Boolean(bossState?.ritualEndedVoluntarily) || (runStatsRef.current?.finalBossesDefeated || 0) > 0;
@@ -11518,9 +11531,11 @@ export default function App() {
                                 </span>
                               </div>
                             ) : readyToPlace ? (
-                              <span className="text-amber-200">
-                                Place {activeSelectedCard.name} in an Open Lane
-                              </span>
+                              !hasCompletedFirstRun && duelsCompleted === 0 ? (
+                                <span className="text-amber-200">
+                                  Place {activeSelectedCard.name} in an Open Lane
+                                </span>
+                              ) : null
                             ) : (
                               <span className="text-[#cfb794]">
                                 Needs {reqBones} Bones ({bones}/{reqBones})
@@ -11532,9 +11547,13 @@ export default function App() {
                                 e.stopPropagation();
                                 cancelHandSelection();
                               }}
-                              className="ml-1 px-1.5 py-0.5 bg-black/60 hover:bg-red-950/80 border border-[#8c6747]/50 hover:border-red-400/70 text-[#e8d5b7] hover:text-red-100 rounded-[2px] text-[9px] tracking-[0.16em] transition-colors cursor-pointer"
+                              className={`${readyToPlace && (hasCompletedFirstRun || duelsCompleted > 0) ? '' : 'ml-1 '}px-2 py-0.5 bg-black/70 hover:bg-red-950/85 border border-[#8c6747]/65 hover:border-red-400/80 text-[#e8d5b7] hover:text-red-100 rounded-[2px] text-[9px] font-bold tracking-[0.18em] uppercase transition-colors cursor-pointer`}
                             >
-                              {hasCommittedSacrifices ? 'Undo' : 'Cancel'}
+                              {readyToPlace && (hasCompletedFirstRun || duelsCompleted > 0)
+                                ? 'Undo'
+                                : hasCommittedSacrifices
+                                  ? 'Undo'
+                                  : 'Cancel'}
                             </button>
                           </div>
                         )}
@@ -12214,28 +12233,77 @@ export default function App() {
           GLOBAL MODAL ALERT
          ========================================================================= */}
       {modalAlert && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-[92%] max-w-md pointer-events-auto select-none">
-          <div className="p-4 sm:p-5 rounded border border-[#8c6747]/80 bg-[#120c08]/95 shadow-[0_8px_25px_rgba(0,0,0,0.95)] flex flex-col items-center text-center font-mono w-full">
-            <div className="text-[10px] text-amber-700/80 uppercase tracking-widest mb-1.5">
-              {modalAlert.isWin ? '+-- THY CUP RUNNETH OVER --+' : '+-- I HOPE THIS HURTS --+'}
-            </div>
-            <h2 className={`text-lg sm:text-xl font-mono font-bold uppercase tracking-widest mb-2 ${
-              modalAlert.isWin ? 'text-amber-200' : 'text-red-400'
-            }`}>
-              {modalAlert.title}
-            </h2>
-            <p className="text-xs sm:text-sm font-mono text-amber-100/90 mb-4 leading-relaxed border-t border-[#8c6747]/40 pt-2.5 w-full">
-              {modalAlert.message}
-            </p>
-            <button
-              onClick={modalAlert.onAction}
-              className={`font-mono text-xs uppercase tracking-widest transition-all cursor-pointer ${
-                modalAlert.isWin
-                  ? 'text-amber-300 hover:text-amber-100 hover:tracking-[0.2em]'
-                  : 'text-red-400 hover:text-red-300 hover:tracking-[0.2em]'
+        <div className="fixed inset-0 z-[105] flex items-center justify-center p-4 bg-black/55 backdrop-blur-[3px] pointer-events-auto select-none animate-fade-up">
+          <div
+            className={`relative w-[92%] max-w-md rounded-[3px] border px-6 py-6 sm:px-7 sm:py-7 flex flex-col items-center text-center font-mono overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,228,185,0.14),inset_0_0_32px_rgba(0,0,0,0.72)] ${
+              modalAlert.isWin ? 'border-[#6e4f2c]/90' : 'border-red-900/90'
+            }`}
+            style={{
+              background: modalAlert.isWin
+                ? 'radial-gradient(ellipse at 50% 0%, rgba(180,126,56,0.22) 0%, rgba(18,12,8,0.96) 56%, rgba(10,7,5,0.98) 100%)'
+                : 'radial-gradient(ellipse at 50% 0%, rgba(165,34,28,0.24) 0%, rgba(18,9,8,0.96) 56%, rgba(10,5,5,0.98) 100%)',
+            }}
+          >
+            {/* Inner Double-Rule Hairline Frame */}
+            <div
+              className={`pointer-events-none absolute inset-2 border rounded-[2px] ${
+                modalAlert.isWin ? 'border-[#8a6539]/30' : 'border-red-800/30'
+              }`}
+            />
+            {/* Engraved Brass / Crimson Corner Brackets */}
+            <span className={`pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 ${modalAlert.isWin ? 'border-[#cfa159]/85' : 'border-red-500/80'}`} />
+            <span className={`pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 ${modalAlert.isWin ? 'border-[#cfa159]/85' : 'border-red-500/80'}`} />
+            <span className={`pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 ${modalAlert.isWin ? 'border-[#cfa159]/85' : 'border-red-500/80'}`} />
+            <span className={`pointer-events-none absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 ${modalAlert.isWin ? 'border-[#cfa159]/85' : 'border-red-500/80'}`} />
+
+            {/* Top Crest Eyebrow */}
+            <div
+              className={`relative z-10 text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.28em] mb-1.5 ${
+                modalAlert.isWin ? 'text-[#c99b56]/90' : 'text-red-400/85'
               }`}
             >
-              [ {modalAlert.btnText.toUpperCase()} ]
+              {modalAlert.isWin ? '◆ Thy Cup Runneth Over ◆' : '◆ I Hope This Hurts ◆'}
+            </div>
+
+            {/* Engraved Title */}
+            <h2
+              className={`relative z-10 text-xl sm:text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] leading-snug drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] ${
+                modalAlert.isWin ? 'text-[#f6e2bc]' : 'text-red-300'
+              }`}
+            >
+              {modalAlert.title}
+            </h2>
+
+            {/* Ornate Divider */}
+            <div className="relative z-10 flex items-center justify-center gap-2.5 w-full my-3.5">
+              <span
+                className={`h-px flex-1 max-w-[90px] bg-gradient-to-r from-transparent ${
+                  modalAlert.isWin ? 'to-[#a67c42]/80' : 'to-red-700/80'
+                }`}
+              />
+              <span className={`text-[9px] ${modalAlert.isWin ? 'text-[#d4af37]' : 'text-red-400'}`}>❖</span>
+              <span
+                className={`h-px flex-1 max-w-[90px] bg-gradient-to-l from-transparent ${
+                  modalAlert.isWin ? 'to-[#a67c42]/80' : 'to-red-700/80'
+                }`}
+              />
+            </div>
+
+            {/* Body Copy */}
+            <p className="relative z-10 text-xs sm:text-[13px] font-mono text-[#dfd0b6]/92 mb-6 leading-relaxed px-2">
+              {modalAlert.message}
+            </p>
+
+            {/* Tactile Engraved Action Button */}
+            <button
+              onClick={modalAlert.onAction}
+              className={`relative z-10 px-7 py-2.5 rounded-[2px] border font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.24em] shadow-[0_4px_14px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,235,200,0.12)] active:translate-y-[1px] transition-all duration-150 cursor-pointer ${
+                modalAlert.isWin
+                  ? 'bg-gradient-to-b from-[#2e2014] to-[#17100a] hover:from-[#3d2a19] hover:to-[#20160d] border-[#b88d4f]/85 hover:border-[#f0cf88] text-[#f4dfb7] hover:text-white'
+                  : 'bg-gradient-to-b from-[#361210] to-[#1a0807] hover:from-[#471815] hover:to-[#240b0a] border-red-700/85 hover:border-red-400 text-red-100 hover:text-white'
+              }`}
+            >
+              {modalAlert.btnText}
             </button>
           </div>
         </div>
