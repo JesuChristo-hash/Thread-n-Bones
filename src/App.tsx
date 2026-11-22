@@ -1619,10 +1619,6 @@ export default function App() {
       } else if (ChiptuneAudio.currentTrack !== 'gameover') {
         ChiptuneAudio.playGameOver?.(2.0);
       }
-    } else if (screen === 'SPLASH' && !showContinueModal) {
-      if (ChiptuneAudio.currentTrack !== 'menu') {
-        ChiptuneAudio.playMenu?.(2.2);
-      }
     } else {
       if (ChiptuneAudio.currentTrack !== 'cabin') {
         ChiptuneAudio.playCabin();
@@ -1639,9 +1635,10 @@ export default function App() {
         if (ChiptuneAudio.ctx?.state === 'suspended') {
           void ChiptuneAudio.ctx.resume();
         }
-        if (!showContinueModal && ChiptuneAudio.currentTrack !== 'menu') {
-          ChiptuneAudio.playMenu?.(2.2);
+        if (ChiptuneAudio.currentTrack !== 'cabin') {
+          ChiptuneAudio.playCabin();
         }
+        ChiptuneAudio.setOverlayDuck?.(true);
       } catch {}
     };
     window.addEventListener('pointerdown', unlockMenuAudio, { once: true });
@@ -1656,7 +1653,7 @@ export default function App() {
 
   // Gently sweep music bus low-pass down (~900 Hz) while Pause or Deck overlay is open
   useEffect(() => {
-    const shouldDuck = Boolean(showPauseMenu || showViewDeck || screen === 'VIEW_DECK' || screen === 'DEV_MENU' || screen === 'EVENT_HOARDER_SEARCH');
+    const shouldDuck = Boolean(showPauseMenu || showViewDeck || screen === 'SPLASH' || screen === 'VIEW_DECK' || screen === 'DEV_MENU' || screen === 'EVENT_HOARDER_SEARCH');
     ChiptuneAudio.setOverlayDuck?.(shouldDuck);
   }, [showPauseMenu, showViewDeck, screen]);
 
