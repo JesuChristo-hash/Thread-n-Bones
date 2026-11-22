@@ -7172,11 +7172,11 @@ export default function App() {
               // Anchor positions (left%, top%) on 112x160 card:
               // 0 -> #1 center lower; 1 -> #2 upper-left; 2 -> #3 upper-right; 3 -> #4 far-left; 4 -> #5 far-right
               const crestSlots: Array<{ left: string; top: string; size: string; z: string }> = [
-                { left: '50%', top: '83.5%', size: 'w-[30px] h-[30px]', z: 'z-30' },
-                { left: '31%', top: '73%', size: 'w-[19px] h-[19px]', z: 'z-20' },
-                { left: '69%', top: '73%', size: 'w-[19px] h-[19px]', z: 'z-20' },
-                { left: '15%', top: '70%', size: 'w-[17px] h-[17px]', z: 'z-20' },
-                { left: '85%', top: '70%', size: 'w-[17px] h-[17px]', z: 'z-20' },
+                { left: '50%', top: displaySigils.length === 1 ? '81%' : '83.5%', size: 'w-[30px] h-[30px]', z: 'z-30' },
+                { left: '31%', top: '76%', size: 'w-[19px] h-[19px]', z: 'z-20' },
+                { left: '69%', top: '76%', size: 'w-[19px] h-[19px]', z: 'z-20' },
+                { left: '15%', top: '73.5%', size: 'w-[17px] h-[17px]', z: 'z-20' },
+                { left: '85%', top: '73.5%', size: 'w-[17px] h-[17px]', z: 'z-20' },
                 { left: '15%', top: '59.5%', size: 'w-[15px] h-[15px]', z: 'z-20' },
                 { left: '85%', top: '59.5%', size: 'w-[15px] h-[15px]', z: 'z-20' },
                 { left: '50%', top: '67.5%', size: 'w-[15px] h-[15px]', z: 'z-20' },
