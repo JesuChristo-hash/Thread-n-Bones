@@ -11114,7 +11114,8 @@ export default function App() {
               </div> {/* Closes FIXED LEFT FLANK */}
 
               {/* FIXED-WIDTH CENTER BATTLEFIELD: Absolute dead-center in the arena */}
-                    <div className={`absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center justify-start w-[500px] sm:w-[512px] max-w-full z-10 origin-top scale-[0.96] ${isHeavyRecoil ? 'animate-heavy-recoil' : isBoardRumbling ? 'animate-board-rumble' : ''} ${isHitStop ? 'hitstop-freeze' : ''}`}>
+                    <div className="absolute left-1/2 -translate-x-1/2 -top-10 w-[500px] sm:w-[512px] max-w-full z-10 origin-top scale-[0.96]">
+                  <div className={`w-full flex flex-col items-center justify-start ${isHeavyRecoil ? 'animate-heavy-recoil' : isBoardRumbling ? 'animate-board-rumble' : ''} ${isHitStop ? 'hitstop-freeze' : ''}`}>
                       {/* Opponent Field: Massive Boss 8-Zone Monolith OR Standard Rows 1 & 2 */}
                     {(() => {
                       const massiveBoss = enemyBoard.find(c => c?.isMassive);
@@ -11694,6 +11695,7 @@ export default function App() {
                   })}
                 </div>
               </div>
+                </div>
 
               {/* FIXED FLANK: Bleeding Stone Runnel & Blood Ampoule Rack + S & C Draw Decks directly beneath */}
 <div className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-3 w-44 select-none pointer-events-auto z-20">
