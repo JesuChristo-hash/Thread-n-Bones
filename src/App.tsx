@@ -5636,7 +5636,9 @@ export default function App() {
       isRandomizer = true;
     }
 
-    const resolvedSeed = normalizeSeed(runSeedInput) || generateRandomSeed();
+    const ALL_LINEAGE_IDS = ['randomizer', 'witchcraft', 'infestation', 'skeleton', 'eldritch', 'paleozoic'];
+    const seedsUnlocked = ALL_LINEAGE_IDS.every(id => (archive.clearedLineages || []).includes(id));
+    const resolvedSeed = (seedsUnlocked && normalizeSeed(runSeedInput)) || generateRandomSeed();
     setRunSeed(resolvedSeed);
     runSeedRef.current = resolvedSeed;
     setRunSeedInput(resolvedSeed);
@@ -7744,46 +7746,58 @@ export default function App() {
 
             {/* Run Seed & Post-Clear Ritual Vows Bar */}
             {(() => {
+              const ALL_LINEAGE_IDS = ['randomizer', 'witchcraft', 'infestation', 'skeleton', 'eldritch', 'paleozoic'];
+              const clearedCount = ALL_LINEAGE_IDS.filter(id => (archive.clearedLineages || []).includes(id)).length;
+              const seedsUnlocked = clearedCount >= ALL_LINEAGE_IDS.length;
               const vowsUnlocked =
                 (archive.runsWon || 0) > 0 || (archive.defeatedBosses || []).includes('BoneLord');
               return (
                 <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2.5 px-3 py-1.5 rounded-[3px] bg-[#0c0806]/82 border border-[#3e2a1b]/85 shadow-[0_10px_26px_rgba(0,0,0,0.85)] backdrop-blur-[2px]">
-                  {/* Deterministic Run Seed Input */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] uppercase tracking-[0.22em] text-[#b5905c] font-bold">
-                      Seed
-                    </span>
-                    <input
-                      type="text"
-                      value={runSeedInput}
-                      onChange={e => setRunSeedInput(normalizeSeed(e.target.value))}
-                      placeholder="RANDOM"
-                      maxLength={14}
-                      aria-label="Run Seed"
-                      className="w-28 px-2 py-0.5 rounded-[2px] bg-[#160f0a] border border-[#4e3622] focus:border-[#d4af37] outline-none text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#f3dfb6] placeholder:text-[#6f573d]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRunSeedInput(generateRandomSeed());
-                        triggerSfx('draw');
-                      }}
-                      title="Roll a fresh deterministic seed"
-                      className="px-2 py-0.5 rounded-[2px] bg-[#1d140d] hover:bg-[#2c1e13] border border-[#6e4e2c]/80 hover:border-[#d4af37] text-[9px] font-mono font-bold uppercase tracking-[0.14em] text-[#e5c994] hover:text-white cursor-pointer transition-colors"
-                    >
-                      Roll
-                    </button>
-                    {runSeedInput && (
+                  {/* Deterministic Run Seed Input (Unlocked after clearing Bone Lord with all 6 lineages) */}
+                  {seedsUnlocked ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] uppercase tracking-[0.22em] text-[#b5905c] font-bold">
+                        Seed
+                      </span>
+                      <input
+                        type="text"
+                        value={runSeedInput}
+                        onChange={e => setRunSeedInput(normalizeSeed(e.target.value))}
+                        placeholder="RANDOM"
+                        maxLength={14}
+                        aria-label="Run Seed"
+                        className="w-28 px-2 py-0.5 rounded-[2px] bg-[#160f0a] border border-[#4e3622] focus:border-[#d4af37] outline-none text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#f3dfb6] placeholder:text-[#6f573d]"
+                      />
                       <button
                         type="button"
-                        onClick={() => setRunSeedInput('')}
-                        title="Clear custom seed"
-                        className="px-1.5 py-0.5 rounded-[2px] text-[9px] text-[#9c8162] hover:text-[#f0dab2] cursor-pointer"
+                        onClick={() => {
+                          setRunSeedInput(generateRandomSeed());
+                          triggerSfx('draw');
+                        }}
+                        title="Roll a fresh deterministic seed"
+                        className="px-2 py-0.5 rounded-[2px] bg-[#1d140d] hover:bg-[#2c1e13] border border-[#6e4e2c]/80 hover:border-[#d4af37] text-[9px] font-mono font-bold uppercase tracking-[0.14em] text-[#e5c994] hover:text-white cursor-pointer transition-colors"
                       >
-                        ✕
+                        Roll
                       </button>
-                    )}
-                  </div>
+                      {runSeedInput && (
+                        <button
+                          type="button"
+                          onClick={() => setRunSeedInput('')}
+                          title="Clear custom seed"
+                          className="px-1.5 py-0.5 rounded-[2px] text-[9px] text-[#9c8162] hover:text-[#f0dab2] cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <span
+                      title="Seal the Bone Lord with all 6 Lineages to unlock custom Run Seeds."
+                      className="text-[9px] font-mono uppercase tracking-[0.16em] text-[#8d7253]/85"
+                    >
+                      🔒 Seeds — {clearedCount}/6 Lineages Cleared
+                    </span>
+                  )}
 
                   <div className="hidden sm:block h-4 w-px bg-[#3c291b]" />
 
@@ -11281,7 +11295,7 @@ export default function App() {
                                return (
                                  <div
                                    key={`e-queue-slot-${idx}`}
-                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
+                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#5e564f]/28 bg-[#0b0a0c]/42 shadow-[inset_0_2px_12px_rgba(0,0,0,0.72)] overflow-visible ${
                                       card || isDropping ? 'z-20' : 'z-0'
                                     } ${isDropping ? 'z-30' : 'z-10'}`}
                                   >
@@ -11345,7 +11359,7 @@ export default function App() {
                                          handleItemTargetLane(idx);
                                        }
                                      }}
-                                     className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
+                                     className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#6e645b]/38 bg-[#0d0c0e]/56 shadow-[inset_0_2px_14px_rgba(0,0,0,0.82),0_1px_0_rgba(255,255,255,0.03)] overflow-visible ${
                                        isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
                                      } ${
                                        itemTargetMode && card
@@ -11509,7 +11523,18 @@ export default function App() {
                           >
                             {needsSacrifice ? (
                               <div className={`flex items-center gap-2 ${shortOnBlood ? 'text-red-300/80' : 'text-red-200'}`}>
-                                <span className="flex items-center gap-1">
+                                
+                                     
+                                     {/* Carved Flagstone Corner Chisel Ticks */}
+                                     <span className="pointer-events-none absolute top-1 left-1 w-2 h-2 border-t border-l border-[#9c8c78]/40" />
+                                     <span className="pointer-events-none absolute top-1 right-1 w-2 h-2 border-t border-r border-[#9c8c78]/40" />
+                                     <span className="pointer-events-none absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#9c8c78]/40" />
+                                     <span className="pointer-events-none absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#9c8c78]/40" />
+                                     {/* Etched Stone Queue Channel */}
+                                     <span className="pointer-events-none absolute top-1 left-1 w-2 h-2 border-t border-l border-[#8f8070]/35" />
+                                     <span className="pointer-events-none absolute top-1 right-1 w-2 h-2 border-t border-r border-[#8f8070]/35" />
+                                     <span className="pointer-events-none absolute -bottom-2 left-1/2 -translate-x-1/2 w-px h-2 bg-gradient-to-b from-[#8f8070]/45 to-transparent" />
+                                     <span className="flex items-center gap-1">
                                   {Array.from({ length: reqBlood }).map((_, i) => (
                                     <span
                                       key={i}
@@ -11555,6 +11580,13 @@ export default function App() {
                           </div>
                         )}
 
+                        {/* Gothic Ritual-Cloth Battle Seam */}
+                        <div className="pointer-events-none flex items-center justify-center gap-3 w-[94%] my-1.5 select-none">
+                          <span className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#7a2420]/55 to-[#9c7a4c]/60" />
+                          <span className="w-1.5 h-1.5 rotate-45 bg-[#2a0d0d] border border-[#9c7a4c]/75 shadow-[0_0_6px_rgba(122,36,32,0.65)]" />
+                          <span className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#7a2420]/55 to-[#9c7a4c]/60" />
+                        </div>
+
                         <div className="flex justify-center items-center gap-2 sm:gap-4 w-full overflow-visible">
                           {playerBoard.map((card, idx) => {
                             const canSacrificeThis = Boolean(needsSacrifice && isCardSacrificable(card) && sacrificingLane === null);
@@ -11572,21 +11604,25 @@ export default function App() {
                             const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === true && zeroPowerShakingCard?.lane === idx;
 
                             const slotStyle = canSacrificeThis
-                              ? 'border-red-500/85 bg-red-950/25 hover:bg-red-900/40 hover:border-red-300 shadow-[0_0_16px_rgba(220,38,38,0.38)] cursor-pointer'
+                              ? 'border-red-500/85 bg-red-950/35 hover:bg-red-900/45 hover:border-red-300 shadow-[inset_0_2px_12px_rgba(0,0,0,0.75),0_0_16px_rgba(220,38,38,0.42)] cursor-pointer'
                               : canPlaceHere
-                              ? 'border-amber-400/80 bg-amber-900/15 hover:bg-amber-700/30 hover:border-amber-200 shadow-[0_0_14px_rgba(217,119,6,0.32)] cursor-pointer'
+                              ? 'border-amber-400/80 bg-amber-950/25 hover:bg-amber-900/35 hover:border-amber-200 shadow-[inset_0_2px_12px_rgba(0,0,0,0.75),0_0_14px_rgba(217,119,6,0.34)] cursor-pointer'
                               : isDimmedTarget
-                              ? 'border-[#8c6747]/15 bg-transparent opacity-45 cursor-not-allowed'
-                              : 'border-[#8c6747]/25 hover:border-[#cfb794]/50 bg-transparent hover:bg-white/[0.02] cursor-pointer';
+                              ? 'border-[#5e564f]/20 bg-[#0b0a0c]/30 opacity-45 cursor-not-allowed'
+                              : 'border-[#6e645b]/40 hover:border-[#b59c7c]/60 bg-[#0d0c0e]/58 hover:bg-[#141215]/72 shadow-[inset_0_2px_14px_rgba(0,0,0,0.82),0_1px_0_rgba(255,255,255,0.03)] cursor-pointer';
 
                             return (
                               <div
                                 key={`p-slot-${idx}`}
                                 onClick={() => handlePlayerSlotClick(idx)}
-                                className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed transition-all duration-150 overflow-visible ${slotStyle} ${
+                                className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border transition-all duration-150 overflow-visible ${slotStyle} ${
                                   isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
                                 }`}
                               >
+                                <span className="pointer-events-none absolute top-1 left-1 w-2 h-2 border-t border-l border-[#9c8c78]/40" />
+                                <span className="pointer-events-none absolute top-1 right-1 w-2 h-2 border-t border-r border-[#9c8c78]/40" />
+                                <span className="pointer-events-none absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#9c8c78]/40" />
+                                <span className="pointer-events-none absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#9c8c78]/40" />
                                 {(!card || isAttackingThisLane) && (
                                   <span
                                     className={`absolute font-mono select-none pointer-events-none transition-colors ${
@@ -11961,7 +11997,7 @@ export default function App() {
     </div>
   </div>
 
-  {/* 2. BLOOD BANK OUNCES (Replaces Teeth Counter) */}
+  {/* 2. UNIFIED CARVED-STONE TELEMETRY PLAQUE (Blood Bank, Turn, Bones) */}
   {(() => {
     const winThreshold = typeof getRequiredScaleWinDamage === 'function' ? getRequiredScaleWinDamage() : 5;
     const liveBattleOverkill = Math.max(0, scale - winThreshold);
@@ -11969,37 +12005,45 @@ export default function App() {
 
     return (
       <div
-        className={`flex items-center justify-center gap-1.5 px-3 py-1 bg-[#16120f] border rounded-sm shadow-[0_2px_4px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.05)] select-none transition-all duration-300 ${
+        className={`relative w-full max-w-[168px] mt-1.5 px-3 py-2.5 rounded-[2px] bg-[#100e10]/90 border shadow-[0_10px_24px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.06),inset_0_0_16px_rgba(0,0,0,0.75)] select-none transition-all duration-300 ${
           turnNumber === 1 && scale >= 4
-            ? 'border-red-900/80 shadow-[0_0_10px_rgba(220,38,38,0.4)]'
-            : 'border-[#2f241c]'
+            ? 'border-red-800/85 shadow-[0_0_14px_rgba(220,38,38,0.45)]'
+            : 'border-[#4a413b]/75'
         }`}
-        title={`Blood Bank: ${displayBloodOz} Ounces`}
       >
-        <span className="font-['Cinzel',_serif] font-black text-sm tracking-widest text-[#d8b88a] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
-          {displayBloodOz}
-        </span>
-        <span className="font-mono text-[10px] font-bold text-[#8c6747] tracking-wider uppercase">
-          OZ
-        </span>
+        <span className="pointer-events-none absolute top-1 left-1 w-2 h-2 border-t border-l border-[#8f7960]/65" />
+        <span className="pointer-events-none absolute top-1 right-1 w-2 h-2 border-t border-r border-[#8f7960]/65" />
+        <span className="pointer-events-none absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#8f7960]/65" />
+        <span className="pointer-events-none absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#8f7960]/65" />
+
+        <div className="flex items-center justify-center pb-1.5 mb-1.5 border-b border-[#342c27]/85">
+          <span className="font-['Cinzel',_serif] font-bold text-[10px] tracking-[0.26em] uppercase text-[#bfa78b]">
+            Turn {turnNumber}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 divide-x divide-[#342c27]/85 items-center text-center">
+          <div className="flex items-center justify-center gap-1 pr-1.5" title={`Blood Bank: ${displayBloodOz} Ounces`}>
+            <span className="font-['Cinzel',_serif] font-black text-sm tracking-wider text-[#e2c69b] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
+              {displayBloodOz}
+            </span>
+            <span className="font-mono text-[9px] font-bold text-[#9c7958] tracking-wider uppercase">
+              OZ
+            </span>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 pl-1.5" title={`Bones: ${bones}`}>
+            <span className={`text-xs filter contrast-125 brightness-90 select-none ${boneShaking ? 'animate-bone-shake' : ''}`}>
+              🦴
+            </span>
+            <span className="font-['Cinzel',_serif] font-black text-sm text-[#ebd9bf] tracking-wider drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
+              {bones}
+            </span>
+          </div>
+        </div>
       </div>
     );
   })()}
-                {/* Bone Reservoir Tray (Relocated beneath Ampoule Rack) */}
-                <div className="flex flex-col items-center gap-2 w-full mt-2.5 select-none">
-                  <div className="font-['Cinzel',_serif] font-bold text-xs sm:text-sm tracking-[0.22em] uppercase text-[#9e8368] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                    Turn {turnNumber}
-                  </div>
-
-                  <div className="flex items-center justify-center gap-2 px-3.5 py-1.5 bg-[#140f0c] border border-[#2b221a] rounded-sm shadow-[inset_0_2px_5px_rgba(0,0,0,0.9),0_1px_3px_rgba(0,0,0,0.8)]">
-                    <span className={`text-sm filter contrast-125 brightness-90 select-none ${boneShaking ? 'animate-bone-shake' : ''}`}>
-                      🦴
-                    </span>
-                    <span className="font-['Cinzel',_serif] font-black text-sm text-[#ebd9bf] tracking-widest drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
-                      {bones}
-                    </span>
-                  </div>
-                </div>
 
                 {/* S & C Draw Decks directly beneath Turn & Bones */}
                 <style>{`
@@ -12024,6 +12068,21 @@ export default function App() {
                 <div className="flex items-center justify-center gap-3.5 w-full relative mt-4 sm:mt-5 translate-y-1 font-mono">
                   {/* Squirrel Deck */}
                   <div className="group flex flex-col items-center gap-1.5">
+                    <div className="relative">
+                      <img
+                        src={`${BASE}/assets/cardbases/cardbacks.png`}
+                        alt=""
+                        aria-hidden="true"
+                        className="pointer-events-none select-none absolute inset-0 w-full h-full object-fill rounded translate-x-[4px] translate-y-[4px] brightness-[0.38] border border-black/80"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                      <img
+                        src={`${BASE}/assets/cardbases/cardbacks.png`}
+                        alt=""
+                        aria-hidden="true"
+                        className="pointer-events-none select-none absolute inset-0 w-full h-full object-fill rounded translate-x-[2px] translate-y-[2px] brightness-[0.62] border border-black/70"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
                     <button
                       disabled={phase !== 'DRAW'}
                       onClick={() => handleDraw('sacrifice')}
@@ -12052,6 +12111,7 @@ export default function App() {
                         />
                       </div>
                     </button>
+                    </div>
 
                     {/* Stack Count Below Deck */}
                     <span className="deck-count-red text-[11px] sm:text-xs font-mono font-bold tracking-wider select-none pointer-events-none">
@@ -12061,6 +12121,25 @@ export default function App() {
 
                   {/* Creature Deck */}
                   <div className="group flex flex-col items-center gap-1.5">
+                    <div className="relative">
+                      {deck.length >= 4 && (
+                        <img
+                          src={`${BASE}/assets/cardbases/cardbacks.png`}
+                          alt=""
+                          aria-hidden="true"
+                          className="pointer-events-none select-none absolute inset-0 w-full h-full object-fill rounded translate-x-[4px] translate-y-[4px] brightness-[0.38] border border-black/80"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      )}
+                      {deck.length >= 2 && (
+                        <img
+                          src={`${BASE}/assets/cardbases/cardbacks.png`}
+                          alt=""
+                          aria-hidden="true"
+                          className="pointer-events-none select-none absolute inset-0 w-full h-full object-fill rounded translate-x-[2px] translate-y-[2px] brightness-[0.62] border border-black/70"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      )}
                     <button
                       disabled={phase !== 'DRAW'}
                       onClick={() => handleDraw('main')}
@@ -12089,6 +12168,7 @@ export default function App() {
                         />
                       </div>
                     </button>
+                    </div>
 
                     {/* Stack Count Below Deck */}
                     <span className="deck-count-red text-[11px] sm:text-xs font-mono font-bold tracking-wider select-none pointer-events-none">
