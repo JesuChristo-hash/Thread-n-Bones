@@ -7887,37 +7887,40 @@ export default function App() {
          ========================================================================= */}
       {screen === 'GAME_OVER' && (
         <div
-          className="absolute inset-0 bg-[#080204] z-50 flex flex-col items-center justify-start p-4 sm:p-6 text-center select-none overflow-y-auto animate-fade-up font-mono"
+          className="absolute inset-0 bg-[#080204] z-50 flex flex-col items-center justify-center p-4 text-center select-none overflow-hidden animate-fade-up font-mono"
           style={getScreenBgStyle('gameover.jpg')}
         >
-          <div className="max-w-3xl w-full my-auto flex flex-col items-center bg-[#0d0806]/92 border border-[#3e2316] rounded-sm p-6 sm:p-7 shadow-[0_22px_55px_rgba(0,0,0,0.95)] backdrop-blur-[2px]">
-            <div className="text-4xl mb-2 filter sepia-[0.4]">
-              {bossState.ritualEndedVoluntarily ? '🕯️' : bossState.ritualSurrendered ? '🕯️' : '💀'}
+          <div className="max-w-5xl w-full flex flex-col items-center bg-[#0d0806]/92 border border-[#3e2316] rounded-sm px-6 py-5 shadow-[0_22px_55px_rgba(0,0,0,0.95)] backdrop-blur-[2px]">
+            {/* Compact Header */}
+            <div className="flex items-center justify-center gap-3 mb-1">
+              <span className="text-2xl filter sepia-[0.4]">
+                {bossState.ritualEndedVoluntarily ? '🕯️' : bossState.ritualSurrendered ? '🕯️' : '💀'}
+              </span>
+              <div className="text-left">
+                <div className="text-[10px] text-amber-600/90 font-bold uppercase tracking-widest leading-none mb-0.5">
+                  {bossState.ritualEndedVoluntarily
+                    ? '+-- SUCCESS --+'
+                    : bossState.ritualSurrendered
+                      ? '+-- RITUAL ABANDONED --+'
+                      : '+-- CATASTROPHIC FAILURE --+'}
+                </div>
+                <h1
+                  className={`text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-widest leading-tight ${
+                    bossState.ritualEndedVoluntarily
+                      ? 'text-amber-300 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)]'
+                      : 'text-red-500 drop-shadow-[0_2px_12px_rgba(239,68,68,0.4)]'
+                  }`}
+                >
+                  {bossState.ritualEndedVoluntarily
+                    ? 'RITUAL CONCLUDED'
+                    : bossState.ritualSurrendered
+                      ? 'Forfeited to the Dark'
+                      : 'The Old One Awaits You'}
+                </h1>
+              </div>
             </div>
 
-            <div className="text-[11px] text-amber-600/90 font-bold uppercase tracking-widest mb-1">
-              {bossState.ritualEndedVoluntarily
-                ? '+-- SUCCESS --+'
-                : bossState.ritualSurrendered
-                  ? '+-- RITUAL ABANDONED --+'
-                  : '+-- CATASTROPHIC FAILURE --+'}
-            </div>
-
-            <h1
-              className={`text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-widest mb-1 ${
-                bossState.ritualEndedVoluntarily
-                  ? 'text-amber-300 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)]'
-                  : 'text-red-500 drop-shadow-[0_2px_12px_rgba(239,68,68,0.4)]'
-              }`}
-            >
-              {bossState.ritualEndedVoluntarily
-                ? 'RITUAL CONCLUDED'
-                : bossState.ritualSurrendered
-                  ? 'Forfeited to the Dark'
-                  : 'The Old One Awaits You'}
-            </h1>
-
-            <div className="text-xs font-mono uppercase tracking-widest text-[#cfb794]/80 mb-6">
+            <div className="text-[11px] font-mono uppercase tracking-widest text-[#cfb794]/80 mb-4">
               {bossState.ritualEndedVoluntarily
                 ? 'The Bone Lord has been sealed away'
                 : bossState.ritualSurrendered
@@ -7925,165 +7928,176 @@ export default function App() {
                   : 'Your Blood Runs Cold'}
             </div>
 
-            {/* Stats mounted in a backlit dark cardplate */}
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-6 border border-[#3e2316] py-5 mb-6 text-left items-center bg-[#150d09]/80 px-6 rounded-sm">
-              {/* Left Column: Tracked Stats */}
-              <div className="space-y-3 font-mono text-xs border-b sm:border-b-0 sm:border-r border-[#3e2316] pb-4 sm:pb-0 sm:pr-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Cleared Stages</span>
-                  <span className="text-amber-200 font-bold text-sm">{runStats.clearedStages}</span>
+            {/* Two-Column Body: Stats/Rank/Seed Left, Grimoire Trophy Strip Right */}
+            <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 items-stretch">
+              {/* Left Column: Stats, Rank & Seed/Vows */}
+              <div className="md:col-span-5 flex flex-col justify-between gap-3">
+                <div className="flex-1 flex flex-col justify-between border border-[#3e2316] bg-[#150d09]/80 px-5 py-4 rounded-sm text-left">
+                  <div className="flex items-center justify-between border-b border-[#3e2316] pb-3 mb-3">
+                    <div>
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-[#a8957f] font-semibold">
+                        Rank Assessment
+                      </div>
+                      <div className="text-[10px] text-[#7f6a54] uppercase tracking-wider mt-0.5">
+                        Final Ledger
+                      </div>
+                    </div>
+                    <div className={`text-5xl font-mono font-bold leading-none drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)] ${calculateGrade(runStats).color}`}>
+                      {calculateGrade(runStats).letter}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5 font-mono text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Cleared Stages</span>
+                      <span className="text-amber-200 font-bold text-sm">{runStats.clearedStages}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Cards Sacrificed</span>
+                      <span className="text-red-300 font-bold text-sm">{runStats.cardsSacrificed}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Damage Dealt / Taken</span>
+                      <span className="text-stone-100 font-bold text-sm">
+                        {runStats.scaleDamageDealt} <span className="text-stone-500 font-normal">/</span> {runStats.scaleDamageTaken}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Bosses Slain</span>
+                      <span className="text-purple-300 font-bold text-sm">{runStats.bossesDefeated}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Cards Sacrificed</span>
-                  <span className="text-red-300 font-bold text-sm">{runStats.cardsSacrificed}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Damage Dealt / Taken</span>
-                  <span className="text-stone-100 font-bold text-sm">
-                    {runStats.scaleDamageDealt} <span className="text-stone-500 font-normal">/</span> {runStats.scaleDamageTaken}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Bosses Slain</span>
-                  <span className="text-purple-300 font-bold text-sm">{runStats.bossesDefeated}</span>
-                </div>
+
+                {(runSeed || activeVows.length > 0) && (
+                  <div className="px-4 py-2.5 rounded-sm bg-[#120b08]/88 border border-[#362015] flex flex-col gap-2 text-[10px] font-mono text-left">
+                    {runSeed && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="uppercase tracking-[0.2em] text-[#9b8265]">Run Seed</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try { navigator.clipboard?.writeText(runSeed); } catch {}
+                            setCopiedEndSeed(true);
+                            window.setTimeout(() => setCopiedEndSeed(false), 1400);
+                          }}
+                          title="Click to copy seed"
+                          className="px-2 py-0.5 rounded-[2px] bg-[#1c130c] border border-[#6e4d2b] text-[#f0d39a] hover:text-white font-bold tracking-[0.14em] cursor-pointer transition-colors"
+                        >
+                          {copiedEndSeed ? 'COPIED ✓' : runSeed}
+                        </button>
+                      </div>
+                    )}
+                    {activeVows.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1">
+                        {activeVows.map(vId => (
+                          <span
+                            key={vId}
+                            className="px-1.5 py-0.5 rounded-[2px] bg-[#2a0c0a] border border-red-800/80 text-[8.5px] font-bold uppercase tracking-[0.1em] text-red-200"
+                          >
+                            ✦ {RITUAL_VOW_MAP[vId]?.shortTag || vId}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Right Flank: Clear high-contrast assessment badge */}
-              <div className="flex flex-col items-center justify-between z-20 scale-110 sm:scale-115 origin-center">
-                <div className="text-[11px] font-mono uppercase tracking-widest text-[#a8957f] mb-1 font-semibold">
-                  Rank Assessment
+              {/* Right Column: Final Grimoire Trophy Strip */}
+              <div className="md:col-span-7 flex flex-col p-3.5 rounded-sm bg-[#120b08]/85 border border-[#3a2317] text-left">
+                <div className="flex items-center justify-between border-b border-[#2e1c12] pb-1.5 mb-2 shrink-0">
+                  <span className="text-[10px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#d6b377]">
+                    Final Grimoire ({masterDeck.length} Creatures)
+                  </span>
+                  <span className="text-[9px] font-mono uppercase tracking-[0.16em] text-[#8d7458]">
+                    Fusions • Forgeries • Blessings
+                  </span>
                 </div>
-                <div className={`text-6xl font-mono font-bold drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)] ${calculateGrade(runStats).color}`}>
-                  {calculateGrade(runStats).letter}
-                </div>
+                {masterDeck.length > 0 ? (() => {
+                  const annotated = masterDeck.map((c, idx) => {
+                    const base = ALL_CARD_LOOKUP[c.name];
+                    const isFused = Boolean((c as any).isMycologistCombined);
+                    const isForged = Boolean((c as any).isGoobertClone);
+                    const atkDelta = base ? (c.attack || 0) - (base.attack || 0) : 0;
+                    const hpDelta = base ? (c.health || 0) - (base.health || 0) : 0;
+                    const sigilDelta = base ? (c.sigils?.length || 0) - (base.sigils?.length || 0) : 0;
+                    const isBuffed = atkDelta > 0 || hpDelta > 0;
+                    const isGrafted = sigilDelta > 0;
+
+                    let badge: { label: string; cls: string; rank: number } | null = null;
+                    if (isFused) {
+                      badge = {
+                        label: 'FUSED',
+                        cls: 'bg-[#21102a]/95 border-purple-400/85 text-purple-200',
+                        rank: 4,
+                      };
+                    } else if (isForged) {
+                      badge = {
+                        label: 'FORGED',
+                        cls: 'bg-[#09201c]/95 border-teal-400/85 text-teal-200',
+                        rank: 3,
+                      };
+                    } else if (isBuffed) {
+                      badge = {
+                        label: `+${Math.max(0, atkDelta)}/+${Math.max(0, hpDelta)}`,
+                        cls: 'bg-[#2a110a]/95 border-amber-400/85 text-amber-200',
+                        rank: 2,
+                      };
+                    } else if (isGrafted) {
+                      badge = {
+                        label: 'GRAFTED',
+                        cls: 'bg-[#1f1709]/95 border-[#d4af37]/85 text-[#f4d78b]',
+                        rank: 1,
+                      };
+                    }
+                    return { card: c, idx, badge, rank: badge?.rank || 0 };
+                  });
+
+                  const sorted = [...annotated].sort((a, b) => b.rank - a.rank);
+
+                  return (
+                    <div className="flex flex-wrap justify-center content-start gap-x-0.5 gap-y-1 max-h-[300px] overflow-y-auto pt-2.5 pb-1 px-1">
+                      {sorted.map(({ card, idx, badge }) => (
+                        <div
+                          key={card.id || `trophy-${card.name}-${idx}`}
+                          className="relative flex flex-col items-center pointer-events-none"
+                        >
+                          {badge && (
+                            <span
+                              className={`absolute -top-2 left-1/2 -translate-x-1/2 z-30 px-1.5 py-0.5 rounded-[2px] border text-[7.5px] font-mono font-bold uppercase tracking-[0.14em] whitespace-nowrap shadow-md ${badge.cls}`}
+                            >
+                              {badge.label}
+                            </span>
+                          )}
+                          <div className="scale-[0.64] -mx-4 -my-6">
+                            {renderCard(card, { isClickable: false, disableHoverScale: true })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })() : (
+                  <div className="flex-1 flex items-center justify-center text-[11px] text-[#7f6a54] uppercase tracking-widest">
+                    No surviving creatures
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Run Seed & Active Vows Strip */}
-            {(runSeed || activeVows.length > 0) && (
-              <div className="w-full mb-4 px-4 py-2 rounded-sm bg-[#120b08]/88 border border-[#362015] flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono">
-                {runSeed && (
-                  <div className="flex items-center gap-2">
-                    <span className="uppercase tracking-[0.2em] text-[#9b8265]">Run Seed</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        try { navigator.clipboard?.writeText(runSeed); } catch {}
-                        setCopiedEndSeed(true);
-                        window.setTimeout(() => setCopiedEndSeed(false), 1400);
-                      }}
-                      title="Click to copy seed"
-                      className="px-2 py-0.5 rounded-[2px] bg-[#1c130c] border border-[#6e4d2b] text-[#f0d39a] hover:text-white font-bold tracking-[0.14em] cursor-pointer transition-colors"
-                    >
-                      {copiedEndSeed ? 'COPIED ✓' : runSeed}
-                    </button>
-                  </div>
-                )}
-                {activeVows.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="uppercase tracking-[0.18em] text-red-400/85">Vows</span>
-                    {activeVows.map(vId => (
-                      <span
-                        key={vId}
-                        className="px-2 py-0.5 rounded-[2px] bg-[#2a0c0a] border border-red-800/80 text-[9px] font-bold uppercase tracking-[0.1em] text-red-200"
-                      >
-                        ✦ {RITUAL_VOW_MAP[vId]?.shortTag || vId}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* End-Screen Deck Trophy Strip */}
-            {masterDeck.length > 0 && (() => {
-              const annotated = masterDeck.map((c, idx) => {
-                const base = ALL_CARD_LOOKUP[c.name];
-                const isFused = Boolean((c as any).isMycologistCombined);
-                const isForged = Boolean((c as any).isGoobertClone);
-                const atkDelta = base ? (c.attack || 0) - (base.attack || 0) : 0;
-                const hpDelta = base ? (c.health || 0) - (base.health || 0) : 0;
-                const sigilDelta = base ? (c.sigils?.length || 0) - (base.sigils?.length || 0) : 0;
-                const isBuffed = atkDelta > 0 || hpDelta > 0;
-                const isGrafted = sigilDelta > 0;
-
-                let badge: { label: string; cls: string; rank: number } | null = null;
-                if (isFused) {
-                  badge = {
-                    label: 'FUSED',
-                    cls: 'bg-[#21102a]/95 border-purple-400/85 text-purple-200',
-                    rank: 4,
-                  };
-                } else if (isForged) {
-                  badge = {
-                    label: 'FORGED',
-                    cls: 'bg-[#09201c]/95 border-teal-400/85 text-teal-200',
-                    rank: 3,
-                  };
-                } else if (isBuffed) {
-                  badge = {
-                    label: `+${Math.max(0, atkDelta)}/+${Math.max(0, hpDelta)}`,
-                    cls: 'bg-[#2a110a]/95 border-amber-400/85 text-amber-200',
-                    rank: 2,
-                  };
-                } else if (isGrafted) {
-                  badge = {
-                    label: 'GRAFTED',
-                    cls: 'bg-[#1f1709]/95 border-[#d4af37]/85 text-[#f4d78b]',
-                    rank: 1,
-                  };
-                }
-                return { card: c, idx, badge, rank: badge?.rank || 0 };
-              });
-
-              const sorted = [...annotated].sort((a, b) => b.rank - a.rank);
-
-              return (
-                <div className="w-full mb-5 p-3.5 rounded-sm bg-[#120b08]/85 border border-[#3a2317] text-left">
-                  <div className="flex items-center justify-between border-b border-[#2e1c12] pb-1.5 mb-2.5">
-                    <span className="text-[10px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#d6b377]">
-                      Final Grimoire ({masterDeck.length} Creatures)
-                    </span>
-                    <span className="text-[9px] font-mono uppercase tracking-[0.16em] text-[#8d7458]">
-                      Fusions • Forgeries • Blessings
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 max-h-[225px] overflow-y-auto pt-3 pb-1 px-1">
-                    {sorted.map(({ card, idx, badge }) => (
-                      <div
-                        key={card.id || `trophy-${card.name}-${idx}`}
-                        className="relative flex flex-col items-center pointer-events-none"
-                      >
-                        {badge && (
-                          <span
-                            className={`absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 px-1.5 py-0.5 rounded-[2px] border text-[7.5px] font-mono font-bold uppercase tracking-[0.16em] whitespace-nowrap shadow-md ${badge.cls}`}
-                          >
-                            {badge.label}
-                          </span>
-                        )}
-                        <div className="scale-[0.72] -mx-3 -my-5">
-                          {renderCard(card, { isClickable: false, disableHoverScale: true })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
+            {/* Action Buttons */}
             <div className="flex flex-wrap items-center justify-center gap-3">
               {runSeed && (
                 <button
                   onClick={() => handleRestartRun(runSeed)}
-                  className="bg-[#18110c] hover:bg-[#261b12] active:translate-y-[1px] border border-[#8e6a3c]/80 hover:border-[#e5c16b] rounded-sm shadow-[0_2px_0_#0a0807] transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e6c88e] hover:text-white px-6 py-3 select-none cursor-pointer"
+                  className="bg-[#18110c] hover:bg-[#261b12] active:translate-y-[1px] border border-[#8e6a3c]/80 hover:border-[#e5c16b] rounded-sm shadow-[0_2px_0_#0a0807] transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e6c88e] hover:text-white px-6 py-2.5 select-none cursor-pointer"
                 >
                   REPLAY THIS SEED
                 </button>
               )}
               <button
                 onClick={() => handleRestartRun()}
-                className="bg-[#1e1510] hover:bg-[#2c1e16] active:bg-[#140e0b] border border-[#482c1d] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.08)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e8d7be] hover:text-[#fff] px-8 py-3 select-none cursor-pointer"
+                className="bg-[#1e1510] hover:bg-[#2c1e16] active:bg-[#140e0b] border border-[#482c1d] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.08)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e8d7be] hover:text-[#fff] px-8 py-2.5 select-none cursor-pointer"
               >
                 COMMENCE ANOTHER RITUAL
               </button>
