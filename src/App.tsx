@@ -10845,10 +10845,16 @@ export default function App() {
                                 : "The Weaver")
                         : currentStageName}
                     </h2>
-                    <span className="font-['Cinzel',_serif] font-semibold text-[11px] tracking-[0.22em] uppercase text-[#9e8368] mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                      {isBossMatch ? `Stage ${stage} • Phase ${bossPhase}` : `Stage ${stage} • Depth ${level}`}
-                    </span>
-                    <div className="w-20 h-[1px] bg-gradient-to-r from-transparent via-[#3a2f26] to-transparent mt-1.5" />
+                    <div className="mt-1 px-2.5 py-0.5 rounded-[2px] bg-[#100e10]/88 border border-[#4a413b]/75 shadow-[inset_0_1px_6px_rgba(0,0,0,0.75)]">
+                      <span className="font-['Cinzel',_serif] font-semibold text-[10px] tracking-[0.22em] uppercase text-[#bfa78b]">
+                        {isBossMatch ? `Stage ${stage} • Phase ${bossPhase}` : `Stage ${stage} • Depth ${level}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2 w-28 mt-2">
+                      <span className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#6e6052]/70" />
+                      <span className="w-1 h-1 rotate-45 bg-[#8f7960]/80" />
+                      <span className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#6e6052]/70" />
+                    </div>
                   </div>
 
                   {/* Stitched Effigy Display (Weaver's Needlework & Post-Weaver Totem Duels) */}
@@ -10865,49 +10871,66 @@ export default function App() {
 
                         return (
                           <div
-                            className={`relative border border-dashed ${
+                            className={`relative border ${
                               isWeaverPoppet
-                                ? 'border-purple-700/70 bg-[#160c1c] shadow-[0_4px_14px_rgba(30,10,40,0.7)]'
-                                : 'border-red-900/70 bg-[#1a0d0d] shadow-[0_4px_14px_rgba(40,10,10,0.7)]'
-                            } p-2 flex flex-col items-center justify-between text-center select-none rounded-[3px] shrink-0 ${
-                              Boolean(activeTotem?.head && activeTotem?.body) ? 'flex-1 min-w-0 h-[134px]' : 'w-24 sm:w-28 h-[134px]'
+                                ? 'border-purple-700/65 bg-[#110e15]/92 shadow-[0_8px_20px_rgba(0,0,0,0.85),inset_0_0_16px_rgba(88,28,135,0.22)]'
+                                : 'border-red-900/65 bg-[#120d0e]/92 shadow-[0_8px_20px_rgba(0,0,0,0.85),inset_0_0_16px_rgba(127,29,29,0.22)]'
+                            } p-2 flex flex-col items-center justify-between text-center select-none rounded-[2px] shrink-0 ${
+                              Boolean(activeTotem?.head && activeTotem?.body) ? 'flex-1 min-w-0 h-[138px]' : 'w-24 sm:w-28 h-[138px]'
                             }`}
-                            title={`${isWeaverPoppet ? "Weaver's Poppet" : 'Foe Totem'}: ${tribeName} kin bear the ${sigilName || 'unmarked'} sigil`}
+                            title={`${isWeaverPoppet ? "Weaver's Poppet" : 'Foe Poppet'}: ${tribeName} kin bear the ${sigilName || 'unmarked'} sigil`}
                           >
-                            <span className={`text-[7px] font-mono uppercase tracking-[0.18em] leading-none shrink-0 ${
-                              isWeaverPoppet ? 'text-purple-400/90' : 'text-red-400/90'
+                            <span className={`pointer-events-none absolute top-1 left-1 w-1.5 h-1.5 border-t border-l ${isWeaverPoppet ? 'border-purple-500/65' : 'border-red-700/70'}`} />
+                            <span className={`pointer-events-none absolute top-1 right-1 w-1.5 h-1.5 border-t border-r ${isWeaverPoppet ? 'border-purple-500/65' : 'border-red-700/70'}`} />
+                            <span className={`pointer-events-none absolute bottom-1 left-1 w-1.5 h-1.5 border-b border-l ${isWeaverPoppet ? 'border-purple-500/65' : 'border-red-700/70'}`} />
+                            <span className={`pointer-events-none absolute bottom-1 right-1 w-1.5 h-1.5 border-b border-r ${isWeaverPoppet ? 'border-purple-500/65' : 'border-red-700/70'}`} />
+
+                            <span className={`text-[8px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] leading-none shrink-0 ${
+                              isWeaverPoppet ? 'text-purple-300/90' : 'text-red-300/90'
                             }`}>
-                              {isWeaverPoppet ? 'Poppet' : 'Foe Totem'}
+                              Poppet
                             </span>
 
                             {/* Head Patch */}
-                            <div className="w-full shrink-0 bg-[#201026] border border-purple-900/60 rounded-[2px] py-1 px-0.5 flex flex-col items-center">
+                            <div className={`w-full shrink-0 rounded-[2px] py-1 px-0.5 flex flex-col items-center border shadow-[inset_0_1px_5px_rgba(0,0,0,0.75)] ${
+                              isWeaverPoppet ? 'bg-[#17111f]/90 border-purple-900/65' : 'bg-[#191011]/90 border-red-950/80'
+                            }`}>
                               {patchIcon}
-                              <span className="text-[9px] font-mono font-bold text-purple-200 uppercase tracking-wider truncate w-full mt-0.5 leading-tight">
+                              <span className={`text-[8.5px] font-mono font-bold uppercase tracking-wider truncate w-full mt-0.5 leading-tight ${
+                                isWeaverPoppet ? 'text-purple-200' : 'text-red-200'
+                              }`}>
                                 {tribeName}
                               </span>
                             </div>
 
                             {/* Cross-Stitch Seam */}
-                            <div className="w-full shrink-0 border-t border-dashed border-purple-800/60 my-0.5 flex items-center justify-center">
-                              <span className="text-[7px] text-purple-500/70 leading-none -mt-1 font-mono">✕ ✕ ✕</span>
+                            <div className={`w-full shrink-0 border-t border-dashed my-0.5 flex items-center justify-center ${
+                              isWeaverPoppet ? 'border-purple-800/55' : 'border-red-900/55'
+                            }`}>
+                              <span className={`text-[6.5px] leading-none -mt-1 font-mono ${
+                                isWeaverPoppet ? 'text-purple-400/70' : 'text-red-400/70'
+                              }`}>✕ ✕ ✕</span>
                             </div>
 
                             {/* Torso Sigil Scrap */}
-                            <div className="w-full shrink-0 bg-[#201026] border border-purple-900/60 rounded-[2px] py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[46px]">
+                            <div className={`w-full shrink-0 rounded-[2px] py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[46px] border shadow-[inset_0_1px_5px_rgba(0,0,0,0.75)] ${
+                              isWeaverPoppet ? 'bg-[#17111f]/90 border-purple-900/65' : 'bg-[#191011]/90 border-red-950/80'
+                            }`}>
                               {sigilName ? (
                                 <img
                                   src={getSigilArtUrl(sigilName)}
                                   alt={sigilName}
-                                  className="w-5 h-5 object-contain filter drop-shadow brightness-90 contrast-125 select-none pointer-events-none shrink-0"
+                                  className="w-5 h-5 object-contain filter drop-shadow brightness-95 contrast-125 select-none pointer-events-none shrink-0"
                                   onError={(e) => {
                                     (e.currentTarget as HTMLElement).style.display = 'none';
                                   }}
                                 />
                               ) : (
-                                <span className="text-xs text-purple-400 font-mono">—</span>
+                                <span className={`text-xs font-mono ${isWeaverPoppet ? 'text-purple-400' : 'text-red-400'}`}>—</span>
                               )}
-                              <span className="text-[9px] font-mono font-semibold text-purple-300 uppercase tracking-tight truncate w-full mt-1 leading-normal block">
+                              <span className={`text-[8.5px] font-mono font-semibold uppercase tracking-tight truncate w-full mt-1 leading-normal block ${
+                                isWeaverPoppet ? 'text-purple-200/90' : 'text-red-200/90'
+                              }`}>
                                 {sigilName}
                               </span>
                             </div>
@@ -10925,30 +10948,35 @@ export default function App() {
 
                         return (
                           <div
-                            className={`relative border border-dashed border-[#8c6747]/80 bg-[#150f0a] shadow-[0_4px_14px_rgba(20,10,0,0.7)] p-2 flex flex-col items-center justify-between text-center select-none rounded-[3px] shrink-0 ${
-                              bossTotem ? 'flex-1 min-w-0 h-[134px]' : 'w-24 sm:w-28 h-[134px]'
+                            className={`relative border border-[#5a4e45]/80 bg-[#100e10]/92 shadow-[0_8px_20px_rgba(0,0,0,0.85),inset_0_0_16px_rgba(0,0,0,0.72)] p-2 flex flex-col items-center justify-between text-center select-none rounded-[2px] shrink-0 ${
+                              bossTotem ? 'flex-1 min-w-0 h-[138px]' : 'w-24 sm:w-28 h-[138px]'
                             }`}
                             title={`Stitched Effigy: ${tribeName} kin sewn with ${sigilName}`}
                           >
-                            <span className="text-[7px] font-mono uppercase tracking-[0.18em] text-[#ab8a68] leading-none shrink-0">
+                            <span className="pointer-events-none absolute top-1 left-1 w-1.5 h-1.5 border-t border-l border-[#8f7960]/70" />
+                            <span className="pointer-events-none absolute top-1 right-1 w-1.5 h-1.5 border-t border-r border-[#8f7960]/70" />
+                            <span className="pointer-events-none absolute bottom-1 left-1 w-1.5 h-1.5 border-b border-l border-[#8f7960]/70" />
+                            <span className="pointer-events-none absolute bottom-1 right-1 w-1.5 h-1.5 border-b border-r border-[#8f7960]/70" />
+
+                            <span className="text-[8px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#bfa78b] leading-none shrink-0">
                               Effigy
                             </span>
 
                             {/* Head Patch */}
-                            <div className="w-full shrink-0 bg-[#221811] border border-[#4a3422] rounded-[2px] py-1 px-0.5 flex flex-col items-center">
+                            <div className="w-full shrink-0 bg-[#161417]/90 border border-[#3a3330] rounded-[2px] py-1 px-0.5 flex flex-col items-center shadow-[inset_0_1px_5px_rgba(0,0,0,0.75)]">
                               {patchIcon}
-                              <span className="text-[9px] font-mono font-bold text-amber-200 uppercase tracking-wider truncate w-full mt-0.5 leading-tight">
+                              <span className="text-[8.5px] font-mono font-bold text-[#f0dab2] uppercase tracking-wider truncate w-full mt-0.5 leading-tight">
                                 {tribeName}
                               </span>
                             </div>
 
                             {/* Cross-Stitch Seam */}
-                            <div className="w-full shrink-0 border-t border-dashed border-[#8c6747]/50 my-0.5 flex items-center justify-center">
-                              <span className="text-[7px] text-[#8c6747]/70 leading-none -mt-1 font-mono">✕ ✕ ✕</span>
+                            <div className="w-full shrink-0 border-t border-dashed border-[#5a4e45]/60 my-0.5 flex items-center justify-center">
+                              <span className="text-[6.5px] text-[#8f7960]/75 leading-none -mt-1 font-mono">✕ ✕ ✕</span>
                             </div>
 
                             {/* Torso Sigil Scrap */}
-                            <div className="w-full shrink-0 bg-[#221811] border border-[#4a3422] rounded-[2px] py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[46px]">
+                            <div className="w-full shrink-0 bg-[#161417]/90 border border-[#3a3330] rounded-[2px] py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[46px] shadow-[inset_0_1px_5px_rgba(0,0,0,0.75)]">
                               {sigilName ? (
                                 <img
                                   src={getSigilArtUrl(sigilName)}
@@ -10980,12 +11008,12 @@ export default function App() {
                           onClick={handleTalismanPrick}
                           disabled={phase !== 'PLAY' || isTalismanPricked}
                           title={phase === 'PLAY' ? "Prick your finger upon the iron dish to seal your assault" : "Awaiting your turn..."}
-                          className={`relative w-[125px] h-[125px] sm:w-[140px] sm:h-[140px] rounded-full bg-gradient-to-b from-[#1b1512] to-[#0d0a09] border-2 flex items-center justify-center select-none outline-none transition-all duration-200 ${
+                          className={`relative w-[125px] h-[125px] sm:w-[140px] sm:h-[140px] rounded-full bg-gradient-to-b from-[#171518] to-[#0c0b0d] border-2 flex items-center justify-center select-none outline-none transition-all duration-200 ${
                             isTalismanPricked
                               ? 'translate-y-1 scale-[0.98] border-[#ef4444] shadow-[0_1px_0_#070504,inset_0_5px_14px_rgba(0,0,0,0.98),0_0_28px_rgba(239,68,68,0.85)] cursor-default'
                               : phase === 'PLAY'
-                                ? 'border-[#3d3128] shadow-[0_4px_0_#080605,0_10px_20px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.08)] hover:border-[#ef4444] hover:shadow-[0_0_24px_rgba(239,68,68,0.55),0_0_44px_rgba(185,28,28,0.3),inset_0_0_16px_rgba(185,28,28,0.35)] cursor-pointer active:translate-y-1 active:scale-[0.98]'
-                                : 'border-[#221a15] opacity-60 shadow-[0_3px_0_#080605,0_6px_12px_rgba(0,0,0,0.7)] cursor-not-allowed'
+                                ? 'border-[#4a413b] shadow-[0_4px_0_#080709,0_10px_20px_rgba(0,0,0,0.88),inset_0_1px_1px_rgba(255,255,255,0.08)] hover:border-[#ef4444] hover:shadow-[0_0_24px_rgba(239,68,68,0.55),0_0_44px_rgba(185,28,28,0.3),inset_0_0_16px_rgba(185,28,28,0.35)] cursor-pointer active:translate-y-1 active:scale-[0.98]'
+                                : 'border-[#262326] opacity-60 shadow-[0_3px_0_#080709,0_6px_12px_rgba(0,0,0,0.7)] cursor-not-allowed'
                           }`}
                         >
                           {/* Inner Radial Bloodlight Atmosphere (Hover & Pricked) */}
@@ -11012,7 +11040,7 @@ export default function App() {
                               className={`font-mono text-[3.8px] font-bold select-none tracking-[0.03em] transition-all duration-200 ${
                                 isTalismanPricked
                                   ? 'fill-[#ef4444] drop-shadow-[0_0_3px_rgba(239,68,68,0.7)]'
-                                  : 'fill-[#362217] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
+                                  : 'fill-[#443e40] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
                               }`}
                             >
                               <textPath
@@ -11030,7 +11058,7 @@ export default function App() {
                           <div className={`absolute inset-3 sm:inset-3.5 rounded-full border border-dashed transition-all duration-200 pointer-events-none ${
                             isTalismanPricked
                               ? 'border-red-900/60 shadow-[0_0_8px_rgba(185,28,28,0.25)]'
-                              : 'border-[#2e231c] group-hover:border-[#b91c1c]/90 group-hover:shadow-[0_0_6px_rgba(185,28,28,0.4)]'
+                              : 'border-[#342f33] group-hover:border-[#b91c1c]/90 group-hover:shadow-[0_0_6px_rgba(185,28,28,0.4)]'
                           }`} />
 
                           {/* Inner Core SVG */}
@@ -11048,7 +11076,7 @@ export default function App() {
                               cy="50"
                               r="44"
                               fill="none"
-                              stroke={isTalismanPricked ? "#7f1d1d" : "#241b16"}
+                              stroke={isTalismanPricked ? "#7f1d1d" : "#262328"}
                               strokeWidth="2.5"
                               className="transition-colors duration-200 group-hover:stroke-[#7f1d1d]"
                             />
@@ -11058,7 +11086,7 @@ export default function App() {
                               className={`font-mono text-[4.1px] font-bold select-none tracking-[0.04em] transition-all duration-200 ${
                                 isTalismanPricked
                                   ? 'fill-[#ef4444] drop-shadow-[0_0_3px_rgba(239,68,68,0.75)]'
-                                  : 'fill-[#422e23] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
+                                  : 'fill-[#524b4d] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
                               }`}
                             >
                               <textPath
@@ -11123,30 +11151,36 @@ export default function App() {
                       </pre>
                     </div>
 
-                  {/* Diegetic Timber Utility Plaques (Lowered & Offset Left) */}
-                  <div className="flex flex-col items-center gap-1.5 w-full mt-6 sm:mt-7 -translate-x-6 sm:-translate-x-8">
+                  {/* Carved-Stone Utility Plaques (Lowered & Offset Left) */}
+                  <div className="flex flex-col items-center gap-2 w-full mt-6 sm:mt-7 -translate-x-6 sm:-translate-x-8">
                     <button
                       onClick={openViewDeck}
-                      className="w-38 sm:w-40 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 flex items-center justify-center gap-2"
+                      className="relative w-38 sm:w-40 bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/80 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer px-3 py-1.5 flex items-center justify-center gap-2"
                     >
-                      <Layers className="w-3.5 h-3.5 text-amber-500/80" />
+                      <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
+                      <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
+                      <Layers className="w-3.5 h-3.5 text-[#c79b56]/90" />
                       <span>VIEW DECK</span>
                     </button>
 
                     <button
                       onClick={() => setShowPauseMenu(true)}
-                      className="w-38 sm:w-40 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 flex items-center justify-center gap-2"
+                      className="relative w-38 sm:w-40 bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/80 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer px-3 py-1.5 flex items-center justify-center gap-2"
                     >
-                      <Menu className="w-3.5 h-3.5 text-amber-500/80" />
+                      <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
+                      <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
+                      <Menu className="w-3.5 h-3.5 text-[#c79b56]/90" />
                       <span>SANCTUARY</span>
                     </button>
 
                     {showDevTools && (
                         <button
                           onClick={openDevMenu}
-                          className="w-38 sm:w-40 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 flex items-center justify-center gap-2"
+                          className="relative w-38 sm:w-40 bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/80 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer px-3 py-1.5 flex items-center justify-center gap-2"
                           title="Development Tools"
                         >
+                          <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
+                          <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
                           <span>DEV TOOLS</span>
                         </button>
                       )}
@@ -11581,7 +11615,7 @@ export default function App() {
                         )}
 
                         {/* Gothic Ritual-Cloth Battle Seam */}
-                        <div className="pointer-events-none flex items-center justify-center gap-3 w-[94%] my-1.5 select-none">
+                        <div className="pointer-events-none flex items-center justify-center gap-3 w-[94%] mx-auto my-1.5 select-none">
                           <span className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#7a2420]/55 to-[#9c7a4c]/60" />
                           <span className="w-1.5 h-1.5 rotate-45 bg-[#2a0d0d] border border-[#9c7a4c]/75 shadow-[0_0_6px_rgba(122,36,32,0.65)]" />
                           <span className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#7a2420]/55 to-[#9c7a4c]/60" />
@@ -12177,9 +12211,14 @@ export default function App() {
                   </div>
                 </div>
 
-  {/* Vertical 3-Slot Item Rack (Pinned to the upper right quadrant alongside the runnel) */}
-  <div className="absolute left-[calc(50%+30px)] top-3 flex flex-col items-center justify-center gap-2 p-1.5 bg-[#100b08]/95 border border-[#3e2316] rounded-sm shadow-[inset_0_2px_8px_rgba(0,0,0,0.9),0_4px_12px_rgba(0,0,0,0.7)] z-30">
-    <div className="text-[8px] font-mono uppercase tracking-widest text-[#8c7662]/70 border-b border-[#2e1a10] pb-0.5 w-full text-center">
+  {/* Vertical 3-Slot Carved-Slate Item Rack */}
+  <div className="absolute left-[calc(50%+30px)] top-3 flex flex-col items-center justify-center gap-2 p-2 bg-[#100e10]/92 border border-[#4a413b]/80 rounded-[2px] shadow-[0_10px_24px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.06),inset_0_0_16px_rgba(0,0,0,0.75)] z-30">
+    <span className="pointer-events-none absolute top-1 left-1 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
+    <span className="pointer-events-none absolute top-1 right-1 w-1.5 h-1.5 border-t border-r border-[#8f7960]/65" />
+    <span className="pointer-events-none absolute bottom-1 left-1 w-1.5 h-1.5 border-b border-l border-[#8f7960]/65" />
+    <span className="pointer-events-none absolute bottom-1 right-1 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
+
+    <div className="text-[8px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#bfa78b] border-b border-[#342c27]/85 pb-1 w-full text-center">
       ITEMS
     </div>
 
@@ -12193,18 +12232,18 @@ export default function App() {
           onClick={() => handleUseItem(idx)}
           disabled={phase !== 'PLAY' || !item}
           title={item ? `${item.name}: ${item.description}` : 'Empty Slot'}
-          className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-sm border flex items-center justify-center text-lg outline-none transition-all duration-150 ${
+          className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-[2px] border flex items-center justify-center text-lg outline-none transition-all duration-150 ${
             item
               ? isTargetingThis
-                ? 'border-red-500 bg-red-950/50 shadow-[0_0_12px_rgba(239,68,68,0.8)] scale-105 animate-pulse cursor-pointer'
-                : 'border-[#5a3822] bg-gradient-to-b from-[#241710] to-[#140d09] hover:border-amber-400 hover:scale-105 active:scale-95 shadow-[0_2px_5px_rgba(0,0,0,0.8)] cursor-pointer'
-              : 'border-[#261810]/40 bg-[#090604]/60 cursor-not-allowed opacity-30 shadow-inner'
+                ? 'border-red-500 bg-red-950/55 shadow-[0_0_12px_rgba(239,68,68,0.8)] scale-105 animate-pulse cursor-pointer'
+                : 'border-[#5a5049]/85 bg-gradient-to-b from-[#1a171c] to-[#0f0d10] hover:border-[#d4af37] hover:scale-105 active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_2px_6px_rgba(0,0,0,0.85)] cursor-pointer'
+              : 'border-[#2c272b]/50 bg-[#09080a]/70 cursor-not-allowed opacity-40 shadow-[inset_0_2px_6px_rgba(0,0,0,0.85)]'
           }`}
         >
           {item ? (
             <span>{item.emoji}</span>
           ) : (
-            <span className="text-[#3a261a] text-xs font-mono">•</span>
+            <span className="text-[#4a413b] text-xs font-mono">•</span>
           )}
         </button>
       );
