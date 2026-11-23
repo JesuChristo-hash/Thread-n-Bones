@@ -141,6 +141,24 @@ const renderInkGlyph = (type: MapNodeType, isBoss?: boolean) => {
           <path d="M10 13h4" />
         </svg>
       );
+    case 'anvil':
+      return (
+        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9h14l4 2.5-4 2.5H9c-2.5 0-4.5-1.5-6-5Z" />
+          <path d="M9 14l-1.5 5h9L15 14" />
+          <path d="M5 19h14" />
+        </svg>
+      );
+    case 'flock':
+      return (
+        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 9c-2.5 0-4 1.8-3 3.8.6 1.2 2 1.2 3 .5" />
+          <path d="M17 9c2.5 0 4 1.8 3 3.8-.6 1.2-2 1.2-3 .5" />
+          <path d="M7.5 10.5C7.5 7 9.5 5.5 12 5.5s4.5 1.5 4.5 5c0 4-2 8-4.5 8s-4.5-4-4.5-8Z" />
+          <circle cx="10.2" cy="11.5" r="0.8" fill={stroke} />
+          <circle cx="13.8" cy="11.5" r="0.8" fill={stroke} />
+        </svg>
+      );
     default:
       return null;
   }

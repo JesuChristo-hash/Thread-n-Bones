@@ -781,3 +781,105 @@
 .animate-sigil-badge {
   animation: sigil-badge-float 0.92s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* --- Event Prop Animations: Altar, Anvil, Zealot's Flock --- */
+@keyframes altarSacrificeBurn {
+  0% { transform: scale(1) translateY(0); filter: brightness(1) saturate(1); opacity: 1; }
+  25% { transform: scale(1.06) translateY(-4px) rotate(-1.5deg); filter: brightness(1.75) sepia(0.7) hue-rotate(-30deg) saturate(2.8); opacity: 1; }
+  65% { transform: scale(0.92) translateY(-10px) rotate(1.5deg); filter: brightness(2.2) contrast(1.4) hue-rotate(-35deg) blur(1px); opacity: 0.75; }
+  100% { transform: scale(0.55) translateY(-28px); filter: brightness(0.4) blur(5px); opacity: 0; }
+}
+
+@keyframes altarSigilRise {
+  0% { transform: translateY(20px) scale(0.7); opacity: 0; }
+  35% { opacity: 1; }
+  100% { transform: translateY(-90px) scale(1.25); opacity: 0; }
+}
+
+@keyframes anvilStrikeJolt {
+  0% { transform: translateY(0) scale(1); filter: brightness(1); }
+  20% { transform: translateY(8px) scale(0.94, 1.04); filter: brightness(1.85) contrast(1.25); }
+  55% { transform: translateY(-4px) scale(1.03); filter: brightness(1.3); }
+  100% { transform: translateY(0) scale(1); filter: brightness(1); }
+}
+
+@keyframes sheepWanderA {
+  0%   { transform: translate(0px, 0px); }
+  25%  { transform: translate(22px, -9px); }
+  50%  { transform: translate(-12px, -16px); }
+  75%  { transform: translate(-24px, 7px); }
+  100% { transform: translate(0px, 0px); }
+}
+
+@keyframes sheepWanderB {
+  0%   { transform: translate(0px, 0px); }
+  30%  { transform: translate(-20px, 11px); }
+  60%  { transform: translate(16px, 14px); }
+  85%  { transform: translate(18px, -10px); }
+  100% { transform: translate(0px, 0px); }
+}
+
+@keyframes sheepHop {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-1.8deg); }
+}
+
+/* --- Event Props: Baptismal Font, Rotary Press, Weaver's Loom --- */
+@keyframes fontSubmergeDip {
+  0%   { transform: translateY(0px) scale(1); filter: brightness(1); }
+  38%  { transform: translateY(118px) scale(0.96); filter: brightness(1.35) sepia(0.8) hue-rotate(-35deg) saturate(2.6); }
+  72%  { transform: translateY(126px) scale(0.94); filter: brightness(1.6) sepia(0.9) hue-rotate(-40deg) saturate(3); }
+  100% { transform: translateY(0px) scale(1.03); filter: brightness(1.25); }
+}
+
+@keyframes fontDrownSink {
+  0%   { transform: translateY(0px) scale(1); opacity: 1; }
+  55%  { transform: translateY(142px) scale(0.93) rotate(-2deg); filter: brightness(0.75) sepia(1) hue-rotate(-45deg) saturate(3.5); opacity: 1; }
+  100% { transform: translateY(188px) scale(0.9) rotate(3deg); filter: brightness(0.35); opacity: 1; }
+}
+
+@keyframes bloodBubbleRise {
+  0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+  30%  { opacity: 0.95; }
+  100% { transform: translateY(-54px) scale(1.25); opacity: 0; }
+}
+
+@keyframes pressPlatenSlam {
+  0%   { transform: translateY(-196px); }
+  20%  { transform: translateY(0px); }
+  74%  { transform: translateY(0px); }
+  92%  { transform: translateY(-200px); }
+  100% { transform: translateY(-196px); }
+}
+
+@keyframes pressCardSquish {
+  0%   { transform: scaleY(1) scaleX(1); }
+  8%   { transform: scaleY(1) scaleX(1); }
+  20%  { transform: scaleY(0.05) scaleX(1.12); }
+  74%  { transform: scaleY(0.05) scaleX(1.12); }
+  90%  { transform: scaleY(1.03) scaleX(0.98); }
+  100% { transform: scaleY(1) scaleX(1); }
+}
+
+@keyframes inkSplatterBurst {
+  0%   { transform: scale(0.3); opacity: 0; }
+  35%  { transform: scale(1.15); opacity: 0.95; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+@keyframes loomNeedleSweep {
+  0%, 100% { transform: translateX(-28px) rotate(-14deg); }
+  50%      { transform: translateX(28px) rotate(14deg); }
+}
+
+@keyframes loomTwinConvergeLeft {
+  0%   { transform: translate(0px, 0px) scale(1); opacity: 1; }
+  65%  { transform: translate(64px, 68px) scale(0.84) rotate(6deg); opacity: 0.85; }
+  100% { transform: translate(74px, 84px) scale(0.5); opacity: 0; }
+}
+
+@keyframes loomTwinConvergeRight {
+  0%   { transform: translate(0px, 0px) scale(1); opacity: 1; }
+  65%  { transform: translate(-64px, 68px) scale(0.84) rotate(-6deg); opacity: 0.85; }
+  100% { transform: translate(-74px, 84px) scale(0.5); opacity: 0; }
+}

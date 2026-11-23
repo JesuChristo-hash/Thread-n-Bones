@@ -1832,15 +1832,15 @@ export const ChiptuneAudio: any = {
 
       this.scheduleLoop(inst, 0.625, 32, (step: number, when: number) => {
         if (darkPads[step]) {
-          this.playStrings(darkPads[step], inst.bus, 5.4, 0.11, when);
+          this.playStrings(darkPads[step], inst.bus, 5.4, 0.058, when);
         }
         if (fallingNotes[step]) {
-          this.playSynthPiano([fallingNotes[step]], pianoPan, 3.2, 0.105, when);
+          this.playSynthPiano([fallingNotes[step]], pianoPan, 3.2, 0.055, when);
         }
         if (step === 0) {
-          this.playBell(146.83, bellPan, 4.8, 0.085, when);
+          this.playBell(146.83, bellPan, 4.8, 0.045, when);
         } else if (step === 16) {
-          this.playBell(130.81, bellPan, 4.4, 0.06, when);
+          this.playBell(130.81, bellPan, 4.4, 0.032, when);
         }
       });
     }, fadeTime);
@@ -1894,22 +1894,22 @@ export const ChiptuneAudio: any = {
 
       this.scheduleLoop(inst, 0.454, 32, (step: number, when: number) => {
         if (organChords[step]) {
-          this.playOrgan(organChords[step], inst.bus, 3.9, 0.085, when, 1450);
+          this.playOrgan(organChords[step], inst.bus, 3.9, 0.048, when, 1450);
         }
         if (stringPads[step]) {
-          this.playStrings(stringPads[step], inst.bus, 5.2, 0.1, when);
+          this.playStrings(stringPads[step], inst.bus, 5.2, 0.056, when);
         }
         if (dawnFlute[step]) {
           const [freq, dur] = dawnFlute[step];
-          this.playFlute(freq, flutePan, dur, 0.105, when);
+          this.playFlute(freq, flutePan, dur, 0.06, when);
         }
         if (harpArp[step]) {
-          this.playMusicBox(harpArp[step], chimePan, 2.6, 0.075, when);
+          this.playMusicBox(harpArp[step], chimePan, 2.6, 0.042, when);
         }
         if (step === 0) {
-          this.playBell(587.33, bellPan, 3.8, 0.065, when);
+          this.playBell(587.33, bellPan, 3.8, 0.036, when);
         } else if (step === 16) {
-          this.playBell(440.0, bellPan, 3.6, 0.055, when);
+          this.playBell(440.0, bellPan, 3.6, 0.03, when);
         }
       });
     }, fadeTime);

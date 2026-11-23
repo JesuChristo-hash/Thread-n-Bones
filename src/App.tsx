@@ -943,6 +943,40 @@ export default function App() {
   // Deterministic Run Seed & Post-Clear Ritual Vows (Penances)
   const [runSeed, setRunSeed] = useState<string>('');
   const runSeedRef = useRef<string>('');
+  const duelRngRef = useRef<() => number>(() => Math.random());
+  const [isLossSequenceActive, setIsLossSequenceActive] = useState<boolean>(false);
+
+  const seededShuffle = <T,>(arr: T[], rng: () => number): T[] => {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  };
+
+  // Shared Stamp Press imperfection table for The Begotten (same odds as player Stamp event)
+  const applyBegottenStamp = (card: CardDef, rng: () => number): CardDef => {
+    const stamped = cloneCard(card, 0);
+    (stamped as any).isGoobertClone = true;
+    if (rng() < 0.5) {
+      return stamped; // 50% pristine stamp
+    }
+    const roll = rng();
+    if (roll < 0.34) {
+      const delta = rng() < 0.5 ? 1 : -1;
+      stamped.attack = Math.max(0, (stamped.attack || 0) + delta);
+    } else if (roll < 0.67) {
+      const delta = rng() < 0.5 ? 1 : -1;
+      stamped.health = Math.max(1, (stamped.health || 1) + delta);
+    } else {
+      const pool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
+      if (pool.length > 0) {
+        stamped.sigils = [pool[Math.floor(rng() * pool.length)]];
+      }
+    }
+    return stamped;
+  };
   const [runSeedInput, setRunSeedInput] = useState<string>('');
   const [activeVows, setActiveVows] = useState<VowId[]>([]);
   const activeVowsRef = useRef<VowId[]>([]);
@@ -973,6 +1007,7 @@ export default function App() {
 
   // Campfire Event
   const [campfireCardIdx, setCampfireCardIdx] = useState<number | null>(null);
+  const [campfireAnimState, setCampfireAnimState] = useState<'idle' | 'dipping' | 'drowning' | 'blessed'>('idle');
   const [campfireBuffType, setCampfireBuffType] = useState<'attack' | 'health'>('attack');
   const [campfireStage, setCampfireStage] = useState<number>(0);
   const [isCampfireSafe, setIsCampfireSafe] = useState<boolean>(false);
@@ -980,6 +1015,120 @@ export default function App() {
   // Altar Event
   const [altarHostId, setAltarHostId] = useState<string | null>(null);
   const [altarSacrificeId, setAltarSacrificeId] = useState<string | null>(null);
+  const [altarAnimPhase, setAltarAnimPhase] = useState<'idle' | 'sacrificing' | 'descending' | 'done'>('idle');
+  const [altarStageCards, setAltarStageCards] = useState<{
+    host: CardDef;
+    sacrifice: CardDef;
+    mergedHost: CardDef;
+  } | null>(null);
+
+  // Transmutation Table (Anvil) Event
+  const [anvilSelectedId, setAnvilSelectedId] = useState<string | null>(null);
+  const [anvilStrikeAnim, setAnvilStrikeAnim] = useState<'idle' | 'hammer' | 'forceps'>('idle');
+
+  // The Zealot's Flock Event (run-persistent blessings/curses & pen UI state)
+  type FlockOptionId =
+    | 'stat_boost_disappearing_relics'
+    | 'bones_drain'
+    | 'thin_deck_scale_debt'
+    | 'touch_of_death_brittle'
+    | 'two_squirrels_locked_draw'
+    | 'blood_gauge_hand_penalty'
+    | 'grey_sheep_squirrels';
+
+  interface FlockOptionDef {
+    id: FlockOptionId;
+    blessing: string;
+    curse: string | null;
+    isGrey?: boolean;
+  }
+
+  const FLOCK_OPTIONS: Record<FlockOptionId, FlockOptionDef> = {
+    stat_boost_disappearing_relics: {
+      id: 'stat_boost_disappearing_relics',
+      blessing: 'All your creatures gain +1 Health and +1 Attack',
+      curse: 'Your relic slots disappear after use.',
+    },
+    bones_drain: {
+      id: 'bones_drain',
+      blessing: 'Gain +5 starting Bones',
+      curse: 'You lose 2 Bones at the End of each of your turns.',
+    },
+    thin_deck_scale_debt: {
+      id: 'thin_deck_scale_debt',
+      blessing: 'Remove 2 Cards from your Deck',
+      curse: 'The next 2 battles begin with -2 on the Blood Gauge.',
+    },
+    touch_of_death_brittle: {
+      id: 'touch_of_death_brittle',
+      blessing: 'All cards in your current deck gain Touch of Death',
+      curse: 'All cards in your deck also gain Brittle.',
+    },
+    two_squirrels_locked_draw: {
+      id: 'two_squirrels_locked_draw',
+      blessing: 'Start each battle with 2 Squirrels',
+      curse: 'Cannot Draw Squirrels for the first 2 turns of each battle.',
+    },
+    blood_gauge_hand_penalty: {
+      id: 'blood_gauge_hand_penalty',
+      blessing: 'Start each battle with +2 on the Blood Gauge',
+      curse: 'Your starting hand is reduced by 1.',
+    },
+    grey_sheep_squirrels: {
+      id: 'grey_sheep_squirrels',
+      blessing: '+3 Health to Squirrels',
+      curse: null,
+      isGrey: true,
+    },
+  };
+
+  interface FlockSheepEntity {
+    id: number;
+    x: number;
+    y: number;
+    optionId: FlockOptionId;
+    isGrey: boolean;
+    flip: boolean;
+    wanderAnim: 'sheepWanderA' | 'sheepWanderB';
+    duration: number;
+    delay: number;
+    dismissed?: boolean;
+  }
+
+  const [flockUsedOptions, setFlockUsedOptions] = useState<FlockOptionId[]>([]);
+  const [flockDisappearingRelics, setFlockDisappearingRelics] = useState<boolean>(false);
+  const [flockBoneDrain, setFlockBoneDrain] = useState<boolean>(false);
+  const [flockScaleDebtBattles, setFlockScaleDebtBattles] = useState<number>(0);
+  const [flockExtraSquirrel, setFlockExtraSquirrel] = useState<boolean>(false);
+  const [flockNoSquirrelTurns, setFlockNoSquirrelTurns] = useState<boolean>(false);
+  const [flockSquirrelLockDraws, setFlockSquirrelLockDraws] = useState<number>(0);
+  const [flockStartingScaleBonus, setFlockStartingScaleBonus] = useState<boolean>(false);
+  const [flockHandPenalty, setFlockHandPenalty] = useState<boolean>(false);
+  const [flockSquirrelHealthBonus, setFlockSquirrelHealthBonus] = useState<number>(0);
+
+  const flockDisappearingRelicsRef = useRef<boolean>(false);
+  const flockBoneDrainRef = useRef<boolean>(false);
+  const flockScaleDebtBattlesRef = useRef<number>(0);
+  const flockExtraSquirrelRef = useRef<boolean>(false);
+  const flockNoSquirrelTurnsRef = useRef<boolean>(false);
+  const flockStartingScaleBonusRef = useRef<boolean>(false);
+  const flockHandPenaltyRef = useRef<boolean>(false);
+  const flockSquirrelHealthBonusRef = useRef<number>(0);
+
+  useEffect(() => { flockDisappearingRelicsRef.current = flockDisappearingRelics; }, [flockDisappearingRelics]);
+  useEffect(() => { flockBoneDrainRef.current = flockBoneDrain; }, [flockBoneDrain]);
+  useEffect(() => { flockScaleDebtBattlesRef.current = flockScaleDebtBattles; }, [flockScaleDebtBattles]);
+  useEffect(() => { flockExtraSquirrelRef.current = flockExtraSquirrel; }, [flockExtraSquirrel]);
+  useEffect(() => { flockNoSquirrelTurnsRef.current = flockNoSquirrelTurns; }, [flockNoSquirrelTurns]);
+  useEffect(() => { flockStartingScaleBonusRef.current = flockStartingScaleBonus; }, [flockStartingScaleBonus]);
+  useEffect(() => { flockHandPenaltyRef.current = flockHandPenalty; }, [flockHandPenalty]);
+  useEffect(() => { flockSquirrelHealthBonusRef.current = flockSquirrelHealthBonus; }, [flockSquirrelHealthBonus]);
+
+  const [flockSheepList, setFlockSheepList] = useState<FlockSheepEntity[]>([]);
+  const [flockSelectedSheepId, setFlockSelectedSheepId] = useState<number | null>(null);
+  const [flockRepicksUsed, setFlockRepicksUsed] = useState<number>(0);
+  const [flockPendingRemovals, setFlockPendingRemovals] = useState<number>(0);
+  const [flockRemovalSelectedIds, setFlockRemovalSelectedIds] = useState<string[]>([]);
 
   // Bone Lord Event
   const [boneLordSelectedIdx, setBoneLordSelectedIdx] = useState<number | null>(null);
@@ -991,6 +1140,14 @@ export default function App() {
 
   // Goobert Event
   const [goobertSelectedIdx, setGoobertSelectedIdx] = useState<number | null>(null);
+  const [goobertStampedCard, setGoobertStampedCard] = useState<CardDef | null>(null);
+  const [goobertOriginalSnapshot, setGoobertOriginalSnapshot] = useState<CardDef | null>(null);
+  const [mycoAnimPhase, setMycoAnimPhase] = useState<'idle' | 'sewing' | 'woven'>('idle');
+  const [mycoStageCards, setMycoStageCards] = useState<{
+    twin1: CardDef;
+    twin2: CardDef;
+    fused: CardDef;
+  } | null>(null);
 
   // Cave Trial Event
   const [caveTrials, setCaveTrials] = useState<string[]>([]);
@@ -1136,6 +1293,16 @@ export default function App() {
     actMap?: ActMapData | null;
     runSeed?: string;
     activeVows?: VowId[];
+    isCampfireSafe?: boolean;
+    flockUsedOptions?: string[];
+    flockDisappearingRelics?: boolean;
+    flockBoneDrain?: boolean;
+    flockScaleDebtBattles?: number;
+    flockExtraSquirrel?: boolean;
+    flockNoSquirrelTurns?: boolean;
+    flockStartingScaleBonus?: boolean;
+    flockHandPenalty?: boolean;
+    flockSquirrelHealthBonus?: number;
     savedAt: number;
   }
 
@@ -1188,6 +1355,16 @@ export default function App() {
           actMap: actMapRef.current,
           runSeed: runSeedRef.current,
           activeVows: activeVowsRef.current,
+          isCampfireSafe,
+          flockUsedOptions,
+          flockDisappearingRelics,
+          flockBoneDrain,
+          flockScaleDebtBattles,
+          flockExtraSquirrel,
+          flockNoSquirrelTurns,
+          flockStartingScaleBonus,
+          flockHandPenalty,
+          flockSquirrelHealthBonus,
           savedAt: Date.now(),
         };
         localStorage.setItem(RUN_SAVE_KEY, JSON.stringify(payload));
@@ -1196,7 +1373,7 @@ export default function App() {
         console.warn("Auto-save failed:", e);
       }
     }
-  }, [masterDeck, items, totalOverkillDamage, highestOverkill, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, actMap, runSeed, activeVows, screen]);
+  }, [masterDeck, items, totalOverkillDamage, highestOverkill, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, actMap, runSeed, activeVows, isCampfireSafe, flockUsedOptions, flockDisappearingRelics, flockBoneDrain, flockScaleDebtBattles, flockExtraSquirrel, flockNoSquirrelTurns, flockStartingScaleBonus, flockHandPenalty, flockSquirrelHealthBonus, screen]);
 
   // --- Item Restock & Blood Bank Pricing ---
   const ITEM_COSTS: Record<ItemId, number> = {
@@ -1726,6 +1903,45 @@ export default function App() {
     setTotemPieces([]);
     setTurnNumber(1);
     setIsAmpouleCracked(false);
+    setIsLossSequenceActive(false);
+    setAltarAnimPhase('idle');
+    setAltarStageCards(null);
+    setCampfireAnimState('idle');
+    setGoobertStampedCard(null);
+    setGoobertOriginalSnapshot(null);
+    setMycoAnimPhase('idle');
+    setMycoStageCards(null);
+    setAnvilSelectedId(null);
+    setAnvilStrikeAnim('idle');
+    setFlockUsedOptions([]);
+    setFlockDisappearingRelics(false);
+    flockDisappearingRelicsRef.current = false;
+    setFlockBoneDrain(false);
+    flockBoneDrainRef.current = false;
+    setFlockScaleDebtBattles(0);
+    flockScaleDebtBattlesRef.current = 0;
+    setFlockExtraSquirrel(false);
+    flockExtraSquirrelRef.current = false;
+    setFlockNoSquirrelTurns(false);
+    flockNoSquirrelTurnsRef.current = false;
+    setFlockSquirrelLockDraws(0);
+    setFlockStartingScaleBonus(false);
+    flockStartingScaleBonusRef.current = false;
+    setFlockHandPenalty(false);
+    flockHandPenaltyRef.current = false;
+    setFlockSquirrelHealthBonus(0);
+    flockSquirrelHealthBonusRef.current = 0;
+    setFlockSheepList([]);
+    setFlockSelectedSheepId(null);
+    setFlockRepicksUsed(0);
+    setFlockPendingRemovals(0);
+    setFlockRemovalSelectedIds([]);
+    setItems(['coin_purse', 'magical_hat', 'large_matchbook']);
+    setItemTargetMode(null);
+    setItemTargetSourceSlot(null);
+    setCrucifixUsedThisDuel(false);
+    setIsAcornActive(false);
+    setDieModal(null);
     setShowPauseMenu(false);
     setModalAlert(null);
     setBossState({
@@ -1841,9 +2057,17 @@ export default function App() {
   // --- Draw Mechanics ---
   const handleDraw = (type: 'sacrifice' | 'main') => {
     if (phase !== 'DRAW') return;
+    if (type === 'sacrifice' && flockNoSquirrelTurnsRef.current && flockSquirrelLockDraws > 0) {
+      triggerSfx('hit');
+      addLog(`The Zealot's curse seals your Squirrel pile (${flockSquirrelLockDraws} turn${flockSquirrelLockDraws === 1 ? '' : 's'} remaining).`);
+      return;
+    }
     let card: CardDef;
     if (type === 'sacrifice') {
       card = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
+      if (flockSquirrelHealthBonusRef.current > 0) {
+        card.health = (card.health || 1) + flockSquirrelHealthBonusRef.current;
+      }
       if (isAcornActive) {
         card.attack = (card.attack || 0) + 1;
         card.health = (card.health || 0) + 1;
@@ -1853,6 +2077,9 @@ export default function App() {
       if (deck.length === 0) {
         addLog("Your deck is empty! A Squirrel approaches out of pity.");
         card = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
+        if (flockSquirrelHealthBonusRef.current > 0) {
+          card.health = (card.health || 1) + flockSquirrelHealthBonusRef.current;
+        }
         if (isAcornActive) {
           card.attack = (card.attack || 0) + 1;
           card.health = (card.health || 0) + 1;
@@ -1864,6 +2091,9 @@ export default function App() {
         card = transformAmorphous(applyPlayerTotem(drawn, activeTotem));
         addLog(`Drew ${card.name}.`);
       }
+    }
+    if (flockSquirrelLockDraws > 0) {
+      setFlockSquirrelLockDraws(prev => Math.max(0, prev - 1));
     }
     setHand(prev => [...prev, card]);
     if (bossState.type === 'Zealot' && bossState.phase === 2 && bossState.skipNextPlayerTurn) {
@@ -2609,6 +2839,10 @@ export default function App() {
       }
     }
 
+    if (flockDisappearingRelicsRef.current && items[slotIndex] !== null && nextItems[slotIndex] === null) {
+      nextItems.splice(slotIndex, 1);
+      addLog("The Zealot's curse consumes the empty relic slot forever.");
+    }
     setItems(nextItems);
   };
 
@@ -2625,7 +2859,12 @@ export default function App() {
     setItems(prev => {
       const next = [...prev];
       if (sourceSlot !== null) {
-        next[sourceSlot] = null;
+        if (flockDisappearingRelicsRef.current) {
+          next.splice(sourceSlot, 1);
+          addLog("The Zealot's curse consumes the empty relic slot forever.");
+        } else {
+          next[sourceSlot] = null;
+        }
       }
       return next;
     });
@@ -3665,30 +3904,28 @@ export default function App() {
               }
             }
 
-            // Lane confronting player's strongest creature: Lethal Mirror Print
+            // Lane confronting player's strongest creature: Stamped Mirror Print (uses same imperfect Press odds)
+            const pressRng = duelRngRef.current;
             const threatenedCard = currPBoard[targetCol];
-            const mirrorPrint = threatenedCard
-              ? cloneCard(threatenedCard, 0)
-              : cloneCard(ALL_CARD_LOOKUP['Wolf'] || ALL_CARD_LOOKUP['Amoeba'], 0);
+            const mirrorBase = threatenedCard
+              ? threatenedCard
+              : (ALL_CARD_LOOKUP['Wolf'] || ALL_CARD_LOOKUP['Amoeba']);
+            const mirrorPrint = applyBegottenStamp(mirrorBase, pressRng);
             mirrorPrint.id = `goobert-press-mirror-${Date.now()}`;
-            mirrorPrint.attack = Math.max(2, (threatenedCard?.attack || 2));
-            mirrorPrint.health = Math.max(4, (threatenedCard?.health || 4));
-            mirrorPrint.sigils = Array.from(new Set([...mirrorPrint.sigils, 'Touch of Death', 'Made of Stone']));
-            (mirrorPrint as any).isGoobertClone = true;
             currEBoard[targetCol] = mirrorPrint;
 
-            // Flank with Rotary Slime Amalgams
+            // Flank with Press Slimes (imperfectly stamped rather than auto-buffed)
             const adjacentCols = [0, 1, 2, 3].filter(c => c !== targetCol);
             const leftFlank = adjacentCols[0] ?? 0;
             const rightFlank = adjacentCols[1] ?? 3;
 
             const makePressAmalgam = (idSuffix: string) => {
-              const amalgam = cloneCard(ALL_CARD_LOOKUP['Amalgam'] || ALL_CARD_LOOKUP['Amoeba'], 0);
+              const base = cloneCard(ALL_CARD_LOOKUP['Amoeba'] || ALL_CARD_LOOKUP['Amalgam'], 0);
+              base.attack = 2;
+              base.health = 3;
+              base.sigils = ['Amorphous'];
+              const amalgam = applyBegottenStamp(base, pressRng);
               amalgam.id = `goobert-press-${idSuffix}-${Date.now()}`;
-              amalgam.attack = 3;
-              amalgam.health = 5;
-              amalgam.sigils = ['Double Strike', 'Amorphous', 'Stinky'];
-              (amalgam as any).isGoobertClone = true;
               return amalgam;
             };
 
@@ -3788,7 +4025,15 @@ export default function App() {
           setPlayerBoard(currPBoard);
           setBones(currBones);
           setHand(prev => [...prev, ...handAdditions]);
-          setScale(-permanentScaleDebuff);
+          const flockDebtThisDuel = flockScaleDebtBattlesRef.current > 0 ? 2 : 0;
+    if (flockDebtThisDuel > 0) {
+      const nextDebtBattles = Math.max(0, flockScaleDebtBattlesRef.current - 1);
+      flockScaleDebtBattlesRef.current = nextDebtBattles;
+      setFlockScaleDebtBattles(nextDebtBattles);
+    }
+    const flockBonusThisDuel = flockStartingScaleBonusRef.current ? 2 : 0;
+    setScale(-permanentScaleDebuff - flockDebtThisDuel + flockBonusThisDuel);
+    setFlockSquirrelLockDraws(flockNoSquirrelTurnsRef.current ? 2 : 0);
           setTurnNumber(prev => prev + 1);
           setPhase('DRAW');
           addLog(`=== BOSS PHASE ${nextPhase}: A new turn begins! Draw from your Deck or Squirrels. ===`);
@@ -4186,7 +4431,13 @@ export default function App() {
           setPlayerBoard(currPBoard);
           setEnemyBoard(currEBoard);
           setPhase('GAME_OVER');
+          setIsHeavyRecoil(true);
+          setIsLossSequenceActive(true);
           triggerSfx('defeat');
+          await sleep(420);
+          setIsHeavyRecoil(false);
+          await sleep(1050);
+          setIsLossSequenceActive(false);
           handleLossMatch();
           return;
         }
@@ -4351,17 +4602,11 @@ export default function App() {
                 candidate.sigils = [...candidate.sigils, available[Math.floor(Math.random() * available.length)]];
               }
             } else if (bossState.type === 'The Begotten' || (bossState.type as any) === 'Goobert') {
+              const stamped = applyBegottenStamp(candidate, duelRngRef.current);
+              candidate.attack = stamped.attack;
+              candidate.health = stamped.health;
+              candidate.sigils = stamped.sigils;
               (candidate as any).isGoobertClone = true;
-              if (bossPhase === 1) {
-                candidate.sigils = Array.from(new Set([...candidate.sigils, 'Amorphous']));
-                candidate.health = Math.max(2, (candidate.health || 0) + 1);
-              } else {
-                const lethalPressStamps = ['Touch of Death', 'Double Strike', 'Bifurcated Strike', 'Sharp Quills'];
-                const stamp = lethalPressStamps[Math.floor(Math.random() * lethalPressStamps.length)];
-                candidate.attack = Math.max(2, (candidate.attack || 0) + 1);
-                candidate.health = Math.max(3, (candidate.health || 0) + 1);
-                candidate.sigils = Array.from(new Set([...candidate.sigils, 'Amorphous', stamp]));
-              }
             }
 
             currEQueue[targetSlot] = candidate;
@@ -4398,7 +4643,7 @@ export default function App() {
             maxCardThreat = 3;
           } else {
             maxAllowedTotalCards = 4;
-            maxSpawnsThisTurn = Math.random() < 0.5 ? 1 : 2;
+            maxSpawnsThisTurn = duelRngRef.current() < 0.5 ? 1 : 2;
             maxCardThreat = 4;
           }
 
@@ -4429,8 +4674,7 @@ export default function App() {
             const poolToUse = viableSlots.length > 0 ? viableSlots : emptySlots;
 
             // 2. Shuffle candidates to eliminate the 0 -> 1 bias, then prioritize lanes facing player threats
-            const targetSlots = [...poolToUse]
-              .sort(() => Math.random() - 0.5)
+            const targetSlots = seededShuffle(poolToUse, duelRngRef.current)
               .sort((a, b) => {
                 const aFacesThreat = currPBoard[a] !== null ? 1 : 0;
                 const bFacesThreat = currPBoard[b] !== null ? 1 : 0;
@@ -4486,7 +4730,7 @@ export default function App() {
               const combatants = validPool.filter(c => getEffectiveAtk(c) > 0);
               const poolToUse = (remainingAtkBudget > 0 && combatants.length > 0) ? combatants : validPool;
 
-              const candidate = transformAmorphous(cloneCard(poolToUse[Math.floor(Math.random() * poolToUse.length)], 0));
+              const candidate = transformAmorphous(cloneCard(poolToUse[Math.floor(duelRngRef.current() * poolToUse.length)], 0));
               currEQueue[targetSlot] = candidate;
               currentQueueAtk += getEffectiveAtk(candidate);
               if (getEffectiveAtk(candidate) === 0) queuedZeroAtkCount++;
@@ -4506,6 +4750,11 @@ export default function App() {
     setPlayerBoard(currPBoard);
     setEnemyBoard(currEBoard);
     setEnemyQueue(currEQueue);
+    if (flockBoneDrainRef.current && currBones > 0) {
+      const lost = Math.min(2, currBones);
+      currBones = Math.max(0, currBones - 2);
+      addLog(`The Zealot's curse drains ${lost} Bone${lost === 1 ? '' : 's'} at turn's end.`);
+    }
     setScale(currentScale);
     setBones(currBones);
     if (handAdditions.length > 0) {
@@ -4900,6 +5149,24 @@ export default function App() {
       const data: RunSaveData = JSON.parse(raw);
       const restoredDuels = data.duelsCompleted ?? 0;
       const restoredStage = data.stage ?? 1;
+      setIsCampfireSafe(Boolean(data.isCampfireSafe));
+      setFlockUsedOptions((data.flockUsedOptions as any) || []);
+      setFlockDisappearingRelics(Boolean(data.flockDisappearingRelics));
+      flockDisappearingRelicsRef.current = Boolean(data.flockDisappearingRelics);
+      setFlockBoneDrain(Boolean(data.flockBoneDrain));
+      flockBoneDrainRef.current = Boolean(data.flockBoneDrain);
+      setFlockScaleDebtBattles(data.flockScaleDebtBattles ?? 0);
+      flockScaleDebtBattlesRef.current = data.flockScaleDebtBattles ?? 0;
+      setFlockExtraSquirrel(Boolean(data.flockExtraSquirrel));
+      flockExtraSquirrelRef.current = Boolean(data.flockExtraSquirrel);
+      setFlockNoSquirrelTurns(Boolean(data.flockNoSquirrelTurns));
+      flockNoSquirrelTurnsRef.current = Boolean(data.flockNoSquirrelTurns);
+      setFlockStartingScaleBonus(Boolean(data.flockStartingScaleBonus));
+      flockStartingScaleBonusRef.current = Boolean(data.flockStartingScaleBonus);
+      setFlockHandPenalty(Boolean(data.flockHandPenalty));
+      flockHandPenaltyRef.current = Boolean(data.flockHandPenalty);
+      setFlockSquirrelHealthBonus(data.flockSquirrelHealthBonus ?? 0);
+      flockSquirrelHealthBonusRef.current = data.flockSquirrelHealthBonus ?? 0;
       const inferredBossesDefeated = data.runStats?.bossesDefeated ?? Math.max(0, restoredStage - 1);
 
       setMasterDeck(data.masterDeck);
@@ -5001,6 +5268,9 @@ export default function App() {
 
     const effectiveDuelsCompleted = progressOverride?.duelsCompleted ?? duelsCompleted;
     const effectiveBossesDefeated = progressOverride?.bossesDefeated ?? runStats.bossesDefeated;
+    const activeSeed = runSeedRef.current || runSeed || 'UNSEEDED';
+    const duelRng = createSeededRng(`${activeSeed}:duel:${effectiveDuelsCompleted}:${stage}:${level}:${forcedBoss || 'std'}`);
+    duelRngRef.current = duelRng;
 
     setScale(-permanentScaleDebuff);
 
@@ -5047,9 +5317,10 @@ export default function App() {
 
     const currentTotem = totemOverride !== undefined ? totemOverride : activeTotem;
 
-    const shuffledDeck = activeDeck
-      .map(c => currentTotem ? applyPlayerTotem(cloneCard(c, ouroborosBuffs), currentTotem) : cloneCard(c, ouroborosBuffs))
-      .sort(() => Math.random() - 0.5);
+    const shuffledDeck = seededShuffle(
+      activeDeck.map(c => currentTotem ? applyPlayerTotem(cloneCard(c, ouroborosBuffs), currentTotem) : cloneCard(c, ouroborosBuffs)),
+      duelRng
+    );
 
     setDeck(shuffledDeck);
 
@@ -5077,7 +5348,7 @@ export default function App() {
       });
 
       // 35% chance for a standard encounter to field a random totem once The Weaver has been defeated
-      if (progressOverride?.forceEnemyTotem || (hasDefeatedWeaver && Math.random() < 0.35)) {
+      if (progressOverride?.forceEnemyTotem || (hasDefeatedWeaver && duelRng() < 0.35)) {
         const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved"];
         const randomTotemSigils: string[] = [
           'Airborne',
@@ -5091,8 +5362,8 @@ export default function App() {
           'Stinky',
           'Bone King',
         ];
-        const chosenTribe = tribes[Math.floor(Math.random() * tribes.length)];
-        const chosenSigil = randomTotemSigils[Math.floor(Math.random() * randomTotemSigils.length)];
+        const chosenTribe = tribes[Math.floor(duelRng() * tribes.length)];
+        const chosenSigil = randomTotemSigils[Math.floor(duelRng() * randomTotemSigils.length)];
         activeEncounterTotem = { class: chosenTribe, sigil: chosenSigil };
       }
       setBossTotem(activeEncounterTotem);
@@ -5114,7 +5385,8 @@ export default function App() {
         // Bosses 1, 2, and 3 (Duels 6, 14, 24): Shuffle the standard trio so each appears exactly once
         if (!(window as any).__standardBossOrder || duelNum === 6 || standardBossesInCycle === 0) {
           const pool: ('Zealot' | 'The Begotten' | 'The Weaver')[] = ['Zealot', 'The Begotten', 'The Weaver'];
-          (window as any).__standardBossOrder = [...pool].sort(() => Math.random() - 0.5);
+          const bossOrderRng = createSeededRng(`${activeSeed}:bossOrder:${Math.floor(effectiveDuelsCompleted / 36)}`);
+          (window as any).__standardBossOrder = seededShuffle(pool, bossOrderRng);
         }
 
         const order: ('Zealot' | 'The Begotten' | 'The Weaver')[] = (window as any).__standardBossOrder;
@@ -5178,27 +5450,19 @@ export default function App() {
       } else if (bossType === 'The Begotten') {
         // Lane 0: Shifting Living Slime
         const primeAmoeba = transformAmorphous(cloneCard(ALL_CARD_LOOKUP['Amoeba'], 0));
-        primeAmoeba.attack = 2;
-        primeAmoeba.health = 4;
-        primeAmoeba.sigils = Array.from(new Set([...primeAmoeba.sigils, 'Stinky']));
+        primeAmoeba.attack = 1;
+        primeAmoeba.health = 3;
         (primeAmoeba as any).isGoobertClone = true;
         initBoard[0] = primeAmoeba;
 
-        // Lanes 1 & 2: Stamped caricatures mockingly pulled from player's deck
+        // Lanes 1 & 2: Stamped caricatures mockingly pulled from player's deck (same Press odds as player Stamp)
         const playerPool = masterDeck.filter(c => !c.unsacrificable && !c.isSacrifice && !(c as any).isTerrain);
         const sourceDeck = playerPool.length > 0 ? playerPool : MAIN_DECK_POOL;
 
         [1, 2].forEach(col => {
-          const raw = sourceDeck[Math.floor(Math.random() * sourceDeck.length)];
-          const paintedMockery = cloneCard(raw, 0);
+          const raw = sourceDeck[Math.floor(duelRng() * sourceDeck.length)];
+          const paintedMockery = applyBegottenStamp(raw, duelRng);
           paintedMockery.id = `goobert-p1-${col}-${Date.now()}`;
-          paintedMockery.attack = Math.max(1, (paintedMockery.attack || 0));
-          paintedMockery.health = Math.max(3, (paintedMockery.health || 0) + 1);
-          (paintedMockery as any).isGoobertClone = true;
-
-          const painterStamps = ['Bifurcated Strike', 'Sharp Quills', 'Amorphous', 'Fledgling'];
-          const chosenStamp = painterStamps[Math.floor(Math.random() * painterStamps.length)];
-          paintedMockery.sigils = Array.from(new Set([...(paintedMockery.sigils || []), chosenStamp]));
           initBoard[col] = paintedMockery;
         });
 
@@ -5224,7 +5488,7 @@ export default function App() {
           ['Anubis', 'Demon Elk'],
           ['Skeleton Canine', 'Skeleton'],
         ];
-        const pair = validPairs[Math.floor(Math.random() * validPairs.length)];
+        const pair = validPairs[Math.floor(duelRng() * validPairs.length)];
         initBoard[1] = cloneCard(ALL_CARD_LOOKUP[pair[0]], 0);
         initBoard[2] = cloneCard(ALL_CARD_LOOKUP[pair[1]], 0);
 
@@ -5248,7 +5512,7 @@ export default function App() {
         addLog('=== BOSS BATTLE: The Bone Lord rises! ===');
       } else if (bossType === 'The Weaver') {
         const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved"];
-        const shuffledTribes = [...tribes].sort(() => Math.random() - 0.5);
+        const shuffledTribes = seededShuffle(tribes, duelRng);
         const bossTribe = shuffledTribes[0];
         setWoodcarverClasses([bossTribe, shuffledTribes[1]]);
 
@@ -5256,7 +5520,7 @@ export default function App() {
           s => !['Trifurcated Strike', 'Bifurcated Strike', 'Double Strike', 'Touch of Death'].includes(s)
         );
         const chosenSigil = phase1SafeSigils.length > 0
-          ? phase1SafeSigils[Math.floor(Math.random() * phase1SafeSigils.length)]
+          ? phase1SafeSigils[Math.floor(duelRng() * phase1SafeSigils.length)]
           : WOODCARVER_BOSS_TOTEM_SIGILS[0];
 
         setBossTotem({ class: bossTribe, sigil: chosenSigil });
@@ -5278,7 +5542,7 @@ export default function App() {
         const frontPool = lowTierPool.length > 0 ? lowTierPool : validPool;
 
         const makeFrontlineBeast = () => {
-          const beast = cloneCard(frontPool[Math.floor(Math.random() * frontPool.length)], 0);
+          const beast = cloneCard(frontPool[Math.floor(duelRng() * frontPool.length)], 0);
           if (!beast.sigils.includes(chosenSigil)) {
             beast.sigils.push(chosenSigil);
           }
@@ -5287,7 +5551,7 @@ export default function App() {
 
         initBoard[1] = makeFrontlineBeast();
         initBoard[2] = makeFrontlineBeast();
-        initQueue[Math.random() < 0.5 ? 0 : 3] = makeFrontlineBeast();
+        initQueue[duelRng() < 0.5 ? 0 : 3] = makeFrontlineBeast();
         addLog(`=== BOSS BATTLE: The Weaver appears wielding [${bossTribe}] + [${chosenSigil}]! ===`);
       }
 
@@ -5350,7 +5614,7 @@ export default function App() {
         case 3:
           // Tier 3: 4 cards total, 1-2 opening cards, threat capped at 3
           maxRegularCards = 4;
-          initialCount = Math.random() < 0.6 ? 1 : 2;
+          initialCount = duelRng() < 0.6 ? 1 : 2;
           maxOpeningThreat = 3;
           break;
         case 4:
@@ -5413,21 +5677,21 @@ export default function App() {
       let enemyObstacleTarget = 0;
 
       // Obstacles are an occasional encounter condition (30% chance in regular battles), not a constant
-      const rollsTerrainEncounter = !isBoss && Math.random() < 0.30;
+      const rollsTerrainEncounter = !isBoss && duelRng() < 0.30;
       if (rollsTerrainEncounter) {
         // Flat 50/50 split between player flank and enemy frontline
-        if (Math.random() < 0.50) {
+        if (duelRng() < 0.50) {
           playerObstacleTarget = 1;
-          const pLane = Math.floor(Math.random() * 4);
-          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
+          const pLane = Math.floor(duelRng() * 4);
+          const terrainCard = duelRng() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
           nextPlayerBoard[pLane] = {
             ...cloneCard(terrainCard),
             id: `terrain-player-${Date.now()}-${pLane}`
           };
         } else {
           enemyObstacleTarget = 1;
-          const eLane = Math.floor(Math.random() * 4);
-          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
+          const eLane = Math.floor(duelRng() * 4);
+          const terrainCard = duelRng() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
           initBoard[eLane] = {
             ...cloneCard(terrainCard),
             id: `terrain-enemy-${Date.now()}-${eLane}`
@@ -5450,7 +5714,7 @@ export default function App() {
       // - Shuffle available lanes FIRST to eliminate the column 0/1 bias
       const openFrontlineLanes = [0, 1, 2, 3]
         .filter(l => initBoard[l] === null)
-        .sort(() => Math.random() - 0.5);
+        .sort(() => duelRng() - 0.5);
 
       const prioritizedLanes = openFrontlineLanes.sort((a, b) => {
         const aBlocked = nextPlayerBoard[a] !== null ? 1 : 0;
@@ -5498,7 +5762,7 @@ export default function App() {
           const activeCombatants = validCandidates.filter(c => (c.attack || 0) > 0);
           const poolToDraw = (zeroAtkCount === 0 && activeCombatants.length > 0) ? activeCombatants : validCandidates;
 
-          const chosen = transformAmorphous(cloneCard(poolToDraw[Math.floor(Math.random() * poolToDraw.length)], 0));
+          const chosen = transformAmorphous(cloneCard(poolToDraw[Math.floor(duelRng() * poolToDraw.length)], 0));
           if (
             activeEncounterTotem &&
             (chosen.class === activeEncounterTotem.class || chosen.class === "ALL Classes") &&
@@ -5531,7 +5795,19 @@ export default function App() {
     setEnemyBoard(initBoard);
     setEnemyQueue(initQueue);
     // Fair Hand Draw: Prioritize honest foundation cards before multi-strike sweepers (1-blood or 0-cost)
-    const initialHand: CardDef[] = [currentTotem ? applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), currentTotem) : cloneCard(TOKEN_SQUIRREL, ouroborosBuffs)];
+    const makeDuelSquirrel = () => {
+      const sq = currentTotem
+        ? applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), currentTotem)
+        : cloneCard(TOKEN_SQUIRREL, ouroborosBuffs);
+      if (flockSquirrelHealthBonusRef.current > 0) {
+        sq.health = (sq.health || 1) + flockSquirrelHealthBonusRef.current;
+      }
+      return sq;
+    };
+    const initialHand: CardDef[] = [makeDuelSquirrel()];
+    if (flockExtraSquirrelRef.current) {
+      initialHand.push(makeDuelSquirrel());
+    }
     const nukeSigils = ['Bifurcated Strike', 'Trifurcated Strike', 'Double Strike'];
     const isStarterCost = (c: CardDef) =>
       c.cost === 1 || ((c.cost === 0 || c.cost === undefined) && (!c.boneCost || c.boneCost === 0));
@@ -5553,7 +5829,11 @@ export default function App() {
       addLog(`Fair Hand dealt a ${drawnStarter.cost === 1 ? '1-blood' : 'free'} creature.`);
     }
 
-    while (initialHand.length < 4 && shuffledDeck.length > 0) {
+    const targetOpeningHandSize = Math.max(
+      1,
+      4 + (flockExtraSquirrelRef.current ? 1 : 0) - (flockHandPenaltyRef.current ? 1 : 0)
+    );
+    while (initialHand.length < targetOpeningHandSize && shuffledDeck.length > 0) {
       initialHand.push(transformAmorphous(shuffledDeck.pop()!));
     }
 
@@ -5935,6 +6215,8 @@ export default function App() {
       if (node.type === 'items') startItemEvent();
       else if (node.type === 'campfire') initCampfire();
       else if (node.type === 'altar') initAltar();
+    else if (node.type === 'anvil') initAnvil();
+    else if (node.type === 'flock') initFlock();
       else if (node.type === 'carving') initTotemCarving();
       else if (node.type === 'cost') initCostBargain();
       else if (node.type === 'bonelord') initBoneLord();
@@ -5951,6 +6233,7 @@ export default function App() {
     clearEventTimers();
     setIsEventBusy(false);
     setCampfireHolding(false);
+    setCampfireAnimState('idle');
     setCampfireCardIdx(null);
     setCampfireBuffType(Math.random() < 0.5 ? 'attack' : 'health');
     setCampfireStage(0);
@@ -5962,7 +6245,7 @@ export default function App() {
     setIsEventBusy(true);
 
     const selectedIdx = campfireCardIdx;
-    const nextDeck = [...masterDeck];
+    const nextDeck = masterDeck.map((c, i) => (i === selectedIdx ? { ...c } : c));
     const targetCard = nextDeck[selectedIdx];
     if (!targetCard) {
       setIsEventBusy(false);
@@ -5970,91 +6253,71 @@ export default function App() {
     }
 
     const noSafeCampfire = activeVowsRef.current.includes('no_safe_campfire');
-    if (campfireStage === 0 && (!noSafeCampfire || isCampfireSafe)) {
-      if (campfireBuffType === 'attack') targetCard.attack = (targetCard.attack || 0) + 1;
+    const isPerilousFirstDip = campfireStage === 0 && noSafeCampfire && !isCampfireSafe;
+    const isSecondDip = campfireStage > 0;
+    const buffType = campfireBuffType;
+    const safe = isCampfireSafe;
+
+    const devourChance = isPerilousFirstDip ? 0.35 : isSecondDip && !safe ? 0.50 : 0;
+    const willDevour = devourChance > 0 && Math.random() < devourChance;
+
+    setCampfireHolding(true);
+    setCampfireAnimState(willDevour ? 'drowning' : 'dipping');
+    triggerSfx('bone');
+
+    scheduleEventTimer(() => {
+      setCampfireHolding(false);
+
+      if (willDevour) {
+        const poisonedSurvivors = Boolean(targetCard.sigils?.includes('Touch of Death'));
+        if (poisonedSurvivors) setIsCampfireSafe(true);
+        nextDeck.splice(selectedIdx, 1);
+        setCampfireCardIdx(null);
+        setMasterDeck(nextDeck);
+        masterDeckRef.current = nextDeck;
+        triggerSfx('defeat');
+
+        scheduleEventTimer(() => {
+          setCampfireAnimState('idle');
+          setModalAlert({
+            title: "DROWNED BY THE ZEALOT",
+            message: isPerilousFirstDip
+              ? (poisonedSurvivors
+                  ? `Under the Vow of Boiling Zeal, the Zealot plunged ${targetCard.name} into the font on the first dip—yet its Unholy Crest poisoned the flock!`
+                  : `Under the Vow of Boiling Zeal, the Zealot snatched ${targetCard.name} into the boiling blood on the very first dip!`)
+              : (poisonedSurvivors
+                  ? `The Zealot plunged the ${targetCard.name} into the boiling blood! In its demise, its Unholy Crest cursed the Zealot's flock.`
+                  : `The Zealot plunged the ${targetCard.name} into the boiling blood! You watch helplessly...`),
+            isWin: false,
+            btnText: "Flee the Chapel",
+            onAction: () => {
+              setModalAlert(null);
+              setIsEventBusy(false);
+              returnToMap(nextDeck);
+            }
+          });
+        }, 420);
+        return;
+      }
+
+      if (buffType === 'attack') targetCard.attack = (targetCard.attack || 0) + 1;
       else targetCard.health = (targetCard.health || 0) + 2;
       setMasterDeck(nextDeck);
       masterDeckRef.current = nextDeck;
-      setCampfireStage(1);
-      triggerSfx('play');
-      addLog(`Warmed ${targetCard.name} safely.`);
-      setIsEventBusy(false);
-    } else if (campfireStage === 0 && noSafeCampfire && !isCampfireSafe) {
-      setCampfireHolding(true);
-      triggerSfx('bone');
-      const buffType = campfireBuffType;
-      scheduleEventTimer(() => {
-        setCampfireHolding(false);
-        const willDevour = Math.random() < 0.35;
-        if (willDevour) {
-          const poisonedSurvivors = Boolean(targetCard.sigils?.includes('Touch of Death'));
-          if (poisonedSurvivors) setIsCampfireSafe(true);
-          nextDeck.splice(selectedIdx, 1);
-          setCampfireCardIdx(null);
-          setMasterDeck(nextDeck);
-          masterDeckRef.current = nextDeck;
-          triggerSfx('defeat');
-          setModalAlert({
-            title: "DROWNED BY THE ZEALOT",
-            message: poisonedSurvivors
-              ? `Under the Vow of Boiling Zeal, the Zealot plunged ${targetCard.name} into the font on the first dip—yet its Unholy Crest poisoned the flock!`
-              : `Under the Vow of Boiling Zeal, the Zealot snatched ${targetCard.name} into the boiling blood on the very first dip!`,
-            isWin: false,
-            btnText: "Flee the Chapel",
-            onAction: () => {
-              setModalAlert(null);
-              setIsEventBusy(false);
-              returnToMap(nextDeck);
-            }
-          });
-        } else {
-          if (buffType === 'attack') targetCard.attack = (targetCard.attack || 0) + 1;
-          else targetCard.health = (targetCard.health || 0) + 2;
-          setMasterDeck(nextDeck);
-          masterDeckRef.current = nextDeck;
-          setCampfireStage(1);
-          triggerSfx('play');
-          addLog(`${targetCard.name} survived the perilous first baptism.`);
+      setCampfireAnimState('blessed');
+
+      if (!isSecondDip) {
+        setCampfireStage(1);
+        triggerSfx('play');
+        addLog(isPerilousFirstDip ? `${targetCard.name} survived the perilous first baptism.` : `Warmed ${targetCard.name} safely.`);
+        scheduleEventTimer(() => {
+          setCampfireAnimState('idle');
           setIsEventBusy(false);
-        }
-      }, 620);
-    } else {
-      setCampfireHolding(true);
-      triggerSfx('bone');
-      const buffType = campfireBuffType;
-      const safe = isCampfireSafe;
-      scheduleEventTimer(() => {
-        setCampfireHolding(false);
-        const willDevour = !safe && Math.random() < 0.50;
-        if (willDevour) {
-          const poisonedSurvivors = Boolean(targetCard.sigils?.includes('Touch of Death'));
-          if (poisonedSurvivors) {
-            setIsCampfireSafe(true);
-          }
-          nextDeck.splice(selectedIdx, 1);
-          setCampfireCardIdx(null);
-          setMasterDeck(nextDeck);
-          masterDeckRef.current = nextDeck;
-          triggerSfx('defeat');
-          setModalAlert({
-            title: "DROWNED BY THE ZEALOT",
-            message: poisonedSurvivors
-              ? `The Zealot plunged the ${targetCard.name} into the boiling blood! In its demise, its Unholy Crest cursed the Zealot's flock.`
-              : `The Zealot plunged the ${targetCard.name} into the boiling blood! You watch helplessly...`,
-            isWin: false,
-            btnText: "Flee the Chapel",
-            onAction: () => {
-              setModalAlert(null);
-              setIsEventBusy(false);
-              returnToMap(nextDeck);
-            }
-          });
-        } else {
-          if (buffType === 'attack') targetCard.attack = (targetCard.attack || 0) + 1;
-          else targetCard.health = (targetCard.health || 0) + 2;
-          setMasterDeck(nextDeck);
-          masterDeckRef.current = nextDeck;
-          triggerSfx('victory');
+        }, 480);
+      } else {
+        triggerSfx('victory');
+        scheduleEventTimer(() => {
+          setCampfireAnimState('idle');
           setModalAlert({
             title: "BATHED AGAIN",
             message: `${targetCard.name} absorbs the blood blessing, you shudder at its abnormal growth...`,
@@ -6066,9 +6329,9 @@ export default function App() {
               returnToMap(nextDeck);
             }
           });
-        }
-      }, 620);
-    }
+        }, 750);
+      }
+    }, 780);
   };
 
   // --- Altar (Sigil Transfer) Event ---
@@ -6085,6 +6348,8 @@ export default function App() {
     setIsEventBusy(false);
     setAltarHostId(null);
     setAltarSacrificeId(null);
+    setAltarAnimPhase('idle');
+    setAltarStageCards(null);
 
     // Detect if the deck has ANY valid (Host, Sacrifice) pair under Altar rules
     const hasValidPair = masterDeck.some(host => {
@@ -6144,29 +6409,350 @@ export default function App() {
       return;
     }
 
-    setAltarHostId(null);
-    setAltarSacrificeId(null);
-
+    const mergedHost: CardDef = { ...host, sigils: mergedSigils };
     const nextDeck = masterDeck.filter(c => c.id !== sacrifice.id).map(c => {
       if (c.id === host.id) {
-        return { ...c, sigils: mergedSigils };
+        return mergedHost;
       }
       return c;
     });
 
+    setAltarStageCards({ host, sacrifice, mergedHost });
+    setAltarAnimPhase('sacrificing');
+    triggerSfx('sacrifice');
+
+    // Beat 1 (0 -> 850ms): Sacrifice dissolves on the stone altar
+    scheduleEventTimer(() => {
+      setAltarAnimPhase('descending');
+      triggerSfx('bell');
+      setMasterDeck(nextDeck);
+      masterDeckRef.current = nextDeck;
+    }, 850);
+
+    // Beat 2 (850 -> 2350ms): Host descends onto the stone slab in its place, pausing so the player sees the result
+    scheduleEventTimer(() => {
+      setAltarAnimPhase('done');
+      setModalAlert({
+        title: "RITUAL COMPLETE",
+        message: `${sacrifice.name} was surrendered to the Maker. Its essence now empowers ${host.name}.`,
+        isWin: true,
+        btnText: "Leave Altar",
+        onAction: () => {
+          setModalAlert(null);
+          setAltarHostId(null);
+          setAltarSacrificeId(null);
+          setAltarAnimPhase('idle');
+          setAltarStageCards(null);
+          setIsEventBusy(false);
+          returnToMap(nextDeck);
+        }
+      });
+    }, 2350);
+  };
+
+  // --- Transmutation Table (Anvil) Event ---
+  const initAnvil = () => {
+    setIsEventBusy(false);
+    setAnvilSelectedId(null);
+    setAnvilStrikeAnim('idle');
+    setScreen('EVENT_ANVIL');
+  };
+
+  const getBloodToBoneCost = (bloodCost: number): number => {
+    if (bloodCost <= 1) return 2;
+    if (bloodCost === 2) return 5;
+    if (bloodCost === 3) return 7;
+    return 8;
+  };
+
+  const canAnvilBloodToBone = (card: CardDef | null): boolean => {
+    if (!card) return false;
+    return (card.cost || 0) > 0;
+  };
+
+  const canAnvilHollow = (card: CardDef | null): boolean => {
+    if (!card) return false;
+    const blood = card.cost || 0;
+    const bone = card.boneCost || 0;
+    if (blood === 0 && bone === 0) return true; // No-cost card gains Unkillable
+    if (blood >= 2) return true;
+    if (blood === 0 && bone >= 2) return true;
+    return false; // Already at minimum 1 Blood or 1 Bone
+  };
+
+  const applyAnvilStrike = (mode: 'hammer' | 'forceps') => {
+    if (isEventBusy || !anvilSelectedId) return;
+    const target = masterDeck.find(c => c.id === anvilSelectedId);
+    if (!target) return;
+    if (mode === 'hammer' && !canAnvilBloodToBone(target)) return;
+    if (mode === 'forceps' && !canAnvilHollow(target)) return;
+
+    setIsEventBusy(true);
+    setAnvilStrikeAnim(mode);
+    triggerSfx(mode === 'hammer' ? 'hit' : 'bone');
+
+    const updated = cloneCard(target);
+    updated.id = target.id;
+    let outcomeMsg = '';
+
+    if (mode === 'hammer') {
+      const oldBlood = updated.cost || 1;
+      const newBones = getBloodToBoneCost(oldBlood);
+      updated.cost = 0;
+      updated.boneCost = newBones;
+      outcomeMsg = `The hammer fell. ${updated.name}'s ${oldBlood} Blood cost shattered into ${newBones} Bones.`;
+    } else {
+      const oldBlood = updated.cost || 0;
+      const oldBones = updated.boneCost || 0;
+      if (oldBlood === 0 && oldBones === 0) {
+        if (!updated.sigils.includes('Unkillable')) {
+          updated.sigils = [...updated.sigils, 'Unkillable'];
+        }
+        outcomeMsg = `The forceps drew nothing from ${updated.name}'s empty veins—yet it refuses to die. Gained Unkillable.`;
+      } else {
+        if (oldBlood >= 2) {
+          updated.cost = Math.max(1, oldBlood - 1);
+        } else if (oldBones >= 2) {
+          updated.boneCost = Math.max(1, oldBones - 1);
+        }
+        if ((updated.health || 1) > 1) {
+          updated.health = (updated.health || 1) - 1;
+          outcomeMsg = `${updated.name} was hollowed out. Its summoning cost fell by 1, at the price of 1 Health.`;
+        } else {
+          if (!updated.sigils.includes('Brittle')) {
+            updated.sigils = [...updated.sigils, 'Brittle'];
+          }
+          outcomeMsg = `${updated.name} was hollowed to the bone. Its cost fell by 1, leaving it Brittle.`;
+        }
+      }
+    }
+
+    const nextDeck = masterDeck.map(c => (c.id === target.id ? updated : c));
     setMasterDeck(nextDeck);
     masterDeckRef.current = nextDeck;
+
+    scheduleEventTimer(() => {
+      setAnvilStrikeAnim('idle');
+      triggerSfx('play');
+      setModalAlert({
+        title: mode === 'hammer' ? 'TRANSMUTED' : 'HOLLOWED',
+        message: outcomeMsg,
+        isWin: true,
+        btnText: 'Leave Table',
+        onAction: () => {
+          setModalAlert(null);
+          setAnvilSelectedId(null);
+          setIsEventBusy(false);
+          returnToMap(nextDeck);
+        },
+      });
+    }, 900);
+  };
+
+  // --- The Zealot's Flock Event ---
+  const initFlock = () => {
+    setIsEventBusy(false);
+    setFlockSelectedSheepId(null);
+    setFlockRepicksUsed(0);
+    setFlockPendingRemovals(0);
+    setFlockRemovalSelectedIds([]);
+
+    const allBlackIds: FlockOptionId[] = [
+      'stat_boost_disappearing_relics',
+      'bones_drain',
+      'thin_deck_scale_debt',
+      'touch_of_death_brittle',
+      'two_squirrels_locked_draw',
+      'blood_gauge_hand_penalty',
+    ];
+    const remainingBlack = allBlackIds.filter(id => !flockUsedOptions.includes(id));
+    const useGreySheep = isCampfireSafe || remainingBlack.length === 0;
+
+    const activeSeed = runSeedRef.current || runSeed || 'FLOCK';
+    const rng = createSeededRng(`${activeSeed}:flock:${duelsCompleted}:${flockUsedOptions.length}:${stage}`);
+
+    if (useGreySheep) {
+      setFlockSheepList([
+        {
+          id: 0,
+          x: 50,
+          y: 52,
+          optionId: 'grey_sheep_squirrels',
+          isGrey: true,
+          flip: false,
+          wanderAnim: 'sheepWanderA',
+          duration: 11,
+          delay: 0,
+        },
+      ]);
+    } else {
+      const shuffledOptions = seededShuffle(remainingBlack, rng);
+      const slots: { x: number; y: number }[] = [
+        { x: 14, y: 26 }, { x: 31, y: 20 }, { x: 50, y: 24 }, { x: 69, y: 22 }, { x: 85, y: 28 },
+        { x: 18, y: 52 }, { x: 38, y: 48 }, { x: 58, y: 52 }, { x: 79, y: 50 },
+        { x: 20, y: 76 }, { x: 42, y: 74 }, { x: 64, y: 77 }, { x: 83, y: 74 },
+      ];
+      const sheep: FlockSheepEntity[] = slots.map((pos, idx) => ({
+        id: idx,
+        x: Math.max(10, Math.min(90, Math.round(pos.x + (rng() - 0.5) * 7))),
+        y: Math.max(16, Math.min(82, Math.round(pos.y + (rng() - 0.5) * 8))),
+        optionId: shuffledOptions[idx % shuffledOptions.length],
+        isGrey: false,
+        flip: rng() < 0.5,
+        wanderAnim: idx % 2 === 0 ? 'sheepWanderA' : 'sheepWanderB',
+        duration: Number((7.5 + rng() * 5.5).toFixed(2)),
+        delay: Number((-rng() * 8).toFixed(2)),
+      }));
+      setFlockSheepList(sheep);
+    }
+
+    setScreen('EVENT_FLOCK');
+  };
+
+  const handleFlockRepick = () => {
+    if (flockRepicksUsed >= 1 || flockSelectedSheepId === null) return;
+    const picked = flockSheepList.find(s => s.id === flockSelectedSheepId);
+    if (!picked || picked.isGrey) return;
+
+    triggerSfx('draw');
+    setFlockRepicksUsed(1);
+    setFlockSelectedSheepId(null);
+    setFlockSheepList(prev =>
+      prev.map(s => (s.id === picked.id ? { ...s, dismissed: true } : s))
+    );
+  };
+
+  const applyFlockOption = (optId: FlockOptionId) => {
+    if (isEventBusy) return;
+    setIsEventBusy(true);
+
+    if (optId === 'grey_sheep_squirrels') {
+      const nextBonus = flockSquirrelHealthBonusRef.current + 3;
+      flockSquirrelHealthBonusRef.current = nextBonus;
+      setFlockSquirrelHealthBonus(nextBonus);
+      triggerSfx('victory');
+      setModalAlert({
+        title: 'THE LONE GREY SHEEP',
+        message: 'Its wool parts quietly. All Squirrels gain +3 Health for the rest of the ritual.',
+        isWin: true,
+        btnText: 'Leave the Pen',
+        onAction: () => {
+          setModalAlert(null);
+          setIsEventBusy(false);
+          returnToMap();
+        },
+      });
+      return;
+    }
+
+    setFlockUsedOptions(prev => (prev.includes(optId) ? prev : [...prev, optId]));
+
+    if (optId === 'thin_deck_scale_debt') {
+      const nextDebt = flockScaleDebtBattlesRef.current + 2;
+      flockScaleDebtBattlesRef.current = nextDebt;
+      setFlockScaleDebtBattles(nextDebt);
+      const removableCount = Math.min(2, Math.max(0, masterDeck.length - 1));
+      if (removableCount === 0) {
+        triggerSfx('sacrifice');
+        setModalAlert({
+          title: 'THE FLOCK FED',
+          message: 'Your deck is too bare to thin further, yet the next 2 battles still begin at -2 on the Blood Gauge.',
+          isWin: true,
+          btnText: 'Leave the Pen',
+          onAction: () => {
+            setModalAlert(null);
+            setIsEventBusy(false);
+            returnToMap();
+          },
+        });
+      } else {
+        triggerSfx('sacrifice');
+        setFlockPendingRemovals(removableCount);
+        setFlockRemovalSelectedIds([]);
+        setIsEventBusy(false);
+      }
+      return;
+    }
+
+    let nextDeck = masterDeck;
+    let msg = '';
+
+    if (optId === 'stat_boost_disappearing_relics') {
+      nextDeck = masterDeck.map(c => ({
+        ...c,
+        attack: (c.attack || 0) + 1,
+        health: (c.health || 1) + 1,
+      }));
+      setMasterDeck(nextDeck);
+      masterDeckRef.current = nextDeck;
+      flockDisappearingRelicsRef.current = true;
+      setFlockDisappearingRelics(true);
+      msg = 'Your creatures swell with +1 Attack and +1 Health. Your relic slots will vanish after each use.';
+    } else if (optId === 'bones_drain') {
+      const nextBones = (startingBonesRef.current ?? startingBones) + 5;
+      startingBonesRef.current = nextBones;
+      setStartingBones(nextBones);
+      flockBoneDrainRef.current = true;
+      setFlockBoneDrain(true);
+      msg = 'You gain +5 starting Bones every battle, but lose 2 Bones at the end of each turn.';
+    } else if (optId === 'touch_of_death_brittle') {
+      nextDeck = masterDeck.map(c => {
+        const sigs = [...(c.sigils || [])];
+        if (!sigs.includes('Touch of Death')) sigs.push('Touch of Death');
+        if (!sigs.includes('Brittle')) sigs.push('Brittle');
+        return { ...c, sigils: sigs };
+      });
+      setMasterDeck(nextDeck);
+      masterDeckRef.current = nextDeck;
+      msg = 'Every creature in your deck now bears Touch of Death—and turns Brittle.';
+    } else if (optId === 'two_squirrels_locked_draw') {
+      flockExtraSquirrelRef.current = true;
+      setFlockExtraSquirrel(true);
+      flockNoSquirrelTurnsRef.current = true;
+      setFlockNoSquirrelTurns(true);
+      msg = 'Each battle begins with 2 Squirrels in hand, but you cannot draw Squirrels for the first 2 turns.';
+    } else if (optId === 'blood_gauge_hand_penalty') {
+      flockStartingScaleBonusRef.current = true;
+      setFlockStartingScaleBonus(true);
+      flockHandPenaltyRef.current = true;
+      setFlockHandPenalty(true);
+      msg = 'Each battle begins at +2 on the Blood Gauge, but your starting hand is reduced by 1.';
+    }
+
     triggerSfx('sacrifice');
     setModalAlert({
-      title: "RITUAL COMPLETE",
-      message: `${sacrifice.name} was surrendered to the Maker. Its essence now empowers ${host.name}.`,
+      title: 'THE FLOCK FED',
+      message: msg,
       isWin: true,
-      btnText: "Leave Altar",
+      btnText: 'Leave the Pen',
       onAction: () => {
         setModalAlert(null);
         setIsEventBusy(false);
         returnToMap(nextDeck);
-      }
+      },
+    });
+  };
+
+  const confirmFlockDeckRemovals = () => {
+    if (flockRemovalSelectedIds.length !== flockPendingRemovals) return;
+    setIsEventBusy(true);
+    const removeSet = new Set(flockRemovalSelectedIds);
+    const nextDeck = masterDeck.filter(c => !c.id || !removeSet.has(c.id));
+    setMasterDeck(nextDeck);
+    masterDeckRef.current = nextDeck;
+    setFlockPendingRemovals(0);
+    setFlockRemovalSelectedIds([]);
+    triggerSfx('sacrifice');
+    setModalAlert({
+      title: 'OFFERING ACCEPTED',
+      message: `${removeSet.size} creature${removeSet.size === 1 ? '' : 's'} culled from your deck. Your next 2 battles begin at -2 on the Blood Gauge.`,
+      isWin: true,
+      btnText: 'Leave the Pen',
+      onAction: () => {
+        setModalAlert(null);
+        setIsEventBusy(false);
+        returnToMap(nextDeck);
+      },
     });
   };
 
@@ -6285,8 +6871,11 @@ export default function App() {
 
   // --- Mycologists Event ---
   const initMycologists = () => {
+    clearEventTimers();
     setIsEventBusy(false);
     setMycoSelectedIndices([]);
+    setMycoAnimPhase('idle');
+    setMycoStageCards(null);
 
     const counts: Record<string, number> = {};
     masterDeck.forEach(c => {
@@ -6356,7 +6945,6 @@ export default function App() {
     }
 
     const targets = [...mycoSelectedIndices];
-    setMycoSelectedIndices([]);
 
     const fused = cloneCard(card1);
     fused.attack = (card1.attack || 0) + (card2.attack || 0);
@@ -6368,21 +6956,36 @@ export default function App() {
 
     const nextDeck = masterDeck.filter((_, idx) => !targets.includes(idx));
     nextDeck.push(fused);
-    setMasterDeck(nextDeck);
-    masterDeckRef.current = nextDeck;
+
+    setMycoStageCards({ twin1: card1, twin2: card2, fused });
+    setMycoAnimPhase('sewing');
     triggerSfx('sacrifice');
 
-    setModalAlert({
-      title: "FUSED IN SANGUINE WEB",
-      message: `The Weaver bound ${card1.name} and ${card2.name} into an abomination of exceptional might!`,
-      isWin: true,
-      btnText: "Leave Weaver",
-      onAction: () => {
-        setModalAlert(null);
-        setIsEventBusy(false);
-        returnToMap(nextDeck);
-      }
-    });
+    // Beat 1 (0 -> 850ms): Needles flash as Twin I & Twin II pull into the loom
+    scheduleEventTimer(() => {
+      setMycoAnimPhase('woven');
+      setMasterDeck(nextDeck);
+      masterDeckRef.current = nextDeck;
+      triggerSfx('bell');
+    }, 850);
+
+    // Beat 2 (850 -> 2300ms): Fused abomination sits woven on the loom cloth before modal appears
+    scheduleEventTimer(() => {
+      setModalAlert({
+        title: "FUSED IN SANGUINE WEB",
+        message: `The Weaver bound ${card1.name} and ${card2.name} into an abomination of exceptional might!`,
+        isWin: true,
+        btnText: "Leave Weaver",
+        onAction: () => {
+          setModalAlert(null);
+          setMycoSelectedIndices([]);
+          setMycoAnimPhase('idle');
+          setMycoStageCards(null);
+          setIsEventBusy(false);
+          returnToMap(nextDeck);
+        }
+      });
+    }, 2300);
   };
 
   const initGoobert = () => {
@@ -6390,6 +6993,8 @@ export default function App() {
     setIsEventBusy(false);
     setGoobertStamping(false);
     setGoobertSelectedIdx(null);
+    setGoobertStampedCard(null);
+    setGoobertOriginalSnapshot(null);
     setScreen('EVENT_GOOBERT');
   };
 
@@ -6403,36 +7008,47 @@ export default function App() {
       return;
     }
 
+    setGoobertOriginalSnapshot(original);
+    setGoobertStampedCard(null);
     setGoobertStamping(true);
-    triggerSfx('bell');
+    triggerSfx('hit');
 
-    scheduleEventTimer(() => {
-      setGoobertStamping(false);
-      setGoobertSelectedIdx(null);
+    const clone = cloneCard(original);
+    clone.isGoobertClone = true;
+    clone.id = `goobert-${Date.now()}`;
 
-      const clone = cloneCard(original);
-      clone.isGoobertClone = true;
-      clone.id = `goobert-${Date.now()}`;
+    const mutated = Math.random() < 0.5;
+    let desc = `The Press did indeed Stamp a pristine ${original.name}!`;
 
-      const mutated = Math.random() < 0.5;
-      let desc = `The Press did indeed Stamp a pristine ${original.name}!`;
-
-      if (mutated) {
-        if (Math.random() < 0.5) {
-          const delta = Math.random() < 0.5 ? 1 : -1;
-          clone.attack = Math.max(0, (clone.attack || 0) + delta);
-          desc = `The Begotten slammed the Press shut. The Stamped ${original.name}'s attack shifted by ${delta > 0 ? '+1' : '-1'}.`;
-        } else {
-          const pool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
-          clone.sigils = [pool[Math.floor(Math.random() * pool.length)]];
-          desc = `The Begotten's carelessness cut ${original.name}'s crest in the Press, he Stamped it with ${clone.sigils[0]} to "compensate!"`;
-        }
+    if (mutated) {
+      if (Math.random() < 0.5) {
+        const delta = Math.random() < 0.5 ? 1 : -1;
+        clone.attack = Math.max(0, (clone.attack || 0) + delta);
+        desc = `The Begotten slammed the Press shut. The Stamped ${original.name}'s attack shifted by ${delta > 0 ? '+1' : '-1'}.`;
+      } else {
+        const pool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
+        clone.sigils = [pool[Math.floor(Math.random() * pool.length)]];
+        desc = `The Begotten's carelessness cut ${original.name}'s crest in the Press, he Stamped it with ${clone.sigils[0]} to "compensate!"`;
       }
+    }
 
-      const nextDeck = [...masterDeck, clone];
+    const nextDeck = [...masterDeck, clone];
+
+    // Beat 1 (860ms): Swap blank plate for stamped clone mid-clamp while crushed flat against the press bed
+    scheduleEventTimer(() => {
+      setGoobertStampedCard(clone);
       setMasterDeck(nextDeck);
       masterDeckRef.current = nextDeck;
       triggerSfx('play');
+    }, 860);
+
+    // Beat 2 (1860ms): Platen finishes lifting after 1s hold, cards unsquish into view
+    scheduleEventTimer(() => {
+      setGoobertStamping(false);
+    }, 1860);
+
+    // Beat 3 (3150ms): Pause so the player sees the stamped clone on the press bed before the modal opens
+    scheduleEventTimer(() => {
       setModalAlert({
         title: "THE BEGOTTEN SNEERS",
         message: desc,
@@ -6440,10 +7056,14 @@ export default function App() {
         btnText: "VENTURE ONWARD",
         onAction: () => {
           setModalAlert(null);
+          setGoobertSelectedIdx(null);
+          setGoobertStampedCard(null);
+          setGoobertOriginalSnapshot(null);
+          setIsEventBusy(false);
           returnToMap(nextDeck);
         }
       });
-    }, 580);
+    }, 3150);
   };
 
   // --- Cave Trials Event ---
@@ -6651,6 +7271,8 @@ export default function App() {
     else if (type === 'items') startItemEvent();
     else if (type === 'campfire') initCampfire();
     else if (type === 'altar') initAltar();
+    else if (type === 'anvil') initAnvil();
+    else if (type === 'flock') initFlock();
     else if (type === 'carving') initTotemCarving();
     else if (type === 'cost') initCostBargain();
     else if (type === 'choice') initCardChoice();
@@ -8018,9 +8640,41 @@ export default function App() {
                         Final Ledger
                       </div>
                     </div>
-                    <div className={`text-5xl font-mono font-bold leading-none drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)] ${calculateGrade(runStats).color}`}>
-                      {calculateGrade(runStats).letter}
-                    </div>
+                    {(() => {
+                      const grade = calculateGrade(runStats);
+                      const baseLetter = grade.letter.charAt(0);
+                      const suffix = grade.letter.slice(1);
+                      const baseUrl = import.meta.env.BASE_URL || './';
+                      return (
+                        <div
+                          className="flex items-center justify-end gap-0.5 select-none drop-shadow-[0_4px_14px_rgba(0,0,0,0.95)]"
+                          aria-label={`Grade ${grade.letter}`}
+                        >
+                          <img
+                            src={`${baseUrl}assets/text/${baseLetter}.png`}
+                            alt={baseLetter}
+                            className="h-12 w-auto object-contain"
+                            draggable={false}
+                          />
+                          {suffix === '+' && (
+                            <img
+                              src={`${baseUrl}assets/text/plus.png`}
+                              alt="+"
+                              className="h-8 w-auto object-contain -ml-1 self-start mt-0.5"
+                              draggable={false}
+                            />
+                          )}
+                          {suffix === '++' && (
+                            <img
+                              src={`${baseUrl}assets/text/plus-plus.png`}
+                              alt="++"
+                              className="h-8 w-auto object-contain -ml-1 self-start mt-0.5"
+                              draggable={false}
+                            />
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="space-y-2.5 font-mono text-xs">
@@ -8717,7 +9371,7 @@ export default function App() {
                 <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
               </div>
               <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-                Surplus Cache
+                Relic Cache
               </h1>
               <p className="mt-2 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/68 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-lg leading-relaxed shadow-md">
                 Exchange your overkill blood harvest for field relics before the trail resumes.
@@ -8734,7 +9388,7 @@ export default function App() {
                   <span className="text-[9px] uppercase font-bold text-red-400/70">OZ</span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-1.5 bg-[#120b08]/90 border border-[#3e2a1c] rounded-[2px] shadow-[0_6px_16px_rgba(0,0,0,0.75)]">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#b59c80] font-bold">Satchel</span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#b59c80] font-bold">Relics</span>
                   <span className="h-3 w-px bg-[#3e2a1c]" />
                   <span className="font-['Cinzel',_serif] text-sm font-bold text-[#ead4ac]">
                     {items.filter(s => s !== null).length} / {items.length}
@@ -8832,265 +9486,1023 @@ export default function App() {
       {/* =========================================================================
           CAMPFIRE EVENT SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_CAMPFIRE' && (
-        <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('campfireevent.jpg')}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,8,5,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+      {screen === 'EVENT_CAMPFIRE' && (() => {
+        const selectedCard = campfireCardIdx !== null ? masterDeck[campfireCardIdx] || null : null;
+        const isAnimating = campfireAnimState === 'dipping' || campfireAnimState === 'drowning';
 
-          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#d69758]">
-                Divine Blessing
-              </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Baptism of Boiling Blood
-            </h1>
-            <p className="mt-2 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#442518]/75 text-[11px] font-mono text-[#d8be9f]/85 max-w-lg leading-relaxed shadow-md">
-              {campfireStage === 0
-                ? "The Zealot's wicked smile sickens you. Select a creature to baptize in the boiling blood."
-                : isCampfireSafe
-                  ? "The chapel is deserted. You may bathe your Creature in blood an additional time without peril."
-                  : "The Zealot murmurs about the hunger growing in his Flock... bathing again risks losing your Creature."}
-            </p>
+        return (
+          <div
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('campfireevent.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,8,5,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
-            {/* Blessing Type Pill */}
-            <div className="mt-4 mb-5 flex items-center gap-3">
-              <span className="px-3.5 py-1 rounded-[2px] bg-[#1a0d09]/90 border border-[#783422]/80 text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#f2b886]">
-                Font Grants: {campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'}
-              </span>
-              {campfireStage === 0 && activeVows.includes('no_safe_campfire') && !isCampfireSafe && (
-                <span className="px-3 py-1 rounded-[2px] border bg-[#240b09]/90 border-red-700/80 text-red-300 text-[10px] font-mono font-bold uppercase tracking-[0.2em]">
-                  Vow Active — 35% First-Dip Risk
-                </span>
-              )}
-              {campfireStage > 0 && (
-                <span
-                  className={`px-3 py-1 rounded-[2px] border text-[10px] font-mono font-bold uppercase tracking-[0.2em] ${
-                    isCampfireSafe
-                      ? 'bg-[#101c13]/90 border-emerald-700/70 text-emerald-300'
-                      : 'bg-[#210b09]/90 border-red-700/80 text-red-300'
-                  }`}
-                >
-                  {isCampfireSafe ? 'Flock Slain — Safe' : 'Perilous Second Bath'}
-                </span>
-              )}
-            </div>
+            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Top Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#d69758]">
+                    Divine Blessing
+                  </span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  Baptism of Boiling Blood
+                </h1>
+              </div>
 
-            {/* Deck Selection Tray */}
-            <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#0d0806]/78 border border-[#422719]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,220,180,0.06)] backdrop-blur-[2px]">
-              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9c643b]/70" />
-              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9c643b]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c643b]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c643b]/70" />
-
-              <div className="flex flex-wrap gap-4 justify-center pt-2">
-                {masterDeck.map((c, idx) => {
-                  const isSelected = campfireCardIdx === idx;
-                  const lockedOut = campfireStage > 0 && !isSelected;
-                  return (
+              {/* Two-Column Split: Boiling Font Stage Left, Deck Panel Right */}
+              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                {/* LEFT COLUMN: Stone Baptismal Font Prop + Action Buttons */}
+                <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 rounded-[3px] bg-gradient-to-b from-[#140a07]/74 via-[#1c0d09]/85 to-[#0c0605]/95 border border-[#4e281b]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,210,175,0.08)] overflow-hidden flex flex-col items-center justify-between">
                     <div
-                      key={c.id || `camp-${c.name}-${idx}`}
-                      onClick={() => campfireStage === 0 && setCampfireCardIdx(idx)}
-                      className={`relative transform origin-center transition-all duration-200 ${
-                        lockedOut
-                          ? 'opacity-35 grayscale-[40%] cursor-default scale-[0.95]'
-                          : isSelected
-                            ? 'scale-[1.05] -translate-y-2.5 z-30 cursor-pointer'
-                            : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1 cursor-pointer'
+                      className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
+                        isAnimating
+                          ? 'opacity-100'
+                          : campfireAnimState === 'blessed'
+                            ? 'opacity-90'
+                            : 'opacity-45'
                       }`}
-                    >
-                      {isSelected && (
-                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1c0c08]/95 border border-[#c88a42]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f5d38d] whitespace-nowrap shadow-md">
-                          {campfireStage === 0 ? 'Selected' : 'Baptized'}
+                      style={{
+                        background:
+                          campfireAnimState === 'blessed'
+                            ? 'radial-gradient(circle at 50% 55%, rgba(245,158,11,0.34) 0%, rgba(185,28,28,0.18) 48%, transparent 74%)'
+                            : 'radial-gradient(circle at 50% 65%, rgba(220,38,38,0.36) 0%, rgba(127,29,29,0.16) 46%, transparent 74%)',
+                      }}
+                    />
+
+                    <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9c643b]/70" />
+                    <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9c643b]/70" />
+                    <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9c643b]/70" />
+                    <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9c643b]/70" />
+
+                    {/* Status / Blessing Telemetry Strip */}
+                    <div className="relative z-20 flex flex-wrap items-center justify-center gap-2">
+                      <span className="px-3 py-1 rounded-[2px] bg-[#1a0d09]/92 border border-[#783422]/80 text-[9.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#f2b886]">
+                        Font Grants: {campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'}
+                      </span>
+                      {campfireStage === 0 && activeVows.includes('no_safe_campfire') && !isCampfireSafe && (
+                        <span className="px-2.5 py-1 rounded-[2px] border bg-[#240b09]/92 border-red-700/80 text-red-300 text-[9.5px] font-mono font-bold uppercase tracking-[0.18em]">
+                          Vow — 35% First-Dip Risk
                         </span>
                       )}
-                      {renderCard(c, { isSelected, isClickable: !lockedOut, disableHoverScale: true })}
+                      {campfireStage > 0 && (
+                        <span
+                          className={`px-2.5 py-1 rounded-[2px] border text-[9.5px] font-mono font-bold uppercase tracking-[0.18em] ${
+                            isCampfireSafe
+                              ? 'bg-[#101c13]/92 border-emerald-700/75 text-emerald-300'
+                              : 'bg-[#210b09]/92 border-red-700/80 text-red-300'
+                          }`}
+                        >
+                          {isCampfireSafe ? 'Flock Slain — Safe' : 'Perilous Second Bath'}
+                        </span>
+                      )}
                     </div>
-                  );
-                })}
+
+                    {/* Centerpiece: Creature Suspended Over the Boiling Blood Font */}
+                    <div className="relative z-10 flex flex-col items-center justify-center w-full my-auto">
+                      {/* Clip viewport cuts off exactly at the blood pool surface so sinking cards vanish into the liquid */}
+                      <div className="relative z-30 w-[220px] h-[182px] -mb-[38px] overflow-hidden flex items-start justify-center pt-1">
+                        <div
+                          className={`relative w-[124px] h-[168px] flex items-center justify-center rounded-[4px] transition-shadow duration-500 ${
+                            campfireAnimState === 'blessed'
+                              ? 'shadow-[0_0_40px_rgba(245,158,11,0.65),0_0_20px_rgba(220,38,38,0.45)]'
+                              : selectedCard
+                                ? 'shadow-[0_16px_32px_rgba(0,0,0,0.92),0_0_20px_rgba(220,38,38,0.28)]'
+                                : ''
+                          }`}
+                          style={{
+                            animation:
+                              campfireAnimState === 'dipping'
+                                ? 'fontSubmergeDip 0.85s ease-in-out forwards'
+                                : campfireAnimState === 'drowning'
+                                  ? 'fontDrownSink 0.85s ease-in forwards'
+                                  : undefined,
+                          }}
+                        >
+                          {selectedCard ? (
+                            <div className="scale-[1.06] origin-center">
+                              {renderCard(selectedCard, { isClickable: false, disableHoverScale: true })}
+                            </div>
+                          ) : (
+                            <div className="w-[114px] h-[158px] rounded-[4px] border border-dashed border-[#8a4632]/75 bg-[#120807]/75 flex flex-col items-center justify-center gap-1.5 text-[#b57c62]">
+                              <span className="text-xl opacity-70">🩸</span>
+                              <span className="text-[9.5px] uppercase tracking-[0.2em] px-2">Choose Vessel</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Surface Blood Splash / Meniscus Glow where the card enters the liquid */}
+                        {isAnimating && (
+                          <div
+                            className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-36 h-3 rounded-full bg-red-400/80 blur-[2px] shadow-[0_0_16px_rgba(248,113,113,0.95)]"
+                            style={{ animation: 'inkSplatterBurst 0.8s ease-out infinite' }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Rising Steam / Blood Bubbles */}
+                      <div className="pointer-events-none relative w-72 h-0 z-40">
+                        {[-68, -28, 12, 54].map((xOff, idx) => (
+                          <span
+                            key={idx}
+                            className={`absolute bottom-0 rounded-full ${
+                              isAnimating ? 'w-3 h-3 bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.9)]' : 'w-2 h-2 bg-red-500/60'
+                            }`}
+                            style={{
+                              left: `calc(50% + ${xOff}px)`,
+                              animation: `bloodBubbleRise ${isAnimating ? 0.65 : 2.1}s ease-out ${idx * 0.25}s infinite`,
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Carved Stone Baptismal Font SVG Prop */}
+                      <svg
+                        viewBox="0 0 460 132"
+                        className="w-full max-w-[460px] h-auto drop-shadow-[0_18px_28px_rgba(0,0,0,0.96)] pointer-events-none relative z-20"
+                      >
+                        <defs>
+                          <linearGradient id="fontStoneBody" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#423632" />
+                            <stop offset="50%" stopColor="#261f1d" />
+                            <stop offset="100%" stopColor="#14100f" />
+                          </linearGradient>
+                          <radialGradient id="boilingBloodPool" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stopColor={isAnimating ? '#f87171' : '#dc2626'} />
+                            <stop offset="65%" stopColor="#991b1b" />
+                            <stop offset="100%" stopColor="#450a0a" />
+                          </radialGradient>
+                        </defs>
+                        <polygon points="145,126 168,82 292,82 315,126" fill="url(#fontStoneBody)" stroke="#594740" strokeWidth="1.6" />
+                        <rect x="128" y="120" width="204" height="9" rx="2" fill="#1c1614" stroke="#594740" strokeWidth="1.3" />
+                        <path
+                          d="M72 34 L388 34 C376 68, 342 84, 294 84 L166 84 C118 84, 84 68, 72 34 Z"
+                          fill="url(#fontStoneBody)"
+                          stroke="#6e574e"
+                          strokeWidth="1.9"
+                        />
+                        <path d="M230 46 L230 74 M218 58 L242 58" stroke="#7f1d1d" strokeWidth="2.4" strokeLinecap="round" />
+                        <ellipse cx="230" cy="34" rx="164" ry="18" fill="#2b221f" stroke="#7d6459" strokeWidth="2" />
+                        <ellipse cx="230" cy="34" rx="148" ry="13" fill="url(#boilingBloodPool)" />
+                        <ellipse cx="215" cy="33" rx="52" ry="4.5" fill="none" stroke="#fca5a5" strokeWidth="1" opacity="0.45" />
+                        <ellipse cx="255" cy="35" rx="34" ry="3" fill="none" stroke="#fecaca" strokeWidth="0.9" opacity="0.35" />
+                        <path d="M36 52 L54 52 L50 74 L40 74 Z" fill="#231c19" stroke="#634d42" strokeWidth="1.2" />
+                        <path d="M39 50 Q45 32 51 50 Z" fill="#f97316" opacity="0.9" />
+                        <path d="M406 52 L424 52 L420 74 L410 74 Z" fill="#231c19" stroke="#634d42" strokeWidth="1.2" />
+                        <path d="M409 50 Q415 32 421 50 Z" fill="#f97316" opacity="0.9" />
+                      </svg>
+                    </div>
+
+                    <p className="relative z-20 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/80 border border-[#442518]/75 text-[10.5px] font-mono text-[#d8be9f]/90 max-w-lg leading-snug">
+                      {campfireStage === 0
+                        ? "The Zealot's wicked smile sickens you. Place a creature over the boiling font."
+                        : isCampfireSafe
+                          ? "The chapel is deserted. You may bathe your Creature an additional time without peril."
+                          : "The Zealot murmurs about the hunger in his Flock... bathing again risks drowning your Creature."}
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
+                    <button
+                      onClick={applyCampfireWarm}
+                      disabled={campfireCardIdx === null || isEventBusy}
+                      className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#3b1610] to-[#1d0a07] hover:from-[#521e15] hover:to-[#290e0a] active:translate-y-[1px] border border-[#b85b3d]/90 hover:border-[#eb8a64] text-[#f7d6bf] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
+                    >
+                      {campfireHolding
+                        ? 'Submerging...'
+                        : campfireStage === 0
+                          ? `Baptize Creature (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`
+                          : `Bathe Again (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`}
+                    </button>
+                    {campfireStage > 0 && (
+                      <button
+                        onClick={() => returnToMap()}
+                        disabled={campfireHolding || isEventBusy}
+                        className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/92 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_16px_rgba(0,0,0,0.82)] transition-all select-none"
+                      >
+                        Flee the Chapel
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Side Deck Selector Panel */}
+                <div
+                  className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#422719]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,220,180,0.06)] backdrop-blur-[2px] transition-opacity duration-300 ${
+                    isEventBusy ? 'opacity-40 pointer-events-none' : 'opacity-100'
+                  }`}
+                >
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9c643b]/70" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9c643b]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c643b]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c643b]/70" />
+
+                  <div className="px-4 py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
+                    <div className="text-left">
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#d69758]">
+                        Your Creatures ({masterDeck.length})
+                      </div>
+                      <div className="text-[10.5px] font-mono text-[#bfa88a]/85 mt-0.5">
+                        {campfireStage === 0
+                          ? 'Select a vessel to dip into the font.'
+                          : 'Your vessel remains over the font—bathe again or flee.'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
+                    <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                      {masterDeck.map((c, idx) => {
+                        const isSelected = campfireCardIdx === idx;
+                        const lockedOut = campfireStage > 0 && !isSelected;
+                        return (
+                          <div
+                            key={c.id || `camp-${c.name}-${idx}`}
+                            onClick={() => {
+                              if (campfireStage === 0 && !isEventBusy) {
+                                triggerSfx('draw');
+                                setCampfireCardIdx(idx);
+                              }
+                            }}
+                            className={`relative flex flex-col items-center justify-center w-[104px] h-[146px] transition-all duration-200 ${
+                              lockedOut
+                                ? 'opacity-30 grayscale-[45%] cursor-default'
+                                : isSelected
+                                  ? '-translate-y-1.5 z-30 cursor-pointer'
+                                  : 'hover:-translate-y-1 cursor-pointer'
+                            }`}
+                          >
+                            {isSelected && (
+                              <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1c0c08]/95 border border-[#c88a42]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f5d38d] whitespace-nowrap shadow-md">
+                                {campfireStage === 0 ? 'Selected' : 'Baptized'}
+                              </span>
+                            )}
+                            <div className={`transform origin-center transition-transform duration-200 ${isSelected ? 'scale-[0.9]' : 'scale-[0.86] hover:scale-[0.91]'}`}>
+                              {renderCard(c, { isSelected, isClickable: !lockedOut, disableHoverScale: true })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <button
-                onClick={applyCampfireWarm}
-                disabled={campfireCardIdx === null || isEventBusy}
-                className="px-6 py-2.5 rounded-[2px] bg-gradient-to-b from-[#351510] to-[#1a0a07] hover:from-[#471c15] hover:to-[#240e0a] active:translate-y-[1px] border border-[#b45a3c]/85 hover:border-[#e68762] text-[#f6d5be] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,210,180,0.14)] transition-all select-none"
-              >
-                {campfireHolding
-                  ? 'Submerging...'
-                  : campfireStage === 0
-                    ? `Baptize Creature (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`
-                    : `Bathe Again (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`}
-              </button>
-              {campfireStage > 0 && (
-                <button
-                  onClick={() => returnToMap()}
-                  disabled={campfireHolding || isEventBusy}
-                  className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
-                >
-                  Flee the Chapel
-                </button>
-              )}
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           ALTAR EVENT SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_ALTAR' && (
-        <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('altarevent.jpg')}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.38)_0%,rgba(5,3,2,0.89)_100%)] pointer-events-none" />
+      {screen === 'EVENT_ALTAR' && (() => {
+        const hostPreview = altarStageCards
+          ? (altarAnimPhase === 'descending' || altarAnimPhase === 'done'
+              ? altarStageCards.mergedHost
+              : altarStageCards.host)
+          : masterDeck.find(m => m.id === altarHostId) || null;
+        const sacPreview = altarStageCards
+          ? altarStageCards.sacrifice
+          : masterDeck.find(m => m.id === altarSacrificeId) || null;
+        const isAnimating = altarAnimPhase !== 'idle';
 
-          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                Crestfallen Altar
-              </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Sigil Transfer
-            </h1>
-            <p className="mt-2 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-lg leading-relaxed shadow-md">
-              Select a Host to inherit the Crests of a chosen Sacrifice. Greed begets you.
-            </p>
+        return (
+          <div
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('altarevent.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.3)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
-            {/* Two-Step Ritual Indicator */}
-            <div className="mt-4 mb-5 flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.2em]">
-              <span
-                className={`px-3 py-1 rounded-[2px] border ${
-                  altarHostId
-                    ? 'bg-[#1f160c]/90 border-[#d4af37]/85 text-[#f4d78b]'
-                    : 'bg-[#140e0a]/90 border-[#8c673c]/80 text-[#e8cca0]'
-                }`}
-              >
-                1. Host {altarHostId ? '✓' : '— Choose'}
-              </span>
-              <span className="text-[#8a6a44]">→</span>
-              <span
-                className={`px-3 py-1 rounded-[2px] border ${
-                  altarSacrificeId
-                    ? 'bg-[#260d0b]/90 border-red-500/85 text-red-200'
-                    : altarHostId
-                      ? 'bg-[#1c0c0a]/90 border-red-800/80 text-red-300'
-                      : 'bg-[#100b08]/80 border-[#2e2017] text-[#7a6856]'
-                }`}
-              >
-                2. Sacrifice {altarSacrificeId ? '✓' : altarHostId ? '— Choose' : '— Pending'}
-              </span>
-            </div>
+            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Top Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                    Crestfallen Altar
+                  </span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  Sigil Transfer
+                </h1>
+              </div>
 
-            <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
-              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
-
-              <div className="flex flex-wrap gap-4 justify-center pt-2">
-                {masterDeck.map(c => {
-                  const isHost = altarHostId === c.id;
-                  const isSac = altarSacrificeId === c.id;
-                  const hostCard = masterDeck.find(m => m.id === altarHostId);
-                  const cannotBeHost = hasMoreSigilsThanOriginal(c);
-
-                  let wouldExceedFive = false;
-                  if (hostCard && !isHost && c.sigils && c.sigils.length > 0) {
-                    const merged = new Set(hostCard.sigils || []);
-                    c.sigils.forEach(s => merged.add(s));
-                    if (merged.size >= 5) wouldExceedFive = true;
-                  }
-
-                  const isDisabled = (!altarHostId && cannotBeHost) || (altarHostId && !isHost && (wouldExceedFive || !c.sigils || c.sigils.length === 0));
-
-                  return (
+              {/* Two-Column Split: Prominent Altar Left, Scrollable Deck Panel Right */}
+              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                {/* LEFT COLUMN: Dominant Stone Altar Stage + Ritual Action */}
+                <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 rounded-[3px] bg-gradient-to-b from-[#120b09]/72 via-[#18100d]/84 to-[#0b0706]/95 border border-[#4a3222]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] overflow-hidden flex flex-col items-center justify-center">
+                    {/* Ambient crimson / gold ritual glow */}
                     <div
-                      key={c.id}
-                      onClick={() => {
-                        if (!altarHostId) {
-                          if (cannotBeHost) {
-                            addLog(`${c.name} cannot receive more crests: it already bears more than its original nature allows.`);
-                            return;
-                          }
-                          setAltarHostId(c.id || null);
-                        } else if (altarHostId === c.id) {
+                      className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
+                        altarAnimPhase === 'sacrificing'
+                          ? 'opacity-100'
+                          : altarAnimPhase === 'descending' || altarAnimPhase === 'done'
+                            ? 'opacity-85'
+                            : 'opacity-40'
+                      }`}
+                      style={{
+                        background:
+                          altarAnimPhase === 'sacrificing'
+                            ? 'radial-gradient(circle at 50% 66%, rgba(220,38,38,0.46) 0%, rgba(127,29,29,0.18) 46%, transparent 74%)'
+                            : 'radial-gradient(circle at 50% 58%, rgba(212,175,55,0.22) 0%, rgba(120,35,24,0.14) 48%, transparent 74%)',
+                      }}
+                    />
+
+                    {/* Subtle corner brackets */}
+                    <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9a7342]/70" />
+                    <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9a7342]/70" />
+                    <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
+                    <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9a7342]/70" />
+
+                    {/* Full-Scale Ritual Column: Host Above -> Sacrifice on Slab Below */}
+                    <div className="relative z-10 flex flex-col items-center justify-center w-full">
+                      {/* Upper Host Slot — descends onto stone slab when sacrificing finishes */}
+                      <div
+                        className="relative z-30 flex flex-col items-center transition-transform duration-700 ease-in-out"
+                        style={{
+                          transform:
+                            altarAnimPhase === 'descending' || altarAnimPhase === 'done'
+                              ? 'translateY(166px)'
+                              : 'translateY(0px)',
+                        }}
+                      >
+                        <span
+                          className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] border text-[9px] font-mono font-bold uppercase tracking-[0.22em] transition-colors duration-300 ${
+                            altarAnimPhase === 'descending' || altarAnimPhase === 'done'
+                              ? 'bg-[#21160b]/95 border-[#eab308]/90 text-[#fde68a] shadow-[0_0_14px_rgba(234,179,8,0.45)]'
+                              : hostPreview
+                                ? 'bg-[#1a130b]/90 border-[#d4af37]/80 text-[#f4d78b]'
+                                : 'bg-[#120c09]/85 border-[#4e3826]/75 text-[#9c8469]'
+                          }`}
+                        >
+                          {altarAnimPhase === 'descending' || altarAnimPhase === 'done'
+                            ? 'Crests Inherited'
+                            : hostPreview
+                              ? 'Host'
+                              : '1. Select Host'}
+                        </span>
+
+                        <div
+                          className={`w-[114px] h-[154px] flex items-center justify-center rounded-[4px] transition-all duration-500 ${
+                            altarAnimPhase === 'descending' || altarAnimPhase === 'done'
+                              ? 'shadow-[0_0_40px_rgba(234,179,8,0.65),0_0_20px_rgba(220,38,38,0.5)]'
+                              : hostPreview
+                                ? 'shadow-[0_14px_30px_rgba(0,0,0,0.9),0_0_20px_rgba(212,175,55,0.25)]'
+                                : ''
+                          }`}
+                        >
+                          {hostPreview ? (
+                            <div className="scale-[0.98] origin-center">
+                              {renderCard(hostPreview, { isClickable: false, disableHoverScale: true })}
+                            </div>
+                          ) : (
+                            <div className="w-[108px] h-[150px] rounded-[4px] border border-dashed border-[#7a5a3a]/75 bg-[#0d0907]/75 flex flex-col items-center justify-center gap-1.5 text-[#9a7d5e]">
+                              <span className="text-xl opacity-65">✧</span>
+                              <span className="text-[9.5px] uppercase tracking-[0.22em]">Host</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Ascending Crest Energy Motes during Sacrifice */}
+                      {altarAnimPhase === 'sacrificing' && (
+                        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
+                          {[-34, 0, 34].map((offset, i) => (
+                            <div
+                              key={i}
+                              className="absolute bottom-24 w-3 h-3 rounded-full bg-red-400 shadow-[0_0_16px_rgba(248,113,113,0.95)]"
+                              style={{
+                                marginLeft: `${offset}px`,
+                                animation: `altarSigilRise 0.8s ease-out ${i * 0.12}s forwards`,
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Lower Carved Stone Altar Pedestal + Sacrifice Slot */}
+                      <div className="relative z-20 mt-3 flex flex-col items-center w-full">
+                        <div
+                          className="relative z-20 w-[114px] h-[154px] -mb-7 flex items-center justify-center transition-opacity duration-300"
+                          style={{
+                            animation: altarAnimPhase === 'sacrificing' ? 'altarSacrificeBurn 0.85s ease-in forwards' : undefined,
+                            opacity: altarAnimPhase === 'descending' || altarAnimPhase === 'done' ? 0 : 1,
+                          }}
+                        >
+                          {sacPreview ? (
+                            <div className="scale-[1.0] origin-center">
+                              {renderCard(sacPreview, { isClickable: false, disableHoverScale: true, isMarkedSacrifice: true })}
+                            </div>
+                          ) : (
+                            <div className="w-[108px] h-[150px] rounded-[4px] border border-dashed border-red-900/75 bg-[#120807]/80 flex flex-col items-center justify-center gap-1.5 text-red-400/70">
+                              <span className="text-xl opacity-75">†</span>
+                              <span className="text-[9.5px] uppercase tracking-[0.22em]">Sacrifice</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Heavy Carved Stone Altar Slab SVG Prop */}
+                        <svg
+                          viewBox="0 0 460 106"
+                          className="w-full max-w-[470px] h-auto drop-shadow-[0_16px_26px_rgba(0,0,0,0.96)] pointer-events-none"
+                        >
+                          <defs>
+                            <linearGradient id="altarStoneTop" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#463b35" />
+                              <stop offset="55%" stopColor="#2a2320" />
+                              <stop offset="100%" stopColor="#161210" />
+                            </linearGradient>
+                            <linearGradient id="altarStoneBase" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#26201d" />
+                              <stop offset="100%" stopColor="#0f0c0b" />
+                            </linearGradient>
+                          </defs>
+                          {/* Stepped Pedestal Base */}
+                          <polygon points="46,102 68,52 392,52 414,102" fill="url(#altarStoneBase)" stroke="#55453c" strokeWidth="1.6" />
+                          {/* Carved Runic Pillars */}
+                          <line x1="122" y1="56" x2="114" y2="98" stroke="#3f332c" strokeWidth="2.2" />
+                          <line x1="338" y1="56" x2="346" y2="98" stroke="#3f332c" strokeWidth="2.2" />
+                          {/* Central Blood Channel & Sigil Ring */}
+                          <circle cx="230" cy="77" r="13" fill="none" stroke={altarAnimPhase !== 'idle' ? '#dc2626' : '#7a2c24'} strokeWidth="1.8" />
+                          <path d="M230 52 L230 97 M217 77 L243 77" stroke={altarAnimPhase !== 'idle' ? '#ef4444' : '#8f241f'} strokeWidth="1.7" />
+                          {/* Heavy Stone Tabletop Slab */}
+                          <polygon points="16,52 44,22 416,22 444,52" fill="url(#altarStoneTop)" stroke="#756052" strokeWidth="2" />
+                          <rect x="16" y="48" width="428" height="10" rx="1.5" fill="#1e1816" stroke="#5b4a3f" strokeWidth="1.3" />
+                          {/* Blood Grooves across Slab */}
+                          <path
+                            d="M132 37 Q230 43 328 37"
+                            fill="none"
+                            stroke={altarAnimPhase === 'sacrificing' ? '#ef4444' : '#85221e'}
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                          />
+                          {/* Flanking Tallow Candles */}
+                          <rect x="52" y="13" width="9" height="18" rx="1" fill="#dcd0b8" stroke="#64513e" strokeWidth="1" />
+                          <ellipse cx="56.5" cy="8.5" rx="3.5" ry="5.5" fill="#fbbf24" opacity="0.92" />
+                          <rect x="399" y="13" width="9" height="18" rx="1" fill="#dcd0b8" stroke="#64513e" strokeWidth="1" />
+                          <ellipse cx="403.5" cy="8.5" rx="3.5" ry="5.5" fill="#fbbf24" opacity="0.92" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Primary Ritual Action Button directly under the Altar */}
+                  <div className="flex items-center justify-center shrink-0">
+                    <button
+                      onClick={applyAltarTransfer}
+                      disabled={!altarHostId || !altarSacrificeId || isEventBusy || isAnimating}
+                      className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#3b1410] to-[#1d0907] hover:from-[#501b16] hover:to-[#280d0a] active:translate-y-[1px] border border-[#b3473a]/90 hover:border-[#e67365] text-[#f7cfc6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
+                    >
+                      {isAnimating ? 'Communing with the Maker...' : 'Sacrifice to the Maker'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Side Deck Selector Panel */}
+                <div
+                  className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
+                    isAnimating ? 'opacity-30 pointer-events-none' : 'opacity-100'
+                  }`}
+                >
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+
+                  {/* Panel Header & Step Prompt */}
+                  <div className="px-4 py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
+                    <div className="text-left">
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
+                        Your Creatures ({masterDeck.length})
+                      </div>
+                      <div className="text-[10.5px] font-mono text-[#bfa88a]/85 mt-0.5">
+                        {!altarHostId
+                          ? 'Step 1: Choose a Host to receive Crests.'
+                          : !altarSacrificeId
+                            ? 'Step 2: Choose a Sacrifice to place on the stone.'
+                            : 'Ready to commit the offering.'}
+                      </div>
+                    </div>
+                    {(altarHostId || altarSacrificeId) && !isAnimating && (
+                      <button
+                        type="button"
+                        onClick={() => {
                           setAltarHostId(null);
                           setAltarSacrificeId(null);
-                        } else if (!altarSacrificeId) {
-                          if (wouldExceedFive) {
-                            addLog(`Cannot sacrifice ${c.name}: ${hostCard?.name} would have 5 or more crests (max 4 allowed).`);
-                            return;
-                          }
-                          if (c.sigils && c.sigils.length > 0) {
-                            setAltarSacrificeId(c.id || null);
-                          }
-                        } else if (altarSacrificeId === c.id) {
-                          setAltarSacrificeId(null);
+                        }}
+                        className="px-2.5 py-1 rounded-[2px] bg-[#1a110c] hover:bg-[#281a12] border border-[#5a3d28] text-[9.5px] font-mono uppercase tracking-[0.18em] text-[#d4bfa0] cursor-pointer transition shrink-0"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Internally Scrollable Card Grid */}
+                  <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
+                    <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                      {masterDeck.map(c => {
+                        const isHost = altarHostId === c.id;
+                        const isSac = altarSacrificeId === c.id;
+                        const hostCard = masterDeck.find(m => m.id === altarHostId);
+                        const cannotBeHost = hasMoreSigilsThanOriginal(c);
+
+                        let wouldExceedFive = false;
+                        if (hostCard && !isHost && c.sigils && c.sigils.length > 0) {
+                          const merged = new Set(hostCard.sigils || []);
+                          c.sigils.forEach(s => merged.add(s));
+                          if (merged.size >= 5) wouldExceedFive = true;
                         }
-                      }}
-                      className={`relative flex flex-col items-center transform origin-center transition-all duration-200 ${
-                        isDisabled
-                          ? 'opacity-35 grayscale-[55%] cursor-not-allowed scale-[0.95]'
-                          : isHost || isSac
-                            ? 'scale-[1.05] -translate-y-2.5 z-30 cursor-pointer'
-                            : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1 cursor-pointer'
-                      }`}
-                    >
-                      {isHost && (
-                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
-                          Host
-                        </span>
-                      )}
-                      {isSac && (
-                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#210b0a]/95 border border-red-500/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-red-200 whitespace-nowrap shadow-md">
-                          Sacrifice
-                        </span>
-                      )}
-                      {renderCard(c, {
-                        isSelected: isHost,
-                        isMarkedSacrifice: isSac,
-                        isClickable: !isDisabled,
-                        disableHoverScale: true,
+
+                        const isDisabled =
+                          isAnimating ||
+                          (!altarHostId && cannotBeHost) ||
+                          (Boolean(altarHostId) && !isHost && (wouldExceedFive || !c.sigils || c.sigils.length === 0));
+
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() => {
+                              if (isAnimating) return;
+                              if (!altarHostId) {
+                                if (cannotBeHost) {
+                                  addLog(`${c.name} cannot receive more crests: it already bears more than its original nature allows.`);
+                                  return;
+                                }
+                                setAltarHostId(c.id || null);
+                              } else if (altarHostId === c.id) {
+                                setAltarHostId(null);
+                                setAltarSacrificeId(null);
+                              } else if (!altarSacrificeId) {
+                                if (wouldExceedFive) {
+                                  addLog(`Cannot sacrifice ${c.name}: ${hostCard?.name} would have 5 or more crests (max 4 allowed).`);
+                                  return;
+                                }
+                                if (c.sigils && c.sigils.length > 0) {
+                                  setAltarSacrificeId(c.id || null);
+                                }
+                              } else if (altarSacrificeId === c.id) {
+                                setAltarSacrificeId(null);
+                              }
+                            }}
+                            className={`relative flex flex-col items-center justify-center w-[104px] h-[146px] transition-all duration-200 ${
+                              isDisabled
+                                ? 'opacity-35 grayscale-[55%] cursor-not-allowed'
+                                : isHost || isSac
+                                  ? '-translate-y-1.5 z-30 cursor-pointer'
+                                  : 'hover:-translate-y-1 cursor-pointer'
+                            }`}
+                          >
+                            {isHost && (
+                              <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
+                                Host
+                              </span>
+                            )}
+                            {isSac && (
+                              <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#210b0a]/95 border border-red-500/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-red-200 whitespace-nowrap shadow-md">
+                                Sacrifice
+                              </span>
+                            )}
+                            <div className={`transform origin-center transition-transform duration-200 ${isHost || isSac ? 'scale-[0.9]' : 'scale-[0.86] hover:scale-[0.91]'}`}>
+                              {renderCard(c, {
+                                isSelected: isHost,
+                                isMarkedSacrifice: isSac,
+                                isClickable: !isDisabled,
+                                disableHoverScale: true,
+                              })}
+                            </div>
+                            {!altarHostId && cannotBeHost && (
+                              <span className="pointer-events-none absolute -bottom-2 text-[8px] font-mono text-amber-400/90 font-bold uppercase tracking-wider whitespace-nowrap">
+                                Cannot Host
+                              </span>
+                            )}
+                            {altarHostId && !isHost && wouldExceedFive && (
+                              <span className="pointer-events-none absolute -bottom-2 text-[8px] font-mono text-red-400/90 font-bold uppercase tracking-wider whitespace-nowrap">
+                                Exceeds 4
+                              </span>
+                            )}
+                          </div>
+                        );
                       })}
-                      {!altarHostId && cannotBeHost && (
-                        <span className="text-[8.5px] font-mono text-amber-400/90 font-bold mt-1 uppercase tracking-wider">
-                          Cannot Host
-                        </span>
-                      )}
-                      {altarHostId && !isHost && wouldExceedFive && (
-                        <span className="text-[8.5px] font-mono text-red-400/90 font-bold mt-1 uppercase tracking-wider">
-                          Exceeds 4
-                        </span>
-                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+        );
+      })()}
 
-            <div className="flex items-center gap-4">
-              <button
-                onClick={applyAltarTransfer}
-                disabled={!altarHostId || !altarSacrificeId || isEventBusy}
-                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#35120f] to-[#1b0907] hover:from-[#471814] hover:to-[#240c09] active:translate-y-[1px] border border-[#a84236]/85 hover:border-[#e06a5c] text-[#f5c8be] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
-              >
-                Sacrifice to the Maker
-              </button>
+      {/* =========================================================================
+          TRANSMUTATION TABLE (ANVIL) EVENT SCREEN
+         ========================================================================= */}
+      {screen === 'EVENT_ANVIL' && (() => {
+        const selectedCard = masterDeck.find(c => c.id === anvilSelectedId) || null;
+        const canHammer = canAnvilBloodToBone(selectedCard);
+        const canForceps = canAnvilHollow(selectedCard);
+
+        return (
+          <div
+            className="absolute inset-0 bg-[#0b0807] z-50 flex flex-col items-center justify-start px-4 py-4 sm:p-6 overflow-y-auto animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('altarevent.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(22,12,8,0.42)_0%,rgba(6,4,3,0.92)_100%)] pointer-events-none" />
+
+            <div className="relative z-10 max-w-5xl w-full flex flex-col items-center justify-center text-center my-auto py-1">
+              <div className="flex items-center gap-3.5 mb-0.5">
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                  Iron &amp; Sinew
+                </span>
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                Transmutation Table
+              </h1>
+              <p className="mt-1.5 px-4 py-1 rounded-[2px] bg-[#0b0705]/75 border border-[#3a2618]/75 text-[11px] font-mono italic text-[#d4bfa0]/85 shadow-md">
+                "Something about this feels wrong"
+              </p>
+
+              {/* Main Workbench: Anvil Prop Left, Hammer & Forceps Right */}
+              <div className="w-full max-w-4xl mt-4 mb-5 grid grid-cols-1 md:grid-cols-12 gap-5 items-center p-5 rounded-[3px] bg-[#0d0907]/85 border border-[#442f21]/85 shadow-[0_20px_50px_rgba(0,0,0,0.92)] backdrop-blur-[2px]">
+                {/* Left Side: Iron Anvil + Placed Card */}
+                <div className="md:col-span-6 flex flex-col items-center justify-end relative min-h-[255px] pt-2">
+                  {/* Card sitting directly atop the anvil horn/face */}
+                  <div
+                    className="relative z-20 -mb-5 transition-all duration-200"
+                    style={{
+                      animation: anvilStrikeAnim !== 'idle' ? 'anvilStrikeJolt 0.65s ease-out' : undefined,
+                    }}
+                  >
+                    {selectedCard ? (
+                      renderCard(selectedCard, { isClickable: false, disableHoverScale: true })
+                    ) : (
+                      <div className="w-[108px] h-[152px] rounded-[4px] border border-dashed border-[#6b523b]/75 bg-[#120d0a]/75 flex flex-col items-center justify-center gap-1.5 text-[#9c8469]">
+                        <span className="text-xl opacity-65">⚒</span>
+                        <span className="text-[9px] uppercase tracking-[0.2em] px-2">Place Creature</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Heavy Blacksmith Anvil SVG Prop */}
+                  <svg
+                    viewBox="0 0 320 112"
+                    className="w-full max-w-[295px] h-auto drop-shadow-[0_14px_22px_rgba(0,0,0,0.95)] pointer-events-none"
+                  >
+                    <defs>
+                      <linearGradient id="anvilIron" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#4f4844" />
+                        <stop offset="35%" stopColor="#2c2725" />
+                        <stop offset="100%" stopColor="#141110" />
+                      </linearGradient>
+                    </defs>
+                    {/* Anvil Top Face + Pointed Horn */}
+                    <path
+                      d="M16 34 C46 28, 72 24, 96 24 L256 24 L268 38 L298 40 C282 54, 260 60, 232 60 L214 60 L226 94 L256 102 L256 108 L64 108 L64 102 L94 94 L106 60 C68 60, 34 50, 16 34 Z"
+                      fill="url(#anvilIron)"
+                      stroke="#6d625a"
+                      strokeWidth="1.8"
+                      strokeLinejoin="round"
+                    />
+                    {/* Hammered top edge highlight */}
+                    <line x1="94" y1="27" x2="254" y2="27" stroke="#8a7b70" strokeWidth="1.4" opacity="0.65" />
+                    {/* Subtle forge ember reflection */}
+                    <ellipse cx="160" cy="107" rx="115" ry="4" fill="rgba(217,119,6,0.22)" />
+                  </svg>
+                </div>
+
+                {/* Right Side: Two Diegetic Tool Strikes (Hammer & Forceps) */}
+                <div className="md:col-span-6 flex flex-col gap-3.5 text-left">
+                  <button
+                    onClick={() => applyAnvilStrike('hammer')}
+                    disabled={!canHammer || isEventBusy}
+                    className={`group relative w-full p-4 rounded-[3px] border flex items-center gap-4 text-left transition-all duration-200 ${
+                      canHammer && !isEventBusy
+                        ? 'bg-gradient-to-r from-[#24130f]/95 to-[#160c09]/95 border-[#8f4c35]/85 hover:border-[#e08256] hover:shadow-[0_0_24px_rgba(224,130,86,0.22)] cursor-pointer'
+                        : 'bg-[#120d0b]/70 border-[#2e231c]/70 opacity-40 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="w-14 h-14 shrink-0 rounded-[3px] bg-[#0d0806] border border-[#543624] group-hover:border-[#d4845a] flex items-center justify-center shadow-inner">
+                      {/* Forged Hammer SVG */}
+                      <svg viewBox="0 0 32 32" className="w-8 h-8 text-amber-300" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6l8 8-4 4-8-8 4-4Z" fill="rgba(251,191,36,0.16)" />
+                        <path d="M14 10l-3 3 5 5 3-3" />
+                        <path d="M13 15L5 23a2 2 0 0 0 2.8 2.8L16 17.8" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#f3dfb6] group-hover:text-white">
+                        Blood-to-Bone
+                      </div>
+                      <div className="mt-1 text-[11px] font-mono text-[#bfa88a]/85 leading-snug">
+                        Crush crimson tribute into marrow.
+                      </div>
+                      {selectedCard && !canHammer && (
+                        <div className="mt-1 text-[9.5px] uppercase tracking-wider text-red-400/80">
+                          Requires Blood Cost
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => applyAnvilStrike('forceps')}
+                    disabled={!canForceps || isEventBusy}
+                    className={`group relative w-full p-4 rounded-[3px] border flex items-center gap-4 text-left transition-all duration-200 ${
+                      canForceps && !isEventBusy
+                        ? 'bg-gradient-to-r from-[#1a151b]/95 to-[#100d12]/95 border-[#6b5a78]/85 hover:border-[#c4a7db] hover:shadow-[0_0_24px_rgba(196,167,219,0.2)] cursor-pointer'
+                        : 'bg-[#120d0b]/70 border-[#2e231c]/70 opacity-40 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="w-14 h-14 shrink-0 rounded-[3px] bg-[#0b090d] border border-[#453a4f] group-hover:border-[#b799cf] flex items-center justify-center shadow-inner">
+                      {/* Surgical Forceps SVG */}
+                      <svg viewBox="0 0 32 32" className="w-8 h-8 text-stone-200" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="9" cy="24" r="3" />
+                        <circle cx="23" cy="24" r="3" />
+                        <path d="M11 21.5L19.5 7.5C20.3 6.2 21.8 5.5 23 6" />
+                        <path d="M21 21.5L12.5 7.5C11.7 6.2 10.2 5.5 9 6" />
+                        <circle cx="16" cy="14.5" r="1.2" fill="currentColor" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#e7dff0] group-hover:text-white">
+                        Hollowing
+                      </div>
+                      <div className="mt-1 text-[11px] font-mono text-[#bfb4c9]/85 leading-snug">
+                        Carve out the weight—leave only what lingers.
+                      </div>
+                      {selectedCard && !canForceps && (
+                        <div className="mt-1 text-[9.5px] uppercase tracking-wider text-amber-400/80">
+                          Already Hollowed
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  <div className="pt-1 flex justify-end">
+                    <button
+                      onClick={() => {
+                        setAnvilSelectedId(null);
+                        returnToMap();
+                      }}
+                      disabled={isEventBusy}
+                      className="px-4 py-1.5 rounded-[2px] bg-[#16100d] hover:bg-[#221814] border border-[#4a3628] text-[10px] font-mono uppercase tracking-[0.2em] text-[#b8a085] hover:text-[#f0dec2] cursor-pointer transition"
+                    >
+                      Step Away
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Deck Selector Tray */}
+              <div className="relative w-full p-4 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)]">
+                <div className="flex flex-wrap gap-3 justify-center">
+                  {masterDeck.map(c => {
+                    const isPicked = anvilSelectedId === c.id;
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          if (isEventBusy) return;
+                          triggerSfx('draw');
+                          setAnvilSelectedId(isPicked ? null : c.id || null);
+                        }}
+                        className={`relative cursor-pointer transition-all duration-200 ${
+                          isPicked
+                            ? 'scale-[0.98] -translate-y-2 z-20'
+                            : 'scale-[0.88] hover:scale-[0.95] hover:-translate-y-1 opacity-85 hover:opacity-100'
+                        }`}
+                      >
+                        {renderCard(c, { isSelected: isPicked, isClickable: !isEventBusy, disableHoverScale: true })}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* =========================================================================
+          THE ZEALOTS FLOCK EVENT SCREEN
+         ========================================================================= */}
+      {screen === 'EVENT_FLOCK' && (() => {
+        const selectedSheep = flockSheepList.find(s => s.id === flockSelectedSheepId) || null;
+        const revealedOption = selectedSheep ? FLOCK_OPTIONS[selectedSheep.optionId] : null;
+        const isGreyMode = flockSheepList.length === 1 && flockSheepList[0]?.isGrey;
+        const canRepick = !isGreyMode && flockRepicksUsed === 0 && Boolean(selectedSheep);
+
+        return (
+          <div
+            className="absolute inset-0 bg-[#080706] z-50 flex flex-col items-center justify-start px-4 py-4 sm:p-6 overflow-y-auto animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('zealotboss.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,10,9,0.45)_0%,rgba(5,3,3,0.92)_100%)] pointer-events-none" />
+
+            <div className="relative z-10 max-w-5xl w-full flex flex-col items-center justify-center text-center my-auto py-1">
+              <div className="flex items-center gap-3.5 mb-0.5">
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                  {isGreyMode ? 'Cursed Pasture' : 'Thirteen Black Sheep'}
+                </span>
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                The Zealot&apos;s Flock
+              </h1>
+              <p className="mt-1.5 px-4 py-1 rounded-[2px] bg-[#0b0705]/75 border border-[#3a2618]/75 text-[11px] font-mono italic text-[#d4bfa0]/85 shadow-md">
+                {flockPendingRemovals > 0
+                  ? `Select ${flockPendingRemovals} creature${flockPendingRemovals === 1 ? '' : 's'} to cull from your deck (${flockRemovalSelectedIds.length}/${flockPendingRemovals}).`
+                  : isGreyMode
+                    ? '"Only the lone Grey Sheep remains in the mire..."'
+                    : '"Your creatures are ravenous"'}
+              </p>
+
+              {flockPendingRemovals > 0 ? (
+                /* Deck Culling Phase for Remove-2-Cards Option */
+                <div className="w-full max-w-4xl mt-5 p-5 rounded-[3px] bg-[#0d0806]/88 border border-[#4a2b1d]/85 shadow-[0_20px_50px_rgba(0,0,0,0.92)]">
+                  <div className="flex flex-wrap gap-3 justify-center mb-5">
+                    {masterDeck.map(c => {
+                      const cid = c.id || '';
+                      const isMarked = flockRemovalSelectedIds.includes(cid);
+                      return (
+                        <div
+                          key={cid}
+                          onClick={() => {
+                            if (!cid) return;
+                            triggerSfx('draw');
+                            setFlockRemovalSelectedIds(prev => {
+                              if (prev.includes(cid)) return prev.filter(x => x !== cid);
+                              if (prev.length >= flockPendingRemovals) return prev;
+                              return [...prev, cid];
+                            });
+                          }}
+                          className={`relative cursor-pointer transition-all duration-200 ${
+                            isMarked
+                              ? 'scale-[0.98] -translate-y-2 z-20'
+                              : 'scale-[0.88] hover:scale-[0.95] hover:-translate-y-1 opacity-85 hover:opacity-100'
+                          }`}
+                        >
+                          {renderCard(c, { isMarkedSacrifice: isMarked, isClickable: true, disableHoverScale: true })}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={confirmFlockDeckRemovals}
+                    disabled={flockRemovalSelectedIds.length !== flockPendingRemovals || isEventBusy}
+                    className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#35120f] to-[#1b0907] hover:from-[#471814] hover:to-[#240c09] border border-[#a84236]/85 text-[#f5c8be] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition"
+                  >
+                    Cull Selected ({flockRemovalSelectedIds.length}/{flockPendingRemovals})
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Fenced Pen Arena with 13 Wandering Sheep (or 1 Lone Grey Sheep) */}
+                  <div className="relative w-full max-w-4xl h-[270px] sm:h-[300px] mt-4 mb-4 rounded-[4px] bg-[radial-gradient(ellipse_at_center,#665b4a_0%,#4b4134_62%,#2f281f_100%)] border-2 border-[#785c40]/90 shadow-[inset_0_0_36px_rgba(0,0,0,0.48),0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden">
+                    {/* Wooden Fence Rail Perimeter */}
+                    <div className="pointer-events-none absolute inset-2 border border-dashed border-[#967552]/65 rounded-[2px]" />
+                    <div className="pointer-events-none absolute top-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#3f2c1c] via-[#8c6945]/85 to-[#3f2c1c]" />
+                    <div className="pointer-events-none absolute bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#3f2c1c] via-[#8c6945]/85 to-[#3f2c1c]" />
+
+                    {flockSheepList.map(sheep => {
+                      const isPicked = flockSelectedSheepId === sheep.id;
+                      const isLockedOut = Boolean(sheep.dismissed) || (Boolean(selectedSheep) && !isPicked);
+                      const woolFill = sheep.isGrey ? '#8a8d91' : '#181517';
+                      const woolStroke = isPicked
+                        ? (sheep.isGrey ? '#f8fafc' : '#f59e0b')
+                        : (sheep.isGrey ? '#cbd5e1' : '#4a3d38');
+                      const headFill = sheep.isGrey ? '#4b5563' : '#0b090a';
+                      const eyeFill = sheep.isGrey ? '#fef08a' : '#ef4444';
+
+                      return (
+                        <button
+                          key={sheep.id}
+                          type="button"
+                          disabled={Boolean(sheep.dismissed) || (Boolean(selectedSheep) && !isPicked)}
+                          onClick={() => {
+                            if (sheep.dismissed || selectedSheep) return;
+                            triggerSfx('draw');
+                            setFlockSelectedSheepId(sheep.id);
+                          }}
+                          className={`absolute -translate-x-1/2 -translate-y-1/2 p-1 rounded-full transition-all duration-300 focus:outline-none ${
+                            sheep.dismissed
+                              ? 'opacity-15 scale-75 pointer-events-none'
+                              : isPicked
+                                ? 'z-30 scale-125 drop-shadow-[0_0_16px_rgba(245,158,11,0.75)] cursor-default'
+                                : isLockedOut
+                                  ? 'opacity-40 cursor-default'
+                                  : 'z-10 hover:z-20 hover:scale-125 cursor-pointer drop-shadow-[0_6px_10px_rgba(0,0,0,0.85)]'
+                          }`}
+                          style={{
+                            left: `${sheep.x}%`,
+                            top: `${sheep.y}%`,
+                            animation: isPicked
+                              ? undefined
+                              : `${sheep.wanderAnim} ${sheep.duration}s ease-in-out ${sheep.delay}s infinite`,
+                          }}
+                          title={sheep.isGrey ? 'The Lone Grey Sheep' : 'Select a Sheep'}
+                        >
+                          <svg
+                            viewBox="0 0 64 46"
+                            className={`${sheep.isGrey ? 'w-20 h-14' : 'w-14 h-10 sm:w-16 sm:h-12'}`}
+                            style={{
+                              transform: sheep.flip ? 'scaleX(-1)' : undefined,
+                              animation: isPicked ? undefined : `sheepHop 1.9s ease-in-out ${sheep.delay}s infinite`,
+                            }}
+                          >
+                            {/* Legs */}
+                            <line x1="20" y1="32" x2="19" y2="42" stroke="#0c0a09" strokeWidth="3" strokeLinecap="round" />
+                            <line x1="28" y1="33" x2="28" y2="42" stroke="#0c0a09" strokeWidth="3" strokeLinecap="round" />
+                            <line x1="40" y1="33" x2="40" y2="42" stroke="#0c0a09" strokeWidth="3" strokeLinecap="round" />
+                            <line x1="46" y1="32" x2="47" y2="42" stroke="#0c0a09" strokeWidth="3" strokeLinecap="round" />
+                            {/* Fluffy Fleece Body */}
+                            <path
+                              d="M16 24 C14 15, 22 10, 30 12 C34 8, 43 9, 46 14 C53 15, 55 23, 50 29 C48 34, 40 35, 34 34 C26 36, 17 32, 16 24 Z"
+                              fill={woolFill}
+                              stroke={woolStroke}
+                              strokeWidth="1.8"
+                            />
+                            {/* Head & Curled Horn */}
+                            <ellipse cx="14" cy="22" rx="7.5" ry="6" fill={headFill} stroke={woolStroke} strokeWidth="1.4" />
+                            <path d="M16 16 C18 11, 23 12, 22 16" fill="none" stroke="#a89984" strokeWidth="1.8" strokeLinecap="round" />
+                            {/* Glowing Eye */}
+                            <circle cx="11.5" cy="21" r="1.4" fill={eyeFill} />
+                          </svg>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Revealed Offering Plaque */}
+                  <div className="w-full max-w-3xl min-h-[124px] p-4 sm:p-5 rounded-[3px] bg-[#0e0907]/90 border border-[#4a3222]/85 shadow-[0_18px_40px_rgba(0,0,0,0.9)] flex flex-col items-center justify-center">
+                    {!revealedOption ? (
+                      <div className="text-xs font-mono uppercase tracking-[0.22em] text-[#a89278]">
+                        {isGreyMode
+                          ? 'Approach the lone Grey Sheep.'
+                          : flockRepicksUsed === 0
+                            ? 'Choose one of the 13 Black Sheep from the pen to inspect its sacrifice.'
+                            : 'Choose your second and final Sheep from the pen.'}
+                      </div>
+                    ) : (
+                      <div className="w-full flex flex-col items-center gap-3.5 animate-menu-fade-in">
+                        <div className={`w-full grid grid-cols-1 ${revealedOption.curse ? 'sm:grid-cols-2' : ''} gap-3 text-left`}>
+                          <div className="p-3 rounded-[2px] bg-[#16110a]/90 border border-[#9c7838]/75">
+                            <div className="text-[9.5px] font-mono font-bold uppercase tracking-[0.24em] text-amber-300/90 mb-1">
+                              Blessing
+                            </div>
+                            <div className="text-xs font-mono text-[#f6e7c8] leading-relaxed">
+                              {revealedOption.blessing}
+                            </div>
+                          </div>
+
+                          {revealedOption.curse && (
+                            <div className="p-3 rounded-[2px] bg-[#1a0b0a]/90 border border-red-800/80">
+                              <div className="text-[9.5px] font-mono font-bold uppercase tracking-[0.24em] text-red-400 mb-1">
+                                Curse
+                              </div>
+                              <div className="text-xs font-mono text-red-200/95 leading-relaxed">
+                                {revealedOption.curse}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                          <button
+                            onClick={() => applyFlockOption(revealedOption.id)}
+                            disabled={isEventBusy}
+                            className="px-6 py-2 rounded-[2px] bg-gradient-to-b from-[#35120f] to-[#1b0907] hover:from-[#4a1a15] hover:to-[#270d0a] border border-[#b5483b]/90 text-[#f8d1c8] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_6px_16px_rgba(0,0,0,0.85)] transition"
+                          >
+                            {revealedOption.isGrey ? 'Accept the Grey Fleece' : 'Feed the Creatures'}
+                          </button>
+
+                          {canRepick && (
+                            <button
+                              onClick={handleFlockRepick}
+                              disabled={isEventBusy}
+                              className="px-5 py-2 rounded-[2px] bg-[#16110e] hover:bg-[#231b15] border border-[#6e543a]/80 text-[#d8c1a3] hover:text-white font-mono text-[11px] uppercase tracking-[0.18em] cursor-pointer transition"
+                            >
+                              Pick Another Sheep (1 Left)
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* =========================================================================
           TOTEM CARVINGS (TRIBE PICK) SCREEN
@@ -9301,183 +10713,571 @@ export default function App() {
       {/* =========================================================================
           MYCOLOGISTS EVENT SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_MYCOLOGIST' && (
-        <div
-          style={getScreenBgStyle('weaverevent.jpg')}
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+      {screen === 'EVENT_MYCOLOGIST' && (() => {
+        const twin1 = mycoStageCards
+          ? mycoStageCards.twin1
+          : mycoSelectedIndices[0] !== undefined
+            ? masterDeck[mycoSelectedIndices[0]] || null
+            : null;
+        const twin2 = mycoStageCards
+          ? mycoStageCards.twin2
+          : mycoSelectedIndices[1] !== undefined
+            ? masterDeck[mycoSelectedIndices[1]] || null
+            : null;
+        const fusedPreview = mycoStageCards?.fused || null;
+        const isAnimating = mycoAnimPhase !== 'idle';
 
-          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                The Weaver Scoffs
-              </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Sleight of Hand
-            </h1>
+        return (
+          <div
+            style={getScreenBgStyle('weaverevent.jpg')}
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
-            {!mycoHasDuplicates ? (
-              <div className="flex flex-col items-center text-center max-w-lg my-auto">
-                <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 leading-relaxed shadow-md">
-                  The Weaver rummages through your satchel... <span className="text-amber-300 font-bold uppercase">No twin creatures?</span>{' '}
-                  With a flick of her wrist, a duplicate materializes and slips into your pack.
-                </p>
-                {mycoOfferedCard && (
-                  <div className="relative mb-7 p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#442c1c]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-                    <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/75" />
-                    <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/75" />
-                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/75" />
-                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/75" />
-                    <div className="transform scale-110 pointer-events-none">
-                      {renderCard(mycoOfferedCard, { isClickable: false, disableHoverScale: true })}
-                    </div>
-                  </div>
-                )}
-                <button
-                  onClick={claimMycologistDuplicate}
-                  disabled={!mycoOfferedCard}
-                  className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
-                >
-                  Commit to Your Actions
-                </button>
-              </div>
-            ) : (
-              <>
-                <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-lg leading-relaxed shadow-md">
-                  The wretched Weaver glances over her shoulder without halting her loom. Select two identical Creatures to stitch into one.
-                </p>
-
-                <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
-
-                  <div className="flex flex-wrap gap-4 justify-center pt-2">
-                    {masterDeck.map((c, idx) => {
-                      const selPos = mycoSelectedIndices.indexOf(idx);
-                      const isSelected = selPos !== -1;
-                      const isDuplicateCard = masterDeck.filter(card => card.name === c.name).length >= 2;
-                      return (
-                        <div
-                          key={c.id || `myco-${c.name}-${idx}`}
-                          onClick={() => {
-                            if (!isDuplicateCard) return;
-                            if (mycoSelectedIndices.includes(idx)) {
-                              setMycoSelectedIndices(prev => prev.filter(i => i !== idx));
-                            } else if (mycoSelectedIndices.length < 2) {
-                              setMycoSelectedIndices(prev => [...prev, idx]);
-                            }
-                          }}
-                          className={`relative transform origin-center transition-all duration-200 ${
-                            !isDuplicateCard
-                              ? 'opacity-30 grayscale-[55%] cursor-not-allowed scale-[0.95]'
-                              : isSelected
-                                ? 'scale-[1.05] -translate-y-2.5 z-30 cursor-pointer'
-                                : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1 cursor-pointer'
-                          }`}
-                        >
-                          {isSelected && (
-                            <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1e1224]/95 border border-purple-400/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 whitespace-nowrap shadow-md">
-                              Twin {selPos === 0 ? 'I' : 'II'}
-                            </span>
-                          )}
-                          {renderCard(c, { isSelected, isClickable: isDuplicateCard, disableHoverScale: true })}
-                        </div>
-                      );
-                    })}
-                  </div>
+            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Top Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                    {mycoHasDuplicates ? "The Weaver's Loom" : 'The Weaver Scoffs'}
+                  </span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  {mycoHasDuplicates ? 'Sanguine Stitching' : 'Sleight of Hand'}
+                </h1>
+              </div>
 
-                <div className="flex items-center gap-4">
+              {!mycoHasDuplicates ? (
+                /* Single-Frame Loom Gift when player has no duplicates */
+                <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col items-center justify-center gap-4">
+                  <div className="relative w-full p-6 rounded-[3px] bg-[#0d0806]/85 border border-[#442c1c]/85 shadow-[0_20px_50px_rgba(0,0,0,0.92)] flex flex-col items-center text-center">
+                    <span className="pointer-events-none absolute top-2 left-2 w-2.5 h-2.5 border-t border-l border-[#9a7342]/75" />
+                    <span className="pointer-events-none absolute top-2 right-2 w-2.5 h-2.5 border-t border-r border-[#9a7342]/75" />
+                    <span className="pointer-events-none absolute bottom-2 left-2 w-2.5 h-2.5 border-b border-l border-[#9a7342]/75" />
+                    <span className="pointer-events-none absolute bottom-2 right-2 w-2.5 h-2.5 border-b border-r border-[#9a7342]/75" />
+
+                    <p className="mb-5 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/80 border border-[#3a2618]/75 text-[11px] font-mono text-[#d4bfa0]/90 max-w-md leading-relaxed">
+                      The Weaver rummages through your pack... <span className="text-amber-300 font-bold uppercase">No twin creatures?</span>{' '}
+                      Her needles flash across the loom, spinning a fresh twin out of sinew.
+                    </p>
+
+                    {mycoOfferedCard && (
+                      <div className="relative mb-2 p-4 rounded-[3px] bg-[#140d17]/80 border border-purple-500/45 shadow-[0_0_32px_rgba(168,85,247,0.22)]">
+                        {renderCard(mycoOfferedCard, { isClickable: false, disableHoverScale: true })}
+                      </div>
+                    )}
+                  </div>
+
                   <button
-                    onClick={confirmMycologistCombine}
-                    disabled={
-                      mycoSelectedIndices.length !== 2 ||
-                      masterDeck[mycoSelectedIndices[0]]?.name !== masterDeck[mycoSelectedIndices[1]]?.name
-                    }
-                    className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2f1d36] to-[#180f1c] hover:from-[#3e2647] hover:to-[#221528] active:translate-y-[1px] border border-purple-400/75 hover:border-purple-300 text-purple-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
+                    onClick={claimMycologistDuplicate}
+                    disabled={!mycoOfferedCard || isEventBusy}
+                    className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
                   >
-                    Sew Creatures
+                    Claim Twin Creature
                   </button>
                 </div>
-              </>
-            )}
+              ) : (
+                /* Two-Column Split: Weaver's Loom Stage Left, Deck Selector Right */
+                <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                  {/* LEFT COLUMN: Weaver's Loom Prop + Sew Button */}
+                  <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
+                    <div className="relative w-full flex-1 min-h-0 px-6 py-4 rounded-[3px] bg-gradient-to-b from-[#130c15]/76 via-[#170e19]/86 to-[#0b070c]/95 border border-[#4a3052]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(233,213,255,0.08)] overflow-hidden flex flex-col items-center justify-center">
+                      <div
+                        className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
+                          mycoAnimPhase === 'sewing'
+                            ? 'opacity-100'
+                            : mycoAnimPhase === 'woven'
+                              ? 'opacity-90'
+                              : 'opacity-40'
+                        }`}
+                        style={{
+                          background:
+                            mycoAnimPhase === 'woven'
+                              ? 'radial-gradient(circle at 50% 62%, rgba(168,85,247,0.38) 0%, rgba(126,34,206,0.16) 48%, transparent 74%)'
+                              : 'radial-gradient(circle at 50% 54%, rgba(147,51,234,0.24) 0%, rgba(153,27,27,0.14) 50%, transparent 74%)',
+                        }}
+                      />
+
+                      <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-purple-400/60" />
+                      <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-purple-400/60" />
+                      <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-purple-400/60" />
+                      <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-purple-400/60" />
+
+                      {/* Loom Stage */}
+                      <div className="relative z-10 flex flex-col items-center justify-center w-full">
+                        {/* Top Twin Spool Slots */}
+                        <div className="relative z-30 flex items-center justify-center gap-10 sm:gap-16">
+                          {/* Twin I */}
+                          <div
+                            className="flex flex-col items-center"
+                            style={{
+                              animation: mycoAnimPhase === 'sewing' ? 'loomTwinConvergeLeft 0.85s ease-in forwards' : undefined,
+                              opacity: mycoAnimPhase === 'woven' ? 0 : 1,
+                            }}
+                          >
+                            <span className="mb-1 px-2 py-0.5 rounded-[2px] bg-[#1e1224]/90 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200">
+                              Twin I
+                            </span>
+                            <div className="w-[100px] h-[138px] flex items-center justify-center">
+                              {twin1 ? (
+                                <div className="scale-[0.88] origin-center shadow-[0_12px_26px_rgba(0,0,0,0.9)]">
+                                  {renderCard(twin1, { isClickable: false, disableHoverScale: true })}
+                                </div>
+                              ) : (
+                                <div className="w-[96px] h-[134px] rounded-[4px] border border-dashed border-purple-500/55 bg-[#120b14]/75 flex flex-col items-center justify-center gap-1 text-purple-300/60">
+                                  <span className="text-lg">🪡</span>
+                                  <span className="text-[8.5px] uppercase tracking-[0.2em]">Twin I</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Twin II */}
+                          <div
+                            className="flex flex-col items-center"
+                            style={{
+                              animation: mycoAnimPhase === 'sewing' ? 'loomTwinConvergeRight 0.85s ease-in forwards' : undefined,
+                              opacity: mycoAnimPhase === 'woven' ? 0 : 1,
+                            }}
+                          >
+                            <span className="mb-1 px-2 py-0.5 rounded-[2px] bg-[#1e1224]/90 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200">
+                              Twin II
+                            </span>
+                            <div className="w-[100px] h-[138px] flex items-center justify-center">
+                              {twin2 ? (
+                                <div className="scale-[0.88] origin-center shadow-[0_12px_26px_rgba(0,0,0,0.9)]">
+                                  {renderCard(twin2, { isClickable: false, disableHoverScale: true })}
+                                </div>
+                              ) : (
+                                <div className="w-[96px] h-[134px] rounded-[4px] border border-dashed border-purple-500/55 bg-[#120b14]/75 flex flex-col items-center justify-center gap-1 text-purple-300/60">
+                                  <span className="text-lg">🪡</span>
+                                  <span className="text-[8.5px] uppercase tracking-[0.2em]">Twin II</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Lower Wooden Loom Frame + Central Fused Cloth Bed */}
+                        <div className="relative z-20 -mt-1 flex flex-col items-center w-full">
+                          <div className="relative z-30 w-[108px] h-[146px] -mb-9 flex items-center justify-center">
+                            {mycoAnimPhase === 'woven' && fusedPreview ? (
+                              <div className="scale-[0.94] origin-center rounded-[4px] shadow-[0_0_40px_rgba(168,85,247,0.75),0_0_20px_rgba(220,38,38,0.45)] animate-menu-fade-in">
+                                {renderCard(fusedPreview, { isClickable: false, disableHoverScale: true })}
+                              </div>
+                            ) : (
+                              <div className="w-[100px] h-[138px] rounded-[4px] border border-dashed border-purple-800/70 bg-[#100912]/80 flex flex-col items-center justify-center gap-1 text-purple-300/60">
+                                <span className="text-lg opacity-75">🧵</span>
+                                <span className="text-[8.5px] uppercase tracking-[0.2em]">Fused</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Wooden Weaver's Loom SVG Prop */}
+                          <svg
+                            viewBox="0 0 460 112"
+                            className="w-full max-w-[465px] h-auto drop-shadow-[0_16px_26px_rgba(0,0,0,0.96)] pointer-events-none"
+                          >
+                            <defs>
+                              <linearGradient id="loomTimber" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="#4a3528" />
+                                <stop offset="55%" stopColor="#2c1f17" />
+                                <stop offset="100%" stopColor="#160f0b" />
+                              </linearGradient>
+                            </defs>
+                            {[110, 140, 170, 200, 230, 260, 290, 320, 350].map((xPos, idx) => (
+                              <line
+                                key={idx}
+                                x1={xPos}
+                                y1="12"
+                                x2={xPos}
+                                y2="96"
+                                stroke={mycoAnimPhase !== 'idle' ? '#c084fc' : '#6b21a8'}
+                                strokeWidth="1.1"
+                                strokeDasharray="3 2"
+                                opacity="0.65"
+                              />
+                            ))}
+                            <path
+                              d="M95 28 L365 76 M365 28 L95 76"
+                              stroke={mycoAnimPhase === 'sewing' ? '#f43f5e' : '#881337'}
+                              strokeWidth="1.6"
+                              opacity="0.75"
+                            />
+                            <rect x="64" y="12" width="16" height="94" rx="2" fill="url(#loomTimber)" stroke="#6e503d" strokeWidth="1.5" />
+                            <rect x="380" y="12" width="16" height="94" rx="2" fill="url(#loomTimber)" stroke="#6e503d" strokeWidth="1.5" />
+                            <rect x="44" y="78" width="372" height="16" rx="2" fill="url(#loomTimber)" stroke="#7a5943" strokeWidth="1.8" />
+                            <rect x="32" y="94" width="396" height="10" rx="2" fill="#1a120d" stroke="#594030" strokeWidth="1.3" />
+                            <g style={{ animation: mycoAnimPhase === 'sewing' ? 'loomNeedleSweep 0.42s ease-in-out infinite' : undefined }}>
+                              <polygon points="175,54 285,54 298,58 285,62 175,62 162,58" fill="#e7dcc8" stroke="#6b5b49" strokeWidth="1.1" />
+                              <circle cx="182" cy="58" r="2" fill="#7e22ce" />
+                            </g>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="flex items-center justify-center shrink-0">
+                      <button
+                        onClick={confirmMycologistCombine}
+                        disabled={
+                          isEventBusy ||
+                          isAnimating ||
+                          mycoSelectedIndices.length !== 2 ||
+                          masterDeck[mycoSelectedIndices[0]]?.name !== masterDeck[mycoSelectedIndices[1]]?.name
+                        }
+                        className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2f1d36] to-[#180f1c] hover:from-[#3e2647] hover:to-[#221528] active:translate-y-[1px] border border-purple-400/80 hover:border-purple-300 text-purple-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
+                      >
+                        {isAnimating ? 'Stitching Flesh...' : 'Sew Creatures'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* RIGHT COLUMN: Side Deck Selector Panel */}
+                  <div
+                    className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
+                      isAnimating ? 'opacity-30 pointer-events-none' : 'opacity-100'
+                    }`}
+                  >
+                    <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
+                    <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+
+                    <div className="px-4 py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
+                      <div className="text-left">
+                        <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
+                          Your Creatures ({masterDeck.length})
+                        </div>
+                        <div className="text-[10.5px] font-mono text-[#bfa88a]/85 mt-0.5">
+                          {mycoSelectedIndices.length === 0
+                            ? 'Select two identical creatures to thread into the loom.'
+                            : mycoSelectedIndices.length === 1
+                              ? `Select a second ${masterDeck[mycoSelectedIndices[0]]?.name}.`
+                              : 'Twins threaded—ready to sew.'}
+                        </div>
+                      </div>
+                      {mycoSelectedIndices.length > 0 && !isAnimating && (
+                        <button
+                          type="button"
+                          onClick={() => setMycoSelectedIndices([])}
+                          className="px-2.5 py-1 rounded-[2px] bg-[#1a110c] hover:bg-[#281a12] border border-[#5a3d28] text-[9.5px] font-mono uppercase tracking-[0.18em] text-[#d4bfa0] cursor-pointer transition shrink-0"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
+                      <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                        {masterDeck.map((c, idx) => {
+                          const selPos = mycoSelectedIndices.indexOf(idx);
+                          const isSelected = selPos !== -1;
+                          const isDuplicateCard = masterDeck.filter(card => card.name === c.name).length >= 2;
+                          const firstPickedName = mycoSelectedIndices.length > 0 ? masterDeck[mycoSelectedIndices[0]]?.name : null;
+                          const wrongTwin = Boolean(firstPickedName && c.name !== firstPickedName);
+                          const isDisabled = !isDuplicateCard || wrongTwin;
+
+                          return (
+                            <div
+                              key={c.id || `myco-${c.name}-${idx}`}
+                              onClick={() => {
+                                if (isDisabled || isAnimating) return;
+                                triggerSfx('draw');
+                                if (mycoSelectedIndices.includes(idx)) {
+                                  setMycoSelectedIndices(prev => prev.filter(i => i !== idx));
+                                } else if (mycoSelectedIndices.length < 2) {
+                                  setMycoSelectedIndices(prev => [...prev, idx]);
+                                }
+                              }}
+                              className={`relative flex flex-col items-center justify-center w-[104px] h-[146px] transition-all duration-200 ${
+                                isDisabled
+                                  ? 'opacity-30 grayscale-[55%] cursor-not-allowed'
+                                  : isSelected
+                                    ? '-translate-y-1.5 z-30 cursor-pointer'
+                                    : 'hover:-translate-y-1 cursor-pointer'
+                              }`}
+                            >
+                              {isSelected && (
+                                <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1e1224]/95 border border-purple-400/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 whitespace-nowrap shadow-md">
+                                  Twin {selPos === 0 ? 'I' : 'II'}
+                                </span>
+                              )}
+                              <div className={`transform origin-center transition-transform duration-200 ${isSelected ? 'scale-[0.9]' : 'scale-[0.86] hover:scale-[0.91]'}`}>
+                                {renderCard(c, { isSelected, isClickable: !isDisabled, disableHoverScale: true })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
-          GOO MAGE GOOBERT EVENT SCREEN
+          THE BEGOTTEN'S PRINTING PRESS EVENT SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_GOOBERT' && (
-        <div
-          className="absolute inset-0 bg-[#090d0b] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('begottenboss.jpg')}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,26,21,0.44)_0%,rgba(4,8,7,0.92)_100%)] pointer-events-none" />
-          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-teal-600/70 to-teal-300/80" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-teal-400/90">
-                Printing Press
-              </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-teal-600/70 to-teal-300/80" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-teal-200 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Stamp-a-Twin
-            </h1>
-            <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#070c0a]/75 border border-teal-900/70 text-[11px] font-mono text-teal-100/80 max-w-lg leading-relaxed shadow-md">
-              The Begotten jeers and scoffs at any who question his Stamps and the quality of his Press. Select a Creature to copy.
-            </p>
+      {screen === 'EVENT_GOOBERT' && (() => {
+        const originalPreview = goobertOriginalSnapshot
+          || (goobertSelectedIdx !== null ? masterDeck[goobertSelectedIdx] || null : null);
+        const isAnimating = goobertStamping || Boolean(goobertStampedCard);
 
-            <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#080e0c]/82 border border-teal-900/75 shadow-[0_18px_44px_rgba(0,0,0,0.92)] backdrop-blur-[2px]">
-              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-teal-500/65" />
-              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-teal-500/65" />
-              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-teal-500/65" />
-              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-teal-500/65" />
+        return (
+          <div
+            className="absolute inset-0 bg-[#090d0b] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('begottenboss.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,26,21,0.38)_0%,rgba(4,8,7,0.92)_100%)] pointer-events-none" />
 
-              <div className="flex flex-wrap gap-4 justify-center pt-2">
-                {masterDeck.map((c, idx) => {
-                  const isSelected = goobertSelectedIdx === idx;
-                  return (
+            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Top Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-teal-600/70 to-teal-300/80" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-teal-400/90">
+                    The Begotten&apos;s Workshop
+                  </span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-teal-600/70 to-teal-300/80" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-teal-200 leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  Printing Press
+                </h1>
+              </div>
+
+              {/* Two-Column Split: Rotary Printing Press Stage Left, Deck Selector Right */}
+              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                {/* LEFT COLUMN: Heavy Rotary Printing Press Prop + Stamp Button */}
+                <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 rounded-[3px] bg-gradient-to-b from-[#0b1512]/78 via-[#0e1a16]/88 to-[#060b09]/95 border border-teal-900/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(153,246,228,0.08)] overflow-hidden flex flex-col items-center justify-between">
                     <div
-                      key={c.id || `goo-${c.name}-${idx}`}
-                      onClick={() => setGoobertSelectedIdx(idx)}
-                      className={`relative cursor-pointer transform origin-center transition-all duration-200 ${
-                        isSelected
-                          ? 'scale-[1.05] -translate-y-2.5 z-30'
-                          : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1'
+                      className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
+                        goobertStampedCard ? 'opacity-95' : goobertStamping ? 'opacity-80' : 'opacity-40'
                       }`}
-                    >
-                      {isSelected && (
-                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#091c18]/95 border border-teal-400/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-teal-200 whitespace-nowrap shadow-md">
-                          Original
-                        </span>
+                      style={{
+                        background:
+                          'radial-gradient(circle at 50% 60%, rgba(20,184,166,0.28) 0%, rgba(13,148,136,0.12) 48%, transparent 74%)',
+                      }}
+                    />
+
+                    <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-teal-500/65" />
+                    <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-teal-500/65" />
+                    <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-teal-500/65" />
+                    <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-teal-500/65" />
+
+                    {/* Press Assembly Container: Platen travels down along the guide rails all the way onto the press bed */}
+                    <div className="relative z-20 flex flex-col items-center justify-end w-full flex-1 min-h-0 pt-16">
+                      {/* Upper Press Platen & Threaded Screw Shaft (resting at -196px; drops to translateY(0) flush on bed) */}
+                      <div
+                        className="pointer-events-none absolute bottom-[52px] inset-x-0 z-40 flex flex-col items-center"
+                        style={{
+                          transform: goobertStamping ? undefined : 'translateY(-196px)',
+                          animation: goobertStamping ? 'pressPlatenSlam 1.85s cubic-bezier(0.22, 0.92, 0.32, 1) forwards' : undefined,
+                        }}
+                      >
+                        <svg viewBox="0 0 460 296" className="w-full max-w-[465px] h-auto drop-shadow-[0_18px_28px_rgba(0,0,0,0.98)]">
+                          <defs>
+                            <linearGradient id="pressIronBeam" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#3c4a46" />
+                              <stop offset="55%" stopColor="#202926" />
+                              <stop offset="100%" stopColor="#101513" />
+                            </linearGradient>
+                            <linearGradient id="pressFacePlate" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#26312e" />
+                              <stop offset="60%" stopColor="#171f1c" />
+                              <stop offset="100%" stopColor="#0d1210" />
+                            </linearGradient>
+                          </defs>
+                          {/* Long Threaded Screw Shaft */}
+                          <rect x="221" y="0" width="18" height="234" rx="2" fill="#465450" stroke="#748a82" strokeWidth="1.2" />
+                          {[18, 34, 50, 66, 82, 98, 114, 130, 146, 162, 178, 194, 210].map((ty) => (
+                            <line key={ty} x1="221" y1={ty} x2="239" y2={ty + 4} stroke="#26302d" strokeWidth="1.5" />
+                          ))}
+                          {/* Crossbar Torque Lever */}
+                          <rect x="168" y="206" width="124" height="8" rx="3" fill="#2c3834" stroke="#647a72" strokeWidth="1.2" />
+                          <circle cx="168" cy="210" r="5.5" fill="#52665f" />
+                          <circle cx="292" cy="210" r="5.5" fill="#52665f" />
+                          {/* Heavy Cast-Iron Stamp Head & Platen Block */}
+                          <rect x="52" y="232" width="356" height="24" rx="2" fill="url(#pressIronBeam)" stroke="#5f7870" strokeWidth="1.8" />
+                          <rect x="64" y="256" width="332" height="28" rx="1.5" fill="url(#pressFacePlate)" stroke="#4d635c" strokeWidth="1.5" />
+                          {/* Emerald Ink Contact Strip at Bottom Edge */}
+                          <rect x="72" y="284" width="316" height="9" rx="1" fill="#134e4a" stroke="#2dd4bf" strokeWidth="1.1" />
+                        </svg>
+                      </div>
+
+                      {goobertStamping && (
+                        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+                          <div
+                            className="w-48 h-24 rounded-full bg-emerald-400/40 blur-md"
+                            style={{ animation: 'inkSplatterBurst 0.72s ease-out forwards' }}
+                          />
+                        </div>
                       )}
-                      {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
+
+                      <div className="relative z-20 flex items-end justify-center gap-8 sm:gap-14 -mb-6">
+                        {/* Left Bed: Original Creature (squishes down & unsquishes in sync with platen) */}
+                        <div className="flex flex-col items-center">
+                          <span
+                            className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#091c18]/92 border border-teal-500/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-teal-200 transition-opacity duration-150 ${
+                              goobertStamping ? 'opacity-0' : 'opacity-100'
+                            }`}
+                          >
+                            Original
+                          </span>
+                          <div
+                            className="w-[108px] h-[148px] flex items-end justify-center origin-bottom"
+                            style={{
+                              animation: goobertStamping ? 'pressCardSquish 1.85s cubic-bezier(0.22, 0.92, 0.32, 1) forwards' : undefined,
+                            }}
+                          >
+                            {originalPreview ? (
+                              <div className="scale-[0.94] origin-bottom shadow-[0_14px_28px_rgba(0,0,0,0.92)]">
+                                {renderCard(originalPreview, { isClickable: false, disableHoverScale: true })}
+                              </div>
+                            ) : (
+                              <div className="w-[102px] h-[142px] rounded-[4px] border border-dashed border-teal-600/65 bg-[#07120f]/80 flex flex-col items-center justify-center gap-1.5 text-teal-400/65">
+                                <span className="text-lg">📜</span>
+                                <span className="text-[9px] uppercase tracking-[0.2em]">Original</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Right Bed: Blank Plate -> Stamped Clone (squishes down & unsquishes in sync with platen) */}
+                        <div className="flex flex-col items-center">
+                          <span
+                            className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] border text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] transition-opacity duration-150 ${
+                              goobertStamping ? 'opacity-0' : 'opacity-100'
+                            } ${
+                              goobertStampedCard
+                                ? 'bg-[#0a261d]/95 border-emerald-400/90 text-emerald-200 shadow-[0_0_14px_rgba(52,211,153,0.45)]'
+                                : 'bg-[#0b1815]/85 border-teal-800/70 text-teal-400/75'
+                            }`}
+                          >
+                            {goobertStampedCard ? 'Stamped Clone' : 'Imprint Plate'}
+                          </span>
+                          <div
+                            className="w-[108px] h-[148px] flex items-end justify-center origin-bottom"
+                            style={{
+                              animation: goobertStamping ? 'pressCardSquish 1.85s cubic-bezier(0.22, 0.92, 0.32, 1) forwards' : undefined,
+                            }}
+                          >
+                            {goobertStampedCard ? (
+                              <div className="scale-[0.94] origin-bottom rounded-[4px] shadow-[0_0_38px_rgba(16,185,129,0.65),0_14px_28px_rgba(0,0,0,0.92)]">
+                                {renderCard(goobertStampedCard, { isClickable: false, disableHoverScale: true })}
+                              </div>
+                            ) : (
+                              <div className="w-[102px] h-[142px] rounded-[4px] border border-dashed border-emerald-700/60 bg-[#081511]/80 flex flex-col items-center justify-center gap-1.5 text-emerald-400/60">
+                                <span className="text-lg opacity-75">🧪</span>
+                                <span className="text-[9px] uppercase tracking-[0.2em]">Blank Plate</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Lower Cast-Iron Press Bed SVG Prop */}
+                      <svg
+                        viewBox="0 0 460 76"
+                        className="w-full max-w-[465px] h-auto drop-shadow-[0_16px_26px_rgba(0,0,0,0.96)] pointer-events-none"
+                      >
+                        <defs>
+                          <linearGradient id="pressBedMetal" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#35423e" />
+                            <stop offset="55%" stopColor="#1c2422" />
+                            <stop offset="100%" stopColor="#0d1210" />
+                          </linearGradient>
+                        </defs>
+                        <rect x="52" y="4" width="12" height="44" rx="1.5" fill="#2a3532" stroke="#556b64" strokeWidth="1.2" />
+                        <rect x="396" y="4" width="12" height="44" rx="1.5" fill="#2a3532" stroke="#556b64" strokeWidth="1.2" />
+                        <polygon points="34,34 56,16 404,16 426,34" fill="url(#pressBedMetal)" stroke="#5c756d" strokeWidth="1.8" />
+                        <rect x="34" y="34" width="392" height="14" rx="1.5" fill="#171f1d" stroke="#4c615a" strokeWidth="1.4" />
+                        <path d="M110 25 Q230 31 350 25" fill="none" stroke="#10b981" strokeWidth="2.4" strokeLinecap="round" opacity="0.7" />
+                        <polygon points="62,72 78,48 382,48 398,72" fill="#131917" stroke="#42544e" strokeWidth="1.5" />
+                      </svg>
                     </div>
-                  );
-                })}
+
+                    <p className="relative z-20 mt-3 px-4 py-1.5 rounded-[2px] bg-[#070c0a]/80 border border-teal-900/75 text-[10.5px] font-mono text-teal-100/85 max-w-lg leading-snug">
+                      The Begotten jeers and scoffs at any who question his Stamps. Place a creature onto the press bed to stamp a flawed twin.
+                    </p>
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="flex items-center justify-center shrink-0">
+                    <button
+                      onClick={confirmGoobertClone}
+                      disabled={goobertSelectedIdx === null || isEventBusy || isAnimating}
+                      className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#13332b] to-[#0a1c17] hover:from-[#1b463b] hover:to-[#0f2922] active:translate-y-[1px] border border-teal-500/85 hover:border-teal-300 text-teal-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
+                    >
+                      {goobertStamping ? 'Pressing Plate...' : goobertStampedCard ? 'Imprint Complete' : 'Stamp Your Card'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Side Deck Selector Panel */}
+                <div
+                  className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#080e0c]/84 border border-teal-900/80 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(153,246,228,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
+                    isAnimating ? 'opacity-30 pointer-events-none' : 'opacity-100'
+                  }`}
+                >
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-teal-500/65" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-teal-500/65" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-teal-500/65" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-teal-500/65" />
+
+                  <div className="px-4 py-3 border-b border-teal-950/90 flex items-center justify-between gap-2 shrink-0">
+                    <div className="text-left">
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-teal-400/90">
+                        Your Creatures ({masterDeck.length})
+                      </div>
+                      <div className="text-[10.5px] font-mono text-teal-100/75 mt-0.5">
+                        Select a creature to place onto the left press bed.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
+                    <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                      {masterDeck.map((c, idx) => {
+                        const isSelected = goobertSelectedIdx === idx;
+                        return (
+                          <div
+                            key={c.id || `goo-${c.name}-${idx}`}
+                            onClick={() => {
+                              if (isEventBusy || isAnimating) return;
+                              triggerSfx('draw');
+                              setGoobertSelectedIdx(idx);
+                            }}
+                            className={`relative flex flex-col items-center justify-center w-[104px] h-[146px] cursor-pointer transition-all duration-200 ${
+                              isSelected ? '-translate-y-1.5 z-30' : 'hover:-translate-y-1'
+                            }`}
+                          >
+                            {isSelected && (
+                              <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#091c18]/95 border border-teal-400/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-teal-200 whitespace-nowrap shadow-md">
+                                Original
+                              </span>
+                            )}
+                            <div className={`transform origin-center transition-transform duration-200 ${isSelected ? 'scale-[0.9]' : 'scale-[0.86] hover:scale-[0.91]'}`}>
+                              {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <div className="flex items-center gap-4">
-              <button
-                onClick={confirmGoobertClone}
-                disabled={goobertSelectedIdx === null || isEventBusy}
-                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#13332b] to-[#0a1c17] hover:from-[#1b463b] hover:to-[#0f2922] active:translate-y-[1px] border border-teal-500/80 hover:border-teal-300 text-teal-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.88)] transition-all select-none"
-              >
-                {goobertStamping ? 'Pressing Plate...' : 'Stamp Your Card'}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           CAVE TRIAL SCREEN
@@ -10206,6 +12006,8 @@ export default function App() {
                 <button onClick={() => handleDevForce('boss-bonelord')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-stone-300 hover:text-white border border-stone-800 hover:border-stone-600 transition cursor-pointer">BONE LORD</button>
                 <button onClick={() => handleDevForce('campfire')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-amber-400 hover:text-amber-200 border border-amber-950/60 hover:border-amber-800 transition cursor-pointer">CAMPFIRE</button>
                 <button onClick={() => handleDevForce('altar')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-purple-400 hover:text-purple-200 border border-purple-950/60 hover:border-purple-800 transition cursor-pointer">ALTAR</button>
+              <button onClick={() => handleDevForce('anvil')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-amber-400 hover:text-amber-200 border border-amber-950/60 hover:border-amber-800 transition cursor-pointer">TRANSMUTATION</button>
+              <button onClick={() => handleDevForce('flock')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-red-400 hover:text-red-200 border border-red-950/60 hover:border-red-800 transition cursor-pointer">ZEALOT FLOCK</button>
                 <button onClick={() => handleDevForce('carving')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-emerald-400 hover:text-emerald-200 border border-emerald-950/60 hover:border-emerald-800 transition cursor-pointer">CARVING</button>
                 <button onClick={() => handleDevForce('cost')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-amber-300 hover:text-amber-100 border border-amber-950/60 hover:border-amber-800 transition cursor-pointer">COST BARGAIN</button>
                 <button onClick={() => handleDevForce('choice')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-amber-300 hover:text-amber-100 border border-amber-950/60 hover:border-amber-800 transition cursor-pointer">CARD CHOICE</button>
@@ -10853,7 +12655,7 @@ export default function App() {
                 <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-2">+-- SANCTUARY SEAL --+</div>
                 <h2 className="text-xl font-mono font-bold text-amber-400 mb-2 tracking-wider uppercase">Ritual Completed</h2>
                 <p className="text-xs font-mono text-stone-400 mb-8 leading-relaxed">
-                  The cycle awaits your command. Will you delve deeper into the sacrificial bond or seal the archives?
+                  The cycle never truly ends. Will you delve deeper into the catacombs or seal the archives?
                 </p>
                 <div className="flex flex-col gap-3">
                   <button
@@ -12141,7 +13943,7 @@ export default function App() {
                           ? 'cursor-pointer hover:scale-105 active:scale-95 animate-deck-glow z-20'
                           : 'border-[#3d2719] opacity-75 cursor-not-allowed shadow-[2px_2px_0_#1c140e,4px_4px_0_#140e0a,6px_6px_8px_rgba(0,0,0,0.8)]'
                       }`}
-                      title="Draw Squirrel"
+                      title={flockNoSquirrelTurns && flockSquirrelLockDraws > 0 ? `Sealed by The Zealot's Flock (${flockSquirrelLockDraws} turn${flockSquirrelLockDraws === 1 ? '' : 's'} left)` : 'Draw Squirrel'}
                     >
                       {/* Card Back Graphic */}
                       <img
@@ -12235,7 +14037,7 @@ export default function App() {
     <span className="pointer-events-none absolute bottom-1 right-1 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
 
     <div className="text-[8px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#bfa78b] border-b border-[#342c27]/85 pb-1 w-full text-center">
-      ITEMS
+      RELICS
     </div>
 
     {items.map((itemId, idx) => {
@@ -12524,6 +14326,30 @@ export default function App() {
           </div>
         )}
       </div>
+    {/* Dramatic Loss Transition Overlay */}
+    {isLossSequenceActive && (
+      <div className="fixed inset-0 z-[220] pointer-events-auto flex flex-col items-center justify-center overflow-hidden select-none animate-menu-fade-in">
+        <div
+          className="absolute inset-0 transition-opacity duration-700"
+          style={{
+            background:
+              'radial-gradient(circle at center, rgba(127, 29, 29, 0.38) 0%, rgba(18, 4, 6, 0.92) 62%, rgba(0, 0, 0, 0.98) 100%)',
+          }}
+        />
+        <div className="relative z-10 flex flex-col items-center text-center px-6">
+          <img
+            src={`${import.meta.env.BASE_URL || './'}assets/text/gameover.png`}
+            alt="Game Over"
+            className="w-72 sm:w-96 max-w-[82vw] object-contain drop-shadow-[0_0_28px_rgba(220,38,38,0.65)] animate-pulse"
+            draggable={false}
+          />
+          <div className="mt-3 text-xs font-mono uppercase tracking-[0.35em] text-red-300/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+            The Scales Tipped Into Darkness
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Mobile Orientation Blocker */}
       <div className="fixed inset-0 z-[9999] bg-[#04060a] flex flex-col items-center justify-center text-amber-100 p-6 text-center portrait:flex landscape:hidden select-none pointer-events-auto">
         <div className="text-4xl mb-4 font-mono animate-pulse">⤹ 📱</div>

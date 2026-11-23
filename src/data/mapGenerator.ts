@@ -18,7 +18,9 @@ export type MapNodeType =
   | 'cave'
   | 'choice'
   | 'totem'
-  | 'items';
+  | 'items'
+  | 'anvil'
+  | 'flock';
 
 export interface MapNode {
   id: string;
@@ -142,10 +144,22 @@ export const MAP_NODE_META: Record<MapNodeType, NodeMeta> = {
     tone: 'boon',
   },
   items: {
-    title: 'Surplus Cache',
+    title: 'Relic Cache',
     tag: 'Peddler',
-    desc: 'Barter overkill blood harvest for occult pack items.',
+    desc: 'Barter overkill blood harvest for occult field relics.',
     tone: 'boon',
+  },
+  anvil: {
+    title: 'Transmutation Table',
+    tag: 'Transmute',
+    desc: 'Something about this feels wrong.',
+    tone: 'ritual',
+  },
+  flock: {
+    title: "The Zealot's Flock",
+    tag: 'Offering',
+    desc: 'Your creatures are ravenous.',
+    tone: 'ritual',
   },
 };
 
@@ -215,36 +229,42 @@ const ALWAYS_ADD_CARD_EVENTS = new Set<MapNodeType>(['choice', 'carving', 'cost'
 
 const EARLY_EVENT_WEIGHTS: WeightedEventPool = {
   choice: 18,
-  carving: 15,
-  campfire: 15,
-  cost: 14,
+  carving: 14,
+  campfire: 14,
+  cost: 13,
   items: 13,
   altar: 12,
-  totem: 12,
+  totem: 11,
+  anvil: 11,
+  flock: 10,
 };
 
 const MID_EVENT_WEIGHTS: WeightedEventPool = {
-  campfire: 16,
-  choice: 15,
-  altar: 14,
-  items: 13,
-  totem: 12,
-  carving: 11,
-  cost: 11,
+  campfire: 15,
+  choice: 14,
+  altar: 13,
+  items: 12,
+  totem: 11,
+  carving: 10,
+  cost: 10,
   goobert: 10,
   mycologist: 10,
-  cave: 10,
+  cave: 9,
   bonelord: 9,
+  anvil: 11,
+  flock: 11,
 };
 
 const PREP_EVENT_WEIGHTS: WeightedEventPool = {
-  campfire: 24,
-  items: 20,
-  altar: 18,
-  mycologist: 14,
-  totem: 14,
-  goobert: 11,
-  bonelord: 10,
+  campfire: 22,
+  items: 18,
+  altar: 16,
+  mycologist: 13,
+  totem: 13,
+  goobert: 10,
+  bonelord: 9,
+  anvil: 13,
+  flock: 12,
 };
 
 const getEffectiveEventWeight = (
