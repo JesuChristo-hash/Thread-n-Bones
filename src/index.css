@@ -883,3 +883,67 @@
   65%  { transform: translate(-64px, 68px) scale(0.84) rotate(-6deg); opacity: 0.85; }
   100% { transform: translate(-74px, 84px) scale(0.5); opacity: 0; }
 }
+
+/* --- Event Props: Bone Lord Ossuary, Tribal Tapestry, Steeple Scales, Effigy Stand --- */
+@keyframes boneOfferDissolve {
+  0%   { transform: scale(1) translateY(0); filter: brightness(1) grayscale(0); opacity: 1; }
+  35%  { transform: scale(1.04) translateY(-6px); filter: brightness(1.7) contrast(1.3) grayscale(0.75); opacity: 0.95; }
+  75%  { transform: scale(0.88) translateY(-18px); filter: brightness(2.1) grayscale(1) blur(1.5px); opacity: 0.55; }
+  100% { transform: scale(0.55) translateY(-34px); filter: brightness(0.6) grayscale(1) blur(5px); opacity: 0; }
+}
+
+@keyframes boneTokenRise {
+  0%   { transform: translateY(18px) scale(0.5) rotate(-14deg); opacity: 0; }
+  35%  { opacity: 1; }
+  100% { transform: translateY(-76px) scale(1.15) rotate(10deg); opacity: 0; }
+}
+
+@keyframes patchThreadDrop {
+  0%   { height: 0px; opacity: 0.2; }
+  50%  { opacity: 1; }
+  100% { height: 54px; opacity: 0.9; }
+}
+
+@keyframes effigyStitchPulse {
+  0%   { transform: scale(1); filter: brightness(1); }
+  40%  { transform: scale(1.06); filter: brightness(1.75) drop-shadow(0 0 22px rgba(234,179,8,0.85)); }
+  100% { transform: scale(1); filter: brightness(1.15); }
+}
+
+@keyframes patchThreadDraw {
+  0%   { stroke-dashoffset: 260; opacity: 0.3; }
+  35%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* --- Steeple Trials Triptych Animations --- */
+@keyframes steepleWitnessFlip {
+  0%   { transform: perspective(700px) rotateY(84deg) scale(0.86) translateY(10px); opacity: 0; }
+  55%  { transform: perspective(700px) rotateY(-6deg) scale(1.03) translateY(-2px); opacity: 1; }
+  100% { transform: perspective(700px) rotateY(0deg) scale(1) translateY(0px); opacity: 1; }
+}
+
+@keyframes steepleVerdictSlam {
+  0%   { transform: scale(1.35); opacity: 0; letter-spacing: 0.4em; }
+  65%  { transform: scale(0.97); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes steepleSmokeWisp {
+  0%   { transform: translateY(0px) translateX(0px) scale(0.7); opacity: 0; }
+  30%  { opacity: 0.45; }
+  100% { transform: translateY(-42px) translateX(8px) scale(1.45); opacity: 0; }
+}
+
+/* --- Event Props: Wax Seal Crack & Wild Beasts Deal-In --- */
+@keyframes waxSealCrack {
+  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+  40%  { transform: scale(1.18) rotate(-4deg); filter: brightness(1.6); opacity: 1; }
+  100% { transform: scale(0.4) rotate(8deg); filter: blur(3px); opacity: 0; }
+}
+
+@keyframes choiceCardDeal {
+  0%   { transform: translateY(24px) scale(0.86); opacity: 0; }
+  65%  { transform: translateY(-4px) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0px) scale(1); opacity: 1; }
+}

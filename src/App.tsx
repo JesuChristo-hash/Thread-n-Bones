@@ -1132,6 +1132,8 @@ export default function App() {
 
   // Bone Lord Event
   const [boneLordSelectedIdx, setBoneLordSelectedIdx] = useState<number | null>(null);
+  const [boneLordAnimPhase, setBoneLordAnimPhase] = useState<'idle' | 'offering' | 'blessed'>('idle');
+  const [boneLordStageData, setBoneLordStageData] = useState<{ card: CardDef; bonus: number } | null>(null);
 
   // Mycologist Event
   const [mycoSelectedIndices, setMycoSelectedIndices] = useState<number[]>([]);
@@ -1190,6 +1192,12 @@ export default function App() {
   const [assemblyHeadIdx, setAssemblyHeadIdx] = useState<number | null>(null);
   const [assemblyBodyIdx, setAssemblyBodyIdx] = useState<number | null>(null);
   const [carvingTribes, setCarvingTribes] = useState<Tribe[]>([]);
+  const [carvingPickedTribe, setCarvingPickedTribe] = useState<Tribe | null>(null);
+  const [carvingSummonedCard, setCarvingSummonedCard] = useState<CardDef | null>(null);
+  const [costBargainPickedType, setCostBargainPickedType] = useState<string | null>(null);
+  const [costBargainRevealedCard, setCostBargainRevealedCard] = useState<CardDef | null>(null);
+  const [choiceDealGen, setChoiceDealGen] = useState<number>(0);
+  const [effigyStitchingAnim, setEffigyStitchingAnim] = useState<boolean>(false);
   const [costChoices, setCostChoices] = useState<Array<'1 Blood' | '2 Blood' | '3 Blood' | 'Bones'>>([]);
 
   // Combat Animation State Specifications
@@ -1911,6 +1919,13 @@ export default function App() {
     setGoobertOriginalSnapshot(null);
     setMycoAnimPhase('idle');
     setMycoStageCards(null);
+    setBoneLordAnimPhase('idle');
+    setBoneLordStageData(null);
+    setCarvingPickedTribe(null);
+    setCarvingSummonedCard(null);
+    setCostBargainPickedType(null);
+    setCostBargainRevealedCard(null);
+    setEffigyStitchingAnim(false);
     setAnvilSelectedId(null);
     setAnvilStrikeAnim('idle');
     setFlockUsedOptions([]);
@@ -6758,7 +6773,10 @@ export default function App() {
 
   // --- Totem Carvings Event ---
   const initTotemCarving = () => {
+    clearEventTimers();
     setIsEventBusy(false);
+    setCarvingPickedTribe(null);
+    setCarvingSummonedCard(null);
     const allTribes: Tribe[] = ["Reptile", "Insect", "Avian", "Canine", "Hooved"];
     const shuffled = [...allTribes].sort(() => Math.random() - 0.5);
     setCarvingTribes(shuffled.slice(0, 3));
@@ -6768,28 +6786,46 @@ export default function App() {
   const claimCarvingTribe = (tribe: Tribe) => {
     if (isEventBusy) return;
     setIsEventBusy(true);
+    setCarvingPickedTribe(tribe);
+    setCarvingSummonedCard(null);
 
     const pool = EVENT_CARD_POOL.filter(c => c.class === tribe || c.class === "ALL Classes");
     const chosen = cloneCard(pool[Math.floor(Math.random() * pool.length)]);
     const nextDeck = [...masterDeck, chosen];
-    setMasterDeck(nextDeck);
-    masterDeckRef.current = nextDeck;
-    triggerSfx('play');
-    setModalAlert({
-      title: "THREAD WOVEN",
-      message: `The stitched ${tribe} crest summoned a ${chosen.name} to join you and your Creatures.`,
-      isWin: true,
-      btnText: "Proceed",
-      onAction: () => {
-        setModalAlert(null);
-        setIsEventBusy(false);
-        returnToMap(nextDeck);
-      }
-    });
+    triggerSfx('draw');
+
+    // Beat 1 (480ms): Summoned creature materializes beneath the chosen hanging patch
+    scheduleEventTimer(() => {
+      setCarvingSummonedCard(chosen);
+      setMasterDeck(nextDeck);
+      masterDeckRef.current = nextDeck;
+      triggerSfx('play');
+    }, 480);
+
+    // Beat 2 (1950ms): Pause so player admires the woven creature on the cloth before modal opens
+    scheduleEventTimer(() => {
+      setModalAlert({
+        title: "THREAD WOVEN",
+        message: `The stitched ${tribe} crest summoned a ${chosen.name} to join you and your Creatures.`,
+        isWin: true,
+        btnText: "Proceed",
+        onAction: () => {
+          setModalAlert(null);
+          setCarvingPickedTribe(null);
+          setCarvingSummonedCard(null);
+          setIsEventBusy(false);
+          returnToMap(nextDeck);
+        }
+      });
+    }, 1950);
   };
 
   // --- Costly Bargain Event ---
   const initCostBargain = () => {
+    clearEventTimers();
+    setIsEventBusy(false);
+    setCostBargainPickedType(null);
+    setCostBargainRevealedCard(null);
     const allCosts: Array<'1 Blood' | '2 Blood' | '3 Blood' | 'Bones'> = ['1 Blood', '2 Blood', '3 Blood', 'Bones'];
     const shuffled = [...allCosts].sort(() => Math.random() - 0.5);
     setCostChoices(shuffled.slice(0, 3));
@@ -6799,6 +6835,8 @@ export default function App() {
   const claimCostBargain = (type: '1 Blood' | '2 Blood' | '3 Blood' | 'Bones') => {
     if (isEventBusy) return;
     setIsEventBusy(true);
+    setCostBargainPickedType(type);
+    setCostBargainRevealedCard(null);
 
     let pool = EVENT_CARD_POOL;
     if (type === '1 Blood') pool = EVENT_CARD_POOL.filter(c => c.cost === 1);
@@ -6808,26 +6846,41 @@ export default function App() {
 
     const card = cloneCard(pool[Math.floor(Math.random() * pool.length)]);
     const nextDeck = [...masterDeck, card];
-    setMasterDeck(nextDeck);
-    masterDeckRef.current = nextDeck;
-    triggerSfx('play');
-    setModalAlert({
-      title: "BARGAIN SEALED",
-      message: `The Merchant stirs but thankfully does not wake. It seems you nabbed a ${card.name}!`,
-      isWin: true,
-      btnText: "Proceed",
-      onAction: () => {
-        setModalAlert(null);
-        setIsEventBusy(false);
-        returnToMap(nextDeck);
-      }
-    });
+    triggerSfx('draw');
+
+    // Beat 1 (420ms): Wax seal cracks and card flips face-up on the counter
+    scheduleEventTimer(() => {
+      setCostBargainRevealedCard(card);
+      setMasterDeck(nextDeck);
+      masterDeckRef.current = nextDeck;
+      triggerSfx('play');
+    }, 420);
+
+    // Beat 2 (1900ms): Pause so player sees the pilfered creature before modal opens
+    scheduleEventTimer(() => {
+      setModalAlert({
+        title: "BARGAIN SEALED",
+        message: `The Merchant stirs but does not wake. You pocketed a ${card.name}.`,
+        isWin: true,
+        btnText: "Proceed",
+        onAction: () => {
+          setModalAlert(null);
+          setCostBargainPickedType(null);
+          setCostBargainRevealedCard(null);
+          setIsEventBusy(false);
+          returnToMap(nextDeck);
+        }
+      });
+    }, 1900);
   };
 
   // --- Bone Lord Event ---
   const initBoneLord = () => {
+    clearEventTimers();
     setIsEventBusy(false);
     setBoneLordSelectedIdx(null);
+    setBoneLordAnimPhase('idle');
+    setBoneLordStageData(null);
     setScreen('EVENT_BONE_LORD');
   };
 
@@ -6844,29 +6897,42 @@ export default function App() {
     const isGoat = card.name === "Black Goat";
     const bonus = isGoat ? 3 : 1;
 
-    setBoneLordSelectedIdx(null);
-
     const nextDeck = masterDeck.filter((_, idx) => idx !== targetIdx);
     const newStartingBones = (startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones) + bonus;
-    setStartingBones(newStartingBones);
-    startingBonesRef.current = newStartingBones;
-    setMasterDeck(nextDeck);
-    masterDeckRef.current = nextDeck;
+
+    setBoneLordStageData({ card, bonus });
+    setBoneLordAnimPhase('offering');
     triggerSfx('sacrifice');
 
-    setModalAlert({
-      title: "THE BONE LORD REJOICES",
-      message: isGoat
-        ? "The Lord of Bones greedily accepts the Black Goat, bestowing a Miracle (+3 Starting Bones permanently)."
-        : `The Bone Lord accepts ${card.name}, bestowing a Blessing (+1 Starting Bone permanently).`,
-      isWin: true,
-      btnText: "Accept Favor",
-      onAction: () => {
-        setModalAlert(null);
-        setIsEventBusy(false);
-        returnToMap(nextDeck);
-      }
-    });
+    // Beat 1 (880ms): Offering turns to ash and bone tokens rise from the ossuary jaws
+    scheduleEventTimer(() => {
+      setBoneLordAnimPhase('blessed');
+      setStartingBones(newStartingBones);
+      startingBonesRef.current = newStartingBones;
+      setMasterDeck(nextDeck);
+      masterDeckRef.current = nextDeck;
+      triggerSfx('bone');
+    }, 880);
+
+    // Beat 2 (2200ms): Pause on the glowing Bone Boon medallion before modal opens
+    scheduleEventTimer(() => {
+      setModalAlert({
+        title: "THE BONE LORD REJOICES",
+        message: isGoat
+          ? "The Lord of Bones greedily accepts the Black Goat, bestowing a Miracle (+3 Starting Bones permanently)."
+          : `The Bone Lord accepts ${card.name}, bestowing a Blessing (+1 Starting Bone permanently).`,
+        isWin: true,
+        btnText: "Accept Favor",
+        onAction: () => {
+          setModalAlert(null);
+          setBoneLordSelectedIdx(null);
+          setBoneLordAnimPhase('idle');
+          setBoneLordStageData(null);
+          setIsEventBusy(false);
+          returnToMap(nextDeck);
+        }
+      });
+    }, 2200);
   };
 
   // --- Mycologists Event ---
@@ -7200,6 +7266,7 @@ export default function App() {
     setChoiceCards(picks);
     setChoiceSelectedIdx(null);
     setChoiceRerollsLeft(1);
+    setChoiceDealGen(prev => prev + 1);
     setScreen('EVENT_CARD_CHOICE');
   };
 
@@ -7217,12 +7284,15 @@ export default function App() {
     }
     setChoiceCards(picks);
     setChoiceSelectedIdx(null);
+    setChoiceDealGen(prev => prev + 1);
     triggerSfx('play');
   };
 
   // --- Woodcarver Totem Event ---
   const initBuildTotem = () => {
+    clearEventTimers();
     setIsEventBusy(false);
+    setEffigyStitchingAnim(false);
     setIsTotemFadingOut(false);
     setTotemChoicesHidden(false);
     setTotemStage('REWARD');
@@ -9319,169 +9389,210 @@ export default function App() {
       {/* =========================================================================
           EVENT: SURPLUS CACHE (ITEM BARTER)
          ========================================================================= */}
-      {screen === 'EVENT_ITEMS' && (
-        <div
-          className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto select-none font-mono animate-fade-up"
-          style={getScreenBgStyle('merchant_event.jpg')}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+      {screen === 'EVENT_ITEMS' && (() => {
+        const satchelFull = items.findIndex(s => s === null) === -1;
+        const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 3));
+        const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
 
-          {cacheConsolationCard ? (
-            /* Consolation Card Showcase Plaque */
-            <div className="relative z-10 flex flex-col items-center justify-center max-w-md w-full text-center my-auto animate-menu-fade-in">
-              <div className="flex items-center gap-3.5 mb-1">
-                <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                  Barter Exhausted
-                </span>
-                <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold text-[#efe0be] uppercase tracking-[0.2em] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-                Peddler's Token
-              </h1>
-              <p className="mt-2 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] text-[#d4bfa0]/85 font-mono leading-relaxed shadow-md">
-                Unable to trade further, the peddler slides a card across the wood.
-              </p>
+        return (
+          <div
+            className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden select-none font-mono animate-fade-up"
+            style={getScreenBgStyle('merchant_event.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.34)_0%,rgba(5,3,2,0.92)_100%)] pointer-events-none" />
 
-              <div className="relative my-7 p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#442c1c]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/75" />
-                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/75" />
-                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/75" />
-                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/75" />
-                <div className="transform scale-110 transition-transform duration-200 pointer-events-none">
-                  {renderCard(cacheConsolationCard, { isClickable: false, disableHoverScale: true })}
-                </div>
-              </div>
-
-              <button
-                onClick={handleConfirmConsolation}
-                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,230,180,0.14)] transition-all"
-              >
-                Claim Card & Press Forward
-              </button>
-            </div>
-          ) : (
-            /* Standard Shelf Display */
-            <div className="relative z-10 flex flex-col items-center justify-center max-w-3xl w-full text-center my-auto">
-              <div className="flex items-center gap-3.5 mb-1">
-                <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                  The Peddler's Cart
-                </span>
-                <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-                Relic Cache
-              </h1>
-              <p className="mt-2 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/68 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-lg leading-relaxed shadow-md">
-                Exchange your overkill blood harvest for field relics before the trail resumes.
-              </p>
-
-              {/* Blood Bank & Satchel Telemetry Strip */}
-              <div className="flex flex-wrap items-center justify-center gap-3 mt-5 mb-6">
-                <div className="flex items-center gap-2 px-4 py-1.5 bg-[#120b08]/90 border border-[#4a261b] rounded-[2px] shadow-[0_6px_16px_rgba(0,0,0,0.75)]">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#b59c80] font-bold">Blood Bank</span>
-                  <span className="h-3 w-px bg-[#4a261b]" />
-                  <span className="font-['Cinzel',_serif] text-sm font-black text-red-400 tracking-wider">
-                    {totalOverkillDamage}
+            {cacheConsolationCard ? (
+              /* Consolation Card Showcase Plaque */
+              <div className="relative z-10 flex flex-col items-center justify-center max-w-md w-full h-full text-center animate-menu-fade-in">
+                <div className="flex items-center gap-3.5 mb-1">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                    Barter Exhausted
                   </span>
-                  <span className="text-[9px] uppercase font-bold text-red-400/70">OZ</span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
-                <div className="flex items-center gap-2 px-4 py-1.5 bg-[#120b08]/90 border border-[#3e2a1c] rounded-[2px] shadow-[0_6px_16px_rgba(0,0,0,0.75)]">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#b59c80] font-bold">Relics</span>
-                  <span className="h-3 w-px bg-[#3e2a1c]" />
-                  <span className="font-['Cinzel',_serif] text-sm font-bold text-[#ead4ac]">
-                    {items.filter(s => s !== null).length} / {items.length}
-                  </span>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold text-[#efe0be] uppercase tracking-[0.2em] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  Peddler&apos;s Token
+                </h1>
+                <p className="mt-2 font-['Cinzel',_serif] text-sm sm:text-base italic tracking-[0.08em] text-[#e5cfa8]">
+                  A parting gift slides across the wood.
+                </p>
+
+                <div className="relative my-6 p-6 rounded-[3px] bg-[#0d0806]/84 border border-[#4a3220]/90 shadow-[0_20px_50px_rgba(0,0,0,0.92)]">
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/75" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/75" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/75" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/75" />
+                  <div className="transform scale-110 pointer-events-none">
+                    {renderCard(cacheConsolationCard, { isClickable: false, disableHoverScale: true })}
+                  </div>
                 </div>
+
+                <button
+                  onClick={handleConfirmConsolation}
+                  className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all"
+                >
+                  Claim &amp; Press Forward
+                </button>
               </div>
+            ) : (
+              /* Widescreen Peddler's Timber Cabinet & Live Relic Counter */
+              <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
+                {/* Top Header */}
+                <div className="flex flex-col items-center text-center shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                      The Peddler&apos;s Cart
+                    </span>
+                    <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                    Relic Cache
+                  </h1>
+                </div>
 
-              {/* Smoked-Wood Relic Tray */}
-              <div className="relative w-full p-5 sm:p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
-                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
-
-                <div className="flex flex-wrap gap-5 items-stretch justify-center">
-                  {itemChoices.length === 0 ? (
-                    <div className="text-xs text-[#a58e74]/75 italic py-10 font-mono">
-                      The cache shelves have been picked clean.
+                {/* Main Timber Display Cabinet */}
+                <div className="relative w-full flex-1 min-h-0 flex flex-col justify-between rounded-[4px] bg-gradient-to-b from-[#160e09]/88 via-[#110b07]/92 to-[#090604]/96 border-2 border-[#4d3522]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,224,178,0.08)] px-5 sm:px-7 py-4 overflow-hidden">
+                  {/* Top Timber Cornice with Flanking Hanging Lanterns */}
+                  <div className="relative z-20 flex items-center justify-between border-b border-[#3f2b1c] pb-2.5 shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <svg viewBox="0 0 24 28" className="w-5 h-6 text-amber-400/90 drop-shadow-[0_0_8px_rgba(251,191,36,0.55)]" fill="none" stroke="currentColor" strokeWidth="1.6">
+                        <path d="M12 2V6M7 7H17L19 20H5L7 7Z" />
+                        <ellipse cx="12" cy="14" rx="2.5" ry="4" fill="#fbbf24" opacity="0.85" />
+                        <path d="M6 20H18M9 23H15" />
+                      </svg>
+                      <span className="font-['Cinzel',_serif] text-xs uppercase tracking-[0.22em] text-[#d6be96]">
+                        Wares on the Shelf
+                      </span>
                     </div>
-                  ) : (
-                    itemChoices.map(itemId => {
-                      const def = ALL_ITEMS[itemId];
-                      const cost = ITEM_COSTS[itemId] ?? 3;
-                      const satchelFull = items.findIndex(s => s === null) === -1;
-                      const canAfford = totalOverkillDamage >= cost && !satchelFull;
 
-                      return (
-                        <button
-                          key={itemId}
-                          disabled={!canAfford}
-                          onClick={() => handleSelectItem(itemId)}
-                          className={`w-48 p-4 rounded-[3px] border flex flex-col items-center text-center transition-all duration-200 relative ${
-                            canAfford
-                              ? 'bg-gradient-to-b from-[#1a110c] to-[#0f0906] border-[#4e3220] hover:border-[#d4af37]/90 hover:-translate-y-1 shadow-[0_10px_24px_rgba(0,0,0,0.85)] hover:shadow-[0_14px_28px_rgba(212,175,55,0.18)] group cursor-pointer'
-                              : 'bg-[#0c0806]/80 border-[#281a12] opacity-45 cursor-not-allowed'
-                          }`}
-                        >
-                          <div className="w-14 h-14 mb-3 rounded-[2px] bg-[#100a07] border border-[#3c2719] group-hover:border-[#9e743c]/80 flex items-center justify-center text-3xl shadow-inner transition-colors">
-                            <span className="group-hover:scale-110 transition-transform">{def.emoji}</span>
-                          </div>
-                          <div className="font-['Cinzel',_serif] text-xs font-bold text-[#f0dab2] uppercase tracking-[0.14em] mb-2">
-                            {def.name}
-                          </div>
-                          <div className="w-8 h-px bg-gradient-to-r from-transparent via-[#7a5a36]/70 to-transparent mb-2.5" />
-                          <div className="text-[10px] text-[#baa68c]/85 leading-relaxed mb-4">
-                            {def.description}
-                          </div>
+                    {/* Glass Blood Vial Counter */}
+                    <div className="flex items-center gap-2.5 px-3.5 py-1 rounded-[2px] bg-[#140908]/95 border border-[#6e241d]/85 shadow-inner">
+                      <span className="text-[10px] uppercase tracking-[0.22em] text-[#c7a896] font-bold">Blood Bank</span>
+                      <span className="h-3.5 w-px bg-[#5e241e]" />
+                      <span className="font-['Cinzel',_serif] text-base font-black text-red-400 tracking-wider">
+                        {totalOverkillDamage}
+                      </span>
+                      <span className="text-[9.5px] uppercase font-bold text-red-400/75">OZ</span>
+                    </div>
+                  </div>
 
-                          <div
-                            className={`mt-auto w-full py-1.5 rounded-[2px] border text-[10px] font-bold uppercase tracking-[0.18em] ${
-                              totalOverkillDamage >= cost
-                                ? 'border-red-900/80 bg-red-950/45 text-red-300'
-                                : 'border-[#2d2119] bg-[#120d0a] text-[#706052]'
-                            }`}
-                          >
-                            🩸 {cost} OZ
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
+                  {/* Three Recessed Velvet Shelf Cubbies */}
+                  <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center py-3">
+                    {itemChoices.length === 0 ? (
+                      <div className="font-['Cinzel',_serif] text-base tracking-[0.14em] text-[#a89074]/80 italic">
+                        Picked clean.
+                      </div>
+                    ) : (
+                      <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 items-stretch">
+                        {itemChoices.map(itemId => {
+                          const def = ALL_ITEMS[itemId];
+                          const cost = ITEM_COSTS[itemId] ?? 3;
+                          const canAfford = totalOverkillDamage >= cost && !satchelFull;
 
-              {(() => {
-                const satchelFull = items.findIndex(s => s === null) === -1;
-                const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 3));
-                const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
+                          return (
+                            <button
+                              key={itemId}
+                              type="button"
+                              disabled={!canAfford}
+                              onClick={() => handleSelectItem(itemId)}
+                              className={`relative p-4 sm:p-5 rounded-[3px] border flex flex-col items-center justify-between text-center transition-all duration-200 overflow-hidden ${
+                                canAfford
+                                  ? 'bg-[radial-gradient(ellipse_at_50%_20%,#241510_0%,#120a07_75%)] border-[#5e3d26]/90 hover:border-[#e5c16b] hover:-translate-y-1.5 shadow-[inset_0_12px_28px_rgba(0,0,0,0.85),0_12px_26px_rgba(0,0,0,0.9)] hover:shadow-[0_16px_34px_rgba(212,175,55,0.22)] group cursor-pointer'
+                                  : 'bg-[#0c0806]/85 border-[#2c1e15] opacity-40 cursor-not-allowed shadow-inner'
+                              }`}
+                            >
+                              {/* Velvet Backing Glow */}
+                              <div
+                                className="pointer-events-none absolute inset-0 opacity-30 group-hover:opacity-75 transition-opacity"
+                                style={{
+                                  background: 'radial-gradient(circle at 50% 28%, rgba(212,175,55,0.22) 0%, transparent 68%)',
+                                }}
+                              />
 
-                return (
-                  <div className="flex flex-col items-center mt-7">
-                    <button
-                      onClick={handleLeaveCache}
-                      className={
-                        cannotBuyMore
-                          ? "px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all"
-                          : "px-6 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] border border-[#4a3322]/80 hover:border-[#8c6742] text-[#bfa788] hover:text-[#efe0be] font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all"
-                      }
-                    >
-                      {cannotBuyMore ? 'Venture Forth' : 'Leave Cache'}
-                    </button>
+                              <div className="relative z-10 flex flex-col items-center">
+                                <div className="w-16 h-16 mb-3 rounded-full bg-[#0e0907] border border-[#523723] group-hover:border-[#d4af37]/90 flex items-center justify-center text-3xl shadow-[inset_0_0_14px_rgba(0,0,0,0.95)] transition-colors">
+                                  <span className="group-hover:scale-110 transition-transform">{def.emoji}</span>
+                                </div>
+                                <div className="font-['Cinzel',_serif] text-sm font-bold text-[#f2ddb7] group-hover:text-white uppercase tracking-[0.15em] mb-1.5">
+                                  {def.name}
+                                </div>
+                                <div className="w-9 h-px bg-gradient-to-r from-transparent via-[#8c673c]/80 to-transparent mb-2" />
+                                <div className="text-[10.5px] text-[#c4b096]/90 leading-relaxed mb-3">
+                                  {def.description}
+                                </div>
+                              </div>
+
+                              {/* Stamped Wax Blood Price Tag */}
+                              <div
+                                className={`relative z-10 mt-auto w-full py-1.5 rounded-[2px] border text-[11px] font-bold uppercase tracking-[0.2em] ${
+                                  totalOverkillDamage >= cost
+                                    ? 'border-red-800/90 bg-red-950/60 text-red-200'
+                                    : 'border-[#2d2119] bg-[#120d0a] text-[#706052]'
+                                }`}
+                              >
+                                🩸 {cost} OZ
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lower Countertop Rail: Your Physical Relic Belt Slots */}
+                  <div className="relative z-20 border-t border-[#3f2b1c] pt-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#b59c80]">
+                        Your Relics ({items.filter(s => s !== null).length}/{items.length})
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {items.map((slotItem, sIdx) => {
+                          const slotDef = slotItem ? ALL_ITEMS[slotItem] : null;
+                          return (
+                            <div
+                              key={sIdx}
+                              title={slotDef ? `${slotDef.name}: ${slotDef.description}` : 'Empty Relic Slot'}
+                              className={`w-10 h-10 rounded-[3px] border flex items-center justify-center text-lg transition-all ${
+                                slotDef
+                                  ? 'bg-[#1a110b] border-[#8c673c]/85 shadow-[inset_0_0_10px_rgba(0,0,0,0.85)]'
+                                  : 'bg-[#0c0806]/80 border-dashed border-[#4a3524]/70 text-[#5c4838]'
+                              }`}
+                            >
+                              {slotDef ? slotDef.emoji : <span className="text-[10px]">·</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     {cannotBuyMore && (
-                      <span className="mt-2.5 text-[10px] text-[#c79d5a]/80 font-mono tracking-wider">
-                        The Merchant gives you a wicked grin...
+                      <span className="font-['Cinzel',_serif] text-xs italic tracking-[0.1em] text-[#d4b074]">
+                        The Merchant grins in the dark.
                       </span>
                     )}
                   </div>
-                );
-              })()}
-            </div>
-          )}
-        </div>
-      )}
+                </div>
+
+                {/* Leave / Venture Forth Button */}
+                <div className="flex items-center justify-center shrink-0">
+                  <button
+                    onClick={handleLeaveCache}
+                    className={
+                      cannotBuyMore
+                        ? "px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all"
+                        : "px-7 py-2.5 rounded-[2px] bg-[#140e0a]/92 hover:bg-[#1f1610] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_6px_16px_rgba(0,0,0,0.82)] transition-all"
+                    }
+                  >
+                    {cannotBuyMore ? 'Venture Forth' : 'Leave Cache'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* =========================================================================
           CAMPFIRE EVENT SCREEN
@@ -9656,12 +9767,12 @@ export default function App() {
                       </svg>
                     </div>
 
-                    <p className="relative z-20 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/80 border border-[#442518]/75 text-[10.5px] font-mono text-[#d8be9f]/90 max-w-lg leading-snug">
+                    <p className="relative z-20 font-['Cinzel',_serif] text-sm sm:text-base tracking-[0.08em] text-[#ecd8bc] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                       {campfireStage === 0
-                        ? "The Zealot's wicked smile sickens you. Place a creature over the boiling font."
+                        ? 'The font boils.'
                         : isCampfireSafe
-                          ? "The chapel is deserted. You may bathe your Creature an additional time without peril."
-                          : "The Zealot murmurs about the hunger in his Flock... bathing again risks drowning your Creature."}
+                          ? 'The chapel stands empty.'
+                          : 'The flock grows hungry.'}
                     </p>
                   </div>
 
@@ -9706,11 +9817,7 @@ export default function App() {
                       <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#d69758]">
                         Your Creatures ({masterDeck.length})
                       </div>
-                      <div className="text-[10.5px] font-mono text-[#bfa88a]/85 mt-0.5">
-                        {campfireStage === 0
-                          ? 'Select a vessel to dip into the font.'
-                          : 'Your vessel remains over the font—bathe again or flee.'}
-                      </div>
+
                     </div>
                   </div>
 
@@ -9981,13 +10088,7 @@ export default function App() {
                       <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
                         Your Creatures ({masterDeck.length})
                       </div>
-                      <div className="text-[10.5px] font-mono text-[#bfa88a]/85 mt-0.5">
-                        {!altarHostId
-                          ? 'Step 1: Choose a Host to receive Crests.'
-                          : !altarSacrificeId
-                            ? 'Step 2: Choose a Sacrifice to place on the stone.'
-                            : 'Ready to commit the offering.'}
-                      </div>
+
                     </div>
                     {(altarHostId || altarSacrificeId) && !isAnimating && (
                       <button
@@ -10124,8 +10225,8 @@ export default function App() {
               <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                 Transmutation Table
               </h1>
-              <p className="mt-1.5 px-4 py-1 rounded-[2px] bg-[#0b0705]/75 border border-[#3a2618]/75 text-[11px] font-mono italic text-[#d4bfa0]/85 shadow-md">
-                "Something about this feels wrong"
+              <p className="mt-1.5 font-['Cinzel',_serif] text-sm sm:text-base italic tracking-[0.1em] text-[#e5cfa8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                &ldquo;Something about this feels wrong.&rdquo;
               </p>
 
               {/* Main Workbench: Anvil Prop Left, Hammer & Forceps Right */}
@@ -10199,9 +10300,7 @@ export default function App() {
                       <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#f3dfb6] group-hover:text-white">
                         Blood-to-Bone
                       </div>
-                      <div className="mt-1 text-[11px] font-mono text-[#bfa88a]/85 leading-snug">
-                        Crush crimson tribute into marrow.
-                      </div>
+
                       {selectedCard && !canHammer && (
                         <div className="mt-1 text-[9.5px] uppercase tracking-wider text-red-400/80">
                           Requires Blood Cost
@@ -10233,9 +10332,7 @@ export default function App() {
                       <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#e7dff0] group-hover:text-white">
                         Hollowing
                       </div>
-                      <div className="mt-1 text-[11px] font-mono text-[#bfb4c9]/85 leading-snug">
-                        Carve out the weight—leave only what lingers.
-                      </div>
+
                       {selectedCard && !canForceps && (
                         <div className="mt-1 text-[9.5px] uppercase tracking-wider text-amber-400/80">
                           Already Hollowed
@@ -10316,12 +10413,12 @@ export default function App() {
               <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                 The Zealot&apos;s Flock
               </h1>
-              <p className="mt-1.5 px-4 py-1 rounded-[2px] bg-[#0b0705]/75 border border-[#3a2618]/75 text-[11px] font-mono italic text-[#d4bfa0]/85 shadow-md">
+              <p className="mt-1.5 font-['Cinzel',_serif] text-sm sm:text-base italic tracking-[0.1em] text-[#e5cfa8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                 {flockPendingRemovals > 0
-                  ? `Select ${flockPendingRemovals} creature${flockPendingRemovals === 1 ? '' : 's'} to cull from your deck (${flockRemovalSelectedIds.length}/${flockPendingRemovals}).`
+                  ? `Cull ${flockPendingRemovals} (${flockRemovalSelectedIds.length}/${flockPendingRemovals})`
                   : isGreyMode
-                    ? '"Only the lone Grey Sheep remains in the mire..."'
-                    : '"Your creatures are ravenous"'}
+                    ? '"Only the grey remains."'
+                    : '"Your creatures are ravenous."'}
               </p>
 
               {flockPendingRemovals > 0 ? (
@@ -10444,12 +10541,12 @@ export default function App() {
                   {/* Revealed Offering Plaque */}
                   <div className="w-full max-w-3xl min-h-[124px] p-4 sm:p-5 rounded-[3px] bg-[#0e0907]/90 border border-[#4a3222]/85 shadow-[0_18px_40px_rgba(0,0,0,0.9)] flex flex-col items-center justify-center">
                     {!revealedOption ? (
-                      <div className="text-xs font-mono uppercase tracking-[0.22em] text-[#a89278]">
+                      <div className="font-['Cinzel',_serif] text-sm uppercase tracking-[0.22em] text-[#c7b08e]">
                         {isGreyMode
-                          ? 'Approach the lone Grey Sheep.'
+                          ? 'The Lone Grey Sheep'
                           : flockRepicksUsed === 0
-                            ? 'Choose one of the 13 Black Sheep from the pen to inspect its sacrifice.'
-                            : 'Choose your second and final Sheep from the pen.'}
+                            ? 'Choose a Sheep'
+                            : 'Final Choice'}
                       </div>
                     ) : (
                       <div className="w-full flex flex-col items-center gap-3.5 animate-menu-fade-in">
@@ -10507,208 +10604,616 @@ export default function App() {
       {/* =========================================================================
           TOTEM CARVINGS (TRIBE PICK) SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_TOTEM_CARVING' && (
-        <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('tribeeventbg.jpg')}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+      {screen === 'EVENT_TOTEM_CARVING' && (() => {
+        const tribesToShow = carvingTribes.length > 0 ? carvingTribes : (["Reptile", "Canine", "Avian"] as Tribe[]);
+        const pickedIdx = carvingPickedTribe ? tribesToShow.indexOf(carvingPickedTribe) : -1;
+        // Exact column centers in a 3-column grid (16.667%, 50%, 83.333%) mapped to a 600px viewBox -> 100, 300, 500
+        const threadStartX = pickedIdx === 0 ? 100 : pickedIdx === 2 ? 500 : 300;
 
-          <div className="relative z-10 max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                The Weaver's Weft
-              </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Tribal Patches
-            </h1>
-            <p className="mt-2 mb-7 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
-              Threadbare swatches rest upon a lone loom. Claiming a Tribal Patch will summon a creature of its Tribe.
-            </p>
+        // Distinct stitched fabric silhouettes per Tribe
+        const renderPatchSilhouette = (tribe: Tribe, isChosen: boolean, isDimmed: boolean) => {
+          const strokeCol = isChosen ? '#f4d78b' : isDimmed ? '#4d3724' : '#9a734a';
+          const fillTop = isChosen ? '#291c11' : '#1f150d';
+          const fillBot = isChosen ? '#140d08' : '#100a06';
+          const gradId = `patchCloth-${tribe}`;
 
-            <div className="relative w-full p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+          // Outer & inner stitch paths tailored to each tribe's silhouette
+          let outerPath = '';
+          let stitchPath = '';
+          switch (tribe) {
+            case 'Reptile':
+              // Swallowtail notched banner
+              outerPath = 'M 14 8 H 166 V 176 L 90 154 L 14 176 Z';
+              stitchPath = 'M 21 15 H 159 V 166 L 90 146 L 21 166 Z';
+              break;
+            case 'Insect':
+              // Chamfered hexagonal talisman swatch
+              outerPath = 'M 36 8 H 144 L 170 42 V 142 L 138 176 H 42 L 10 142 V 42 Z';
+              stitchPath = 'M 40 15 H 140 L 162 45 V 139 L 134 169 H 46 L 18 139 V 45 Z';
+              break;
+            case 'Avian':
+              // Pointed heraldic crest shield
+              outerPath = 'M 16 12 Q 90 2 164 12 V 104 Q 164 152 90 178 Q 16 152 16 104 Z';
+              stitchPath = 'M 23 19 Q 90 10 157 19 V 102 Q 157 145 90 169 Q 23 145 23 102 Z';
+              break;
+            case 'Canine':
+              // Rugged jagged-hem pelt swatch
+              outerPath = 'M 16 8 H 164 L 168 156 L 138 172 L 114 158 L 90 176 L 66 158 L 42 172 L 12 156 Z';
+              stitchPath = 'M 23 15 H 157 L 160 151 L 137 163 L 114 150 L 90 167 L 66 150 L 43 163 L 20 151 Z';
+              break;
+            case 'Hooved':
+            default:
+              // Rounded apothecary / saddle-cloth medallion
+              outerPath = 'M 22 10 H 158 Q 168 10 168 22 V 116 Q 168 172 90 176 Q 12 172 12 116 V 22 Q 12 10 22 10 Z';
+              stitchPath = 'M 27 17 H 153 Q 161 17 161 26 V 114 Q 161 164 90 168 Q 19 164 19 114 V 26 Q 19 17 27 17 Z';
+              break;
+          }
 
-              <div className="flex flex-wrap gap-6 justify-center">
-                {(carvingTribes.length > 0 ? carvingTribes : (["Reptile", "Canine", "Avian"] as Tribe[])).map(tribe => (
-                  <button
-                    key={tribe}
-                    type="button"
-                    disabled={isEventBusy}
-                    onClick={() => !isEventBusy && claimCarvingTribe(tribe)}
-                    className={`w-44 p-5 text-center transition-all duration-200 flex flex-col items-center border border-dashed rounded-[3px] bg-gradient-to-b from-[#1a120c] to-[#100a07] shadow-[0_10px_24px_rgba(0,0,0,0.85)] select-none ${
-                      isEventBusy
-                        ? 'opacity-40 cursor-not-allowed border-[#5e442c]/40'
-                        : 'cursor-pointer group border-[#8c6747]/80 hover:border-[#e5c16b] hover:shadow-[0_12px_28px_rgba(212,175,55,0.22)] hover:-translate-y-1.5'
-                    }`}
-                  >
-                    <div className="text-[8.5px] font-mono uppercase tracking-[0.24em] text-[#b39169] mb-2">
-                      Stitched Patch
+          return (
+            <svg viewBox="0 0 180 184" className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-[0_14px_24px_rgba(0,0,0,0.9)]">
+              <defs>
+                <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor={fillTop} />
+                  <stop offset="100%" stopColor={fillBot} />
+                </linearGradient>
+              </defs>
+              <path d={outerPath} fill={`url(#${gradId})`} stroke={strokeCol} strokeWidth={isChosen ? '2.2' : '1.6'} strokeLinejoin="round" />
+              <path d={stitchPath} fill="none" stroke={isChosen ? '#f4d78b' : '#b48d59'} strokeWidth="1.2" strokeDasharray="4 3.5" opacity={isChosen ? '0.95' : '0.6'} />
+            </svg>
+          );
+        };
+
+        return (
+          <div
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('tribeeventbg.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
+
+            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Top Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                    The Weaver&apos;s Weft
+                  </span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  Tribal Patches
+                </h1>
+
+              </div>
+
+              {/* Center Stage: Continuous Wooden Rod + Aligned Hooks + Shaped Patches + Curved Thread Connector */}
+              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-center rounded-[3px] bg-gradient-to-b from-[#130c08]/76 via-[#160e09]/85 to-[#0b0705]/94 border border-[#493221]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] px-6 py-4 overflow-hidden">
+                <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9a7342]/70" />
+                <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9a7342]/70" />
+                <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
+                <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9a7342]/70" />
+
+                {/* Hanging Assembly (Crossbar + 3 Strictly Aligned Columns) */}
+                <div className="relative z-20 w-full max-w-3xl flex flex-col items-center">
+                  {/* Continuous Timber Crossbar positioned directly behind the per-column brass rings */}
+                  <div className="pointer-events-none absolute top-[6px] left-2 right-2 h-3 rounded-full bg-gradient-to-b from-[#664933] via-[#3c281b] to-[#1d130d] border border-[#8c6747]/90 shadow-[0_6px_14px_rgba(0,0,0,0.95)] z-10">
+                    <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#2c1d13] border-2 border-[#a87e52]" />
+                    <span className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#2c1d13] border-2 border-[#a87e52]" />
+                  </div>
+
+                  {/* Three Equal Columns: Brass Ring + Twine + Distinctly Shaped Patch all share exact column center */}
+                  <div className="relative z-20 w-full grid grid-cols-3">
+                    {tribesToShow.map(tribe => {
+                      const isChosen = carvingPickedTribe === tribe;
+                      const isDimmed = Boolean(carvingPickedTribe) && !isChosen;
+
+                      return (
+                        <div key={tribe} className="flex flex-col items-center">
+                          {/* Brass Ring locked onto the timber bar */}
+                          <div
+                            className={`w-4 h-4 mt-[4px] rounded-full border-2 transition-colors duration-300 z-20 ${
+                              isChosen
+                                ? 'border-[#fde68a] bg-[#2a1d10] shadow-[0_0_10px_rgba(253,230,138,0.75)]'
+                                : 'border-[#d4af37] bg-[#1a110a]'
+                            }`}
+                          />
+                          {/* Twine dropping straight from ring center into patch grommet */}
+                          <div className="w-[1.5px] h-5 bg-gradient-to-b from-[#d4af37]/90 to-[#8c6747]/75" />
+
+                          {/* Distinctly Shaped Stitched Patch Button */}
+                          <button
+                            type="button"
+                            disabled={isEventBusy}
+                            onClick={() => !isEventBusy && claimCarvingTribe(tribe)}
+                            className={`relative w-[176px] sm:w-[192px] h-[182px] sm:h-[192px] px-4 pt-4 pb-6 text-center transition-all duration-300 flex flex-col items-center justify-start select-none ${
+                              isChosen
+                                ? 'scale-105 z-20 cursor-default drop-shadow-[0_0_24px_rgba(212,175,55,0.4)]'
+                                : isDimmed
+                                  ? 'opacity-25 grayscale-[60%] scale-95 cursor-default'
+                                  : 'cursor-pointer group hover:-translate-y-1.5 hover:drop-shadow-[0_0_20px_rgba(212,175,55,0.28)]'
+                            }`}
+                          >
+                            {renderPatchSilhouette(tribe, isChosen, isDimmed)}
+
+                            {/* Brass Grommet Pin */}
+                            <span className="relative z-10 w-2.5 h-2.5 rounded-full bg-[#d4af37] border border-[#3a2614] shadow-[0_0_6px_rgba(212,175,55,0.8)] mb-2.5" />
+
+                            <div className="relative z-10 w-14 h-14 mb-2 bg-[#1c130c]/90 border border-[#5a412a]/85 rounded-[2px] flex items-center justify-center group-hover:border-[#e5c16b]/85 shadow-inner transition-colors [&>*]:scale-[2.15]">
+                              {TRIBE_EMBROIDERY[tribe] || <span className="text-xl">✦</span>}
+                            </div>
+                            <div className="relative z-10 font-['Cinzel',_serif] font-bold text-[#f2ddb7] group-hover:text-white text-sm uppercase tracking-[0.18em]">
+                              {tribe}
+                            </div>
+                            <div className="relative z-10 w-9 h-px bg-gradient-to-r from-transparent via-[#9c7847]/75 to-transparent my-1.5" />
+                            <div className="relative z-10 font-mono text-[8.5px] font-bold uppercase tracking-[0.22em] text-[#c7a77a]/85 group-hover:text-[#f4d78b] transition-colors">
+                              {isChosen ? 'Unraveling...' : '› Tug Thread ‹'}
+                            </div>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Curved Crimson-Gold Thread Bridge connecting whichever patch was picked directly into the box below */}
+                  <div className="pointer-events-none relative w-full h-10 -my-1 z-10">
+                    <svg viewBox="0 0 600 44" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                      {pickedIdx !== -1 ? (
+                        <>
+                          <path
+                            d={`M ${threadStartX} -4 C ${threadStartX} 24, 300 18, 300 44`}
+                            fill="none"
+                            stroke="#dc2626"
+                            strokeWidth="2.8"
+                            strokeLinecap="round"
+                            strokeDasharray="260"
+                            style={{ animation: 'patchThreadDraw 0.48s ease-out forwards' }}
+                          />
+                          <path
+                            d={`M ${threadStartX} -4 C ${threadStartX} 24, 300 18, 300 44`}
+                            fill="none"
+                            stroke="#f4d78b"
+                            strokeWidth="1.1"
+                            strokeDasharray="6 6"
+                            opacity="0.85"
+                          />
+                          <circle cx="300" cy="43" r="3.5" fill="#f4d78b" />
+                        </>
+                      ) : (
+                        /* Subtle dormant guide threads from all 3 swatches converging into the summoning cloth */
+                        [100, 300, 500].map(sx => (
+                          <path
+                            key={sx}
+                            d={`M ${sx} -2 C ${sx} 22, 300 20, 300 44`}
+                            fill="none"
+                            stroke="#6e5035"
+                            strokeWidth="1"
+                            strokeDasharray="3 4"
+                            opacity="0.38"
+                          />
+                        ))
+                      )}
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Lower Woven Summoning Cloth (anchored cleanly at center x=300 where the thread lands) */}
+                <div className="relative z-10 w-full max-w-md min-h-[168px] flex flex-col items-center justify-center rounded-[3px] bg-[#0c0806]/88 border border-[#4a3322]/85 px-4 py-3 shadow-[inset_0_0_24px_rgba(0,0,0,0.85)]">
+                  <span className="pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-[#1a120b] border-t border-l border-[#9a7342]/80" />
+                  {carvingSummonedCard ? (
+                    <div className="flex flex-col items-center animate-menu-fade-in">
+                      <span className="mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1f160c]/95 border border-[#d4af37]/85 text-[8.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#f4d78b]">
+                        Woven From {carvingPickedTribe}
+                      </span>
+                      <div className="scale-[0.92] origin-center rounded-[4px] shadow-[0_0_36px_rgba(212,175,55,0.5)]">
+                        {renderCard(carvingSummonedCard, { isClickable: false, disableHoverScale: true })}
+                      </div>
                     </div>
-                    <div className="w-16 h-16 mb-3 bg-[#20160f] border border-[#4f3824] rounded-[2px] flex items-center justify-center group-hover:border-[#c89e4c]/80 shadow-inner transition-colors [&>*]:scale-[2.35]">
-                      {TRIBE_EMBROIDERY[tribe] || <span className="text-2xl">🧵</span>}
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-[#9c8262]">
+                      {/* Crisp SVG Sewing Needle & Thread Icon */}
+                      <svg viewBox="0 0 32 32" className="w-7 h-7 text-[#c79d5a]/80" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M25 5L7 25" />
+                        <ellipse cx="23.5" cy="6.5" rx="1.6" ry="3" transform="rotate(45 23.5 6.5)" />
+                        <path d="M24 6C28 10 26 18 19 20C14 21.5 13 26 17 27" stroke="#b91c1c" strokeWidth="1.3" strokeDasharray="2.5 2" />
+                      </svg>
+                      {carvingPickedTribe && (
+                        <span className="font-['Cinzel',_serif] text-xs uppercase tracking-[0.24em] text-[#e5cfa8]">
+                          Weaving {carvingPickedTribe}...
+                        </span>
+                      )}
                     </div>
-                    <div className="font-['Cinzel',_serif] font-bold text-[#f0dab2] group-hover:text-white text-sm uppercase tracking-[0.18em]">
-                      {tribe}
-                    </div>
-                    <div className="w-8 h-px bg-gradient-to-r from-transparent via-[#8a6539]/70 to-transparent my-2.5" />
-                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#bfa073]/70 group-hover:text-[#f4d78b] transition-colors">
-                      › Claim Patch ‹
-                    </div>
-                  </button>
-                ))}
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           COSTLY BARGAIN SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_COST_BARGAIN' && (
-        <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('costeventbg.jpg')}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+      {screen === 'EVENT_COST_BARGAIN' && (() => {
+        const choicesToShow = costChoices.length > 0 ? costChoices : (['1 Blood', '2 Blood', 'Bones'] as const);
 
-          <div className="relative z-10 max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                Free of Cost
-              </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Blood & Bone Pact
-            </h1>
-            <p className="mt-2 mb-7 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
-              The Merchant's dozed off. Help yourself to one unlabeled creature by its summon cost.
-            </p>
+        const renderCostEmblem = (costType: string) => {
+          if (costType === 'Bones') {
+            return (
+              <svg viewBox="0 0 56 56" className="w-14 h-14 text-[#e5dcc8]" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 15c-2.8-2.2-6.5 1.2-4.4 4.4 1.3 2 .9 3.5-.6 4.6 3.3 1.7 5.5-.5 7.2-2.2l17.6 17.6c-1.7 1.7-3.9 3.9-2.2 7.2 1.1-1.5 2.6-1.9 4.6-.6 3.2 2.1 6.6-1.6 4.4-4.4-1.3-2-.9-3.5.6-4.6-3.3-1.7-5.5.5-7.2 2.2L17.4 21.6c1.7-1.7 3.9-3.9 2.2-7.2-1.1 1.5-2.6 1.9-4.6.6Z" fill="rgba(229,220,200,0.16)" />
+              </svg>
+            );
+          }
+          const drops = costType.startsWith('3') ? 3 : costType.startsWith('2') ? 2 : 1;
+          const xs = drops === 1 ? [28] : drops === 2 ? [19, 37] : [13, 28, 43];
+          return (
+            <svg viewBox="0 0 56 56" className="w-14 h-14 text-red-400" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              {xs.map((cx, i) => (
+                <path
+                  key={i}
+                  d={`M ${cx} 13 C ${cx} 13, ${cx + 8} 25, ${cx + 8} 32 A 8 8 0 1 1 ${cx - 8} 32 C ${cx - 8} 25, ${cx} 13, ${cx} 13 Z`}
+                  fill="rgba(220,38,38,0.42)"
+                />
+              ))}
+            </svg>
+          );
+        };
 
-            <div className="relative w-full p-6 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+        return (
+          <div
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('costeventbg.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.92)_100%)] pointer-events-none" />
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full">
-                {(costChoices.length > 0 ? costChoices : (['1 Blood', '2 Blood', 'Bones'] as const)).map(costType => {
-                  const isBones = costType === 'Bones';
-                  return (
-                    <button
-                      key={costType}
-                      type="button"
-                      disabled={isEventBusy}
-                      onClick={() => {
-                        if (isEventBusy) return;
-                        claimCostBargain(costType);
-                      }}
-                      className={`p-6 rounded-[3px] text-center transition-all duration-200 flex flex-col items-center justify-center gap-2 border bg-gradient-to-b from-[#1a110c] to-[#0f0906] shadow-[0_10px_24px_rgba(0,0,0,0.85)] select-none ${
-                        isEventBusy
-                          ? 'opacity-35 cursor-not-allowed border-[#2c1e15]'
-                          : isBones
-                            ? 'cursor-pointer group border-[#544738]/85 hover:border-[#dfd3bc] hover:-translate-y-1.5 hover:shadow-[0_12px_28px_rgba(220,208,185,0.16)]'
-                            : 'cursor-pointer group border-[#5e251d]/85 hover:border-[#dc6152] hover:-translate-y-1.5 hover:shadow-[0_12px_28px_rgba(210,60,48,0.2)]'
-                      }`}
-                    >
-                      <div className="w-14 h-14 rounded-full bg-[#120b08] border border-[#3c2719] flex items-center justify-center mb-1 shadow-inner">
-                        <span className="text-3xl filter sepia-[0.25] group-hover:scale-110 transition-transform">
-                          {isBones ? '🦴' : '🩸'}
-                        </span>
-                      </div>
-                      <span className="font-['Cinzel',_serif] font-bold text-[#f0dab2] group-hover:text-white uppercase tracking-[0.18em] text-sm">
-                        {costType}
-                      </span>
-                      <div className="w-8 h-px bg-gradient-to-r from-transparent via-[#7a5a36]/70 to-transparent my-1" />
-                      <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.22em] text-[#bfa073]/70 group-hover:text-[#f4d78b] transition-colors">
-                        › Pilfer ‹
-                      </span>
-                    </button>
-                  );
-                })}
+            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Top Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                    Unmarked Wares
+                  </span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  Blood &amp; Bone Pact
+                </h1>
+              </div>
+
+              {/* Candlelit Merchant Counter Stage */}
+              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-between rounded-[4px] bg-gradient-to-b from-[#160f0a]/84 via-[#120c08]/92 to-[#090604]/96 border border-[#4a3322]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,224,178,0.08)] px-6 py-5 overflow-hidden">
+                <span className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-[#9a7342]/75" />
+                <span className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-[#9a7342]/75" />
+                <span className="pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-[#9a7342]/75" />
+                <span className="pointer-events-none absolute bottom-2 right-2 w-3.5 h-3.5 border-b border-r border-[#9a7342]/75" />
+
+                {/* Subtle Countertop Wood Plank Line */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-14 h-px bg-gradient-to-r from-transparent via-[#5e4128]/70 to-transparent" />
+
+                {/* Three Wax-Sealed Offerings */}
+                <div className="relative z-10 w-full max-w-3xl flex-1 flex items-center justify-center">
+                  <div className="w-full grid grid-cols-3 gap-5 sm:gap-8 items-center justify-items-center">
+                    {choicesToShow.map(costType => {
+                      const isBones = costType === 'Bones';
+                      const isPicked = costBargainPickedType === costType;
+                      const isDimmed = Boolean(costBargainPickedType) && !isPicked;
+
+                      if (isPicked && costBargainRevealedCard) {
+                        return (
+                          <div
+                            key={costType}
+                            className="flex flex-col items-center justify-center animate-menu-fade-in"
+                          >
+                            <span className="mb-2 px-2.5 py-0.5 rounded-[2px] bg-[#1f160c]/95 border border-[#d4af37]/85 text-[8.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#f4d78b]">
+                              Pilfered
+                            </span>
+                            <div
+                              className="scale-[1.12] origin-center rounded-[4px] shadow-[0_0_40px_rgba(212,175,55,0.52)]"
+                              style={{ animation: 'steepleWitnessFlip 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards' }}
+                            >
+                              {renderCard(costBargainRevealedCard, { isClickable: false, disableHoverScale: true })}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <button
+                          key={costType}
+                          type="button"
+                          disabled={isEventBusy}
+                          onClick={() => !isEventBusy && claimCostBargain(costType)}
+                          className={`group relative w-[166px] sm:w-[186px] h-[238px] sm:h-[258px] rounded-[5px] border-2 flex flex-col items-center justify-between p-4 transition-all duration-300 select-none overflow-hidden ${
+                            isPicked
+                              ? 'border-[#f4d78b] bg-gradient-to-b from-[#2b1c12] to-[#140c08] scale-105 shadow-[0_0_32px_rgba(212,175,55,0.45)] cursor-default'
+                              : isDimmed
+                                ? 'opacity-25 grayscale-[60%] scale-95 border-[#38271b] bg-[#110b08] cursor-default'
+                                : isBones
+                                  ? 'cursor-pointer border-[#6e6354]/90 hover:border-[#efe5d4] bg-gradient-to-b from-[#1f1a16] via-[#15110e] to-[#0d0a08] hover:-translate-y-2 shadow-[0_18px_36px_rgba(0,0,0,0.92)] hover:shadow-[0_22px_42px_rgba(229,220,200,0.2)]'
+                                  : 'cursor-pointer border-[#782b22]/90 hover:border-[#ef6b5b] bg-gradient-to-b from-[#24110e] via-[#170b09] to-[#0e0706] hover:-translate-y-2 shadow-[0_18px_36px_rgba(0,0,0,0.92)] hover:shadow-[0_22px_42px_rgba(220,38,38,0.24)]'
+                          }`}
+                        >
+                          {/* Inner Cardback Filigree Frame */}
+                          <div className="pointer-events-none absolute inset-2.5 rounded-[3px] border border-dashed border-[#8a6a44]/45" />
+
+                          <span className="relative z-10 text-[9px] font-mono uppercase tracking-[0.26em] text-[#b49670]/80">
+                            Sealed
+                          </span>
+
+                          {/* Embossed Wax Seal Medallion */}
+                          <div
+                            className={`relative z-10 w-24 h-24 rounded-full border-2 flex items-center justify-center shadow-[inset_0_0_18px_rgba(0,0,0,0.85),0_6px_16px_rgba(0,0,0,0.85)] transition-transform duration-300 group-hover:scale-105 ${
+                              isBones
+                                ? 'bg-gradient-to-b from-[#332e27] to-[#1b1814] border-[#b5a994]/80'
+                                : 'bg-gradient-to-b from-[#591512] to-[#2b0908] border-[#c7483c]/85'
+                            }`}
+                            style={{
+                              animation: isPicked ? 'waxSealCrack 0.42s ease-in forwards' : undefined,
+                            }}
+                          >
+                            {renderCostEmblem(costType)}
+                          </div>
+
+                          <div className="relative z-10 flex flex-col items-center">
+                            <span className="font-['Cinzel',_serif] font-bold text-[#f2ddb7] group-hover:text-white uppercase tracking-[0.18em] text-sm">
+                              {costType}
+                            </span>
+                            <span className="mt-1 font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-[#bfa073]/75 group-hover:text-[#f4d78b]">
+                              {isPicked ? 'Breaking Seal...' : '› Pilfer ‹'}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Stark Cinzel Footer */}
+                <div className="relative z-20 pt-2 shrink-0">
+                  <p className="font-['Cinzel',_serif] text-sm sm:text-base italic tracking-[0.1em] text-[#e5cfa8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                    &ldquo;The Merchant sleeps.&rdquo;
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           BONE LORD SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_BONE_LORD' && (
-        <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('bonelordevent.jpg')}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,10,9,0.42)_0%,rgba(4,3,3,0.92)_100%)] pointer-events-none" />
+      {screen === 'EVENT_BONE_LORD' && (() => {
+        const selectedCard = boneLordStageData
+          ? boneLordStageData.card
+          : boneLordSelectedIdx !== null
+            ? masterDeck[boneLordSelectedIdx] || null
+            : null;
+        const isGoatPreview = selectedCard?.name === 'Black Goat';
+        const previewBonus = boneLordStageData ? boneLordStageData.bonus : isGoatPreview ? 3 : 1;
+        const isAnimating = boneLordAnimPhase !== 'idle';
 
-          <div className="relative z-10 max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c7beb0]">
-                The Bone Lord
-              </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ece5d8] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Ancient Altar of Bones
-            </h1>
-            <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0908]/75 border border-[#3d3730]/75 text-[11px] font-mono text-[#cfc5b6]/85 max-w-lg leading-relaxed shadow-md">
-              A flooding darkness envelops the world around you. Offer a Sacrifice from your deck to earn his eternal favor.
-            </p>
+        return (
+          <div
+            className="absolute inset-0 bg-[#0b0908] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('bonelordevent.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,12,11,0.34)_0%,rgba(4,3,3,0.92)_100%)] pointer-events-none" />
 
-            <div className="relative w-full p-5 sm:p-6 mb-7 rounded-[3px] bg-[#0c0a09]/82 border border-[#3f3830]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92)] backdrop-blur-[2px]">
-              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9c9282]/70" />
-              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9c9282]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c9282]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c9282]/70" />
+            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Top Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c7beb0]">
+                    The Bone Lord
+                  </span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ece5d8] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  Ancient Altar of Bones
+                </h1>
+              </div>
 
-              <div className="flex flex-wrap gap-4 justify-center pt-2">
-                {masterDeck.map((c, idx) => {
-                  const isSelected = boneLordSelectedIdx === idx;
-                  return (
+              {/* Two-Column Split: Ossuary Skull Pedestal Left, Deck Selector Right */}
+              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                {/* LEFT COLUMN: Ossuary Pedestal & Horned Skull Prop + Stylized Inscription + Offer Button */}
+                <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-5 rounded-[3px] bg-gradient-to-b from-[#131110]/76 via-[#171412]/86 to-[#090807]/95 border border-[#474038]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(235,225,210,0.08)] overflow-hidden flex flex-col items-center justify-between">
+                    {/* Ambient Ivory / Ember Aura */}
                     <div
-                      key={c.id || `bl-${c.name}-${idx}`}
-                      onClick={() => setBoneLordSelectedIdx(idx)}
-                      className={`relative cursor-pointer transform origin-center transition-all duration-200 ${
-                        isSelected
-                          ? 'scale-[1.05] -translate-y-2.5 z-30'
-                          : 'scale-[0.96] hover:scale-[1.03] hover:-translate-y-1'
+                      className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
+                        boneLordAnimPhase === 'blessed'
+                          ? 'opacity-95'
+                          : boneLordAnimPhase === 'offering'
+                            ? 'opacity-85'
+                            : 'opacity-40'
                       }`}
-                    >
-                      {isSelected && (
-                        <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#210b0a]/95 border border-red-500/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-red-200 whitespace-nowrap shadow-md">
-                          Offering
-                        </span>
+                      style={{
+                        background:
+                          boneLordAnimPhase === 'blessed'
+                            ? 'radial-gradient(circle at 50% 48%, rgba(234,179,8,0.28) 0%, rgba(214,202,184,0.16) 46%, transparent 74%)'
+                            : 'radial-gradient(circle at 50% 52%, rgba(214,202,184,0.18) 0%, rgba(120,105,90,0.1) 48%, transparent 74%)',
+                      }}
+                    />
+
+                    <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#a89f90]/70" />
+                    <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#a89f90]/70" />
+                    <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#a89f90]/70" />
+                    <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#a89f90]/70" />
+
+                    {/* Centerpiece: Offering Card above Horned Bone Lord Skull Pedestal */}
+                    <div className="relative z-10 flex flex-col items-center justify-center w-full my-auto pt-2">
+                      {/* Rising Bone Tokens during Blessing */}
+                      {boneLordAnimPhase !== 'idle' && (
+                        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
+                          {(previewBonus === 3 ? [-42, 0, 42] : [0]).map((xOff, i) => (
+                            <div
+                              key={i}
+                              className="absolute bottom-24 text-2xl drop-shadow-[0_0_12px_rgba(254,243,199,0.9)]"
+                              style={{
+                                marginLeft: `${xOff}px`,
+                                animation: `boneTokenRise 1.15s ease-out ${i * 0.16}s forwards`,
+                              }}
+                            >
+                              🦴
+                            </div>
+                          ))}
+                        </div>
                       )}
-                      {renderCard(c, { isMarkedSacrifice: isSelected, isClickable: true, disableHoverScale: true })}
+
+                      {/* Offering Card (clickable to return to side deck) or Manifested Boon Medallion */}
+                      <div className="relative z-20 w-[124px] h-[168px] -mb-6 flex items-center justify-center">
+                        {boneLordAnimPhase === 'blessed' ? (
+                          <div className="flex flex-col items-center justify-center px-5 py-4 rounded-[4px] bg-[#1a1612]/95 border-2 border-[#e5d5b7]/90 shadow-[0_0_38px_rgba(234,179,8,0.5)] animate-menu-fade-in">
+                            <span className="text-3xl mb-1">🦴</span>
+                            <span className="font-['Cinzel',_serif] font-black text-xl text-amber-200 tracking-wider">
+                              +{previewBonus}
+                            </span>
+                            <span className="text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#d6cbb8] mt-0.5 whitespace-nowrap">
+                              Starting Bone{previewBonus > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <div
+                            className="w-full h-full flex items-center justify-center"
+                            style={{
+                              animation: boneLordAnimPhase === 'offering' ? 'boneOfferDissolve 0.88s ease-in forwards' : undefined,
+                            }}
+                          >
+                            {selectedCard ? (
+                              <div
+                                onClick={() => {
+                                  if (!isEventBusy && !isAnimating) {
+                                    triggerSfx('draw');
+                                    setBoneLordSelectedIdx(null);
+                                  }
+                                }}
+                                title="Click to return creature to deck"
+                                className="group relative scale-[1.06] origin-center cursor-pointer transition-transform duration-200 hover:-translate-y-1 shadow-[0_16px_32px_rgba(0,0,0,0.95)]"
+                              >
+                                {renderCard(selectedCard, { isClickable: false, disableHoverScale: true, isMarkedSacrifice: true })}
+                              </div>
+                            ) : (
+                              <div className="w-[112px] h-[156px] rounded-[4px] border border-dashed border-[#786e60]/75 bg-[#12100e]/75 flex flex-col items-center justify-center gap-1.5 text-[#a69a88]">
+                                <span className="text-xl opacity-70">💀</span>
+                                <span className="text-[9.5px] uppercase tracking-[0.2em] px-2">Place Tribute</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Carved Ossuary Skull & Ribcage Pedestal SVG Prop */}
+                      <svg
+                        viewBox="0 0 460 124"
+                        className="w-full max-w-[475px] h-auto drop-shadow-[0_18px_28px_rgba(0,0,0,0.98)] pointer-events-none relative z-20"
+                      >
+                        <defs>
+                          <linearGradient id="ossuaryBone" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#d6cbb8" />
+                            <stop offset="55%" stopColor="#8c8172" />
+                            <stop offset="100%" stopColor="#3d3730" />
+                          </linearGradient>
+                          <linearGradient id="ossuaryStone" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#332e29" />
+                            <stop offset="100%" stopColor="#12100e" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M126 42 C72 34, 48 16, 40 6 C58 26, 86 48, 134 56" fill="none" stroke="url(#ossuaryBone)" strokeWidth="5.5" strokeLinecap="round" />
+                        <path d="M334 42 C388 34, 412 16, 420 6 C402 26, 374 48, 326 56" fill="none" stroke="url(#ossuaryBone)" strokeWidth="5.5" strokeLinecap="round" />
+                        <polygon points="62,118 86,58 374,58 398,118" fill="url(#ossuaryStone)" stroke="#5c5348" strokeWidth="1.6" />
+                        <polygon points="34,58 60,34 400,34 426,58" fill="#292420" stroke="#807567" strokeWidth="1.9" />
+                        <ellipse cx="230" cy="44" rx="132" ry="9" fill="#171412" stroke="#6b6054" strokeWidth="1.2" />
+                        <path
+                          d="M196 76 C196 58, 264 58, 264 76 C264 88, 252 94, 248 106 L212 106 C208 94, 196 88, 196 76 Z"
+                          fill="url(#ossuaryBone)"
+                          stroke="#4a4239"
+                          strokeWidth="1.6"
+                        />
+                        <ellipse cx="216" cy="79" rx="7.5" ry="6" fill={boneLordAnimPhase !== 'idle' ? '#fbbf24' : '#0f0c0b'} />
+                        <ellipse cx="244" cy="79" rx="7.5" ry="6" fill={boneLordAnimPhase !== 'idle' ? '#fbbf24' : '#0f0c0b'} />
+                        <polygon points="230,86 225,94 235,94" fill="#171310" />
+                        <line x1="219" y1="98" x2="219" y2="106" stroke="#26201b" strokeWidth="2" />
+                        <line x1="230" y1="98" x2="230" y2="106" stroke="#26201b" strokeWidth="2" />
+                        <line x1="241" y1="98" x2="241" y2="106" stroke="#26201b" strokeWidth="2" />
+                      </svg>
                     </div>
-                  );
-                })}
+
+                    {/* Stylized & Enlarged Ossuary Inscription */}
+                    <div className="relative z-20 w-full max-w-xl flex flex-col items-center text-center pt-1">
+                      <div className="flex items-center gap-3 w-full max-w-xs mb-2 opacity-75">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#8a7f70] to-[#c9bea9]" />
+                        <span className="text-[10px] text-[#c9bea9]">✦</span>
+                        <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[#8a7f70] to-[#c9bea9]" />
+                      </div>
+                      <p className="font-['Cinzel',_serif] text-base sm:text-lg tracking-[0.1em] text-[#efe5d4] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] px-3">
+                        A flooding darkness envelops the chamber.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="flex items-center justify-center shrink-0">
+                    <button
+                      onClick={confirmBoneLordOffering}
+                      disabled={boneLordSelectedIdx === null || isEventBusy || isAnimating}
+                      className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2e2620] to-[#171310] hover:from-[#3d322a] hover:to-[#211b17] active:translate-y-[1px] border border-[#b5a994]/85 hover:border-[#efe5d5] text-[#f2eadc] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
+                    >
+                      {isAnimating ? 'The Bone Lord Consumes...' : 'Offer Sacrifice'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Side Deck Selector Panel (hides card currently resting on the altar) */}
+                <div
+                  className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#0c0a09]/84 border border-[#3f3830]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(235,225,210,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
+                    isAnimating ? 'opacity-30 pointer-events-none' : 'opacity-100'
+                  }`}
+                >
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9c9282]/70" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9c9282]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c9282]/70" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c9282]/70" />
+
+                  <div className="px-4 py-3 border-b border-[#38312a]/80 flex items-center justify-between gap-2 shrink-0">
+                    <div className="text-left">
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#d6cbb8]">
+                        Your Creatures ({boneLordSelectedIdx !== null ? Math.max(0, masterDeck.length - 1) : masterDeck.length})
+                      </div>
+
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
+                    <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                      {masterDeck.map((c, idx) => {
+                        if (boneLordSelectedIdx === idx) return null;
+                        return (
+                          <div
+                            key={c.id || `bl-${c.name}-${idx}`}
+                            onClick={() => {
+                              if (isEventBusy || isAnimating) return;
+                              triggerSfx('draw');
+                              setBoneLordSelectedIdx(idx);
+                            }}
+                            className="relative flex flex-col items-center justify-center w-[104px] h-[146px] cursor-pointer transition-all duration-200 hover:-translate-y-1"
+                          >
+                            <div className="transform origin-center transition-transform duration-200 scale-[0.86] hover:scale-[0.91]">
+                              {renderCard(c, { isClickable: true, disableHoverScale: true })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <div className="flex items-center gap-4">
-              <button
-                onClick={confirmBoneLordOffering}
-                disabled={boneLordSelectedIdx === null || isEventBusy}
-                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2e2620] to-[#171310] hover:from-[#3d322a] hover:to-[#211b17] active:translate-y-[1px] border border-[#b5a994]/85 hover:border-[#efe5d5] text-[#f2eadc] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.88)] transition-all select-none"
-              >
-                Offer Sacrifice
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           MYCOLOGISTS EVENT SCREEN
@@ -10758,9 +11263,8 @@ export default function App() {
                     <span className="pointer-events-none absolute bottom-2 left-2 w-2.5 h-2.5 border-b border-l border-[#9a7342]/75" />
                     <span className="pointer-events-none absolute bottom-2 right-2 w-2.5 h-2.5 border-b border-r border-[#9a7342]/75" />
 
-                    <p className="mb-5 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/80 border border-[#3a2618]/75 text-[11px] font-mono text-[#d4bfa0]/90 max-w-md leading-relaxed">
-                      The Weaver rummages through your pack... <span className="text-amber-300 font-bold uppercase">No twin creatures?</span>{' '}
-                      Her needles flash across the loom, spinning a fresh twin out of sinew.
+                    <p className="mb-5 font-['Cinzel',_serif] text-base sm:text-lg tracking-[0.08em] text-[#efe0be] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                      No twins? She spins one from sinew.
                     </p>
 
                     {mycoOfferedCard && (
@@ -10952,13 +11456,7 @@ export default function App() {
                         <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
                           Your Creatures ({masterDeck.length})
                         </div>
-                        <div className="text-[10.5px] font-mono text-[#bfa88a]/85 mt-0.5">
-                          {mycoSelectedIndices.length === 0
-                            ? 'Select two identical creatures to thread into the loom.'
-                            : mycoSelectedIndices.length === 1
-                              ? `Select a second ${masterDeck[mycoSelectedIndices[0]]?.name}.`
-                              : 'Twins threaded—ready to sew.'}
-                        </div>
+
                       </div>
                       {mycoSelectedIndices.length > 0 && !isAnimating && (
                         <button
@@ -11204,8 +11702,8 @@ export default function App() {
                       </svg>
                     </div>
 
-                    <p className="relative z-20 mt-3 px-4 py-1.5 rounded-[2px] bg-[#070c0a]/80 border border-teal-900/75 text-[10.5px] font-mono text-teal-100/85 max-w-lg leading-snug">
-                      The Begotten jeers and scoffs at any who question his Stamps. Place a creature onto the press bed to stamp a flawed twin.
+                    <p className="relative z-20 mt-3 font-['Cinzel',_serif] text-sm sm:text-base tracking-[0.1em] text-teal-100/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                      The Begotten jeers at his press.
                     </p>
                   </div>
 
@@ -11237,9 +11735,7 @@ export default function App() {
                       <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-teal-400/90">
                         Your Creatures ({masterDeck.length})
                       </div>
-                      <div className="text-[10.5px] font-mono text-teal-100/75 mt-0.5">
-                        Select a creature to place onto the left press bed.
-                      </div>
+
                     </div>
                   </div>
 
@@ -11282,40 +11778,215 @@ export default function App() {
       {/* =========================================================================
           CAVE TRIAL SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_CAVE_TRIAL' && (
-        <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-start px-4 py-4 sm:p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('trialevent.jpg')}
-        >
-          <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,9,7,0.38)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
+      {screen === 'EVENT_CAVE_TRIAL' && (() => {
+        const rule = caveSelectedTrial ? CAVE_TRIAL_RULES[caveSelectedTrial] : null;
+        const revealedCards = caveDrawnCards.slice(0, caveRevealCount);
+        const liveResult = rule ? rule.evaluate(revealedCards) : null;
 
-          <div className="relative z-10 max-w-3xl w-full flex flex-col items-center text-center my-auto py-1">
-            <div className="flex items-center gap-3.5 mb-0.5">
-              <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                The Steeple Ordeal
-              </span>
-              <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-            </div>
-            <h1 className="text-xl sm:text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ece5d8] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              The Cavern Trials
-            </h1>
+        const getWitnessContrib = (trialName: string | null, card: CardDef): string => {
+          if (!trialName) return '';
+          switch (trialName) {
+            case 'Trial of Bones':
+              return `${card.boneCost || 0} Bone${(card.boneCost || 0) === 1 ? '' : 's'}`;
+            case 'Trial of Blood':
+              return `${card.cost || 0} Blood`;
+            case 'Trial of Power':
+              return `${card.attack || 0} Power`;
+            case 'Trial of Health':
+              return `${card.health || 0} Health`;
+            case 'Trial of Wisdom': {
+              const n = card.sigils?.length || 0;
+              return `${n} Crest${n === 1 ? '' : 's'}`;
+            }
+            case 'Trial of Kin':
+              return card.class && card.class !== 'No Class' ? card.class : 'Kinless';
+            default:
+              return '';
+          }
+        };
 
-            {!caveSelectedTrial ? (
-              <>
-                <p className="mt-2 mb-5 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
-                  The Zealot lays out the Trials of the Flock. Three random Creatures from your deck will be drawn and weighed against your chosen condition.
-                </p>
+        const renderTrialEmblem = (trialName: string) => {
+          switch (trialName) {
+            case 'Trial of Bones':
+              return (
+                <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 12c-2.5-2-6 1-4 4 1.2 1.8.8 3.2-.5 4.2 3 1.5 5-.5 6.5-2l16 16c-1.5 1.5-3.5 3.5-2 6.5 1-1.3 2.4-1.7 4.2-.5 3 2 6-1.5 4-4-1.2-1.8-.8-3.2.5-4.2-3-1.5-5 .5-6.5 2L14 18c1.5-1.5 3.5-3.5 2-6.5-1 1.3-2.4 1.7-4 .5Z" />
+                  <path d="M36 12c2.5-2 6 1 4 4-1.2 1.8-.8 3.2.5 4.2-3 1.5-5-.5-6.5-2L18 34c1.5 1.5 3.5 3.5 2 6.5-1-1.3-2.4-1.7-4.2-.5-3 2-6-1.5-4-4 1.2-1.8.8-3.2-.5-4.2 3-1.5 5 .5 6.5 2L34 18c-1.5-1.5-3.5-3.5-2-6.5 1 1.3 2.4 1.7 4 .5Z" opacity="0.55" />
+                </svg>
+              );
+            case 'Trial of Blood':
+              return (
+                <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M24 7 C24 7, 36 21, 36 30 A12 12 0 1 1 12 30 C12 21, 24 7, 24 7 Z" fill="rgba(185,28,28,0.22)" />
+                  <path d="M19 31 A5 5 0 0 0 24 36" opacity="0.8" />
+                  <line x1="24" y1="16" x2="24" y2="27" opacity="0.65" />
+                  <line x1="19" y1="22" x2="29" y2="22" opacity="0.65" />
+                </svg>
+              );
+            case 'Trial of Power':
+              return (
+                <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M24 6 L28 18 L24 34 L20 18 Z" fill="rgba(212,175,55,0.16)" />
+                  <path d="M14 29 H34" />
+                  <path d="M24 34 V42 M20 42 H28" />
+                  <path d="M13 13 L18 20 M35 13 L30 20" opacity="0.7" />
+                </svg>
+              );
+            case 'Trial of Health':
+              return (
+                <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M24 7 L38 13 V24 C38 33 32 39 24 42 C16 39 10 33 10 24 V13 Z" fill="rgba(212,175,55,0.12)" />
+                  <path d="M24 17 V31 M17 24 H31" strokeWidth="2.3" />
+                </svg>
+              );
+            case 'Trial of Wisdom':
+              return (
+                <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 24 C12 13, 36 13, 42 24 C36 35, 12 35, 6 24 Z" fill="rgba(212,175,55,0.12)" />
+                  <circle cx="24" cy="24" r="6.5" />
+                  <circle cx="24" cy="24" r="2.2" fill="currentColor" />
+                  <path d="M24 8 V12 M24 36 V40 M12 11 L15 14 M36 11 L33 14" opacity="0.65" />
+                </svg>
+              );
+            case 'Trial of Kin':
+            default:
+              return (
+                <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="24" r="9" />
+                  <circle cx="30" cy="24" r="9" />
+                  <path d="M24 10 L27 16 L24 19 L21 16 Z" fill="rgba(212,175,55,0.2)" />
+                  <path d="M24 38 L27 32 L24 29 L21 32 Z" fill="rgba(212,175,55,0.2)" />
+                </svg>
+              );
+          }
+        };
 
-                <div className="relative w-full max-w-xl p-5 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+        const isPassedScreen = caveVerdictReady && cavePassed;
+        const isFailedScreen = caveVerdictReady && !cavePassed;
 
-                  <div className="flex flex-col gap-3 w-full">
-                    {caveTrials.map((t, idx) => {
-                      const isDisabled = isEventBusy || Boolean(caveSelectedTrial);
+        return (
+          <div
+            className="absolute inset-0 bg-[#090605] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('trialevent.jpg')}
+          >
+            {/* Atmospheric Cathedral Vignette */}
+            <div
+              className="absolute inset-0 pointer-events-none transition-all duration-700"
+              style={{
+                background: isPassedScreen
+                  ? 'radial-gradient(ellipse at 50% 35%, rgba(212,175,55,0.2) 0%, rgba(16,11,6,0.68) 52%, rgba(4,3,2,0.95) 100%)'
+                  : isFailedScreen
+                    ? 'radial-gradient(ellipse at 50% 35%, rgba(153,27,27,0.26) 0%, rgba(14,5,5,0.74) 52%, rgba(4,2,2,0.96) 100%)'
+                    : 'radial-gradient(ellipse at 50% 35%, rgba(30,19,12,0.34) 0%, rgba(10,7,5,0.74) 55%, rgba(4,2,2,0.95) 100%)',
+              }}
+            />
+
+            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Top Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                    The Zealot&apos;s Tribunal
+                  </span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe3cc] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  The Steeple Ordeal
+                </h1>
+              </div>
+
+              {/* MAIN CATHEDRAL TRIPTYCH STAGE */}
+              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-between rounded-[4px] bg-gradient-to-b from-[#130d09]/84 via-[#110b08]/90 to-[#080504]/96 border border-[#4a3423]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,224,178,0.08)] px-5 sm:px-8 py-4 overflow-hidden">
+                {/* Corner Brass Filigree */}
+                <span className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-[#a88246]/75" />
+                <span className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-[#a88246]/75" />
+                <span className="pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-[#a88246]/75" />
+                <span className="pointer-events-none absolute bottom-2 right-2 w-3.5 h-3.5 border-b border-r border-[#a88246]/75" />
+
+                {/* Subtle Gothic Rose Window Tracery Behind Stage */}
+                <svg
+                  viewBox="0 0 400 200"
+                  className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[520px] h-auto opacity-[0.09]"
+                  fill="none"
+                  stroke={isFailedScreen ? '#ef4444' : '#e5c16b'}
+                  strokeWidth="1.2"
+                >
+                  <circle cx="200" cy="40" r="90" />
+                  <circle cx="200" cy="40" r="62" strokeDasharray="4 4" />
+                  <circle cx="200" cy="40" r="24" />
+                  {[0, 30, 60, 90, 120, 150].map(deg => (
+                    <line key={deg} x1="200" y1="40" x2={200 + Math.cos((deg * Math.PI) / 180) * 90} y2={40 + Math.sin((deg * Math.PI) / 180) * 90} />
+                  ))}
+                </svg>
+
+                {/* KEYSTONE STATUS / VERDICT BANNER */}
+                <div className="relative z-20 w-full flex flex-col items-center shrink-0">
+                  {!caveSelectedTrial ? null : (
+                    <div
+                      className={`w-full max-w-2xl px-5 py-2.5 rounded-[3px] border flex flex-col sm:flex-row items-center justify-between gap-2 shadow-[0_10px_28px_rgba(0,0,0,0.85)] transition-all duration-300 ${
+                        !caveVerdictReady
+                          ? 'bg-[#17110b]/94 border-[#9c7840]/85 text-[#f0d5a1]'
+                          : cavePassed
+                            ? 'bg-gradient-to-r from-[#1f1608]/95 via-[#2a1d0b]/95 to-[#1f1608]/95 border-[#eab308]/90 text-[#fef08a]'
+                            : 'bg-gradient-to-r from-[#210909]/95 via-[#2c0d0d]/95 to-[#210909]/95 border-red-600/85 text-red-200'
+                      }`}
+                      style={{
+                        animation: caveVerdictReady ? 'steepleVerdictSlam 0.42s ease-out forwards' : undefined,
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-['Cinzel',_serif] text-sm sm:text-base font-bold uppercase tracking-[0.2em]">
+                          {caveSelectedTrial}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-[2px] text-[9px] font-mono font-bold uppercase tracking-[0.22em] border ${
+                            !caveVerdictReady
+                              ? 'bg-[#241a0e] border-[#a88246] text-[#f4d78b]'
+                              : cavePassed
+                                ? 'bg-[#36260b] border-[#facc15] text-[#fef08a]'
+                                : 'bg-[#3b0e0e] border-red-500 text-red-200'
+                          }`}
+                        >
+                          {!caveVerdictReady ? 'Weighing' : cavePassed ? 'Passed' : 'Found Wanting'}
+                        </span>
+                      </div>
+
+                      {rule && liveResult && (
+                        <div className="text-[10.5px] font-mono uppercase tracking-[0.12em] text-[#ede0c8]/95">
+                          <span className="font-bold">{liveResult.detail}</span>
+                          <span className="text-[#9e825f] mx-2">|</span>
+                          <span className="opacity-80">Need {rule.requirement}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Compact Witness Ledger shown during Passed Reward Selection */}
+                  {isPassedScreen && (
+                    <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[9.5px] font-mono uppercase tracking-[0.16em] text-[#cbb38e]">
+                      <span className="text-[#9c8260]">Witnesses:</span>
+                      {caveDrawnCards.map((c, idx) => (
+                        <span
+                          key={c.id || `wit-pill-${idx}`}
+                          className="px-2.5 py-0.5 rounded-[2px] bg-[#17110b]/90 border border-[#5c4328]/80 text-[#efe0be]"
+                        >
+                          {c.name}{' '}
+                          <span className="text-amber-300/90 font-bold">
+                            ({getWitnessContrib(caveSelectedTrial, c)})
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* THREE GOTHIC LANCET BAYS (Adapts seamlessly across Select -> Weigh/Fail -> Claim Reward) */}
+                <div className="relative z-10 w-full flex-1 min-h-0 grid grid-cols-3 gap-4 sm:gap-6 items-stretch py-3">
+                  {!caveSelectedTrial ? (
+                    /* PHASE 1: THREE CARVED STONE ORDEAL TABLETS */
+                    caveTrials.map((t, idx) => {
+                      const isDisabled = isEventBusy;
                       const reqText = CAVE_TRIAL_RULES[t]?.requirement || 'Trial of the Flock';
                       return (
                         <button
@@ -11323,128 +11994,182 @@ export default function App() {
                           type="button"
                           disabled={isDisabled}
                           onClick={() => !isDisabled && evaluateCaveTrial(t)}
-                          className={`p-3.5 rounded-[3px] text-center transition-all duration-200 border flex items-center justify-between px-5 select-none ${
-                            isDisabled
-                              ? 'opacity-40 cursor-not-allowed border-[#3d2d20]/40 bg-[#120d0a]'
-                              : 'cursor-pointer group border-[#4d3523]/85 hover:border-[#d4af37]/90 bg-gradient-to-r from-[#17100b] via-[#1c130d] to-[#17100b] hover:translate-x-1 shadow-[0_6px_18px_rgba(0,0,0,0.75)]'
-                          }`}
+                          className="group relative flex flex-col items-center justify-between px-4 py-5 rounded-t-[96px] rounded-b-[4px] border border-[#5e442b]/85 hover:border-[#e5c16b] bg-gradient-to-b from-[#1d140e]/92 via-[#150f0b]/95 to-[#0c0806]/98 shadow-[0_16px_36px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,224,178,0.08)] hover:-translate-y-1.5 hover:shadow-[0_20px_42px_rgba(212,175,55,0.22)] transition-all duration-300 cursor-pointer overflow-hidden text-center select-none"
                         >
-                          <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#9e7c51]">
+                          {/* Backlit Stained-Glass Arch Glow on Hover */}
+                          <div
+                            className="pointer-events-none absolute inset-0 opacity-25 group-hover:opacity-80 transition-opacity duration-300"
+                            style={{
+                              background:
+                                'radial-gradient(ellipse at 50% 24%, rgba(212,175,55,0.28) 0%, rgba(120,53,15,0.08) 52%, transparent 78%)',
+                            }}
+                          />
+                          {/* Inner Lancet Arch Moulding */}
+                          <div className="pointer-events-none absolute inset-2 rounded-t-[88px] rounded-b-[2px] border border-dashed border-[#7a5a3a]/45 group-hover:border-[#d4af37]/70 transition-colors" />
+
+                          {/* Roman Numeral Keystone */}
+                          <span className="relative z-10 w-7 h-7 rounded-full bg-[#120c08] border border-[#8c673c]/80 group-hover:border-[#f4d78b] flex items-center justify-center text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] group-hover:text-[#fde68a]">
                             {['I', 'II', 'III'][idx] || idx + 1}
                           </span>
-                          <div className="flex flex-col items-center">
-                            <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#f0dab2] group-hover:text-white">
-                              {t}
+
+                          {/* Occult Emblem Medallion */}
+                          <div className="relative z-10 my-auto flex flex-col items-center gap-3">
+                            <div className="w-20 h-20 rounded-full bg-[#0f0a07]/90 border border-[#6b4f32]/80 group-hover:border-[#e5c16b]/90 flex items-center justify-center text-[#d4af37] group-hover:text-[#fef08a] group-hover:scale-105 shadow-[inset_0_0_18px_rgba(0,0,0,0.9)] transition-all duration-300">
+                              {renderTrialEmblem(t)}
                             </div>
-                            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#d6b37a]/90 mt-1">
-                              {reqText}
+
+                            <div>
+                              <div className="font-['Cinzel',_serif] font-bold text-sm sm:text-base uppercase tracking-[0.18em] text-[#f2ddb7] group-hover:text-white">
+                                {t}
+                              </div>
+                              <div className="mt-2 px-3 py-1 rounded-[2px] bg-[#0b0705]/85 border border-[#4a3322]/80 font-mono text-[10px] uppercase tracking-[0.14em] text-[#e0be82]">
+                                {reqText}
+                              </div>
                             </div>
                           </div>
-                          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#bfa073]/65 group-hover:text-[#f4d78b]">
-                            ›
-                          </span>
+
+                          {/* Bottom Callout */}
+                          <div className="relative z-10 text-[9.5px] font-mono font-bold uppercase tracking-[0.24em] text-[#a88960] group-hover:text-[#f4d78b] transition-colors">
+                            › Swear Vow ‹
+                          </div>
                         </button>
                       );
-                    })}
-                  </div>
-                </div>
-              </>
-            ) : (() => {
-              const rule = CAVE_TRIAL_RULES[caveSelectedTrial];
-              const revealedCards = caveDrawnCards.slice(0, caveRevealCount);
-              const liveResult = rule ? rule.evaluate(revealedCards) : null;
-              return (
-                <div className="flex flex-col items-center w-full mt-2">
-                  {/* Live Tally -> Final Verdict Stamp */}
-                  <div
-                    className={`mb-3 px-4 py-2 rounded-[2px] border shadow-md flex flex-col items-center gap-0.5 transition-all duration-300 ${
-                      !caveVerdictReady
-                        ? 'bg-[#140e09]/92 border-[#8c6a3d]/80 text-[#e4c896]'
-                        : cavePassed
-                          ? 'bg-[#1a1309]/92 border-[#d4af37]/85 text-[#f4d78b] scale-[1.03]'
-                          : 'bg-[#210b09]/92 border-red-700/85 text-red-300 scale-[1.03]'
-                    }`}
-                  >
-                    <div className="font-['Cinzel',_serif] text-sm sm:text-base font-bold uppercase tracking-[0.22em]">
-                      {caveSelectedTrial} — {!caveVerdictReady ? 'Weighing...' : cavePassed ? 'Passed' : 'Failed'}
-                    </div>
-                    {rule && liveResult && (
-                      <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#e6d2b3]/90">
-                        {liveResult.detail} <span className="text-[#9e825f] mx-1.5">•</span> Need: {rule.requirement}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Staggered Drawn Witness Cards */}
-                  <div className="relative w-full px-4 py-3 mb-3 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_14px_34px_rgba(0,0,0,0.88)] backdrop-blur-[2px]">
-                    <div className="text-[9px] font-mono uppercase tracking-[0.26em] text-[#b48f5a] mb-1">
-                      Weighed Upon the Scales ({Math.min(caveRevealCount, caveDrawnCards.length)} / {caveDrawnCards.length})
-                    </div>
-                    <div className="flex flex-wrap gap-2 sm:gap-3 justify-center items-center min-h-[168px]">
-                      {caveDrawnCards.map((c, i) => {
-                        const isShown = i < caveRevealCount;
-                        return (
+                    })
+                  ) : isPassedScreen ? (
+                    /* PHASE 3A (PASSED): THREE BLESSED REWARD CARDS IN GOLDEN LANCET BAYS */
+                    caveRewardCards.map((c, idx) => {
+                      const isSelected = caveSelectedRewardIdx === idx;
+                      return (
+                        <div
+                          key={c.id || `cave-rew-${idx}`}
+                          onClick={() => {
+                            triggerSfx('draw');
+                            setCaveSelectedRewardIdx(idx);
+                          }}
+                          className={`group relative flex flex-col items-center justify-center px-3 py-4 rounded-t-[96px] rounded-b-[4px] border transition-all duration-300 cursor-pointer overflow-hidden ${
+                            isSelected
+                              ? 'border-[#facc15] bg-gradient-to-b from-[#2a1e0c]/95 via-[#1c1308]/95 to-[#0e0905]/98 shadow-[0_0_34px_rgba(234,179,8,0.34)] -translate-y-1.5 z-20'
+                              : 'border-[#6e5232]/80 hover:border-[#d4af37] bg-gradient-to-b from-[#1a120b]/90 via-[#130d08]/94 to-[#0a0705]/98 hover:-translate-y-1'
+                          }`}
+                        >
                           <div
-                            key={c.id || `cave-drawn-${i}`}
-                            className="scale-[0.82] -my-4 pointer-events-none transition-all duration-200"
+                            className="pointer-events-none absolute inset-0 opacity-65"
+                            style={{
+                              background: isSelected
+                                ? 'radial-gradient(ellipse at 50% 35%, rgba(250,204,21,0.32) 0%, transparent 72%)'
+                                : 'radial-gradient(ellipse at 50% 35%, rgba(212,175,55,0.16) 0%, transparent 72%)',
+                            }}
+                          />
+                          <div className="pointer-events-none absolute inset-2 rounded-t-[88px] rounded-b-[2px] border border-dashed border-[#8a6a3f]/45" />
+
+                          <span
+                            className={`relative z-10 mb-2 px-2.5 py-0.5 rounded-[2px] border text-[8.5px] font-mono font-bold uppercase tracking-[0.22em] ${
+                              isSelected
+                                ? 'bg-[#2a1d09] border-[#facc15] text-[#fef08a]'
+                                : 'bg-[#140e09]/90 border-[#5e442b] text-[#c7a878]'
+                            }`}
                           >
-                            {isShown ? (
-                              <div className="animate-fade-up">
+                            {isSelected ? 'Selected Blessing' : `Reliquary ${['I', 'II', 'III'][idx]}`}
+                          </span>
+
+                          <div className={`relative z-10 transition-transform duration-200 ${isSelected ? 'scale-[1.03]' : 'scale-[0.96] group-hover:scale-[1.0]'}`}>
+                            {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    /* PHASE 2 (WEIGHING) & PHASE 3B (FAILED): THREE WITNESS LECTERN BAYS */
+                    [0, 1, 2].map(i => {
+                      const c = caveDrawnCards[i];
+                      const isShown = i < caveRevealCount && Boolean(c);
+                      return (
+                        <div
+                          key={c?.id || `cave-wit-${i}`}
+                          className={`relative flex flex-col items-center justify-center px-3 py-4 rounded-t-[96px] rounded-b-[4px] border overflow-hidden transition-all duration-500 ${
+                            isFailedScreen
+                              ? 'border-red-900/80 bg-gradient-to-b from-[#1c0b0a]/92 via-[#140807]/95 to-[#0a0505]/98'
+                              : 'border-[#5a412a]/85 bg-gradient-to-b from-[#1a120c]/90 via-[#130d09]/94 to-[#0a0705]/98'
+                          }`}
+                        >
+                          <div
+                            className="pointer-events-none absolute inset-0"
+                            style={{
+                              background: isFailedScreen
+                                ? 'radial-gradient(ellipse at 50% 30%, rgba(185,28,28,0.22) 0%, transparent 72%)'
+                                : isShown
+                                  ? 'radial-gradient(ellipse at 50% 30%, rgba(212,175,55,0.2) 0%, transparent 72%)'
+                                  : 'radial-gradient(ellipse at 50% 30%, rgba(120,88,52,0.12) 0%, transparent 72%)',
+                            }}
+                          />
+                          <div className="pointer-events-none absolute inset-2 rounded-t-[88px] rounded-b-[2px] border border-dashed border-[#6b4f32]/40" />
+
+                          {/* Snuffed Candle + Smoke Wisp on Fail */}
+                          {isFailedScreen && (
+                            <div className="pointer-events-none absolute top-4 right-5 flex flex-col items-center opacity-70">
+                              <span
+                                className="w-2 h-2 rounded-full bg-stone-400/60 blur-[2px]"
+                                style={{ animation: `steepleSmokeWisp 2.2s ease-out ${i * 0.35}s infinite` }}
+                              />
+                              <div className="w-1.5 h-4 bg-[#d6cbb8]/55 rounded-t-[1px] border border-[#594b3d]" />
+                            </div>
+                          )}
+
+                          <span className="relative z-10 mb-2 text-[9px] font-mono font-bold uppercase tracking-[0.24em] text-[#a88960]">
+                            Witness {['I', 'II', 'III'][i]}
+                          </span>
+
+                          <div className="relative z-10 h-[168px] flex items-center justify-center">
+                            {isShown && c ? (
+                              <div
+                                className="scale-[0.98] origin-center shadow-[0_14px_28px_rgba(0,0,0,0.92)]"
+                                style={{ animation: 'steepleWitnessFlip 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards' }}
+                              >
                                 {renderCard(c, { isClickable: false, disableHoverScale: true })}
                               </div>
                             ) : (
-                              <div className="w-[120px] h-[176px] rounded-[4px] bg-gradient-to-b from-[#1a110b] to-[#0c0805] border border-[#5a3d24]/75 shadow-inner flex flex-col items-center justify-center gap-1.5 opacity-80">
-                                <span className="w-6 h-6 rounded-full border border-[#8e6a3c]/60 flex items-center justify-center text-[10px] font-['Cinzel',_serif] text-[#b48f5a]">
-                                  {['I', 'II', 'III'][i] || i + 1}
+                              <div className="w-[108px] h-[152px] rounded-[4px] bg-gradient-to-b from-[#1a110b] to-[#0c0805] border border-dashed border-[#634529]/80 shadow-inner flex flex-col items-center justify-center gap-2">
+                                <span className="w-7 h-7 rounded-full border border-[#8e6a3c]/65 flex items-center justify-center text-xs font-['Cinzel',_serif] text-[#c79d5a]">
+                                  {['I', 'II', 'III'][i]}
                                 </span>
-                                <span className="text-[8px] font-mono uppercase tracking-[0.22em] text-[#7c6142]">
-                                  Drawing
+                                <span className="text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#8c7050] animate-pulse">
+                                  Summoning
                                 </span>
                               </div>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
 
-                  {caveVerdictReady && cavePassed && (
-                    <div className="relative w-full px-4 py-3 mb-4 rounded-[3px] bg-[#100b07]/84 border border-[#5a3d24]/85 shadow-[0_16px_38px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-                      <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#d4af37]/75" />
-                      <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#d4af37]/75" />
-                      <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#d4af37]/75" />
-                      <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#d4af37]/75" />
-
-                      <p className="text-[10px] font-mono font-bold text-[#d6b174] mb-1.5 uppercase tracking-[0.22em]">
-                        The Zealot Offers a Blessed Creature — Choose One
-                      </p>
-                      <div className="flex flex-wrap gap-3 sm:gap-4 justify-center items-center py-1">
-                        {caveRewardCards.map((c, idx) => {
-                          const isSelected = caveSelectedRewardIdx === idx;
-                          return (
-                            <div
-                              key={c.id || `cave-rew-${idx}`}
-                              onClick={() => setCaveSelectedRewardIdx(idx)}
-                              className={`relative cursor-pointer transform origin-center transition-all duration-200 -my-2 ${
-                                isSelected
-                                  ? 'scale-[0.95] -translate-y-1.5 z-30'
-                                  : 'scale-[0.86] hover:scale-[0.91] hover:-translate-y-1'
-                              }`}
-                            >
-                              {isSelected && (
-                                <span className="pointer-events-none absolute -top-3.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
-                                  Claimed
-                                </span>
-                              )}
-                              {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                          {/* Per-Card Contribution Pill */}
+                          <div className="relative z-10 mt-2.5 min-h-[24px] flex items-center justify-center">
+                            {isShown && c && (
+                              <span
+                                className={`px-2.5 py-0.5 rounded-[2px] border text-[9.5px] font-mono font-bold uppercase tracking-[0.18em] ${
+                                  isFailedScreen
+                                    ? 'bg-[#240c0b]/90 border-red-800/80 text-red-200'
+                                    : 'bg-[#1c140b]/90 border-[#9c7840]/80 text-[#f4d78b]'
+                                }`}
+                              >
+                                {getWitnessContrib(caveSelectedTrial, c)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
+                </div>
 
-                  {caveVerdictReady && (
+                {/* BOTTOM STAGE FOOTER / ACTION BAR */}
+                <div className="relative z-20 w-full flex flex-col items-center justify-center pt-1 shrink-0 min-h-[44px]">
+                  {!caveSelectedTrial ? (
+                    <div className="font-['Cinzel',_serif] text-sm uppercase tracking-[0.22em] text-[#d6be96]">
+                      Swear Your Vow
+                    </div>
+                  ) : !caveVerdictReady ? (
+                    <div className="text-[10.5px] font-mono uppercase tracking-[0.26em] text-[#d4b074] animate-pulse">
+                      The Zealot Weighs Your Witnesses...
+                    </div>
+                  ) : isPassedScreen ? (
                     <button
                       onClick={() => {
                         setIsEventBusy(false);
@@ -11456,336 +12181,529 @@ export default function App() {
                         }
                         returnToMap(updatedDeck);
                       }}
-                      disabled={cavePassed && caveSelectedRewardIdx === null}
-                      className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none animate-fade-up"
+                      disabled={caveSelectedRewardIdx === null}
+                      className="px-9 py-2.5 rounded-[2px] bg-gradient-to-b from-[#33220f] to-[#1a1007] hover:from-[#472f15] hover:to-[#241609] active:translate-y-[1px] border border-[#d4af37]/90 hover:border-[#fef08a] text-[#f8e4b8] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
                     >
-                      {cavePassed ? 'Claim & Proceed' : 'Depart the Steeple'}
+                      Claim Blessing &amp; Proceed
                     </button>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                      <span className="font-['Cinzel',_serif] text-sm sm:text-base tracking-[0.1em] text-red-200/95">
+                        The candles go dark.
+                      </span>
+                      <button
+                        onClick={() => {
+                          setIsEventBusy(false);
+                          returnToMap();
+                        }}
+                        className="px-8 py-2 rounded-[2px] bg-gradient-to-b from-[#2e1210] to-[#170908] hover:from-[#421a17] hover:to-[#240d0c] active:translate-y-[1px] border border-red-700/85 hover:border-red-400 text-red-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
+                      >
+                        Depart the Steeple
+                      </button>
+                    </div>
                   )}
                 </div>
-              );
-            })()}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
-          WOODCARVER TOTEM SCREEN
+          WOODCARVER / WEAVER EFFIGY WORKBENCH SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_BUILD_TOTEM' && (
-        <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('weaverevent.jpg')}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.36)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+      {screen === 'EVENT_BUILD_TOTEM' && (() => {
+        const previewHead: string | null =
+          totemStage === 'ASSEMBLE'
+            ? (assemblyHeadIdx !== null ? totemPieces[assemblyHeadIdx]?.value || null : activeTotem.head)
+            : (selectedTotemRewardIdx !== null && totemRewardChoices[selectedTotemRewardIdx]?.type === 'head'
+                ? totemRewardChoices[selectedTotemRewardIdx].value
+                : activeTotem.head);
+        const previewBody: string | null =
+          totemStage === 'ASSEMBLE'
+            ? (assemblyBodyIdx !== null ? totemPieces[assemblyBodyIdx]?.value || null : activeTotem.body)
+            : (selectedTotemRewardIdx !== null && totemRewardChoices[selectedTotemRewardIdx]?.type === 'body'
+                ? totemRewardChoices[selectedTotemRewardIdx].value
+                : activeTotem.body);
 
-          <div className="relative z-10 max-w-3xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                The Weaver's Loom
-              </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Needle & Threadcraft
-            </h1>
+        return (
+          <div
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('weaverevent.jpg')}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.92)_100%)] pointer-events-none" />
 
-            {totemStage === 'REWARD' ? (
-              <>
-                <p
-                  className={`mt-2 mb-7 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md transition-opacity duration-300 ${
-                    isTotemFadingOut ? 'opacity-0' : ''
-                  }`}
-                >
-                  Claim a Tribal Patch or Threadbound Crest to bind to your Effigy.
-                </p>
+            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Top Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                    The Weaver&apos;s Loom
+                  </span>
+                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  Needle &amp; Threadcraft
+                </h1>
+              </div>
 
-                {!totemChoicesHidden && (
-                  <div className="relative w-full p-6 mb-7 rounded-[3px] bg-[#0d0806]/80 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
-                    <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-                    <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
-
-                    <div className="flex flex-wrap gap-5 justify-center">
-                      {totemRewardChoices.map((tc, idx) => {
-                        const isSelected = selectedTotemRewardIdx === idx;
-                        const fadeAnim = isTotemFadingOut
-                          ? isSelected
-                            ? 'animate-swipe-up-fade pointer-events-none'
-                            : 'opacity-0 transition-opacity duration-300 pointer-events-none'
-                          : '';
-
-                        return (
-                          <div
-                            key={`totem-rew-${idx}`}
-                            onClick={() => !isEventBusy && !isTotemFadingOut && setSelectedTotemRewardIdx(idx)}
-                            className={`p-4 border border-dashed rounded-[3px] transition-all duration-200 text-center select-none w-44 flex flex-col items-center justify-start ${fadeAnim} ${
-                              isEventBusy || isTotemFadingOut
-                                ? 'opacity-40 cursor-not-allowed border-[#5e442c]/40 bg-[#140e0a]'
-                                : isSelected
-                                  ? 'border-[#e5c16b] bg-gradient-to-b from-[#281b11] to-[#160e09] scale-105 -translate-y-1 shadow-[0_0_24px_rgba(212,175,55,0.28)] cursor-pointer'
-                                  : 'border-[#8c6747]/75 hover:border-[#cfa159] bg-gradient-to-b from-[#1a120c] to-[#100a07] shadow-[0_8px_20px_rgba(0,0,0,0.85)] hover:-translate-y-1 cursor-pointer'
-                            }`}
-                          >
-                            <div className="text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#b48f5a] mb-2.5">
-                              {tc.type === 'head' ? 'Tribal Patch' : 'Threadbound Crest'}
-                            </div>
-
-                            <div className={`flex items-center justify-center w-16 h-16 mb-3 bg-[#1e140e] border border-[#4f3824] rounded-[2px] shadow-inner ${tc.type === 'head' ? '[&>*]:scale-[2.35]' : ''}`}>
-                              {tc.type === 'head' ? (
-                                TRIBE_EMBROIDERY[tc.value as Tribe] || <span className="text-2xl">🧵</span>
-                              ) : (
-                                <img
-                                  src={getSigilArtUrl(tc.value)}
-                                  alt={tc.value}
-                                  className="w-12 h-12 object-contain"
-                                  style={{ imageRendering: 'pixelated' }}
-                                />
-                              )}
-                            </div>
-
-                            <div className="font-['Cinzel',_serif] font-bold text-[#f0dab2] text-xs uppercase tracking-[0.16em] mb-1">
-                              {tc.value}
-                            </div>
-
-                            {tc.type === 'body' && (
-                              <div className="text-[9.5px] text-[#c7ad87]/80 italic leading-snug mt-1">
-                                {SIGIL_DESCRIPTIONS[tc.value]}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {!totemChoicesHidden && (
-                  <button
-                    onClick={async () => {
-                      if (selectedTotemRewardIdx === null || isEventBusy) return;
-                      setIsEventBusy(true);
-
-                      const chosen = totemRewardChoices[selectedTotemRewardIdx];
-                      const nextPieces = [...totemPieces, chosen];
-                      setTotemPieces(nextPieces);
-                      triggerSfx('play');
-
-                      if (nextPieces.length >= 7) {
-                        const sigils = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
-                        const randSigil = sigils[Math.floor(Math.random() * sigils.length)];
-                        const amalgam = cloneCard(ALL_CARD_LOOKUP["Amalgam"]);
-                        amalgam.sigils = [randSigil];
-                        const nextDeck = [...masterDeck, amalgam];
-                        setMasterDeck(nextDeck);
-                        masterDeckRef.current = nextDeck;
-                        addLog(`Your satchel overflowed with 7 effigy scraps! The Weaver gifted an Amalgam (${randSigil})!`);
-                      }
-
-                      const hasHead = nextPieces.some(p => p.type === 'head');
-                      const hasBody = nextPieces.some(p => p.type === 'body');
-
-                      if (hasHead && hasBody) {
-                        setTotemStage('ASSEMBLE');
-                        setIsEventBusy(false);
-                      } else {
-                        // 1. Chosen piece floats upward and fades out
-                        setIsTotemFadingOut(true);
-                        await new Promise(res => setTimeout(res, 500));
-
-                        // 2. Unmount choices and button from the DOM completely
-                        setTotemChoicesHidden(true);
-
-                        // 3. Pause for an exact second on the empty loom
-                        await new Promise(res => setTimeout(res, 1000));
-
-                        returnToMap();
-                      }
+              {/* Two-Column Split: Live Stitched Effigy Stand Left, Claim/Assembly Rack Right */}
+              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                {/* LEFT COLUMN: Physical Stitched Effigy Stand Prop */}
+                <div className="lg:col-span-5 relative flex flex-col items-center justify-between px-5 py-4 rounded-[3px] bg-gradient-to-b from-[#140e0a]/78 via-[#19110c]/88 to-[#0b0705]/95 border border-[#4a3322]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] overflow-hidden">
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background:
+                        previewHead && previewBody
+                          ? 'radial-gradient(circle at 50% 48%, rgba(212,175,55,0.22) 0%, rgba(120,53,15,0.1) 50%, transparent 75%)'
+                          : 'radial-gradient(circle at 50% 48%, rgba(140,103,71,0.14) 0%, transparent 72%)',
                     }}
-                    disabled={selectedTotemRewardIdx === null || isEventBusy}
-                    className={`px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all duration-300 select-none ${
-                      isTotemFadingOut ? 'opacity-0 pointer-events-none' : ''
-                    }`}
-                  >
-                    Bind to Effigy
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col items-center w-full">
-                <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
-                  Stitch a Tribal Patch and Threadbound Crest together to activate your Effigy.
-                </p>
+                  />
+                  <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9a7342]/70" />
 
-                <div className="relative w-full p-5 sm:p-6 mb-6 rounded-[3px] bg-[#0d0806]/82 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] backdrop-blur-[2px]">
+                  <div className="relative z-20 text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
+                    {totemStage === 'REWARD' ? 'Effigy Stand' : 'Live Effigy Assembly'}
+                  </div>
+
+                  {/* Assembled Effigy Figure (Head Crown + Stitched Seam + Body Crest + Timber Pedestal) */}
+                  <div
+                    className="relative z-10 flex flex-col items-center justify-center my-auto"
+                    style={{
+                      animation: effigyStitchingAnim ? 'effigyStitchPulse 0.9s ease-in-out' : undefined,
+                    }}
+                  >
+                    {/* Crown / Tribal Patch Socket */}
+                    <div className="relative z-20 flex flex-col items-center">
+                      <span className="mb-1 text-[8px] font-mono uppercase tracking-[0.22em] text-[#bfa073]">
+                        {previewHead || 'No Patch'}
+                      </span>
+                      <div
+                        className={`w-24 h-24 rounded-[4px] border-2 border-dashed flex items-center justify-center transition-all duration-300 shadow-[0_12px_26px_rgba(0,0,0,0.9)] ${
+                          previewHead
+                            ? 'bg-gradient-to-b from-[#2b1d12] to-[#170f09] border-[#e5c16b]/90 [&>*]:scale-[2.9]'
+                            : 'bg-[#120c08]/80 border-[#5e442c]/70 text-[#7a6045]'
+                        }`}
+                      >
+                        {previewHead ? (
+                          TRIBE_EMBROIDERY[previewHead as Tribe] || <span className="text-2xl">🧵</span>
+                        ) : (
+                          <span className="text-[9px] uppercase tracking-[0.2em]">Head</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Stitched Sinew Neck Seam */}
+                    <svg viewBox="0 0 80 28" className="w-16 h-7 -my-1 z-30 pointer-events-none">
+                      <line x1="40" y1="0" x2="40" y2="28" stroke="#8c6747" strokeWidth="6" />
+                      <path
+                        d="M28 6 L52 12 M52 6 L28 12 M28 16 L52 22 M52 16 L28 22"
+                        stroke={previewHead && previewBody ? '#f4d78b' : '#991b1b'}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+
+                    {/* Torso / Threadbound Crest Socket */}
+                    <div className="relative z-20 flex flex-col items-center -mb-2">
+                      <div
+                        className={`w-28 h-28 rounded-[4px] border-2 border-dashed flex items-center justify-center transition-all duration-300 shadow-[0_14px_28px_rgba(0,0,0,0.92)] ${
+                          previewBody
+                            ? 'bg-gradient-to-b from-[#261a11] to-[#140d08] border-[#e5c16b]/90'
+                            : 'bg-[#120c08]/80 border-[#5e442c]/70 text-[#7a6045]'
+                        }`}
+                      >
+                        {previewBody ? (
+                          <img
+                            src={getSigilArtUrl(previewBody)}
+                            alt={previewBody}
+                            className="w-16 h-16 object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.35)]"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                        ) : (
+                          <span className="text-[9px] uppercase tracking-[0.2em]">Crest</span>
+                        )}
+                      </div>
+                      <span className="mt-1.5 text-[8.5px] font-mono uppercase tracking-[0.2em] text-[#e5c996]">
+                        {previewBody || 'No Crest'}
+                      </span>
+                    </div>
+
+                    {/* Carved Wooden Effigy Pedestal Base */}
+                    <svg viewBox="0 0 260 44" className="w-56 h-auto drop-shadow-[0_12px_20px_rgba(0,0,0,0.96)] pointer-events-none mt-1">
+                      <polygon points="36,38 56,12 204,12 224,38" fill="#231710" stroke="#755538" strokeWidth="1.6" />
+                      <rect x="24" y="34" width="212" height="8" rx="1.5" fill="#160f0a" stroke="#5c422a" strokeWidth="1.2" />
+                    </svg>
+                  </div>
+
+                  {/* Active Effigy Status Footer */}
+                  <div className="relative z-20 w-full min-h-[32px] flex items-center justify-center text-center">
+                    {previewHead && previewBody && (
+                      <div className="font-['Cinzel',_serif] text-sm tracking-[0.1em] text-[#f4d78b] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                        {previewHead} &mdash; {previewBody}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Reward Selection OR Assembly Bench */}
+                <div className="lg:col-span-7 relative flex flex-col justify-between min-h-0 rounded-[3px] bg-[#0d0806]/86 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] p-5">
                   <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full">
-                    <div className="border border-dashed border-[#8c6747]/60 p-4 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
-                      <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-3 border-b border-[#3a271a] pb-1.5">
-                        1. Tribal Patches ({totemPieces.filter(p => p.type === 'head').length})
+                  {totemStage === 'REWARD' ? (
+                    <div className="flex flex-col h-full justify-between">
+                      <div className={`text-left border-b border-[#3a2618]/80 pb-3 transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
+                        <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
+                          Step 1 — Claim an Effigy Scrap
+                        </div>
+
                       </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {totemPieces.map((p, idx) => p.type === 'head' && (
+
+                      {!totemChoicesHidden ? (
+                        <div className="flex-1 flex flex-wrap gap-4 items-center justify-center py-4">
+                          {totemRewardChoices.map((tc, idx) => {
+                            const isSelected = selectedTotemRewardIdx === idx;
+                            const fadeAnim = isTotemFadingOut
+                              ? isSelected
+                                ? 'animate-swipe-up-fade pointer-events-none'
+                                : 'opacity-0 transition-opacity duration-300 pointer-events-none'
+                              : '';
+
+                            return (
+                              <div
+                                key={`totem-rew-${idx}`}
+                                onClick={() => {
+                                  if (!isEventBusy && !isTotemFadingOut) {
+                                    triggerSfx('draw');
+                                    setSelectedTotemRewardIdx(idx);
+                                  }
+                                }}
+                                className={`p-4 border border-dashed rounded-[3px] transition-all duration-200 text-center select-none w-44 flex flex-col items-center justify-start ${fadeAnim} ${
+                                  isEventBusy || isTotemFadingOut
+                                    ? 'opacity-40 cursor-not-allowed border-[#5e442c]/40 bg-[#140e0a]'
+                                    : isSelected
+                                      ? 'border-[#e5c16b] bg-gradient-to-b from-[#281b11] to-[#160e09] scale-105 -translate-y-1 shadow-[0_0_24px_rgba(212,175,55,0.28)] cursor-pointer'
+                                      : 'border-[#8c6747]/75 hover:border-[#cfa159] bg-gradient-to-b from-[#1a120c] to-[#100a07] shadow-[0_8px_20px_rgba(0,0,0,0.85)] hover:-translate-y-1 cursor-pointer'
+                                }`}
+                              >
+                                <div className="text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#b48f5a] mb-2">
+                                  {tc.type === 'head' ? 'Tribal Patch' : 'Threadbound Crest'}
+                                </div>
+                                <div className={`flex items-center justify-center w-16 h-16 mb-2.5 bg-[#1e140e] border border-[#4f3824] rounded-[2px] shadow-inner ${tc.type === 'head' ? '[&>*]:scale-[2.35]' : ''}`}>
+                                  {tc.type === 'head' ? (
+                                    TRIBE_EMBROIDERY[tc.value as Tribe] || <span className="text-2xl">🧵</span>
+                                  ) : (
+                                    <img
+                                      src={getSigilArtUrl(tc.value)}
+                                      alt={tc.value}
+                                      className="w-12 h-12 object-contain"
+                                      style={{ imageRendering: 'pixelated' }}
+                                    />
+                                  )}
+                                </div>
+                                <div className="font-['Cinzel',_serif] font-bold text-[#f0dab2] text-xs uppercase tracking-[0.16em] mb-1">
+                                  {tc.value}
+                                </div>
+                                {tc.type === 'body' && (
+                                  <div className="text-[9.5px] text-[#c7ad87]/80 italic leading-snug mt-0.5 line-clamp-3">
+                                    {SIGIL_DESCRIPTIONS[tc.value]}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-[11px] font-mono uppercase tracking-[0.22em] text-[#9c8262]">
+                          Piece Bound to Satchel...
+                        </div>
+                      )}
+
+                      {!totemChoicesHidden && (
+                        <div className="flex justify-center pt-2">
                           <button
-                            key={`head-${idx}`}
-                            onClick={() => setAssemblyHeadIdx(idx)}
-                            className={`px-2.5 py-2 border border-dashed rounded-[2px] text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
-                              assemblyHeadIdx === idx
-                                ? 'border-[#e5c16b] bg-[#281b12] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
-                                : 'border-[#7a5a3c]/65 bg-[#1a130d] text-[#cbb697]/80 hover:border-[#c89e4c]'
+                            onClick={async () => {
+                              if (selectedTotemRewardIdx === null || isEventBusy) return;
+                              setIsEventBusy(true);
+
+                              const chosen = totemRewardChoices[selectedTotemRewardIdx];
+                              const nextPieces = [...totemPieces, chosen];
+                              setTotemPieces(nextPieces);
+                              triggerSfx('play');
+
+                              if (nextPieces.length >= 7) {
+                                const sigils = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
+                                const randSigil = sigils[Math.floor(Math.random() * sigils.length)];
+                                const amalgam = cloneCard(ALL_CARD_LOOKUP["Amalgam"]);
+                                amalgam.sigils = [randSigil];
+                                const nextDeck = [...masterDeck, amalgam];
+                                setMasterDeck(nextDeck);
+                                masterDeckRef.current = nextDeck;
+                                addLog(`Your satchel overflowed with 7 effigy scraps! The Weaver gifted an Amalgam (${randSigil})!`);
+                              }
+
+                              const hasHead = nextPieces.some(p => p.type === 'head');
+                              const hasBody = nextPieces.some(p => p.type === 'body');
+
+                              if (hasHead && hasBody) {
+                                setTotemStage('ASSEMBLE');
+                                setIsEventBusy(false);
+                              } else {
+                                setIsTotemFadingOut(true);
+                                await new Promise(res => setTimeout(res, 500));
+                                setTotemChoicesHidden(true);
+                                await new Promise(res => setTimeout(res, 950));
+                                returnToMap();
+                              }
+                            }}
+                            disabled={selectedTotemRewardIdx === null || isEventBusy}
+                            className={`px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all duration-300 select-none ${
+                              isTotemFadingOut ? 'opacity-0 pointer-events-none' : ''
                             }`}
                           >
-                            <div className="w-6 h-6 flex items-center justify-center shrink-0 [&>*]:scale-[1.25]">
-                              {TRIBE_EMBROIDERY[p.value as Tribe] || <span>🧵</span>}
-                            </div>
-                            <span>{p.value}</span>
+                            Bind to Effigy
                           </button>
-                        ))}
-                      </div>
+                        </div>
+                      )}
                     </div>
-
-                    <div className="border border-dashed border-[#8c6747]/60 p-4 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
-                      <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-3 border-b border-[#3a271a] pb-1.5">
-                        2. Threadbound Crests ({totemPieces.filter(p => p.type === 'body').length})
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {totemPieces.map((p, idx) => p.type === 'body' && (
-                          <button
-                            key={`body-${idx}`}
-                            onClick={() => setAssemblyBodyIdx(idx)}
-                            className={`px-2.5 py-2 border border-dashed rounded-[2px] text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
-                              assemblyBodyIdx === idx
-                                ? 'border-[#e5c16b] bg-[#281b12] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
-                                : 'border-[#7a5a3c]/65 bg-[#1a130d] text-[#cbb697]/80 hover:border-[#c89e4c]'
-                            }`}
-                          >
-                            <div className="w-6 h-6 flex items-center justify-center shrink-0">
-                              <img
-                                src={getSigilArtUrl(p.value)}
-                                alt={p.value}
-                                className="w-5 h-5 object-contain"
-                                style={{ imageRendering: 'pixelated' }}
-                              />
-                            </div>
-                            <span>{p.value}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {activeTotem.head && activeTotem.body && (
-                    <div className="mt-4 pt-3 border-t border-[#2f2015] text-[10px] text-[#bfa073]/85 font-mono uppercase tracking-[0.18em]">
-                      Currently Stitched: <span className="text-[#f4d78b] font-bold">{activeTotem.head}</span> + <span className="text-[#f4d78b] font-bold">{activeTotem.body}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4">
-                  {assemblyHeadIdx !== null && assemblyBodyIdx !== null ? (
-                    <button
-                      onClick={() => {
-                        const hVal = totemPieces[assemblyHeadIdx].value as Tribe;
-                        const bVal = totemPieces[assemblyBodyIdx].value;
-                        const newTotem = { head: hVal, body: bVal };
-                        setActiveTotem(newTotem);
-                        addLog(`Effigy stitched: ${hVal} + ${bVal}`);
-                        returnToMap(undefined, newTotem);
-                      }}
-                      className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
-                    >
-                      Stitch Effigy
-                    </button>
                   ) : (
-                    <button
-                      onClick={() => {
-                        let nextHead = activeTotem.head;
-                        let nextBody = activeTotem.body;
-                        if (assemblyHeadIdx !== null) nextHead = totemPieces[assemblyHeadIdx!].value as Tribe;
-                        if (assemblyBodyIdx !== null) nextBody = totemPieces[assemblyBodyIdx!].value;
-                        const newTotem = { head: nextHead, body: nextBody };
-                        setActiveTotem(newTotem);
-                        returnToMap(undefined, newTotem);
-                      }}
-                      className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
-                    >
-                      Store Pieces & Proceed
-                    </button>
+                    <div className="flex flex-col h-full justify-between min-h-0">
+                      <div className="text-left border-b border-[#3a2618]/80 pb-2.5 shrink-0">
+                        <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
+                          Step 2 — Stitch Your Active Effigy
+                        </div>
+
+                      </div>
+
+                      <div className="flex-1 min-h-0 overflow-y-auto py-3 flex flex-col gap-3.5">
+                        {/* Tribal Patches Shelf */}
+                        <div className="border border-dashed border-[#8c6747]/60 p-3.5 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
+                          <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-2.5 border-b border-[#3a271a] pb-1.5 text-left">
+                            1. Tribal Patches ({totemPieces.filter(p => p.type === 'head').length})
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {totemPieces.map((p, idx) => p.type === 'head' && (
+                              <button
+                                key={`head-${idx}`}
+                                type="button"
+                                onClick={() => {
+                                  triggerSfx('draw');
+                                  setAssemblyHeadIdx(idx);
+                                }}
+                                className={`px-2.5 py-2 border border-dashed rounded-[2px] text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+                                  assemblyHeadIdx === idx
+                                    ? 'border-[#e5c16b] bg-[#281b12] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
+                                    : 'border-[#7a5a3c]/65 bg-[#1a130d] text-[#cbb697]/80 hover:border-[#c89e4c]'
+                                }`}
+                              >
+                                <div className="w-6 h-6 flex items-center justify-center shrink-0 [&>*]:scale-[1.25]">
+                                  {TRIBE_EMBROIDERY[p.value as Tribe] || <span>🧵</span>}
+                                </div>
+                                <span>{p.value}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Threadbound Crests Shelf */}
+                        <div className="border border-dashed border-[#8c6747]/60 p-3.5 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
+                          <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-2.5 border-b border-[#3a271a] pb-1.5 text-left">
+                            2. Threadbound Crests ({totemPieces.filter(p => p.type === 'body').length})
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {totemPieces.map((p, idx) => p.type === 'body' && (
+                              <button
+                                key={`body-${idx}`}
+                                type="button"
+                                onClick={() => {
+                                  triggerSfx('draw');
+                                  setAssemblyBodyIdx(idx);
+                                }}
+                                className={`px-2.5 py-2 border border-dashed rounded-[2px] text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
+                                  assemblyBodyIdx === idx
+                                    ? 'border-[#e5c16b] bg-[#281b12] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
+                                    : 'border-[#7a5a3c]/65 bg-[#1a130d] text-[#cbb697]/80 hover:border-[#c89e4c]'
+                                }`}
+                              >
+                                <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                                  <img
+                                    src={getSigilArtUrl(p.value)}
+                                    alt={p.value}
+                                    className="w-5 h-5 object-contain"
+                                    style={{ imageRendering: 'pixelated' }}
+                                  />
+                                </div>
+                                <span>{p.value}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-center gap-3 pt-2 shrink-0">
+                        {assemblyHeadIdx !== null && assemblyBodyIdx !== null ? (
+                          <button
+                            disabled={effigyStitchingAnim}
+                            onClick={() => {
+                              const hVal = totemPieces[assemblyHeadIdx].value as Tribe;
+                              const bVal = totemPieces[assemblyBodyIdx].value;
+                              const newTotem = { head: hVal, body: bVal };
+                              setActiveTotem(newTotem);
+                              setEffigyStitchingAnim(true);
+                              triggerSfx('bell');
+                              addLog(`Effigy stitched: ${hVal} + ${bVal}`);
+                              scheduleEventTimer(() => {
+                                setEffigyStitchingAnim(false);
+                                returnToMap(undefined, newTotem);
+                              }, 950);
+                            }}
+                            className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-45 shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
+                          >
+                            {effigyStitchingAnim ? 'Stitching Effigy...' : 'Stitch Effigy'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              let nextHead = activeTotem.head;
+                              let nextBody = activeTotem.body;
+                              if (assemblyHeadIdx !== null) nextHead = totemPieces[assemblyHeadIdx!].value as Tribe;
+                              if (assemblyBodyIdx !== null) nextBody = totemPieces[assemblyBodyIdx!].value;
+                              const newTotem = { head: nextHead, body: nextBody };
+                              setActiveTotem(newTotem);
+                              returnToMap(undefined, newTotem);
+                            }}
+                            className="px-7 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
+                          >
+                            Store Pieces &amp; Proceed
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           CARD CHOICE EVENT SCREEN
          ========================================================================= */}
       {screen === 'EVENT_CARD_CHOICE' && (
         <div
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
+          className="absolute inset-0 bg-[#080706] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
           style={getScreenBgStyle('choiceevent.jpg')}
         >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.34)_0%,rgba(5,3,2,0.88)_100%)] pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,12,9,0.28)_0%,rgba(4,3,2,0.92)_100%)] pointer-events-none" />
 
-          <div className="relative z-10 max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="flex items-center gap-3.5 mb-1">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                Deck Reinforcement
-              </span>
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Wild Beasts
-            </h1>
-            <p className="mt-2 mb-6 px-4 py-1.5 rounded-[2px] bg-[#0b0705]/70 border border-[#3a2618]/70 text-[11px] font-mono text-[#d4bfa0]/85 max-w-md leading-relaxed shadow-md">
-              A trio of feral denizens emerge from the thicket. Select one Creature to accompany you.
-            </p>
-
-            {/* Handheld 3-card fanning spread inside a subtle tabletop spotlight */}
-            <div className="relative flex items-center justify-center w-full h-[250px] mb-7 rounded-[3px] bg-[#0d0806]/65 border border-[#3e291b]/75 shadow-[0_18px_44px_rgba(0,0,0,0.88)] backdrop-blur-[2px] select-none group">
-              <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-              <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
-
-              {choiceCards.map((c, idx) => {
-                const isSelected = choiceSelectedIdx === idx;
-                const fanTransforms = [
-                  'rotate-[-9deg] -translate-x-[88px] group-hover:-translate-x-[118px] group-hover:rotate-[-12deg] z-0',
-                  'rotate-0 -translate-y-2 group-hover:-translate-y-4 z-10',
-                  'rotate-[9deg] translate-x-[88px] group-hover:translate-x-[118px] group-hover:rotate-[12deg] z-20',
-                ];
-                return (
-                  <div
-                    key={c.id || `choice-${idx}`}
-                    onClick={() => setChoiceSelectedIdx(idx)}
-                    className={`absolute cursor-pointer transform origin-bottom transition-all duration-300 ease-out ${fanTransforms[idx] || ''} ${
-                      isSelected
-                        ? '!z-30 -translate-y-7 scale-[1.09] rotate-0'
-                        : 'hover:-translate-y-3 hover:scale-[1.04] hover:!z-25'
-                    }`}
-                  >
-                    {isSelected && (
-                      <span className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
-                        Selected
-                      </span>
-                    )}
-                    {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
-                  </div>
-                );
-              })}
+          <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
+            {/* Top Header */}
+            <div className="flex flex-col items-center text-center shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                  Thicket Clearing
+                </span>
+                <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                Wild Beasts
+              </h1>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-4">
+            {/* Moonlit Briar Stage with Three Distinct Creature Pedestals */}
+            <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-between rounded-[4px] bg-gradient-to-b from-[#11120e]/82 via-[#0f0c09]/90 to-[#070504]/96 border border-[#443121]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,228,185,0.08)] px-6 py-5 overflow-hidden">
+              <span className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-[#9a7342]/75" />
+              <span className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-[#9a7342]/75" />
+              <span className="pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-[#9a7342]/75" />
+              <span className="pointer-events-none absolute bottom-2 right-2 w-3.5 h-3.5 border-b border-r border-[#9a7342]/75" />
+
+              {/* Moonlit Haze & Layered Briar Silhouettes */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 50% 24%, rgba(212,186,128,0.16) 0%, rgba(42,32,20,0.12) 48%, transparent 76%)',
+                }}
+              />
+              <svg
+                viewBox="0 0 800 120"
+                preserveAspectRatio="none"
+                className="pointer-events-none absolute bottom-0 inset-x-0 w-full h-24 opacity-45"
+              >
+                <path
+                  d="M0 120 L0 64 Q45 36 86 72 Q132 48 188 84 Q245 64 310 92 Q400 72 490 92 Q560 58 625 82 Q690 42 742 74 Q775 56 800 68 L800 120 Z"
+                  fill="#090705"
+                />
+              </svg>
+
+              {/* Three Emergent Beasts */}
+              <div
+                key={choiceDealGen}
+                className="relative z-20 w-full max-w-3xl flex-1 flex items-center justify-center gap-6 sm:gap-12"
+              >
+                {choiceCards.map((c, idx) => {
+                  const isSelected = choiceSelectedIdx === idx;
+                  const tiltClass = idx === 0 ? '-rotate-2' : idx === 2 ? 'rotate-2' : 'rotate-0';
+                  return (
+                    <div
+                      key={c.id || `choice-${choiceDealGen}-${idx}`}
+                      onClick={() => {
+                        triggerSfx('draw');
+                        setChoiceSelectedIdx(idx);
+                      }}
+                      style={{
+                        animation: `choiceCardDeal 0.36s cubic-bezier(0.22, 1, 0.36, 1) ${idx * 0.08}s both`,
+                      }}
+                      className={`relative flex flex-col items-center cursor-pointer transition-all duration-300 ${
+                        isSelected
+                          ? '-translate-y-4 scale-[1.16] rotate-0 z-30'
+                          : `${tiltClass} scale-[1.06] hover:-translate-y-2.5 hover:scale-[1.12] hover:rotate-0 z-10 hover:z-20`
+                      }`}
+                    >
+                      {isSelected && (
+                        <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 z-40 px-2.5 py-0.5 rounded-[2px] bg-[#1f160b]/95 border border-[#e5c16b]/90 text-[8.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#fde68a] whitespace-nowrap shadow-[0_0_14px_rgba(234,179,8,0.4)]">
+                          Chosen
+                        </span>
+                      )}
+                      <div
+                        className={`rounded-[4px] transition-shadow duration-300 ${
+                          isSelected
+                            ? 'shadow-[0_0_38px_rgba(212,175,55,0.52),0_18px_32px_rgba(0,0,0,0.95)]'
+                            : 'shadow-[0_16px_30px_rgba(0,0,0,0.92)]'
+                        }`}
+                      >
+                        {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
+                      </div>
+                      {/* Ground Shadow Oval */}
+                      <div
+                        className={`mt-3 h-2 rounded-full blur-[3px] transition-all duration-300 ${
+                          isSelected ? 'w-28 bg-amber-500/30' : 'w-24 bg-black/75'
+                        }`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Stark Cinzel Line */}
+              <div className="relative z-20 pt-2 shrink-0">
+                <p className="font-['Cinzel',_serif] text-sm sm:text-base italic tracking-[0.1em] text-[#e5cfa8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                  Three emerge from the brush.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center justify-center gap-4 shrink-0">
               <button
                 onClick={() => {
                   let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
@@ -11797,14 +12715,14 @@ export default function App() {
                   returnToMap(updatedDeck);
                 }}
                 disabled={choiceSelectedIdx === null}
-                className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_18px_rgba(0,0,0,0.85)] transition-all select-none"
+                className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
               >
                 Take Creature
               </button>
               {choiceRerollsLeft > 0 && (
                 <button
                   onClick={rerollCardChoice}
-                  className="px-5 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
+                  className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/92 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_6px_16px_rgba(0,0,0,0.82)] transition-all select-none"
                 >
                   Reroll ({choiceRerollsLeft})
                 </button>
@@ -14344,7 +15262,7 @@ export default function App() {
             draggable={false}
           />
           <div className="mt-3 text-xs font-mono uppercase tracking-[0.35em] text-red-300/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-            The Scales Tipped Into Darkness
+            The Sacred Threads Drag you into the Abyss
           </div>
         </div>
       </div>
