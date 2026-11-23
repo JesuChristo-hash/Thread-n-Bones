@@ -8181,7 +8181,7 @@ export default function App() {
           const hasFire = weatherAct === 4;
 
           return (
-            <div className="pointer-events-none fixed inset-0 z-[52] overflow-hidden select-none">
+            <div className="pointer-events-none fixed inset-0 z-[15] overflow-hidden select-none">
               {/* Act 1-3: Drifting Mist Layers */}
               {hasMist && (
                 <>
