@@ -846,18 +846,25 @@
 
 @keyframes pressPlatenSlam {
   0%   { transform: translateY(-196px); }
+  6%   { transform: translateY(-140px); }
+  13%  { transform: translateY(-70px); }
   20%  { transform: translateY(0px); }
   74%  { transform: translateY(0px); }
-  92%  { transform: translateY(-200px); }
+  81%  { transform: translateY(-70px); }
+  88%  { transform: translateY(-140px); }
+  95%  { transform: translateY(-200px); }
   100% { transform: translateY(-196px); }
 }
 
 @keyframes pressCardSquish {
   0%   { transform: scaleY(1) scaleX(1); }
-  8%   { transform: scaleY(1) scaleX(1); }
+  6%   { transform: scaleY(1) scaleX(1); }
+  13%  { transform: scaleY(0.52) scaleX(1.06); }
   20%  { transform: scaleY(0.05) scaleX(1.12); }
   74%  { transform: scaleY(0.05) scaleX(1.12); }
-  90%  { transform: scaleY(1.03) scaleX(0.98); }
+  81%  { transform: scaleY(0.52) scaleX(1.06); }
+  88%  { transform: scaleY(1) scaleX(1); }
+  94%  { transform: scaleY(1.03) scaleX(0.98); }
   100% { transform: scaleY(1) scaleX(1); }
 }
 
@@ -868,20 +875,31 @@
 }
 
 @keyframes loomNeedleSweep {
-  0%, 100% { transform: translateX(-28px) rotate(-14deg); }
-  50%      { transform: translateX(28px) rotate(14deg); }
+  0%   { transform: translate(-36px, -46px) rotate(-18deg); }
+  25%  { transform: translate(36px, -16px) rotate(16deg); }
+  50%  { transform: translate(-36px, 16px) rotate(-18deg); }
+  75%  { transform: translate(36px, 46px) rotate(16deg); }
+  100% { transform: translate(-28px, 64px) rotate(-12deg); }
 }
 
 @keyframes loomTwinConvergeLeft {
-  0%   { transform: translate(0px, 0px) scale(1); opacity: 1; }
-  65%  { transform: translate(64px, 68px) scale(0.84) rotate(6deg); opacity: 0.85; }
-  100% { transform: translate(74px, 84px) scale(0.5); opacity: 0; }
+  0%   { transform: translateX(0px) scale(1); opacity: 1; }
+  45%  { transform: translateX(52px) scale(0.96) rotate(2deg); opacity: 1; }
+  85%  { transform: translateX(62px) scale(0.92); opacity: 0.85; }
+  100% { transform: translateX(66px) scale(0.85); opacity: 0; }
 }
 
 @keyframes loomTwinConvergeRight {
-  0%   { transform: translate(0px, 0px) scale(1); opacity: 1; }
-  65%  { transform: translate(-64px, 68px) scale(0.84) rotate(-6deg); opacity: 0.85; }
-  100% { transform: translate(-74px, 84px) scale(0.5); opacity: 0; }
+  0%   { transform: translateX(0px) scale(1); opacity: 1; }
+  45%  { transform: translateX(-52px) scale(0.96) rotate(-2deg); opacity: 1; }
+  85%  { transform: translateX(-62px) scale(0.92); opacity: 0.85; }
+  100% { transform: translateX(-66px) scale(0.85); opacity: 0; }
+}
+
+@keyframes loomSeamStitchDraw {
+  0%   { stroke-dashoffset: 320; opacity: 0.3; }
+  20%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
 }
 
 /* --- Event Props: Bone Lord Ossuary, Tribal Tapestry, Steeple Scales, Effigy Stand --- */

@@ -707,22 +707,42 @@ const MapScreen: React.FC<MapScreenProps> = ({
             onScroll={handleParchmentScroll}
             className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden border-x-2 border-[#383336] shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_0_54px_rgba(14,11,16,0.78)]"
             style={{
-              backgroundColor: '#afa89d',
-              backgroundImage: `
-                radial-gradient(ellipse at 50% 22%, rgba(226,220,210,0.42) 0%, rgba(154,147,138,0.24) 56%, rgba(36,31,34,0.68) 100%),
-                repeating-linear-gradient(0deg, rgba(28,24,28,0.05) 0px, rgba(28,24,28,0.05) 1px, transparent 1px, transparent 4px),
-                repeating-linear-gradient(90deg, rgba(28,24,28,0.04) 0px, rgba(28,24,28,0.04) 1px, transparent 1px, transparent 4px)
-              `,
+              backgroundColor: '#9c9282',
               scrollbarWidth: 'thin',
               scrollbarColor: '#4e4749 #141215',
             }}
           >
-            {/* Inner Cartographic Canvas (Scaled Dynamically to Act Row Count) */}
-            <div className="relative w-full" style={{ height: `${parchmentHeight}px` }}>
-              {/* Faint Hand-Ruled Border & Compass Watermark */}
-              <div className="pointer-events-none absolute inset-3 border border-[#4a321b]/35" />
-              <div className="pointer-events-none absolute inset-4 border border-dashed border-[#4a321b]/20" />
-              <div className="pointer-events-none absolute top-5 right-6 text-[9px] font-['Cinzel',_serif] uppercase tracking-[0.28em] text-[#4b321b]/55">
+            {/* Inner Cartographic Canvas (Mirrored Seamless mapbg.jpg Tiles + Dark Ink) */}
+            <div className="relative w-full overflow-hidden" style={{ height: `${parchmentHeight}px` }}>
+              {/* Seamless Mirrored Vertical Background Stack (eliminates horizontal tile seams on long acts) */}
+              <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                {Array.from({ length: Math.max(1, Math.ceil(parchmentHeight / 520)) }, (_, tileIdx) => (
+                  <div
+                    key={tileIdx}
+                    className="w-full"
+                    style={{
+                      height: '520px',
+                      backgroundImage: `url(${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg)`,
+                      backgroundSize: '100% 100%',
+                      backgroundRepeat: 'no-repeat',
+                      transform: tileIdx % 2 === 1 ? 'scaleY(-1)' : undefined,
+                    }}
+                  />
+                ))}
+                {/* Subtle Warm Parchment Contrast Wash & Edge Vignette */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse at 50% 45%, rgba(220,210,192,0.18) 0%, rgba(24,18,15,0.48) 100%)',
+                  }}
+                />
+              </div>
+
+              {/* Hand-Ruled Dark Ink Border & Act Stamp */}
+              <div className="pointer-events-none absolute inset-3 border border-[#120d0a]/70 z-0" />
+              <div className="pointer-events-none absolute inset-4 border border-dashed border-[#120d0a]/45 z-0" />
+              <div className="pointer-events-none absolute top-5 right-6 text-[10px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.28em] text-[#110c09]/90 drop-shadow-[0_1px_0_rgba(255,255,255,0.18)] z-0">
                 ACT {['I', 'II', 'III', 'IV'][mapData.act - 1] || mapData.act}
               </div>
 
@@ -739,9 +759,9 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   width={cartography.vw - 20}
                   height={cartography.vh - 20}
                   fill="none"
-                  stroke="#231f24"
-                  strokeOpacity="0.34"
-                  strokeWidth="1.4"
+                  stroke="#0d0a09"
+                  strokeOpacity="0.72"
+                  strokeWidth="1.6"
                 />
                 <rect
                   x="15"
@@ -749,35 +769,35 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   width={cartography.vw - 30}
                   height={cartography.vh - 30}
                   fill="none"
-                  stroke="#231f24"
-                  strokeOpacity="0.22"
-                  strokeWidth="0.9"
+                  stroke="#0d0a09"
+                  strokeOpacity="0.48"
+                  strokeWidth="1"
                   strokeDasharray="6 4"
                 />
                 {/* Ornate Corner Ticks */}
                 <path
                   d={`M 10 28 L 28 10 M ${cartography.vw - 10} 28 L ${cartography.vw - 28} 10 M 10 ${cartography.vh - 28} L 28 ${cartography.vh - 10} M ${cartography.vw - 10} ${cartography.vh - 28} L ${cartography.vw - 28} ${cartography.vh - 10}`}
-                  stroke="#231f24"
-                  strokeOpacity="0.38"
-                  strokeWidth="1.2"
+                  stroke="#0d0a09"
+                  strokeOpacity="0.78"
+                  strokeWidth="1.5"
                 />
 
                 {/* Aged Water & Blood Ring Stains */}
                 {cartography.stains.map(st => (
-                  <g key={st.id} opacity={st.isBlood ? 0.11 : 0.1}>
+                  <g key={st.id} opacity={st.isBlood ? 0.2 : 0.16}>
                     <circle
                       cx={st.cx}
                       cy={st.cy}
                       r={st.r}
-                      fill={st.isBlood ? '#6e1712' : '#5e4022'}
+                      fill={st.isBlood ? '#590d0a' : '#2e1d0f'}
                     />
                     <circle
                       cx={st.cx}
                       cy={st.cy}
                       r={st.r * 0.92}
                       fill="none"
-                      stroke={st.isBlood ? '#4d0e0a' : '#3d2814'}
-                      strokeWidth="1.1"
+                      stroke={st.isBlood ? '#3b0705' : '#1c1108'}
+                      strokeWidth="1.2"
                     />
                   </g>
                 ))}
@@ -785,26 +805,26 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 {/* Horizontal Scroll-Fold Creases */}
                 {cartography.folds.map((fy, idx) => (
                   <g key={`fold-${idx}`}>
-                    <line x1="12" y1={fy} x2={cartography.vw - 12} y2={fy} stroke="#2a1a0d" strokeOpacity="0.14" strokeWidth="1.2" />
-                    <line x1="12" y1={fy + 1.5} x2={cartography.vw - 12} y2={fy + 1.5} stroke="#f7e8c8" strokeOpacity="0.18" strokeWidth="1" />
+                    <line x1="12" y1={fy} x2={cartography.vw - 12} y2={fy} stroke="#0f0a07" strokeOpacity="0.34" strokeWidth="1.3" />
+                    <line x1="12" y1={fy + 1.5} x2={cartography.vw - 12} y2={fy + 1.5} stroke="#f7e8c8" strokeOpacity="0.2" strokeWidth="1" />
                   </g>
                 ))}
 
                 {/* Topographic Elevation Contours */}
                 {cartography.contours.map(ct => (
-                  <g key={ct.id} transform={`translate(${ct.cx} ${ct.cy}) rotate(${ct.rot})`} fill="none" stroke="#231f24" strokeOpacity="0.14">
-                    <ellipse cx="0" cy="0" rx={ct.rx} ry={ct.ry} strokeWidth="1" strokeDasharray="5 4" />
-                    <ellipse cx="0" cy="0" rx={ct.rx * 0.66} ry={ct.ry * 0.66} strokeWidth="0.85" />
-                    <ellipse cx="0" cy="0" rx={ct.rx * 0.34} ry={ct.ry * 0.34} strokeWidth="0.7" strokeDasharray="3 3" />
+                  <g key={ct.id} transform={`translate(${ct.cx} ${ct.cy}) rotate(${ct.rot})`} fill="none" stroke="#120e0b" strokeOpacity="0.38">
+                    <ellipse cx="0" cy="0" rx={ct.rx} ry={ct.ry} strokeWidth="1.15" strokeDasharray="5 4" />
+                    <ellipse cx="0" cy="0" rx={ct.rx * 0.66} ry={ct.ry * 0.66} strokeWidth="0.95" />
+                    <ellipse cx="0" cy="0" rx={ct.rx * 0.34} ry={ct.ry * 0.34} strokeWidth="0.8" strokeDasharray="3 3" />
                   </g>
                 ))}
 
                 {/* Boss Sanctum Arcane Halo at the Top Apex */}
-                <g transform={`translate(${cartography.bossPx.x} ${cartography.bossPx.y})`} opacity="0.28" stroke="#4f1610" fill="none">
-                  <circle cx="0" cy="0" r="46" strokeWidth="1.2" strokeDasharray="4 3" />
-                  <circle cx="0" cy="0" r="56" strokeWidth="0.85" />
-                  <path d="M-64 0 L-48 0 M48 0 L64 0 M0 -64 L0 -48 M0 48 L0 64" strokeWidth="1.1" />
-                  <path d="M-42 -42 L-33 -33 M42 -42 L33 -33 M-42 42 L-33 33 M42 42 L33 33" strokeWidth="0.9" />
+                <g transform={`translate(${cartography.bossPx.x} ${cartography.bossPx.y})`} opacity="0.72" stroke="#260806" fill="none">
+                  <circle cx="0" cy="0" r="46" strokeWidth="1.5" strokeDasharray="4 3" />
+                  <circle cx="0" cy="0" r="56" strokeWidth="1.1" />
+                  <path d="M-64 0 L-48 0 M48 0 L64 0 M0 -64 L0 -48 M0 48 L0 64" strokeWidth="1.4" />
+                  <path d="M-42 -42 L-33 -33 M42 -42 L33 -33 M-42 42 L-33 33 M42 42 L33 33" strokeWidth="1.1" />
                 </g>
 
                 {/* Act-Themed Margin Illustrations */}
@@ -816,9 +836,9 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   if (!rowNode) return null;
                   const ry = (rowNode.y / 100) * cartography.vh;
                   return (
-                    <g key={`tick-${r}`} opacity="0.32" stroke="#231f24" fill="#3b2615">
-                      <line x1="15" y1={ry} x2="23" y2={ry} strokeWidth="1" />
-                      <text x="26" y={ry + 3} fontSize="7.5" fontFamily="monospace" letterSpacing="0.8">
+                    <g key={`tick-${r}`} opacity="0.84" stroke="#0d0a08" fill="#0d0a08">
+                      <line x1="15" y1={ry} x2="23" y2={ry} strokeWidth="1.3" />
+                      <text x="26" y={ry + 3} fontSize="8" fontFamily="monospace" fontWeight="bold" letterSpacing="0.8">
                         {r === 0 ? 'START' : r === mapData.rows - 1 ? 'APEX' : String(r).padStart(2, '0')}
                       </text>
                     </g>
@@ -828,15 +848,15 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 {/* Hand-Inked Compass Rose (Bottom-Right near Trailhead) */}
                 <g
                   transform={`translate(${cartography.vw - 64} ${cartography.vh - 68})`}
-                  opacity="0.36"
-                  stroke="#362212"
+                  opacity="0.84"
+                  stroke="#0f0b09"
                   fill="none"
                 >
-                  <circle cx="0" cy="0" r="24" strokeWidth="1" />
-                  <circle cx="0" cy="0" r="20" strokeWidth="0.7" strokeDasharray="2 2" />
-                  <path d="M0 -28 L4 -4 L28 0 L4 4 L0 28 L-4 4 L-28 0 L-4 -4 Z" fill="rgba(54,34,18,0.16)" strokeWidth="1" />
-                  <path d="M0 -28 L0 0 L4 -4 Z M28 0 L0 0 L4 4 Z M0 28 L0 0 L-4 4 Z M-28 0 L0 0 L-4 -4 Z" fill="#362212" stroke="none" opacity="0.55" />
-                  <text x="-3.2" y="-31" fontSize="8" fontFamily="serif" fontWeight="bold" fill="#362212" stroke="none">N</text>
+                  <circle cx="0" cy="0" r="24" strokeWidth="1.3" />
+                  <circle cx="0" cy="0" r="20" strokeWidth="0.9" strokeDasharray="2 2" />
+                  <path d="M0 -28 L4 -4 L28 0 L4 4 L0 28 L-4 4 L-28 0 L-4 -4 Z" fill="rgba(18,12,9,0.34)" strokeWidth="1.2" />
+                  <path d="M0 -28 L0 0 L4 -4 Z M28 0 L0 0 L4 4 Z M0 28 L0 0 L-4 4 Z M-28 0 L0 0 L-4 -4 Z" fill="#0f0b09" stroke="none" opacity="0.88" />
+                  <text x="-3.5" y="-31" fontSize="9" fontFamily="serif" fontWeight="bold" fill="#0f0b09" stroke="none">N</text>
                 </g>
               </svg>
 
@@ -880,32 +900,32 @@ const MapScreen: React.FC<MapScreenProps> = ({
                           fill="none"
                           stroke={
                             isTraced
-                              ? '#a82317'
+                              ? '#8f160d'
                               : isWalked
-                                ? '#5f1812'
+                                ? '#3b0b08'
                                 : isEdgeLockedOut
-                                  ? 'rgba(32, 28, 34, 0.16)'
+                                  ? 'rgba(14, 11, 10, 0.36)'
                                   : isActiveChoice
                                     ? hasActiveTrace
-                                      ? 'rgba(140, 34, 24, 0.35)'
-                                      : '#8c2218'
+                                      ? 'rgba(122, 20, 14, 0.5)'
+                                      : '#78140d'
                                     : hasActiveTrace
-                                      ? 'rgba(32, 28, 34, 0.22)'
-                                      : 'rgba(32, 28, 34, 0.48)'
+                                      ? 'rgba(14, 11, 10, 0.48)'
+                                      : 'rgba(14, 11, 10, 0.86)'
                           }
                           strokeWidth={
                             isTraced
-                              ? 2.6
+                              ? 3.1
                               : isWalked
-                                ? 2.6
+                                ? 3.0
                                 : isEdgeLockedOut
-                                  ? 1.15
+                                  ? 1.45
                                   : isActiveChoice
-                                    ? 2.1
-                                    : 1.45
+                                    ? 2.7
+                                    : 2.05
                           }
                           strokeDasharray={
-                            isWalked || isTraced ? undefined : isActiveChoice ? '4 3' : '2.5 3.5'
+                            isWalked || isTraced ? undefined : isActiveChoice ? '5 3.5' : '3.5 4'
                           }
                           vectorEffect="non-scaling-stroke"
                           strokeLinecap="round"
@@ -970,10 +990,10 @@ const MapScreen: React.FC<MapScreenProps> = ({
                                 ? 'bg-gradient-to-b from-[#2b1214] to-[#13090b] hover:from-[#3d171a] hover:to-[#1b0c0f] border-2 border-[#b5372e] text-[#f0b4aa] shadow-[0_0_18px_rgba(166,34,24,0.55),0_4px_10px_rgba(0,0,0,0.7)] hover:scale-115 cursor-pointer'
                                 : 'bg-gradient-to-b from-[#242027] to-[#110f14] hover:from-[#322d36] hover:to-[#19161e] border-2 border-[#9e8a70] text-[#ebe1cf] shadow-[0_0_16px_rgba(143,121,96,0.45),0_4px_10px_rgba(0,0,0,0.7)] hover:scale-115 cursor-pointer'
                               : isVisited
-                                ? 'bg-[#18161a]/75 border border-[#4a413b]/60 text-[#7d736c]/60 hover:brightness-110 hover:scale-105 cursor-help'
+                                ? 'bg-[#121013]/85 border border-[#3d3530]/75 text-[#8a8078]/70 shadow-[0_3px_8px_rgba(0,0,0,0.7)] hover:brightness-110 hover:scale-105 cursor-help'
                                 : isCombat
-                                  ? 'bg-[#1c1214]/90 border border-[#6e2d29]/80 text-[#cf9088]/90 hover:brightness-115 hover:scale-105 cursor-help'
-                                  : 'bg-[#17151a]/90 border border-[#524844]/80 text-[#c7bdb0]/85 hover:brightness-115 hover:scale-105 cursor-help'
+                                  ? 'bg-[#170c0e] border-2 border-[#7d2c26] text-[#e8a8a0] shadow-[0_4px_12px_rgba(0,0,0,0.85)] hover:brightness-115 hover:scale-105 cursor-help'
+                                  : 'bg-[#110f13] border-2 border-[#5c5048] text-[#dfd5c5] shadow-[0_4px_12px_rgba(0,0,0,0.85)] hover:brightness-115 hover:scale-105 cursor-help'
                       }`}
                     >
                       {/* Pulsing Outer Ring for Reachable Choices */}
@@ -1038,21 +1058,29 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
         {/* RIGHT FLANK: Cartographer's Omen Inspector & Expedition Ledger */}
         <div className="w-full sm:w-[240px] md:w-[280px] lg:w-[330px] max-h-[38%] sm:max-h-none flex flex-row sm:flex-col justify-between gap-2.5 lg:gap-4 shrink-0 min-h-0 overflow-y-auto sm:overflow-y-auto">
-          {/* Omen / Node Inspector Plaque (Carved Slate & Ritual Cloth) */}
-          <div
-            className="relative flex-1 flex flex-col justify-between p-4 lg:p-5 rounded-[2px] border border-[#4a413b]/85 shadow-[0_18px_42px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.07),inset_0_0_28px_rgba(0,0,0,0.75)] backdrop-blur-[3px] overflow-hidden"
-            style={{
-              background:
-                'radial-gradient(ellipse at 50% 0%, rgba(122,36,32,0.16) 0%, rgba(16,14,17,0.94) 52%, rgba(9,8,10,0.98) 100%)',
-            }}
-          >
-            {/* Inner Engraved Double-Rule Frame */}
-            <div className="pointer-events-none absolute inset-1.5 border border-[#5e544d]/30 rounded-[2px]" />
-            {/* Tarnished Brass Corner Brackets */}
-            <span className="pointer-events-none absolute top-1.5 left-1.5 w-3 h-3 border-t-2 border-l-2 border-[#8f7960]/75" />
-            <span className="pointer-events-none absolute top-1.5 right-1.5 w-3 h-3 border-t-2 border-r-2 border-[#8f7960]/75" />
-            <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-3 h-3 border-b-2 border-l-2 border-[#8f7960]/75" />
-            <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-3 h-3 border-b-2 border-r-2 border-[#8f7960]/75" />
+          {/* Omen / Node Inspector — Hanging Ritual Cloth Banner */}
+          <div className="relative flex-1 flex flex-col min-h-0">
+            {/* Top Timber & Brass Banner Rod */}
+            <div className="relative z-20 h-3 w-[103%] -ml-[1.5%] rounded-full bg-gradient-to-b from-[#664933] via-[#3a271a] to-[#1a110b] border border-[#8f6d4a]/90 shadow-[0_5px_12px_rgba(0,0,0,0.92)] flex items-center justify-between px-1 shrink-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
+            </div>
+
+            <div
+              className="relative flex-1 flex flex-col justify-between px-4 pt-4 pb-5 lg:px-5 lg:pt-4 lg:pb-6 -mt-0.5 rounded-b-[14px] border-x border-b border-[#6e5038]/85 shadow-[0_18px_42px_rgba(0,0,0,0.92),inset_0_12px_26px_rgba(0,0,0,0.72)] overflow-hidden"
+              style={{
+                backgroundColor: '#1a0e0e',
+                backgroundImage: `
+                  radial-gradient(ellipse at 50% 0%, rgba(145,38,32,0.28) 0%, rgba(26,14,14,0.92) 58%, rgba(13,8,9,0.98) 100%),
+                  repeating-linear-gradient(45deg, rgba(212,175,55,0.03) 0px, rgba(212,175,55,0.03) 1px, transparent 1px, transparent 5px),
+                  repeating-linear-gradient(-45deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 5px)
+                `,
+              }}
+            >
+              {/* Stitched Gold-Thread Banner Seam */}
+              <div className="pointer-events-none absolute inset-2 border border-dashed border-[#a8824c]/45 rounded-b-[10px]" />
+              {/* Woven Center Fringe Accent at Bottom Hem */}
+              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#2c1910] via-[#b88f4c]/70 to-[#2c1910]" />
 
             <div className="relative z-10">
               {/* Header Bar */}
@@ -1110,29 +1138,38 @@ const MapScreen: React.FC<MapScreenProps> = ({
             </div>
 
             {/* Footer Status Strip */}
-            <div className="relative z-10 mt-3 lg:mt-4 pt-2.5 border-t border-[#342c27]/85 text-center">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-[#141216]/90 border border-[#3a3330]/85 text-[8.5px] font-mono uppercase tracking-[0.2em] text-[#b8a58e]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#8f322c] opacity-90" />
+            <div className="relative z-10 mt-3 lg:mt-4 pt-2.5 border-t border-[#4d3326]/75 text-center">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-[#140a0a]/90 border border-[#5e3d2a]/80 text-[8.5px] font-mono uppercase tracking-[0.2em] text-[#cfb898]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#b5372e] opacity-95" />
                 {currentNode.nextIds.length === 1
                   ? 'Single path forward'
                   : `${currentNode.nextIds.length} diverging branches ahead`}
               </div>
             </div>
+            </div>
           </div>
 
-          {/* Expedition Status & Act Boss Telemetry (Carved Slate) */}
-          <div
-            className="relative p-4 rounded-[2px] border border-[#4a413b]/85 shadow-[0_16px_34px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.06),inset_0_0_24px_rgba(0,0,0,0.75)] backdrop-blur-[3px] overflow-hidden"
-            style={{
-              background:
-                'radial-gradient(ellipse at 50% 0%, rgba(122,36,32,0.12) 0%, rgba(15,13,16,0.94) 55%, rgba(9,8,10,0.98) 100%)',
-            }}
-          >
-            <div className="pointer-events-none absolute inset-1.5 border border-[#5e544d]/25 rounded-[2px]" />
-            <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#8f7960]/70" />
-            <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#8f7960]/70" />
-            <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#8f7960]/70" />
-            <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#8f7960]/70" />
+          {/* Expedition Status & Act Boss Telemetry — Hanging Ritual Cloth Banner */}
+          <div className="relative flex flex-col">
+            {/* Top Timber & Brass Banner Rod */}
+            <div className="relative z-20 h-3 w-[103%] -ml-[1.5%] rounded-full bg-gradient-to-b from-[#664933] via-[#3a271a] to-[#1a110b] border border-[#8f6d4a]/90 shadow-[0_5px_12px_rgba(0,0,0,0.92)] flex items-center justify-between px-1 shrink-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
+            </div>
+
+            <div
+              className="relative px-4 pt-3.5 pb-4 -mt-0.5 rounded-b-[14px] border-x border-b border-[#6e5038]/85 shadow-[0_16px_34px_rgba(0,0,0,0.92),inset_0_10px_22px_rgba(0,0,0,0.72)] overflow-hidden"
+              style={{
+                backgroundColor: '#160d0e',
+                backgroundImage: `
+                  radial-gradient(ellipse at 50% 0%, rgba(122,36,32,0.22) 0%, rgba(22,13,14,0.93) 58%, rgba(11,7,8,0.98) 100%),
+                  repeating-linear-gradient(45deg, rgba(212,175,55,0.03) 0px, rgba(212,175,55,0.03) 1px, transparent 1px, transparent 5px),
+                  repeating-linear-gradient(-45deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 5px)
+                `,
+              }}
+            >
+              <div className="pointer-events-none absolute inset-2 border border-dashed border-[#a8824c]/40 rounded-b-[10px]" />
+              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#2c1910] via-[#b88f4c]/70 to-[#2c1910]" />
 
             <div className="relative z-10">
               <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-[#342c27]/85">
@@ -1195,6 +1232,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 </div>
               )}
             </div>
+          </div>
           </div>
         </div>
       </div>
