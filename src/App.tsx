@@ -10219,176 +10219,191 @@ export default function App() {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0b0807] z-50 flex flex-col items-center justify-start px-4 py-4 sm:p-6 overflow-y-auto animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0b0807] z-50 flex flex-col items-center justify-center px-4 py-4 sm:px-6 sm:py-5 overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('altarevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(22,12,8,0.42)_0%,rgba(6,4,3,0.92)_100%)] pointer-events-none" />
 
-            <div className="relative z-10 max-w-5xl w-full flex flex-col items-center justify-center text-center my-auto py-1">
-              <div className="flex items-center gap-3.5 mb-0.5">
-                <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                  Iron &amp; Sinew
-                </span>
-                <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-                Transmutation Table
-              </h1>
-              <p className="mt-1.5 font-['Cinzel',_serif] text-sm sm:text-base italic tracking-[0.1em] text-[#e5cfa8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-                &ldquo;Something about this feels wrong.&rdquo;
-              </p>
-
-              {/* Main Workbench: Anvil Prop Left, Hammer & Forceps Right */}
-              <div className="w-full max-w-4xl mt-4 mb-5 grid grid-cols-1 md:grid-cols-12 gap-5 items-center p-5 rounded-[3px] bg-[#0d0907]/85 border border-[#442f21]/85 shadow-[0_20px_50px_rgba(0,0,0,0.92)] backdrop-blur-[2px]">
-                {/* Left Side: Iron Anvil + Placed Card */}
-                <div className="md:col-span-6 flex flex-col items-center justify-end relative min-h-[255px] pt-2">
-                  {/* Card sitting directly atop the anvil horn/face */}
-                  <div
-                    className="relative z-20 -mb-5 transition-all duration-200"
-                    style={{
-                      animation: anvilStrikeAnim !== 'idle' ? 'anvilStrikeJolt 0.65s ease-out' : undefined,
-                    }}
-                  >
-                    {selectedCard ? (
-                      renderCard(selectedCard, { isClickable: false, disableHoverScale: true })
-                    ) : (
-                      <div className="w-[108px] h-[152px] rounded-[4px] border border-dashed border-[#6b523b]/75 bg-[#120d0a]/75 flex flex-col items-center justify-center gap-1.5 text-[#9c8469]">
-                        <span className="text-xl opacity-65">⚒</span>
-                        <span className="text-[9px] uppercase tracking-[0.2em] px-2">Place Creature</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Heavy Blacksmith Anvil SVG Prop */}
-                  <svg
-                    viewBox="0 0 320 112"
-                    className="w-full max-w-[295px] h-auto drop-shadow-[0_14px_22px_rgba(0,0,0,0.95)] pointer-events-none"
-                  >
-                    <defs>
-                      <linearGradient id="anvilIron" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#4f4844" />
-                        <stop offset="35%" stopColor="#2c2725" />
-                        <stop offset="100%" stopColor="#141110" />
-                      </linearGradient>
-                    </defs>
-                    {/* Anvil Top Face + Pointed Horn */}
-                    <path
-                      d="M16 34 C46 28, 72 24, 96 24 L256 24 L268 38 L298 40 C282 54, 260 60, 232 60 L214 60 L226 94 L256 102 L256 108 L64 108 L64 102 L94 94 L106 60 C68 60, 34 50, 16 34 Z"
-                      fill="url(#anvilIron)"
-                      stroke="#6d625a"
-                      strokeWidth="1.8"
-                      strokeLinejoin="round"
-                    />
-                    {/* Hammered top edge highlight */}
-                    <line x1="94" y1="27" x2="254" y2="27" stroke="#8a7b70" strokeWidth="1.4" opacity="0.65" />
-                    {/* Subtle forge ember reflection */}
-                    <ellipse cx="160" cy="107" rx="115" ry="4" fill="rgba(217,119,6,0.22)" />
-                  </svg>
+            <div className="relative z-10 w-full max-w-6xl h-full min-h-0 flex flex-col">
+              {/* Header */}
+              <div className="shrink-0 flex flex-col items-center text-center pb-3">
+                <div className="flex items-center gap-3.5 mb-0.5">
+                  <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                    Iron &amp; Sinew
+                  </span>
+                  <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
+                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  Transmutation Table
+                </h1>
+                <p className="mt-1 font-['Cinzel',_serif] text-sm italic tracking-[0.1em] text-[#e5cfa8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                  &ldquo;Something about this feels wrong.&rdquo;
+                </p>
+              </div>
 
-                {/* Right Side: Two Diegetic Tool Strikes (Hammer & Forceps) */}
-                <div className="md:col-span-6 flex flex-col gap-3.5 text-left">
-                  <button
-                    onClick={() => applyAnvilStrike('hammer')}
-                    disabled={!canHammer || isEventBusy}
-                    className={`group relative w-full p-4 rounded-[3px] border flex items-center gap-4 text-left transition-all duration-200 ${
-                      canHammer && !isEventBusy
-                        ? 'bg-gradient-to-r from-[#24130f]/95 to-[#160c09]/95 border-[#8f4c35]/85 hover:border-[#e08256] hover:shadow-[0_0_24px_rgba(224,130,86,0.22)] cursor-pointer'
-                        : 'bg-[#120d0b]/70 border-[#2e231c]/70 opacity-40 cursor-not-allowed'
-                    }`}
-                  >
-                    <div className="w-14 h-14 shrink-0 rounded-[3px] bg-[#0d0806] border border-[#543624] group-hover:border-[#d4845a] flex items-center justify-center shadow-inner">
-                      {/* Forged Hammer SVG */}
-                      <svg viewBox="0 0 32 32" className="w-8 h-8 text-amber-300" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M18 6l8 8-4 4-8-8 4-4Z" fill="rgba(251,191,36,0.16)" />
-                        <path d="M14 10l-3 3 5 5 3-3" />
-                        <path d="M13 15L5 23a2 2 0 0 0 2.8 2.8L16 17.8" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#f3dfb6] group-hover:text-white">
-                        Blood-to-Bone
-                      </div>
-
-                      {selectedCard && !canHammer && (
-                        <div className="mt-1 text-[9.5px] uppercase tracking-wider text-red-400/80">
-                          Requires Blood Cost
-                        </div>
-                      )}
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => applyAnvilStrike('forceps')}
-                    disabled={!canForceps || isEventBusy}
-                    className={`group relative w-full p-4 rounded-[3px] border flex items-center gap-4 text-left transition-all duration-200 ${
-                      canForceps && !isEventBusy
-                        ? 'bg-gradient-to-r from-[#1a151b]/95 to-[#100d12]/95 border-[#6b5a78]/85 hover:border-[#c4a7db] hover:shadow-[0_0_24px_rgba(196,167,219,0.2)] cursor-pointer'
-                        : 'bg-[#120d0b]/70 border-[#2e231c]/70 opacity-40 cursor-not-allowed'
-                    }`}
-                  >
-                    <div className="w-14 h-14 shrink-0 rounded-[3px] bg-[#0b090d] border border-[#453a4f] group-hover:border-[#b799cf] flex items-center justify-center shadow-inner">
-                      {/* Surgical Forceps SVG */}
-                      <svg viewBox="0 0 32 32" className="w-8 h-8 text-stone-200" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="9" cy="24" r="3" />
-                        <circle cx="23" cy="24" r="3" />
-                        <path d="M11 21.5L19.5 7.5C20.3 6.2 21.8 5.5 23 6" />
-                        <path d="M21 21.5L12.5 7.5C11.7 6.2 10.2 5.5 9 6" />
-                        <circle cx="16" cy="14.5" r="1.2" fill="currentColor" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.18em] text-[#e7dff0] group-hover:text-white">
-                        Hollowing
-                      </div>
-
-                      {selectedCard && !canForceps && (
-                        <div className="mt-1 text-[9.5px] uppercase tracking-wider text-amber-400/80">
-                          Cannot Hollow
-                        </div>
-                      )}
-                    </div>
-                  </button>
-
-                  <div className="pt-1 flex justify-end">
-                    <button
+              {/* Two-Column Split: Forge Stage Left, Scrollable Deck Right */}
+              <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch">
+                {/* Left Column: Iron Anvil + Diegetic Tools */}
+                <div className="lg:col-span-7 min-h-0 flex flex-col justify-between p-4 sm:p-5 rounded-[3px] bg-[#0d0907]/85 border border-[#442f21]/85 shadow-[0_20px_50px_rgba(0,0,0,0.92)] backdrop-blur-[2px]">
+                  {/* Anvil Prop Stage */}
+                  <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative">
+                    <div
                       onClick={() => {
+                        if (!selectedCard || isEventBusy) return;
+                        triggerSfx('draw');
                         setAnvilSelectedId(null);
-                        returnToMap();
                       }}
-                      disabled={isEventBusy}
-                      className="px-4 py-1.5 rounded-[2px] bg-[#16100d] hover:bg-[#221814] border border-[#4a3628] text-[10px] font-mono uppercase tracking-[0.2em] text-[#b8a085] hover:text-[#f0dec2] cursor-pointer transition"
+                      className={`relative z-20 -mb-5 transition-all duration-200 ${selectedCard && !isEventBusy ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
+                      style={{
+                        animation: anvilStrikeAnim !== 'idle' ? 'anvilStrikeJolt 0.65s ease-out' : undefined,
+                      }}
                     >
-                      Step Away
-                    </button>
-                  </div>
-                </div>
-              </div>
+                      {selectedCard ? (
+                        renderCard(selectedCard, { isClickable: false, disableHoverScale: true })
+                      ) : (
+                        <div className="w-[108px] h-[152px] rounded-[4px] border border-dashed border-[#6b523b]/75 bg-[#120d0a]/75 flex flex-col items-center justify-center gap-1.5 text-[#9c8469]">
+                          <span className="text-xl opacity-65">⚒</span>
+                          <span className="text-[9px] uppercase tracking-[0.2em] px-2 text-center">Place Creature</span>
+                        </div>
+                      )}
+                    </div>
 
-              {/* Deck Selector Tray */}
-              <div className="relative w-full p-4 rounded-[3px] bg-[#0d0806]/78 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)]">
-                <div className="flex flex-wrap gap-3 justify-center">
-                  {masterDeck.map(c => {
-                    const isPicked = anvilSelectedId === c.id;
-                    return (
-                      <div
-                        key={c.id}
-                        onClick={() => {
-                          if (isEventBusy) return;
-                          triggerSfx('draw');
-                          setAnvilSelectedId(isPicked ? null : c.id || null);
-                        }}
-                        className={`relative cursor-pointer transition-all duration-200 ${
-                          isPicked
-                            ? 'scale-[0.98] -translate-y-2 z-20'
-                            : 'scale-[0.88] hover:scale-[0.95] hover:-translate-y-1 opacity-85 hover:opacity-100'
+                    {/* Heavy Blacksmith Anvil SVG Prop */}
+                    <svg
+                      viewBox="0 0 320 112"
+                      className="w-full max-w-[285px] h-auto drop-shadow-[0_14px_22px_rgba(0,0,0,0.95)] pointer-events-none"
+                    >
+                      <defs>
+                        <linearGradient id="anvilIron" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#4f4844" />
+                          <stop offset="35%" stopColor="#2c2725" />
+                          <stop offset="100%" stopColor="#141110" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M16 34 C46 28, 72 24, 96 24 L256 24 L268 38 L298 40 C282 54, 260 60, 232 60 L214 60 L226 94 L256 102 L256 108 L64 108 L64 102 L94 94 L106 60 C68 60, 34 50, 16 34 Z"
+                        fill="url(#anvilIron)"
+                        stroke="#6d625a"
+                        strokeWidth="1.8"
+                        strokeLinejoin="round"
+                      />
+                      <line x1="94" y1="27" x2="254" y2="27" stroke="#8a7b70" strokeWidth="1.4" opacity="0.65" />
+                      <ellipse cx="160" cy="107" rx="115" ry="4" fill="rgba(217,119,6,0.22)" />
+                    </svg>
+                  </div>
+
+                  {/* Tool Strikes + Leave Action */}
+                  <div className="shrink-0 pt-3.5 border-t border-[#3a271b]/75 flex flex-col gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                      <button
+                        onClick={() => applyAnvilStrike('hammer')}
+                        disabled={!canHammer || isEventBusy}
+                        className={`group relative w-full p-3.5 rounded-[3px] border flex items-center gap-3.5 text-left transition-all duration-200 ${
+                          canHammer && !isEventBusy
+                            ? 'bg-gradient-to-r from-[#24130f]/95 to-[#160c09]/95 border-[#8f4c35]/85 hover:border-[#e08256] hover:shadow-[0_0_24px_rgba(224,130,86,0.22)] cursor-pointer'
+                            : 'bg-[#120d0b]/70 border-[#2e231c]/70 opacity-40 cursor-not-allowed'
                         }`}
                       >
-                        {renderCard(c, { isSelected: isPicked, isClickable: !isEventBusy, disableHoverScale: true })}
-                      </div>
-                    );
-                  })}
+                        <div className="w-12 h-12 shrink-0 rounded-[3px] bg-[#0d0806] border border-[#543624] group-hover:border-[#d4845a] flex items-center justify-center shadow-inner">
+                          <svg viewBox="0 0 32 32" className="w-7 h-7 text-amber-300" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 6l8 8-4 4-8-8 4-4Z" fill="rgba(251,191,36,0.16)" />
+                            <path d="M14 10l-3 3 5 5 3-3" />
+                            <path d="M13 15L5 23a2 2 0 0 0 2.8 2.8L16 17.8" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.15em] text-[#f3dfb6] group-hover:text-white">
+                            Blood-to-Bone
+                          </div>
+                          {selectedCard && !canHammer && (
+                            <div className="mt-0.5 text-[9.5px] uppercase tracking-wider text-red-400/85">
+                              Requires Blood Cost
+                            </div>
+                          )}
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => applyAnvilStrike('forceps')}
+                        disabled={!canForceps || isEventBusy}
+                        className={`group relative w-full p-3.5 rounded-[3px] border flex items-center gap-3.5 text-left transition-all duration-200 ${
+                          canForceps && !isEventBusy
+                            ? 'bg-gradient-to-r from-[#1a151b]/95 to-[#100d12]/95 border-[#6b5a78]/85 hover:border-[#c4a7db] hover:shadow-[0_0_24px_rgba(196,167,219,0.2)] cursor-pointer'
+                            : 'bg-[#120d0b]/70 border-[#2e231c]/70 opacity-40 cursor-not-allowed'
+                        }`}
+                      >
+                        <div className="w-12 h-12 shrink-0 rounded-[3px] bg-[#0b090d] border border-[#453a4f] group-hover:border-[#b799cf] flex items-center justify-center shadow-inner">
+                          <svg viewBox="0 0 32 32" className="w-7 h-7 text-stone-200" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="9" cy="24" r="3" />
+                            <circle cx="23" cy="24" r="3" />
+                            <path d="M11 21.5L19.5 7.5C20.3 6.2 21.8 5.5 23 6" />
+                            <path d="M21 21.5L12.5 7.5C11.7 6.2 10.2 5.5 9 6" />
+                            <circle cx="16" cy="14.5" r="1.2" fill="currentColor" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.15em] text-[#e7dff0] group-hover:text-white">
+                            Hollowing
+                          </div>
+                          {selectedCard && !canForceps && (
+                            <div className="mt-0.5 text-[9.5px] uppercase tracking-wider text-amber-400/85">
+                              Cannot Hollow
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => {
+                          setAnvilSelectedId(null);
+                          returnToMap();
+                        }}
+                        disabled={isEventBusy}
+                        className="px-4 py-1.5 rounded-[2px] bg-[#16100d] hover:bg-[#221814] border border-[#4a3628] text-[10px] font-mono uppercase tracking-[0.2em] text-[#b8a085] hover:text-[#f0dec2] cursor-pointer transition"
+                      >
+                        Step Away
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Scrollable Deck Selector */}
+                <div className="lg:col-span-5 min-h-0 flex flex-col rounded-[3px] bg-[#0d0806]/82 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] overflow-hidden">
+                  <div className="shrink-0 px-4 py-2.5 border-b border-[#342217]/80 flex items-center justify-between bg-[#120b08]/80">
+                    <span className="font-['Cinzel',_serif] text-xs font-bold uppercase tracking-[0.22em] text-[#d8c19a]">
+                      Deck
+                    </span>
+                    <span className="text-[10px] font-mono tracking-[0.18em] text-[#9b8266]">
+                      {masterDeck.length}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-y-auto p-3">
+                    <div className="flex flex-wrap gap-2.5 justify-center content-start">
+                      {masterDeck.map(c => {
+                        const isPicked = anvilSelectedId === c.id;
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() => {
+                              if (isEventBusy) return;
+                              triggerSfx('draw');
+                              setAnvilSelectedId(isPicked ? null : c.id || null);
+                            }}
+                            className={`relative cursor-pointer transition-all duration-200 ${
+                              isPicked
+                                ? 'scale-[0.95] -translate-y-1 z-20'
+                                : 'scale-[0.86] hover:scale-[0.93] hover:-translate-y-0.5 opacity-85 hover:opacity-100'
+                            }`}
+                          >
+                            {renderCard(c, { isSelected: isPicked, isClickable: !isEventBusy, disableHoverScale: true })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
