@@ -1122,9 +1122,6 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   <span className="text-[#8f7960]">◆</span>
                   Expedition Ledger
                 </span>
-                <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-[#8d7d6e]">
-                  Act {mapData.act}
-                </span>
               </div>
 
               <div className="divide-y divide-[#282428]/90 text-[10px] font-mono">
@@ -1164,20 +1161,6 @@ const MapScreen: React.FC<MapScreenProps> = ({
                       : 'Unstitched'}
                   </span>
                 </div>
-
-                {displaySeed && (
-                  <div className="flex items-center justify-between pt-2 pb-0.5">
-                    <span className="text-[#9c9084] uppercase tracking-wider">Run Seed</span>
-                    <button
-                      type="button"
-                      onClick={copySeed}
-                      title="Click to copy run seed"
-                      className="px-2 py-0.5 rounded-[2px] bg-[#161418] hover:bg-[#231f25] border border-[#5a4e45]/80 hover:border-[#d6c2a5] font-mono font-bold text-[#e3d2b6] hover:text-white tracking-[0.14em] cursor-pointer transition-colors"
-                    >
-                      {copiedSeed ? 'COPIED ✓' : displaySeed}
-                    </button>
-                  </div>
-                )}
               </div>
 
               {activeVows.length > 0 && (

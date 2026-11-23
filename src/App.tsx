@@ -5524,7 +5524,7 @@ export default function App() {
       setEnemyWavesLeft(2);
       addLog(`Encounter ${encounter} started [Tier ${difficultyTier}] (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
       if (activeEncounterTotem) {
-        addLog(`Totem Battle! The adversary wields a [${activeEncounterTotem.class}] + [${activeEncounterTotem.sigil}] totem.`);
+        addLog(`Cursed Battle! The adversary wields a [${activeEncounterTotem.class}] + [${activeEncounterTotem.sigil}] totem.`);
       }
     }
 
@@ -7171,10 +7171,11 @@ export default function App() {
             {displaySigils.map((s, idx) => {
               // Anchor positions (left%, top%) on 112x160 card:
               // 0 -> #1 center lower; 1 -> #2 upper-left; 2 -> #3 upper-right; 3 -> #4 far-left; 4 -> #5 far-right
+              const spreadPair = displaySigils.length === 2 || displaySigils.length === 3;
               const crestSlots: Array<{ left: string; top: string; size: string; z: string }> = [
                 { left: '50%', top: displaySigils.length === 1 ? '81%' : '83.5%', size: 'w-[30px] h-[30px]', z: 'z-30' },
-                { left: '31%', top: '76%', size: 'w-[19px] h-[19px]', z: 'z-20' },
-                { left: '69%', top: '76%', size: 'w-[19px] h-[19px]', z: 'z-20' },
+                { left: spreadPair ? '28.5%' : '31%', top: '76%', size: 'w-[19px] h-[19px]', z: 'z-20' },
+                { left: spreadPair ? '71.5%' : '69%', top: '76%', size: 'w-[19px] h-[19px]', z: 'z-20' },
                 { left: '15%', top: '73.5%', size: 'w-[17px] h-[17px]', z: 'z-20' },
                 { left: '85%', top: '73.5%', size: 'w-[17px] h-[17px]', z: 'z-20' },
                 { left: '15%', top: '59.5%', size: 'w-[15px] h-[15px]', z: 'z-20' },
@@ -8616,16 +8617,20 @@ export default function App() {
         <div className="fixed top-3 right-4 z-[60] flex items-center gap-3 select-none">
           <button
             onClick={openViewDeck}
-            className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5"
+            className="relative bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/85 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_6px_16px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3.5 py-1.5"
           >
+            <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
+            <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
             DECK ({masterDeck.length})
           </button>
           {showDevTools && (
               <button
                 onClick={openDevMenu}
-                className="w-38 sm:w-40 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 flex items-center justify-center gap-2"
+                className="relative w-38 sm:w-40 bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/85 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_6px_16px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 flex items-center justify-center gap-2"
                 title="Development Tools"
               >
+                <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
+                <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
                 <span>DEV TOOLS</span>
               </button>
             )}

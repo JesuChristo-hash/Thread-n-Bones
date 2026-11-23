@@ -71,7 +71,7 @@ export const MAP_NODE_META: Record<MapNodeType, NodeMeta> = {
   },
   elite_combat: {
     title: 'Effigy Ward',
-    tag: 'Totem Battle',
+    tag: 'Cursed Battle',
     desc: 'An enemy empowered by a stitched Tribal Effigy.',
     tone: 'combat',
   },
