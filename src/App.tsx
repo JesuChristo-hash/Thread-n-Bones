@@ -9299,7 +9299,7 @@ export default function App() {
           return (
             <div
               key={c.id || `draft-p-${c.name}-${idx}`}
-              className="relative w-[78px] h-[112px] sm:w-[104px] sm:h-[148px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
+              className="relative w-[44px] h-[62px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -9313,10 +9313,10 @@ export default function App() {
                     : "opacity-75 saturate-[0.82] cursor-default"
                 } ${
                   isSelected
-                    ? "scale-[0.74] sm:scale-[0.96] lg:scale-[1.13] -translate-y-1.5 lg:-translate-y-2 z-30"
+                    ? "scale-[0.43] sm:scale-[0.69] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30"
                     : canTradePelt
-                      ? "scale-[0.68] sm:scale-[0.9] lg:scale-[1.06] hover:scale-[0.72] sm:hover:scale-[0.94] lg:hover:scale-[1.11] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
-                      : "scale-[0.68] sm:scale-[0.9] lg:scale-[1.06]"
+                      ? "scale-[0.38] sm:scale-[0.62] lg:scale-[1.06] hover:scale-[0.41] sm:hover:scale-[0.66] lg:hover:scale-[1.11] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
+                      : "scale-[0.38] sm:scale-[0.62] lg:scale-[1.06]"
                 }`}
               >
                 {isSelected && (
@@ -9335,9 +9335,9 @@ export default function App() {
             return (
               <div
                 key={`draft-slot-empty-${idx}`}
-                className="relative w-[78px] h-[112px] sm:w-[104px] sm:h-[148px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[44px] h-[62px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
-                <div className="w-[72px] h-[104px] sm:w-[96px] sm:h-[138px] lg:w-[114px] lg:h-[162px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
+                <div className="w-[40px] h-[58px] sm:w-[66px] sm:h-[94px] lg:w-[114px] lg:h-[162px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
                   <span className="text-[9px] font-['Cinzel',_serif] uppercase tracking-[0.25em] text-[#6e5642]/70">
                     Claimed
                   </span>
@@ -9353,10 +9353,10 @@ export default function App() {
             return (
               <div
                 key={`draft-back-${idx}`}
-                className="relative w-[78px] h-[112px] sm:w-[104px] sm:h-[148px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[44px] h-[62px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
                 <div
-                  className={`w-[72px] h-[104px] sm:w-[96px] sm:h-[138px] lg:w-[114px] lg:h-[162px] rounded-[3px] transition-all duration-200 ${
+                  className={`w-[40px] h-[58px] sm:w-[66px] sm:h-[94px] lg:w-[114px] lg:h-[162px] rounded-[3px] transition-all duration-200 ${
                     draftFlippingDown ? 'animate-flip-down' : 'opacity-65 filter brightness-75'
                   }`}
                 >
@@ -9375,7 +9375,7 @@ export default function App() {
           return (
             <div
               key={c.id || `draft-t-${c.name}-${idx}`}
-              className="relative w-[78px] h-[112px] sm:w-[104px] sm:h-[148px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
+              className="relative w-[44px] h-[62px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -9386,8 +9386,8 @@ export default function App() {
                   draftFlippingUp ? 'animate-flip-up' : ''
                 } ${
                   isSelected
-                    ? "scale-[0.74] sm:scale-[0.96] lg:scale-[1.13] -translate-y-1.5 lg:-translate-y-2 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
-                    : "scale-[0.68] sm:scale-[0.9] lg:scale-[1.06] hover:scale-[0.72] sm:hover:scale-[0.94] lg:hover:scale-[1.11] hover:-translate-y-1"
+                    ? "scale-[0.43] sm:scale-[0.69] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
+                    : "scale-[0.38] sm:scale-[0.62] lg:scale-[1.06] hover:scale-[0.41] sm:hover:scale-[0.66] lg:hover:scale-[1.11] hover:-translate-y-1"
                 }`}
               >
                 {isSelected && (
@@ -9403,7 +9403,7 @@ export default function App() {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-start lg:justify-between gap-3 sm:gap-4 px-2.5 sm:px-6 py-3 sm:py-4 overflow-y-auto overflow-x-hidden font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between gap-1.5 sm:gap-2 lg:gap-4 px-1.5 sm:px-4 lg:px-6 py-2 sm:py-2.5 lg:py-4 overflow-hidden font-mono select-none"
             style={getScreenBgStyle('draft.jpg')}
           >
             {/* Atmospheric Dark Vignette */}
@@ -9428,16 +9428,16 @@ export default function App() {
             </div>
 
             {/* Dual Smoked-Wood & Iron Tabletop Trays (Snug Fit) */}
-            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[auto_auto] justify-center items-stretch gap-3 sm:gap-5 lg:my-auto max-w-full">
+            <div className="relative z-10 grid grid-cols-[auto_auto] justify-center items-stretch gap-1.5 sm:gap-3 lg:gap-5 my-auto max-w-full">
               {/* Left Tray: Player's Starter Deck */}
-              <div className="relative flex flex-col items-center px-2.5 sm:px-5 pt-2.5 sm:pt-3 pb-3 sm:pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#3d2d20]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
+              <div className="relative flex flex-col items-center px-1.5 sm:px-3 lg:px-5 pt-1.5 sm:pt-2 lg:pt-3 pb-2 sm:pb-2.5 lg:pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#3d2d20]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
                 <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#7c5d3b]/65" />
                 <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#7c5d3b]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#7c5d3b]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#7c5d3b]/65" />
 
-                <div className="shrink-0 w-full flex items-center justify-between pb-2 mb-3 border-b border-[#3a2a1e]/75">
-                  <h2 className="text-xs font-['Cinzel',_serif] font-bold text-[#e5c78a] uppercase tracking-[0.26em]">
+                <div className="shrink-0 w-full flex items-center justify-between pb-1 sm:pb-1.5 lg:pb-2 mb-1.5 sm:mb-2 lg:mb-3 border-b border-[#3a2a1e]/75">
+                  <h2 className="text-[9px] sm:text-[10px] lg:text-xs font-['Cinzel',_serif] font-bold text-[#e5c78a] uppercase tracking-[0.14em] lg:tracking-[0.26em]">
                     Your Satchel
                   </h2>
                   <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#a98d68]/75">
@@ -9445,25 +9445,25 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 my-auto">
-                  <div className="flex justify-center items-center gap-1.5 sm:gap-3">
+                <div className="flex flex-col items-center justify-center gap-1 sm:gap-2 lg:gap-3 my-auto">
+                  <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
                     {draftPlayerDeck.slice(0, 3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx))}
                   </div>
-                  <div className="flex justify-center items-center gap-1.5 sm:gap-3">
+                  <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
                     {draftPlayerDeck.slice(3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx + 3))}
                   </div>
                 </div>
               </div>
 
               {/* Right Tray: Trader's Table */}
-              <div className="relative flex flex-col items-center px-2.5 sm:px-5 pt-2.5 sm:pt-3 pb-3 sm:pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#422823]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,205,190,0.05)] backdrop-blur-[2px]">
+              <div className="relative flex flex-col items-center px-1.5 sm:px-3 lg:px-5 pt-1.5 sm:pt-2 lg:pt-3 pb-2 sm:pb-2.5 lg:pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#422823]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,205,190,0.05)] backdrop-blur-[2px]">
                 <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#8a4c42]/65" />
                 <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#8a4c42]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#8a4c42]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#8a4c42]/65" />
 
-                <div className="shrink-0 w-full flex items-center justify-between pb-2 mb-3 border-b border-[#3f2622]/75">
-                  <h2 className="text-xs font-['Cinzel',_serif] font-bold text-[#e2a498] uppercase tracking-[0.26em]">
+                <div className="shrink-0 w-full flex items-center justify-between pb-1 sm:pb-1.5 lg:pb-2 mb-1.5 sm:mb-2 lg:mb-3 border-b border-[#3f2622]/75">
+                  <h2 className="text-[9px] sm:text-[10px] lg:text-xs font-['Cinzel',_serif] font-bold text-[#e2a498] uppercase tracking-[0.14em] lg:tracking-[0.26em]">
                     The Trader&rsquo;s Table
                   </h2>
                   <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#b47c72]/80">
@@ -9471,11 +9471,11 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 my-auto">
-                  <div className="flex justify-center items-center gap-1.5 sm:gap-3">
+                <div className="flex flex-col items-center justify-center gap-1 sm:gap-2 lg:gap-3 my-auto">
+                  <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
                     {draftTradePool.slice(0, 4).map((c, idx) => renderMerchantDraftSlot(c, idx))}
                   </div>
-                  <div className="flex justify-center items-center gap-1.5 sm:gap-3">
+                  <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
                     {draftTradePool.slice(4, 8).map((c, sliceIdx) => renderMerchantDraftSlot(c, sliceIdx + 4))}
                   </div>
                 </div>
@@ -9483,7 +9483,7 @@ export default function App() {
             </div>
 
             {/* Grounded Tactile Action Bar */}
-            <div className="sticky bottom-1 lg:static z-30 flex items-center gap-2.5 sm:gap-4 px-3 sm:px-5 py-2 rounded-[3px] bg-[#0c0807]/95 border border-[#3a2a1e]/85 shadow-[0_10px_28px_rgba(0,0,0,0.92)] backdrop-blur-[2px] shrink-0">
+            <div className="relative z-10 flex items-center gap-2.5 sm:gap-4 px-3 sm:px-5 py-1.5 lg:py-2 rounded-[3px] bg-[#0c0807]/88 border border-[#3a2a1e]/80 shadow-[0_10px_28px_rgba(0,0,0,0.88)] backdrop-blur-[2px] shrink-0">
               <button
                 onClick={executeDraftTrade}
                 disabled={!canConfirmTrade}
