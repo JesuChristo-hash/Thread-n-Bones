@@ -416,14 +416,22 @@ const MapScreen: React.FC<MapScreenProps> = ({
       rot: Math.round((rng() - 0.5) * 40),
     }));
 
-    // Faint aged ink/water stains
-    const stains = Array.from({ length: Math.max(4, Math.floor(mapData.rows / 2.5)) }, (_, i) => ({
-      id: `st-${i}`,
-      cx: Math.round(45 + rng() * (vw - 90)),
-      cy: Math.round(90 + rng() * (vh - 180)),
-      r: Math.round(18 + rng() * 32),
-      isBlood: rng() < 0.35,
-    }));
+    // Deterministic blood splatters & smears (blood01.png - blood04.png)
+    const stains = Array.from({ length: Math.max(7, Math.floor(mapData.rows * 0.95)) }, (_, i) => {
+      const sideBias = rng() < 0.65;
+      const cx = sideBias
+        ? (rng() < 0.5 ? Math.round(28 + rng() * 95) : Math.round(vw - 123 + rng() * 95))
+        : Math.round(90 + rng() * (vw - 180));
+      return {
+        id: `st-${i}`,
+        cx,
+        cy: Math.round(210 + rng() * Math.max(120, vh - 290)),
+        size: Math.round(58 + rng() * 76),
+        rot: Math.round(rng() * 360),
+        variant: (Math.floor(rng() * 4) + 1) as 1 | 2 | 3 | 4,
+        opacity: Number((0.48 + rng() * 0.34).toFixed(2)),
+      };
+    });
 
     // Horizontal scroll-fold creases
     const folds: number[] = [];
@@ -782,22 +790,33 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   strokeWidth="1.5"
                 />
 
-                {/* Aged Water & Blood Ring Stains */}
+                {/* Boss Sanctum Bloodbath Drip Hanging from Top Apex */}
+                <image
+                  href={`${import.meta.env.BASE_URL || './'}assets/text/bloodbath.png`}
+                  x="0"
+                  y="0"
+                  width={cartography.vw}
+                  height="275"
+                  preserveAspectRatio="none"
+                  opacity="0.86"
+                  style={{ mixBlendMode: 'multiply' }}
+                />
+
+                {/* Blood Splatters & Smears (blood01-04.png) */}
                 {cartography.stains.map(st => (
-                  <g key={st.id} opacity={st.isBlood ? 0.2 : 0.16}>
-                    <circle
-                      cx={st.cx}
-                      cy={st.cy}
-                      r={st.r}
-                      fill={st.isBlood ? '#590d0a' : '#2e1d0f'}
-                    />
-                    <circle
-                      cx={st.cx}
-                      cy={st.cy}
-                      r={st.r * 0.92}
-                      fill="none"
-                      stroke={st.isBlood ? '#3b0705' : '#1c1108'}
-                      strokeWidth="1.2"
+                  <g
+                    key={st.id}
+                    transform={`translate(${st.cx} ${st.cy}) rotate(${st.rot})`}
+                    opacity={st.opacity}
+                    style={{ mixBlendMode: 'multiply' }}
+                  >
+                    <image
+                      href={`${import.meta.env.BASE_URL || './'}assets/text/blood0${st.variant}.png`}
+                      x={-st.size / 2}
+                      y={-st.size / 2}
+                      width={st.size}
+                      height={st.size}
+                      preserveAspectRatio="xMidYMid meet"
                     />
                   </g>
                 ))}
@@ -818,17 +837,6 @@ const MapScreen: React.FC<MapScreenProps> = ({
                     <ellipse cx="0" cy="0" rx={ct.rx * 0.34} ry={ct.ry * 0.34} strokeWidth="0.8" strokeDasharray="3 3" />
                   </g>
                 ))}
-
-                {/* Boss Sanctum Arcane Halo at the Top Apex */}
-                <g transform={`translate(${cartography.bossPx.x} ${cartography.bossPx.y})`} opacity="0.72" stroke="#260806" fill="none">
-                  <circle cx="0" cy="0" r="46" strokeWidth="1.5" strokeDasharray="4 3" />
-                  <circle cx="0" cy="0" r="56" strokeWidth="1.1" />
-                  <path d="M-64 0 L-48 0 M48 0 L64 0 M0 -64 L0 -48 M0 48 L0 64" strokeWidth="1.4" />
-                  <path d="M-42 -42 L-33 -33 M42 -42 L33 -33 M-42 42 L-33 33 M42 42 L33 33" strokeWidth="1.1" />
-                </g>
-
-                {/* Act-Themed Margin Illustrations */}
-                {cartography.props.map(renderCartographyProp)}
 
                 {/* Left-Margin Mile-Marker Ticks */}
                 {Array.from({ length: mapData.rows }, (_, r) => {
@@ -1061,40 +1069,52 @@ const MapScreen: React.FC<MapScreenProps> = ({
           {/* Omen / Node Inspector — Hanging Ritual Cloth Banner */}
           <div className="relative flex-1 flex flex-col min-h-0">
             {/* Top Timber & Brass Banner Rod */}
-            <div className="relative z-20 h-3 w-[103%] -ml-[1.5%] rounded-full bg-gradient-to-b from-[#664933] via-[#3a271a] to-[#1a110b] border border-[#8f6d4a]/90 shadow-[0_5px_12px_rgba(0,0,0,0.92)] flex items-center justify-between px-1 shrink-0">
+            <div
+              className="relative z-20 h-3 w-[103%] -ml-[1.5%] rounded-full border border-[#8f6d4a]/90 shadow-[0_5px_12px_rgba(0,0,0,0.92)] flex items-center justify-between px-1 shrink-0"
+              style={{
+                backgroundColor: '#3a271a',
+                backgroundImage: `linear-gradient(to bottom, rgba(102,73,51,0.52), rgba(42,27,18,0.62), rgba(20,12,8,0.84)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
+                backgroundSize: '140px 140px',
+                backgroundRepeat: 'repeat',
+              }}
+            >
               <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
             </div>
 
             <div
-              className="relative flex-1 flex flex-col justify-between px-4 pt-4 pb-5 lg:px-5 lg:pt-4 lg:pb-6 -mt-0.5 rounded-b-[14px] border-x border-b border-[#6e5038]/85 shadow-[0_18px_42px_rgba(0,0,0,0.92),inset_0_12px_26px_rgba(0,0,0,0.72)] overflow-hidden"
+              className="relative flex-1 flex flex-col justify-center px-5 pt-3.5 pb-5 lg:px-6 lg:pt-4 lg:pb-6 -mt-0.5 rounded-b-[14px] border-x border-b border-[#7a3c2e]/90 shadow-[0_18px_42px_rgba(0,0,0,0.92),inset_0_12px_26px_rgba(0,0,0,0.72)] overflow-hidden"
               style={{
-                backgroundColor: '#1a0e0e',
-                backgroundImage: `
-                  radial-gradient(ellipse at 50% 0%, rgba(145,38,32,0.28) 0%, rgba(26,14,14,0.92) 58%, rgba(13,8,9,0.98) 100%),
-                  repeating-linear-gradient(45deg, rgba(212,175,55,0.03) 0px, rgba(212,175,55,0.03) 1px, transparent 1px, transparent 5px),
-                  repeating-linear-gradient(-45deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 5px)
-                `,
+                background: 'radial-gradient(ellipse at 50% 0%, #6b0f12 0%, #44080a 52%, #1d0405 100%)',
               }}
             >
+              {/* Multiplied Cloth Weave Texture (preserves deep crimson without pink washout) */}
+              <div
+                className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
+                style={{
+                  backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/cloth.jpg")`,
+                  backgroundSize: '170px 170px',
+                  backgroundRepeat: 'repeat',
+                }}
+              />
               {/* Stitched Gold-Thread Banner Seam */}
-              <div className="pointer-events-none absolute inset-2 border border-dashed border-[#a8824c]/45 rounded-b-[10px]" />
+              <div className="pointer-events-none absolute inset-2 border border-dashed border-[#c49a5c]/50 rounded-b-[10px]" />
               {/* Woven Center Fringe Accent at Bottom Hem */}
-              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#2c1910] via-[#b88f4c]/70 to-[#2c1910]" />
+              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#3a0a0a] via-[#cca059]/80 to-[#3a0a0a]" />
 
-            <div className="relative z-10">
+            <div className="relative z-10 flex flex-col h-full min-h-0">
               {/* Header Bar */}
-              <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-[#342c27]/85">
-                <span className="flex items-center gap-1.5 text-[9px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.24em] text-[#cbb698]">
-                  <span className="text-[#8f7960]">◆</span>
+              <div className="shrink-0 flex items-center justify-between pb-2 mb-2.5 border-b border-[#7c2620]/80">
+                <span className="flex items-center gap-1.5 text-xs font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ecd8b8] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                  <span className="text-[#c99b56]">◆</span>
                   {isInspectedReachable ? 'Reachable Omen' : 'Map Survey'}
                 </span>
                 {inspectedMeta && (
                   <span
-                    className={`px-2 py-0.5 rounded-[2px] border text-[8.5px] font-mono font-bold uppercase tracking-[0.18em] ${
+                    className={`px-2 py-0.5 rounded-[2px] border text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] ${
                       inspectedMeta.tone === 'boss' || inspectedMeta.tone === 'combat'
-                        ? 'bg-[#260b0b]/90 border-red-900/80 text-red-300'
-                        : 'bg-[#181519]/90 border-[#524844]/80 text-[#dfd2be]'
+                        ? 'bg-[#2b0607]/90 border-red-600/85 text-red-200'
+                        : 'bg-[#22090a]/90 border-[#8a5d42]/85 text-[#f0dec0]'
                     }`}
                   >
                     {inspectedMeta.tag}
@@ -1103,48 +1123,38 @@ const MapScreen: React.FC<MapScreenProps> = ({
               </div>
 
               {inspectedNode && inspectedMeta && (
-                <div className="flex flex-col items-center text-center py-1">
+                <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center px-2 pb-2">
                   {/* Carved Stone Glyph Medallion */}
-                  <div className="relative mb-3.5">
+                  <div className="relative mb-2.5 shrink-0">
                     <div
-                      className={`w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-[0_6px_18px_rgba(0,0,0,0.88),inset_0_0_12px_rgba(0,0,0,0.8)] ${
+                      className={`w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-[0_8px_20px_rgba(0,0,0,0.9),inset_0_0_12px_rgba(0,0,0,0.8)] ${
                         inspectedMeta.tone === 'boss'
-                          ? 'bg-gradient-to-b from-[#3b1212] to-[#170707] border-[#a88a5a]/85 text-[#f0dab2]'
+                          ? 'bg-gradient-to-b from-[#450d0d] to-[#1a0505] border-[#c49f62]/90 text-[#f5dfb4]'
                           : inspectedMeta.tone === 'combat'
-                            ? 'bg-gradient-to-b from-[#2b1213] to-[#14090a] border-[#8c3632]/85 text-[#ebb0a6]'
-                            : 'bg-gradient-to-b from-[#211e24] to-[#100e12] border-[#6e6258]/85 text-[#e6dac6]'
+                            ? 'bg-gradient-to-b from-[#340d0e] to-[#160607] border-[#a13630]/90 text-[#f2b8ae]'
+                            : 'bg-gradient-to-b from-[#261619] to-[#12090b] border-[#8c7462]/90 text-[#efe2cc]'
                       }`}
                     >
                       {renderInkGlyph(inspectedNode.type, inspectedNode.type === 'boss')}
                     </div>
-                    <span className="pointer-events-none absolute -inset-1.5 rounded-full border border-dashed border-[#6e6258]/40" />
+                    <span className="pointer-events-none absolute -inset-1.5 rounded-full border border-dashed border-[#a68356]/45" />
                   </div>
 
-                  <h2 className="text-lg font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#eee4d4] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                  <h2 className="text-lg lg:text-xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] text-[#f7ead3] leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                     {inspectedMeta.title}
                   </h2>
 
-                  <div className="flex items-center justify-center gap-2 w-full my-3">
-                    <span className="h-px flex-1 max-w-[54px] bg-gradient-to-r from-transparent via-[#7a2420]/55 to-[#8f7960]/75" />
-                    <span className="w-1.5 h-1.5 rotate-45 bg-[#2a0d0d] border border-[#8f7960]/80" />
-                    <span className="h-px flex-1 max-w-[54px] bg-gradient-to-l from-transparent via-[#7a2420]/55 to-[#8f7960]/75" />
+                  <div className="flex items-center justify-center gap-2.5 w-full my-2.5 shrink-0">
+                    <span className="h-px flex-1 max-w-[58px] bg-gradient-to-r from-transparent via-[#b52c26]/75 to-[#c49a5c]/85" />
+                    <span className="w-1.5 h-1.5 rotate-45 bg-[#3a0a0a] border border-[#c49a5c]/85" />
+                    <span className="h-px flex-1 max-w-[58px] bg-gradient-to-l from-transparent via-[#b52c26]/75 to-[#c49a5c]/85" />
                   </div>
 
-                  <p className="text-[11px] font-mono text-[#cfc4b4]/90 leading-relaxed px-1">
+                  <p className="text-xs lg:text-[13.5px] font-['Cinzel',_serif] italic tracking-[0.04em] text-[#f2e2c9] leading-snug px-1.5 drop-shadow-[0_1px_6px_rgba(0,0,0,0.95)]">
                     {inspectedMeta.desc}
                   </p>
                 </div>
               )}
-            </div>
-
-            {/* Footer Status Strip */}
-            <div className="relative z-10 mt-3 lg:mt-4 pt-2.5 border-t border-[#4d3326]/75 text-center">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-[#140a0a]/90 border border-[#5e3d2a]/80 text-[8.5px] font-mono uppercase tracking-[0.2em] text-[#cfb898]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#b5372e] opacity-95" />
-                {currentNode.nextIds.length === 1
-                  ? 'Single path forward'
-                  : `${currentNode.nextIds.length} diverging branches ahead`}
-              </div>
             </div>
             </div>
           </div>
@@ -1152,65 +1162,76 @@ const MapScreen: React.FC<MapScreenProps> = ({
           {/* Expedition Status & Act Boss Telemetry — Hanging Ritual Cloth Banner */}
           <div className="relative flex flex-col">
             {/* Top Timber & Brass Banner Rod */}
-            <div className="relative z-20 h-3 w-[103%] -ml-[1.5%] rounded-full bg-gradient-to-b from-[#664933] via-[#3a271a] to-[#1a110b] border border-[#8f6d4a]/90 shadow-[0_5px_12px_rgba(0,0,0,0.92)] flex items-center justify-between px-1 shrink-0">
+            <div
+              className="relative z-20 h-3 w-[103%] -ml-[1.5%] rounded-full border border-[#8f6d4a]/90 shadow-[0_5px_12px_rgba(0,0,0,0.92)] flex items-center justify-between px-1 shrink-0"
+              style={{
+                backgroundColor: '#3a271a',
+                backgroundImage: `linear-gradient(to bottom, rgba(102,73,51,0.52), rgba(42,27,18,0.62), rgba(20,12,8,0.84)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
+                backgroundSize: '140px 140px',
+                backgroundRepeat: 'repeat',
+              }}
+            >
               <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
             </div>
 
             <div
-              className="relative px-4 pt-3.5 pb-4 -mt-0.5 rounded-b-[14px] border-x border-b border-[#6e5038]/85 shadow-[0_16px_34px_rgba(0,0,0,0.92),inset_0_10px_22px_rgba(0,0,0,0.72)] overflow-hidden"
+              className="relative px-5 pt-4 pb-5 -mt-0.5 rounded-b-[14px] border-x border-b border-[#7a3c2e]/90 shadow-[0_16px_34px_rgba(0,0,0,0.92),inset_0_10px_22px_rgba(0,0,0,0.72)] overflow-hidden"
               style={{
-                backgroundColor: '#160d0e',
-                backgroundImage: `
-                  radial-gradient(ellipse at 50% 0%, rgba(122,36,32,0.22) 0%, rgba(22,13,14,0.93) 58%, rgba(11,7,8,0.98) 100%),
-                  repeating-linear-gradient(45deg, rgba(212,175,55,0.03) 0px, rgba(212,175,55,0.03) 1px, transparent 1px, transparent 5px),
-                  repeating-linear-gradient(-45deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 5px)
-                `,
+                background: 'radial-gradient(ellipse at 50% 0%, #610d10 0%, #3d0709 54%, #1a0304 100%)',
               }}
             >
-              <div className="pointer-events-none absolute inset-2 border border-dashed border-[#a8824c]/40 rounded-b-[10px]" />
-              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#2c1910] via-[#b88f4c]/70 to-[#2c1910]" />
+              <div
+                className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
+                style={{
+                  backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/cloth.jpg")`,
+                  backgroundSize: '170px 170px',
+                  backgroundRepeat: 'repeat',
+                }}
+              />
+              <div className="pointer-events-none absolute inset-2 border border-dashed border-[#c49a5c]/45 rounded-b-[10px]" />
+              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#3a0a0a] via-[#cca059]/80 to-[#3a0a0a]" />
 
             <div className="relative z-10">
-              <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-[#342c27]/85">
-                <span className="flex items-center gap-1.5 text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.24em] text-[#cbb698]">
-                  <span className="text-[#8f7960]">◆</span>
+              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#6b3428]/80">
+                <span className="flex items-center gap-1.5 text-xs font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#ecd8b8] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                  <span className="text-[#c99b56]">◆</span>
                   Expedition Ledger
                 </span>
               </div>
 
-              <div className="divide-y divide-[#282428]/90 text-[10px] font-mono">
-                <div className="flex items-center justify-between py-1.5">
-                  <span className="text-[#9c9084] uppercase tracking-wider">Act Boss</span>
-                  <span className="font-bold text-red-300 uppercase tracking-wider drop-shadow-[0_1px_4px_rgba(185,28,28,0.45)]">
+              <div className="divide-y divide-[#4d201c]/80 text-xs">
+                <div className="flex items-center justify-between py-2">
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em]">Act Boss</span>
+                  <span className="font-['Cinzel',_serif] font-bold text-sm text-red-200 uppercase tracking-[0.14em] drop-shadow-[0_1px_6px_rgba(185,28,28,0.65)]">
                     {bossMeta.name}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5">
-                  <span className="text-[#9c9084] uppercase tracking-wider">Creatures</span>
-                  <span className="px-1.5 py-0.5 rounded-[2px] bg-[#161418] border border-[#3a3330] font-bold text-[#ebe2d2]">
+                <div className="flex items-center justify-between py-2">
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em]">Creatures</span>
+                  <span className="px-2 py-0.5 rounded-[2px] bg-[#1a0c0d]/90 border border-[#6e4636] font-mono font-bold text-xs text-[#f5e7cf]">
                     {deckSize}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5">
-                  <span className="text-[#9c9084] uppercase tracking-wider">Overkill Blood</span>
-                  <span className="px-1.5 py-0.5 rounded-[2px] bg-[#220a0b] border border-red-900/70 font-bold text-red-300">
+                <div className="flex items-center justify-between py-2">
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em]">Overkill Blood</span>
+                  <span className="px-2 py-0.5 rounded-[2px] bg-[#2b090b]/90 border border-red-800/80 font-mono font-bold text-xs text-red-200">
                     {overkillBlood} oz
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5">
-                  <span className="text-[#9c9084] uppercase tracking-wider">Starting Bones</span>
-                  <span className="px-1.5 py-0.5 rounded-[2px] bg-[#161418] border border-[#3a3330] font-bold text-[#e6dfd2]">
+                <div className="flex items-center justify-between py-2">
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em]">Starting Bones</span>
+                  <span className="px-2 py-0.5 rounded-[2px] bg-[#1a0c0d]/90 border border-[#6e4636] font-mono font-bold text-xs text-[#f5e7cf]">
                     {startingBones}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between gap-2 py-1.5">
-                  <span className="text-[#9c9084] uppercase tracking-wider shrink-0">Effigy</span>
-                  <span className="font-bold text-[#d8be92] truncate text-right">
+                <div className="flex items-center justify-between gap-2 py-2">
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em] shrink-0">Effigy</span>
+                  <span className="font-['Cinzel',_serif] font-bold text-xs text-[#efd4a0] truncate text-right tracking-[0.08em]">
                     {activeTotem?.head && activeTotem?.body
                       ? `${activeTotem.head} / ${activeTotem.body}`
                       : 'Unstitched'}

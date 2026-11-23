@@ -965,3 +965,47 @@
   65%  { transform: translateY(-4px) scale(1.02); opacity: 1; }
   100% { transform: translateY(0px) scale(1); opacity: 1; }
 }
+
+
+/* --- Act 1-4 Global Weather & Atmosphere --- */
+@keyframes weatherMistDriftA {
+  0%   { transform: translate3d(-8%, 0, 0) scale(1.04); opacity: 0.28; }
+  50%  { transform: translate3d(6%, -1.5%, 0) scale(1.09); opacity: 0.44; }
+  100% { transform: translate3d(-8%, 0, 0) scale(1.04); opacity: 0.28; }
+}
+@keyframes weatherMistDriftB {
+  0%   { transform: translate3d(7%, 1%, 0) scale(1.06); opacity: 0.22; }
+  50%  { transform: translate3d(-7%, -1%, 0) scale(1.02); opacity: 0.36; }
+  100% { transform: translate3d(7%, 1%, 0) scale(1.06); opacity: 0.22; }
+}
+@keyframes weatherRainFall {
+  0%   { transform: translate3d(0, -14vh, 0) rotate(12deg); opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translate3d(-12vw, 114vh, 0) rotate(12deg); opacity: 0; }
+}
+@keyframes weatherLightningFlash {
+  0%, 84%, 100% { opacity: 0; }
+  85%   { opacity: 0.34; }
+  86.2% { opacity: 0.04; }
+  87.1% { opacity: 0.52; }
+  88.8% { opacity: 0; }
+  93%   { opacity: 0; }
+  93.6% { opacity: 0.22; }
+  95%   { opacity: 0; }
+}
+@keyframes weatherFireGlow {
+  0%, 100% { opacity: 0.42; transform: scaleY(1); }
+  50%      { opacity: 0.68; transform: scaleY(1.08); }
+}
+@keyframes weatherEmberRise {
+  0%   { transform: translate3d(0, 0, 0) scale(0.7); opacity: 0; }
+  15%  { opacity: 0.95; }
+  70%  { opacity: 0.65; }
+  100% { transform: translate3d(var(--ember-drift, 24px), -88vh, 0) scale(0.25); opacity: 0; }
+}
+@keyframes weatherSmokeDrift {
+  0%   { transform: translate3d(-5%, 4%, 0) scale(1.02); opacity: 0.14; }
+  50%  { transform: translate3d(5%, -5%, 0) scale(1.1); opacity: 0.24; }
+  100% { transform: translate3d(-5%, 4%, 0) scale(1.02); opacity: 0.14; }
+}

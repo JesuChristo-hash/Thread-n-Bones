@@ -6804,7 +6804,7 @@ export default function App() {
       triggerSfx('play');
     }, 480);
 
-    // Beat 2 (1950ms): Pause so player admires the woven creature on the cloth before modal opens
+    // Beat 2 (3200ms): Pause so player sees the thread draw and woven creature before modal opens
     scheduleEventTimer(() => {
       setModalAlert({
         title: "THREAD WOVEN",
@@ -6819,7 +6819,7 @@ export default function App() {
           returnToMap(nextDeck);
         }
       });
-    }, 1950);
+    }, 3200);
   };
 
   // --- Costly Bargain Event ---
@@ -7361,6 +7361,22 @@ export default function App() {
     else if (type === 'goobert') initGoobert();
     else if (type === 'cave') initCaveTrial();
     else if (type === 'totem') initBuildTotem();
+  };
+
+  const handleDevJumpAct = (targetAct: 1 | 2 | 3 | 4) => {
+    const mapOpts = {
+      seed: runSeedRef.current || undefined,
+      allEliteRow2: activeVowsRef.current.includes('all_elite_row2'),
+    };
+    const currentDeckSize = masterDeckRef.current.length || masterDeck.length;
+    const nextMap = generateActMap(targetAct, getBossForAct(targetAct, mapOpts.seed), currentDeckSize, mapOpts);
+    setStage(targetAct);
+    setActMap(nextMap);
+    actMapRef.current = nextMap;
+    setCurrentStageName(nextMap.actTitle);
+    triggerSfx('draw');
+    addLog(`[DEV] Jumped to Act ${targetAct}: ${nextMap.actTitle}.`);
+    setScreen('EVENT_CROSSROADS');
   };
 
   const handleDevNewHand = () => {
@@ -8155,6 +8171,140 @@ export default function App() {
           className={`flex flex-col text-slate-200 overflow-hidden font-sans select-none ${getStageBgClass(stage, isBossMatch)} ${isTutorialGlitching ? 'animate-tutorial-glitch' : ''}`}
         >
         {/* =========================================================================
+            GLOBAL ACT 1-4 ATMOSPHERE & WEATHER OVERLAY
+           ========================================================================= */}
+        {screen !== 'SPLASH' && screen !== 'DECK_SELECT' && screen !== 'GAME_OVER' && (() => {
+          const weatherAct = Math.min(4, Math.max(1, actMap?.act ?? displayStage));
+          const hasMist = weatherAct === 1 || weatherAct === 2 || weatherAct === 3;
+          const rainCount = weatherAct === 3 ? 58 : weatherAct === 2 ? 28 : 0;
+          const hasLightning = weatherAct === 3;
+          const hasFire = weatherAct === 4;
+
+          return (
+            <div className="pointer-events-none fixed inset-0 z-[52] overflow-hidden select-none">
+              {/* Act 1-3: Drifting Mist Layers */}
+              {hasMist && (
+                <>
+                  <div
+                    className="absolute -inset-x-[15%] bottom-[-12%] h-[58%]"
+                    style={{
+                      background:
+                        weatherAct === 3
+                          ? 'radial-gradient(ellipse at 30% 80%, rgba(165,180,196,0.22) 0%, rgba(110,125,140,0.12) 45%, transparent 74%)'
+                          : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.2) 0%, rgba(135,132,124,0.1) 45%, transparent 74%)',
+                      filter: 'blur(28px)',
+                      animation: 'weatherMistDriftA 22s ease-in-out infinite',
+                    }}
+                  />
+                  <div
+                    className="absolute -inset-x-[15%] bottom-[-8%] h-[46%]"
+                    style={{
+                      background:
+                        weatherAct === 3
+                          ? 'radial-gradient(ellipse at 72% 85%, rgba(155,172,190,0.2) 0%, rgba(95,112,130,0.1) 48%, transparent 76%)'
+                          : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.18) 0%, rgba(120,116,108,0.09) 48%, transparent 76%)',
+                      filter: 'blur(34px)',
+                      animation: 'weatherMistDriftB 29s ease-in-out infinite',
+                    }}
+                  />
+                </>
+              )}
+
+              {/* Act 2 (Rain) & Act 3 (Heavy Storm Rain) */}
+              {rainCount > 0 && (
+                <div className="absolute inset-0">
+                  {Array.from({ length: rainCount }, (_, i) => {
+                    const leftPct = ((i * 37.3 + (i % 5) * 3.1) % 112) - 4;
+                    const duration = weatherAct === 3
+                      ? (0.48 + ((i * 19) % 10) * 0.032).toFixed(2)
+                      : (0.78 + ((i * 17) % 10) * 0.045).toFixed(2);
+                    const delay = -(((i * 0.23) % 1.8).toFixed(2));
+                    const heightPx = weatherAct === 3 ? 28 + (i % 4) * 9 : 18 + (i % 4) * 6;
+                    const opacity = weatherAct === 3 ? 0.22 + (i % 3) * 0.08 : 0.14 + (i % 3) * 0.06;
+                    return (
+                      <span
+                        key={`rain-${weatherAct}-${i}`}
+                        className="absolute top-0 rounded-full"
+                        style={{
+                          left: `${leftPct}%`,
+                          width: weatherAct === 3 ? '1.35px' : '1px',
+                          height: `${heightPx}px`,
+                          opacity,
+                          background: 'linear-gradient(to bottom, transparent, rgba(208,224,242,0.85), rgba(186,208,232,0.25))',
+                          animation: `weatherRainFall ${duration}s linear ${delay}s infinite`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Act 3: Intermittent Lightning Flash */}
+              {hasLightning && (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse at 50% 15%, rgba(215,232,255,0.85) 0%, rgba(168,196,238,0.35) 55%, rgba(120,145,190,0.12) 100%)',
+                    mixBlendMode: 'screen',
+                    animation: 'weatherLightningFlash 11.5s linear infinite',
+                  }}
+                />
+              )}
+
+              {/* Act 4: Fire Underglow, Embers & Light Smoke */}
+              {hasFire && (
+                <>
+                  {/* Warm Pulsing Fire Underglow */}
+                  <div
+                    className="absolute inset-x-0 bottom-0 h-[44%] origin-bottom"
+                    style={{
+                      background:
+                        'radial-gradient(ellipse at 50% 100%, rgba(234,88,12,0.34) 0%, rgba(185,28,28,0.2) 45%, transparent 78%)',
+                      mixBlendMode: 'screen',
+                      animation: 'weatherFireGlow 4.8s ease-in-out infinite',
+                    }}
+                  />
+                  {/* Light Drifting Smoke Plume */}
+                  <div
+                    className="absolute -inset-x-[12%] bottom-[-5%] h-[62%]"
+                    style={{
+                      background:
+                        'radial-gradient(ellipse at 40% 75%, rgba(92,82,78,0.26) 0%, rgba(45,40,38,0.14) 50%, transparent 76%)',
+                      filter: 'blur(36px)',
+                      animation: 'weatherSmokeDrift 20s ease-in-out infinite',
+                    }}
+                  />
+                  {/* Rising Embers */}
+                  {Array.from({ length: 30 }, (_, i) => {
+                    const leftPct = (i * 33.7 + 4) % 96;
+                    const sizePx = 2 + (i % 3) * 1.4;
+                    const duration = (4.2 + ((i * 13) % 10) * 0.42).toFixed(2);
+                    const delay = -(((i * 0.67) % 6.5).toFixed(2));
+                    const drift = ((i % 2 === 0 ? 1 : -1) * (18 + (i % 5) * 14));
+                    return (
+                      <span
+                        key={`ember-${i}`}
+                        className="absolute -bottom-3 rounded-full"
+                        style={{
+                          left: `${leftPct}%`,
+                          width: `${sizePx}px`,
+                          height: `${sizePx}px`,
+                          backgroundColor: i % 3 === 0 ? '#fde68a' : i % 2 === 0 ? '#fb923c' : '#ef4444',
+                          boxShadow: '0 0 8px rgba(251,146,60,0.85), 0 0 14px rgba(239,68,68,0.55)',
+                          ['--ember-drift' as any]: `${drift}px`,
+                          animation: `weatherEmberRise ${duration}s ease-out ${delay}s infinite`,
+                        }}
+                      />
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* =========================================================================
             SPLASH SCREEN
            ========================================================================= */}
         {screen === 'SPLASH' && (
@@ -8473,11 +8623,11 @@ export default function App() {
          ========================================================================= */}
       {screen === 'DECK_SELECT' && (
         <div
-          className="absolute inset-0 z-50 flex flex-col items-center justify-between px-6 sm:px-8 py-4 overflow-y-auto animate-fade-up font-mono select-none"
+          className="absolute inset-0 z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-3.5 overflow-hidden animate-fade-up font-mono select-none"
           style={getScreenBgStyle('deck-selection.jpg')}
         >
           {/* Atmospheric Vignette & Candlelight Overlays */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(10,7,5,0.22)_0%,rgba(6,4,3,0.78)_100%)] pointer-events-none z-0" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(10,7,5,0.22)_0%,rgba(6,4,3,0.82)_100%)] pointer-events-none z-0" />
           <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(245,158,11,0.2)_0%,rgba(180,83,9,0.07)_45%,transparent_70%)] pointer-events-none animate-[pulse_5s_infinite_ease-in-out] blur-2xl z-0" />
           <div
             className="absolute -top-16 -right-16 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.18)_0%,rgba(217,119,6,0.06)_45%,transparent_70%)] pointer-events-none animate-[pulse_5s_infinite_ease-in-out] blur-2xl z-0"
@@ -8485,17 +8635,14 @@ export default function App() {
           />
 
           {/* Engraved Ritual Header */}
-          <div className="relative z-10 flex flex-col items-center text-center pt-0.5 shrink-0">
+          <div className="relative z-10 flex flex-col items-center text-center shrink-0">
             <div className="flex items-center gap-4">
-              <div className="h-px w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/80" />
+              <div className="h-px w-16 sm:w-24 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/80" />
               <h1 className="text-xl sm:text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.28em] text-[#e7cda0] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                 Choose Your Lineage
               </h1>
-              <div className="h-px w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/80" />
+              <div className="h-px w-16 sm:w-24 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/80" />
             </div>
-            <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-[#b89768]/75 mt-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
-              Select a starting offering to carry into the dark
-            </p>
 
             {/* Run Seed & Post-Clear Ritual Vows Bar */}
             {(() => {
@@ -8505,8 +8652,7 @@ export default function App() {
               const vowsUnlocked =
                 (archive.runsWon || 0) > 0 || (archive.defeatedBosses || []).includes('BoneLord');
               return (
-                <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2.5 px-3 py-1.5 rounded-[3px] bg-[#0c0806]/82 border border-[#3e2a1b]/85 shadow-[0_10px_26px_rgba(0,0,0,0.85)] backdrop-blur-[2px]">
-                  {/* Deterministic Run Seed Input (Unlocked after clearing Bone Lord with all 6 lineages) */}
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-2.5 px-3.5 py-1 rounded-[3px] bg-[#0c0806]/84 border border-[#3e2a1b]/85 shadow-[0_10px_26px_rgba(0,0,0,0.85)] backdrop-blur-[2px]">
                   {seedsUnlocked ? (
                     <div className="flex items-center gap-1.5">
                       <span className="text-[9px] uppercase tracking-[0.22em] text-[#b5905c] font-bold">
@@ -8548,13 +8694,12 @@ export default function App() {
                       title="Seal the Bone Lord with all 6 Lineages to unlock custom Run Seeds."
                       className="text-[9px] font-mono uppercase tracking-[0.16em] text-[#8d7253]/85"
                     >
-                      🔒 Seeds — {clearedCount}/6 Lineages Cleared
+                      Seeds Locked ({clearedCount}/6)
                     </span>
                   )}
 
-                  <div className="hidden sm:block h-4 w-px bg-[#3c291b]" />
+                  <div className="hidden sm:block h-3.5 w-px bg-[#3c291b]" />
 
-                  {/* Unlockable Ritual Vows (Penances) */}
                   {vowsUnlocked ? (
                     <div className="flex flex-wrap items-center justify-center gap-1.5">
                       <span className="text-[9px] uppercase tracking-[0.22em] text-red-400/90 font-bold mr-0.5">
@@ -8581,10 +8726,10 @@ export default function App() {
                     </div>
                   ) : (
                     <span
-                      title="Defeat the Bone Lord once to unbind optional Ritual Vows (Penances)."
+                      title="Defeat the Bone Lord once to unbind optional Ritual Vows."
                       className="text-[9px] font-mono uppercase tracking-[0.16em] text-[#8d7253]/85"
                     >
-                      🔒 Ritual Vows — Seal the Bone Lord to Unlock
+                      Vows Sealed
                     </span>
                   )}
                 </div>
@@ -8593,7 +8738,7 @@ export default function App() {
           </div>
 
           {/* 3x2 Recessed Altar Plaques */}
-          <div className="relative z-10 grid grid-cols-3 gap-x-6 gap-y-4 w-full max-w-[1160px] my-auto">
+          <div className="relative z-10 flex-1 min-h-0 grid grid-cols-3 grid-rows-2 gap-x-5 gap-y-3 w-full max-w-[1220px] my-2">
             {[
               { id: 'randomizer', name: 'Unformed', desc: 'Masochistic', cards: ["Trade Pelt", "Trade Pelt", "Geck"] },
               { id: 'witchcraft', name: 'Taiga', desc: 'Reliable', cards: ["Mole", "Moose Buck", "Black Goat"] },
@@ -8605,7 +8750,7 @@ export default function App() {
               <div
                 key={d.id}
                 onClick={() => handleSelectLineage(d.id)}
-                className="relative flex flex-col items-center justify-between group px-4 pt-3 pb-3 rounded-[3px] bg-[#0d0907]/74 hover:bg-[#150e0a]/88 border border-[#3a2a1d]/85 hover:border-[#c69853]/75 shadow-[0_14px_30px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,228,185,0.06)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.92),0_0_24px_rgba(212,175,55,0.14),inset_0_1px_0_rgba(255,228,185,0.14)] backdrop-blur-[2px] transition-all duration-300 cursor-pointer select-none"
+                className="relative min-h-0 flex flex-col items-center justify-between group px-3 pt-2 pb-2.5 rounded-[3px] bg-[#0d0907]/76 hover:bg-[#150e0a]/90 border border-[#3a2a1d]/85 hover:border-[#c69853]/75 shadow-[0_14px_30px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,228,185,0.06)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.92),0_0_24px_rgba(212,175,55,0.14),inset_0_1px_0_rgba(255,228,185,0.14)] backdrop-blur-[2px] transition-all duration-300 cursor-pointer select-none overflow-hidden"
               >
                 {/* Engraved Corner Brackets */}
                 <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#7a5b39]/60 group-hover:border-[#e3bc73]/90 transition-colors" />
@@ -8614,20 +8759,20 @@ export default function App() {
                 <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#7a5b39]/60 group-hover:border-[#e3bc73]/90 transition-colors" />
 
                 {/* Warm Candlelit Hover Halo Behind Cards */}
-                <div className="pointer-events-none absolute top-4 inset-x-8 h-28 rounded-full bg-[radial-gradient(circle,rgba(217,156,64,0.16)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="pointer-events-none absolute top-2 inset-x-6 h-32 rounded-full bg-[radial-gradient(circle,rgba(217,156,64,0.18)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 {/* 3-Card Handheld Spread */}
-                <div className="relative flex items-end justify-center w-full h-[144px] pt-4 pb-1">
+                <div className="relative flex-1 min-h-0 flex items-center justify-center w-full">
                   {d.cards.map((cName, cIdx) => {
                     const fanTransforms = [
-                      'rotate-[-7deg] -translate-x-[52px] group-hover:-translate-x-[76px] group-hover:rotate-[-10deg] z-0',
-                      'rotate-[0deg] -translate-y-1 group-hover:-translate-y-2.5 z-10',
-                      'rotate-[7deg] translate-x-[52px] group-hover:translate-x-[76px] group-hover:rotate-[10deg] z-20'
+                      'rotate-[-4deg] -translate-x-[104px] group-hover:-translate-x-[112px] group-hover:rotate-[-6deg] z-0',
+                      'rotate-[0deg] -translate-y-1.5 group-hover:-translate-y-2.5 z-10',
+                      'rotate-[4deg] translate-x-[104px] group-hover:translate-x-[112px] group-hover:rotate-[6deg] z-20'
                     ];
                     return (
                       <div
                         key={`${cName}-${cIdx}`}
-                        className={`absolute transform scale-[0.67] origin-bottom transition-all duration-300 ease-out group-hover:scale-[0.71] drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)] ${fanTransforms[cIdx] || ''}`}
+                        className={`absolute transform scale-[0.86] origin-center transition-all duration-300 ease-out group-hover:scale-[0.9] drop-shadow-[0_10px_16px_rgba(0,0,0,0.88)] ${fanTransforms[cIdx] || ''}`}
                       >
                         {renderCard(ALL_CARD_LOOKUP[cName] || MAIN_DECK_POOL[0], { showCost: true })}
                       </div>
@@ -8636,17 +8781,19 @@ export default function App() {
                 </div>
 
                 {/* Engraved Hairline Divider */}
-                <div className="w-4/5 h-px bg-gradient-to-r from-transparent via-[#5e442c]/75 to-transparent group-hover:via-[#c69853]/80 transition-colors my-1" />
+                <div className="shrink-0 w-4/5 h-px bg-gradient-to-r from-transparent via-[#5e442c]/75 to-transparent group-hover:via-[#c69853]/80 transition-colors my-1" />
 
                 {/* Lineage Plaque Label & Tactile Start Plate */}
-                <div className="flex flex-col items-center text-center w-full pt-0.5">
-                  <h2 className="text-[15px] font-['Cinzel',_serif] font-bold text-[#ecd4a6] uppercase tracking-[0.22em] group-hover:text-[#fff4dc] transition-colors drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
-                    {d.name}
-                  </h2>
-                  <p className="text-[10px] font-mono text-[#b98e57]/75 group-hover:text-[#d8b177] mt-0.5 tracking-[0.26em] uppercase transition-colors">
-                    {d.desc}
-                  </p>
-                  <div className="mt-2 px-5 py-1 rounded-[2px] border border-[#4a3524]/90 bg-[#17110d]/95 group-hover:bg-[#2a1c12] group-hover:border-[#cfa159]/85 shadow-[0_2px_0_#070504,inset_0_1px_0_rgba(255,235,200,0.06)] transition-all duration-200">
+                <div className="shrink-0 flex flex-col items-center text-center w-full">
+                  <div className="flex items-baseline gap-2.5">
+                    <h2 className="text-sm font-['Cinzel',_serif] font-bold text-[#ecd4a6] uppercase tracking-[0.2em] group-hover:text-[#fff4dc] transition-colors drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+                      {d.name}
+                    </h2>
+                    <span className="text-[9px] font-mono text-[#b98e57]/75 group-hover:text-[#d8b177] tracking-[0.2em] uppercase transition-colors">
+                      {d.desc}
+                    </span>
+                  </div>
+                  <div className="mt-1 px-5 py-0.5 rounded-[2px] border border-[#4a3524]/90 bg-[#17110d]/95 group-hover:bg-[#2a1c12] group-hover:border-[#cfa159]/85 shadow-[0_2px_0_#070504,inset_0_1px_0_rgba(255,235,200,0.06)] transition-all duration-200">
                     <span className="font-['Cinzel',_serif] text-[10px] font-bold uppercase tracking-[0.26em] text-[#cbb084] group-hover:text-[#fff2d6] transition-colors">
                       ◆ Start ◆
                     </span>
@@ -8655,8 +8802,6 @@ export default function App() {
               </div>
             ))}
           </div>
-
-          <div className="h-1 shrink-0" />
         </div>
       )}
 
@@ -8665,93 +8810,126 @@ export default function App() {
          ========================================================================= */}
       {screen === 'GAME_OVER' && (
         <div
-          className="absolute inset-0 bg-[#080204] z-50 flex flex-col items-center justify-center p-4 text-center select-none overflow-hidden animate-fade-up font-mono"
+          className="absolute inset-0 bg-[#080204] z-50 flex flex-col items-center justify-center px-5 py-4 text-center select-none overflow-hidden animate-fade-up font-mono"
           style={getScreenBgStyle('gameover.jpg')}
         >
-          <div className="max-w-5xl w-full flex flex-col items-center bg-[#0d0806]/92 border border-[#3e2316] rounded-sm px-6 py-5 shadow-[0_22px_55px_rgba(0,0,0,0.95)] backdrop-blur-[2px]">
-            {/* Compact Header */}
-            <div className="flex items-center justify-center gap-3 mb-1">
-              <span className="text-2xl filter sepia-[0.4]">
-                {bossState.ritualEndedVoluntarily ? '🕯️' : bossState.ritualSurrendered ? '🕯️' : '💀'}
-              </span>
-              <div className="text-left">
-                <div className="text-[10px] text-amber-600/90 font-bold uppercase tracking-widest leading-none mb-0.5">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,6,6,0.35)_0%,rgba(4,2,3,0.9)_100%)] pointer-events-none" />
+
+          <div className="relative z-10 max-w-5xl w-full max-h-full min-h-0 flex flex-col items-center bg-[#0d0806]/92 border border-[#442819] rounded-[3px] px-6 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.96)] backdrop-blur-[2px]">
+            {/* Engraved Header */}
+            <div className="shrink-0 flex flex-col items-center text-center mb-4">
+              <div className="flex items-center gap-3.5 mb-0.5">
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#8a5d36]/75 to-[#d4af37]/85" />
+                <span className={`text-[10px] font-mono font-bold uppercase tracking-[0.3em] ${
+                  bossState.ritualEndedVoluntarily ? 'text-[#d4af37]' : 'text-red-400/90'
+                }`}>
                   {bossState.ritualEndedVoluntarily
-                    ? '+-- SUCCESS --+'
+                    ? 'Seal Complete'
                     : bossState.ritualSurrendered
-                      ? '+-- RITUAL ABANDONED --+'
-                      : '+-- CATASTROPHIC FAILURE --+'}
-                </div>
-                <h1
-                  className={`text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-widest leading-tight ${
-                    bossState.ritualEndedVoluntarily
-                      ? 'text-amber-300 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)]'
-                      : 'text-red-500 drop-shadow-[0_2px_12px_rgba(239,68,68,0.4)]'
-                  }`}
-                >
-                  {bossState.ritualEndedVoluntarily
-                    ? 'RITUAL CONCLUDED'
-                    : bossState.ritualSurrendered
-                      ? 'Forfeited to the Dark'
-                      : 'The Old One Awaits You'}
-                </h1>
+                      ? 'Candle Snuffed'
+                      : 'Scales Tipped'}
+                </span>
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#8a5d36]/75 to-[#d4af37]/85" />
               </div>
+              <h1
+                className={`text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] leading-tight ${
+                  bossState.ritualEndedVoluntarily
+                    ? 'text-[#f2dca8] drop-shadow-[0_2px_14px_rgba(251,191,36,0.35)]'
+                    : 'text-red-500 drop-shadow-[0_2px_14px_rgba(239,68,68,0.45)]'
+                }`}
+              >
+                {bossState.ritualEndedVoluntarily
+                  ? 'Ritual Concluded'
+                  : bossState.ritualSurrendered
+                    ? 'Forfeited to the Dark'
+                    : 'The Old One Awaits'}
+              </h1>
+              <p className="mt-1 font-['Cinzel',_serif] italic text-xs sm:text-sm tracking-[0.1em] text-[#cfb794]/85">
+                {bossState.ritualEndedVoluntarily
+                  ? 'The Bone Lord lies bound beneath stone.'
+                  : bossState.ritualSurrendered
+                    ? 'You turned away before the altar.'
+                    : 'Your blood runs cold upon the scales.'}
+              </p>
             </div>
 
-            <div className="text-[11px] font-mono uppercase tracking-widest text-[#cfb794]/80 mb-4">
-              {bossState.ritualEndedVoluntarily
-                ? 'The Bone Lord has been sealed away'
-                : bossState.ritualSurrendered
-                  ? 'You snuffed the candle before the altar'
-                  : 'Your Blood Runs Cold'}
-            </div>
-
-            {/* Two-Column Body: Stats/Rank/Seed Left, Grimoire Trophy Strip Right */}
-            <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 items-stretch">
+            {/* Two-Column Body: Ledger Left, Grimoire Trophy Strip Right */}
+            <div className="w-full flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 items-stretch">
               {/* Left Column: Stats, Rank & Seed/Vows */}
-              <div className="md:col-span-5 flex flex-col justify-between gap-3">
-                <div className="flex-1 flex flex-col justify-between border border-[#3e2316] bg-[#150d09]/80 px-5 py-4 rounded-sm text-left">
+              <div className="md:col-span-5 min-h-0 flex flex-col justify-between gap-3">
+                <div className="flex-1 flex flex-col justify-between border border-[#3e2316] bg-[#150d09]/82 px-5 py-4 rounded-[3px] text-left">
                   <div className="flex items-center justify-between border-b border-[#3e2316] pb-3 mb-3">
                     <div>
-                      <div className="text-[10px] font-mono uppercase tracking-widest text-[#a8957f] font-semibold">
-                        Rank Assessment
-                      </div>
-                      <div className="text-[10px] text-[#7f6a54] uppercase tracking-wider mt-0.5">
+                      <div className="font-['Cinzel',_serif] text-xs font-bold uppercase tracking-[0.2em] text-[#e5cfa8]">
                         Final Ledger
+                      </div>
+                      <div className="text-[9.5px] font-mono text-[#8e765c] uppercase tracking-[0.18em] mt-0.5">
+                        Judgment
                       </div>
                     </div>
                     {(() => {
                       const grade = calculateGrade(runStats);
-                      const baseLetter = grade.letter.charAt(0);
+                      const baseLetter = grade.letter.charAt(0).toUpperCase();
                       const suffix = grade.letter.slice(1);
                       const baseUrl = import.meta.env.BASE_URL || './';
+                      const gradePalettes: Record<string, { gradient: string; glow: string }> = {
+                        S: {
+                          gradient: 'from-[#fff6c4] via-[#e5b84b] to-[#9a6719]',
+                          glow: 'drop-shadow(0 0 14px rgba(245,196,81,0.55)) drop-shadow(0 5px 12px rgba(0,0,0,0.95))',
+                        },
+                        A: {
+                          gradient: 'from-[#b7f7d8] via-[#34d399] to-[#0f6b4a]',
+                          glow: 'drop-shadow(0 0 12px rgba(52,211,153,0.45)) drop-shadow(0 5px 12px rgba(0,0,0,0.95))',
+                        },
+                        B: {
+                          gradient: 'from-[#c7e4ff] via-[#60a5fa] to-[#1e40af]',
+                          glow: 'drop-shadow(0 0 12px rgba(96,165,250,0.45)) drop-shadow(0 5px 12px rgba(0,0,0,0.95))',
+                        },
+                        C: {
+                          gradient: 'from-[#f3e3c3] via-[#c9a36a] to-[#735329]',
+                          glow: 'drop-shadow(0 0 10px rgba(201,163,106,0.4)) drop-shadow(0 5px 12px rgba(0,0,0,0.95))',
+                        },
+                        D: {
+                          gradient: 'from-[#fed7aa] via-[#ea7b2d] to-[#7c2d12]',
+                          glow: 'drop-shadow(0 0 10px rgba(234,123,45,0.42)) drop-shadow(0 5px 12px rgba(0,0,0,0.95))',
+                        },
+                        F: {
+                          gradient: 'from-[#fca5a5] via-[#dc2626] to-[#6b1111]',
+                          glow: 'drop-shadow(0 0 12px rgba(220,38,38,0.5)) drop-shadow(0 5px 12px rgba(0,0,0,0.95))',
+                        },
+                      };
+                      const palette = gradePalettes[baseLetter] || gradePalettes.F;
+                      const renderMaskedGlyph = (src: string, alt: string, heightClass: string, extraClass = '') => (
+                        <span className={`relative inline-block ${extraClass}`}>
+                          <img src={src} alt={alt} className={`${heightClass} w-auto object-contain opacity-0`} draggable={false} />
+                          <span
+                            aria-hidden="true"
+                            className={`absolute inset-0 bg-gradient-to-b ${palette.gradient}`}
+                            style={{
+                              WebkitMaskImage: `url("${src}")`,
+                              maskImage: `url("${src}")`,
+                              WebkitMaskSize: 'contain',
+                              maskSize: 'contain',
+                              WebkitMaskRepeat: 'no-repeat',
+                              maskRepeat: 'no-repeat',
+                              WebkitMaskPosition: 'center',
+                              maskPosition: 'center',
+                            }}
+                          />
+                        </span>
+                      );
+
                       return (
                         <div
-                          className="flex items-center justify-end gap-0.5 select-none drop-shadow-[0_4px_14px_rgba(0,0,0,0.95)]"
+                          className="flex items-start justify-end gap-0.5 select-none"
+                          style={{ filter: palette.glow }}
                           aria-label={`Grade ${grade.letter}`}
                         >
-                          <img
-                            src={`${baseUrl}assets/text/${baseLetter}.png`}
-                            alt={baseLetter}
-                            className="h-12 w-auto object-contain"
-                            draggable={false}
-                          />
-                          {suffix === '+' && (
-                            <img
-                              src={`${baseUrl}assets/text/plus.png`}
-                              alt="+"
-                              className="h-8 w-auto object-contain -ml-1 self-start mt-0.5"
-                              draggable={false}
-                            />
-                          )}
-                          {suffix === '++' && (
-                            <img
-                              src={`${baseUrl}assets/text/plus-plus.png`}
-                              alt="++"
-                              className="h-8 w-auto object-contain -ml-1 self-start mt-0.5"
-                              draggable={false}
-                            />
-                          )}
+                          {renderMaskedGlyph(`${baseUrl}assets/text/${baseLetter}.png`, baseLetter, 'h-20')}
+                          {suffix === '+' &&
+                            renderMaskedGlyph(`${baseUrl}assets/text/plus.png`, '+', 'h-11', '-ml-1 mt-1')}
+                          {suffix === '++' &&
+                            renderMaskedGlyph(`${baseUrl}assets/text/plus-plus.png`, '++', 'h-11', '-ml-1 mt-1')}
                         </div>
                       );
                     })()}
@@ -8759,31 +8937,31 @@ export default function App() {
 
                   <div className="space-y-2.5 font-mono text-xs">
                     <div className="flex justify-between items-center">
-                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Cleared Stages</span>
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Stages Cleared</span>
                       <span className="text-amber-200 font-bold text-sm">{runStats.clearedStages}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Cards Sacrificed</span>
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Vessels Sacrificed</span>
                       <span className="text-red-300 font-bold text-sm">{runStats.cardsSacrificed}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Damage Dealt / Taken</span>
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Blood Dealt / Taken</span>
                       <span className="text-stone-100 font-bold text-sm">
                         {runStats.scaleDamageDealt} <span className="text-stone-500 font-normal">/</span> {runStats.scaleDamageTaken}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Bosses Slain</span>
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Horrors Felled</span>
                       <span className="text-purple-300 font-bold text-sm">{runStats.bossesDefeated}</span>
                     </div>
                   </div>
                 </div>
 
                 {(runSeed || activeVows.length > 0) && (
-                  <div className="px-4 py-2.5 rounded-sm bg-[#120b08]/88 border border-[#362015] flex flex-col gap-2 text-[10px] font-mono text-left">
+                  <div className="shrink-0 px-4 py-2.5 rounded-[3px] bg-[#120b08]/88 border border-[#362015] flex flex-col gap-2 text-[10px] font-mono text-left">
                     {runSeed && (
                       <div className="flex items-center justify-between gap-2">
-                        <span className="uppercase tracking-[0.2em] text-[#9b8265]">Run Seed</span>
+                        <span className="uppercase tracking-[0.2em] text-[#9b8265]">Seed</span>
                         <button
                           type="button"
                           onClick={() => {
@@ -8815,13 +8993,13 @@ export default function App() {
               </div>
 
               {/* Right Column: Final Grimoire Trophy Strip */}
-              <div className="md:col-span-7 flex flex-col p-3.5 rounded-sm bg-[#120b08]/85 border border-[#3a2317] text-left">
+              <div className="md:col-span-7 min-h-0 flex flex-col p-3.5 rounded-[3px] bg-[#120b08]/85 border border-[#3a2317] text-left">
                 <div className="flex items-center justify-between border-b border-[#2e1c12] pb-1.5 mb-2 shrink-0">
-                  <span className="text-[10px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#d6b377]">
-                    Final Grimoire ({masterDeck.length} Creatures)
+                  <span className="text-[11px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#d6b377]">
+                    Final Grimoire
                   </span>
-                  <span className="text-[9px] font-mono uppercase tracking-[0.16em] text-[#8d7458]">
-                    Fusions • Forgeries • Blessings
+                  <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#8d7458]">
+                    {masterDeck.length} Vessels
                   </span>
                 </div>
                 {masterDeck.length > 0 ? (() => {
@@ -8838,13 +9016,13 @@ export default function App() {
                     let badge: { label: string; cls: string; rank: number } | null = null;
                     if (isFused) {
                       badge = {
-                        label: 'FUSED',
+                        label: 'STITCHED',
                         cls: 'bg-[#21102a]/95 border-purple-400/85 text-purple-200',
                         rank: 4,
                       };
                     } else if (isForged) {
                       badge = {
-                        label: 'FORGED',
+                        label: 'IMPRINTED',
                         cls: 'bg-[#09201c]/95 border-teal-400/85 text-teal-200',
                         rank: 3,
                       };
@@ -8856,7 +9034,7 @@ export default function App() {
                       };
                     } else if (isGrafted) {
                       badge = {
-                        label: 'GRAFTED',
+                        label: 'CRESTED',
                         cls: 'bg-[#1f1709]/95 border-[#d4af37]/85 text-[#f4d78b]',
                         rank: 1,
                       };
@@ -8867,7 +9045,7 @@ export default function App() {
                   const sorted = [...annotated].sort((a, b) => b.rank - a.rank);
 
                   return (
-                    <div className="flex flex-wrap justify-center content-start gap-x-0.5 gap-y-1 max-h-[300px] overflow-y-auto pt-2.5 pb-1 px-1">
+                    <div className="flex-1 min-h-0 flex flex-wrap justify-center content-start gap-x-0.5 gap-y-1 max-h-[290px] overflow-y-auto pt-2.5 pb-1 px-1">
                       {sorted.map(({ card, idx, badge }) => (
                         <div
                           key={card.id || `trophy-${card.name}-${idx}`}
@@ -8889,27 +9067,27 @@ export default function App() {
                   );
                 })() : (
                   <div className="flex-1 flex items-center justify-center text-[11px] text-[#7f6a54] uppercase tracking-widest">
-                    No surviving creatures
+                    No surviving vessels
                   </div>
                 )}
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="shrink-0 flex flex-wrap items-center justify-center gap-3">
               {runSeed && (
                 <button
                   onClick={() => handleRestartRun(runSeed)}
-                  className="bg-[#18110c] hover:bg-[#261b12] active:translate-y-[1px] border border-[#8e6a3c]/80 hover:border-[#e5c16b] rounded-sm shadow-[0_2px_0_#0a0807] transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e6c88e] hover:text-white px-6 py-2.5 select-none cursor-pointer"
+                  className="bg-[#18110c] hover:bg-[#261b12] active:translate-y-[1px] border border-[#8e6a3c]/80 hover:border-[#e5c16b] rounded-[2px] shadow-[0_2px_0_#0a0807] transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] text-[#e6c88e] hover:text-white px-6 py-2.5 select-none cursor-pointer"
                 >
-                  REPLAY THIS SEED
+                  Replay Seed
                 </button>
               )}
               <button
                 onClick={() => handleRestartRun()}
-                className="bg-[#1e1510] hover:bg-[#2c1e16] active:bg-[#140e0b] border border-[#482c1d] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.08)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e8d7be] hover:text-[#fff] px-8 py-2.5 select-none cursor-pointer"
+                className="bg-[#1e1510] hover:bg-[#2c1e16] active:bg-[#140e0b] border border-[#5c3926] hover:border-[#c99b56] rounded-[2px] shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.08)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] text-[#efe0be] hover:text-white px-8 py-2.5 select-none cursor-pointer"
               >
-                COMMENCE ANOTHER RITUAL
+                Begin Anew
               </button>
             </div>
           </div>
@@ -9102,14 +9280,14 @@ export default function App() {
           !draftPlayerDeck.some(c => c.name === "Trade Pelt") && draftTradesLeft <= 0;
 
         const statusPrompt = canVentureOnward
-          ? 'Your offering is complete — step forward into the dark.'
+          ? 'The bargain is struck.'
           : canConfirmTrade && selectedShopCard
-            ? `Exchange Trade Pelt for ${selectedShopCard.name}`
+            ? `Barter Pelt for ${selectedShopCard.name}`
             : selectedPeltCard
-              ? 'Choose a revealed Creature from the Merchant’s table'
+              ? 'Claim an offering from the table'
               : selectedShopCard
-                ? `Select a Trade Pelt from your hand to claim ${selectedShopCard.name}`
-                : 'Select a Trade Pelt from your creatures, then choose one from the Merchant';
+                ? `Offer a Pelt for ${selectedShopCard.name}`
+                : 'Offer a Pelt';
 
         const renderPlayerDraftSlot = (c: CardDef, idx: number) => {
           const isSelected = draftSelectedDeckIdx === idx;
@@ -9121,7 +9299,7 @@ export default function App() {
           return (
             <div
               key={c.id || `draft-p-${c.name}-${idx}`}
-              className="relative w-[116px] h-[164px] shrink-0 flex items-center justify-center"
+              className="relative w-[124px] h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -9135,14 +9313,14 @@ export default function App() {
                     : "opacity-75 saturate-[0.82] cursor-default"
                 } ${
                   isSelected
-                    ? "scale-[1.06] -translate-y-2.5 z-30"
+                    ? "scale-[1.13] -translate-y-2 z-30"
                     : canTradePelt
-                      ? "scale-[0.98] hover:scale-[1.03] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
-                      : "scale-[0.98]"
+                      ? "scale-[1.06] hover:scale-[1.11] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
+                      : "scale-[1.06]"
                 }`}
               >
                 {isSelected && (
-                  <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#c89e4c]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
+                  <span className="pointer-events-none absolute -top-3.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#c89e4c]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
                     Offering
                   </span>
                 )}
@@ -9157,9 +9335,9 @@ export default function App() {
             return (
               <div
                 key={`draft-slot-empty-${idx}`}
-                className="relative w-[116px] h-[164px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[124px] h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
-                <div className="w-[108px] h-[154px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
+                <div className="w-[114px] h-[162px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
                   <span className="text-[9px] font-['Cinzel',_serif] uppercase tracking-[0.25em] text-[#6e5642]/70">
                     Claimed
                   </span>
@@ -9175,10 +9353,10 @@ export default function App() {
             return (
               <div
                 key={`draft-back-${idx}`}
-                className="relative w-[116px] h-[164px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[124px] h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
                 <div
-                  className={`w-[108px] h-[154px] rounded-[3px] transition-all duration-200 ${
+                  className={`w-[114px] h-[162px] rounded-[3px] transition-all duration-200 ${
                     draftFlippingDown ? 'animate-flip-down' : 'opacity-65 filter brightness-75'
                   }`}
                 >
@@ -9197,7 +9375,7 @@ export default function App() {
           return (
             <div
               key={c.id || `draft-t-${c.name}-${idx}`}
-              className="relative w-[116px] h-[164px] shrink-0 flex items-center justify-center"
+              className="relative w-[124px] h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -9208,12 +9386,12 @@ export default function App() {
                   draftFlippingUp ? 'animate-flip-up' : ''
                 } ${
                   isSelected
-                    ? "scale-[1.06] -translate-y-2.5 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
-                    : "scale-[0.98] hover:scale-[1.03] hover:-translate-y-1"
+                    ? "scale-[1.13] -translate-y-2 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
+                    : "scale-[1.06] hover:scale-[1.11] hover:-translate-y-1"
                 }`}
               >
                 {isSelected && (
-                  <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1e0d0c]/95 border border-[#b95a4b]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4b0a4] whitespace-nowrap shadow-md">
+                  <span className="pointer-events-none absolute -top-3.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1e0d0c]/95 border border-[#b95a4b]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4b0a4] whitespace-nowrap shadow-md">
                     Claiming
                   </span>
                 )}
@@ -9225,85 +9403,79 @@ export default function App() {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-7 py-5 overflow-hidden font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-6 py-4 overflow-hidden font-mono select-none"
             style={getScreenBgStyle('draft.jpg')}
           >
             {/* Atmospheric Dark Vignette */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(8,10,14,0.18)_0%,rgba(6,5,7,0.82)_100%)] pointer-events-none z-0" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(8,10,14,0.18)_0%,rgba(6,5,7,0.84)_100%)] pointer-events-none z-0" />
 
-            {/* Header & Dynamic Ritual Status */}
+            {/* Header & Ritual Status */}
             <div className="relative z-10 flex flex-col items-center text-center shrink-0">
-              <h1 className="text-2xl sm:text-[26px] font-['Cinzel',_serif] text-[#e5c57c] tracking-[0.16em] italic drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+              <h1 className="text-xl sm:text-2xl font-['Cinzel',_serif] text-[#e5c57c] tracking-[0.18em] italic drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                 · Fortasse propositum facultates tuas superat ·
               </h1>
-              <div className="mt-1.5 flex items-center gap-3 px-4 py-1 rounded-[2px] bg-[#0b0807]/75 border border-[#3a2a1e]/75 backdrop-blur-[2px]">
-                <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-[#cfb794]/85">
+              <div className="mt-1.5 flex items-center gap-3 px-4 py-1 rounded-[2px] bg-[#0b0807]/80 border border-[#3a2a1e]/80 backdrop-blur-[2px]">
+                <span className="font-['Cinzel',_serif] text-xs tracking-[0.14em] text-[#e5cfa8]">
                   {statusPrompt}
                 </span>
                 <span className="h-3 w-px bg-[#4a3728]/80" />
                 <span className={`text-[10px] font-mono font-bold uppercase tracking-[0.2em] ${
                   draftTradesLeft > 0 ? 'text-[#e5c16b]' : 'text-emerald-400/85'
                 }`}>
-                  {draftTradesLeft > 0 ? `${draftTradesLeft} ${draftTradesLeft === 1 ? 'Pelt' : 'Pelts'} Left` : 'Ready'}
+                  {draftTradesLeft > 0 ? `${draftTradesLeft} ${draftTradesLeft === 1 ? 'Pelt' : 'Pelts'}` : 'Settled'}
                 </span>
               </div>
             </div>
 
-            {/* Dual Smoked-Wood & Iron Tabletop Trays */}
-            <div className="relative z-10 grid grid-cols-[minmax(0,1fr)_minmax(0,1.28fr)] gap-6 max-w-[1160px] w-full my-auto items-stretch">
+            {/* Dual Smoked-Wood & Iron Tabletop Trays (Snug Fit) */}
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[auto_auto] justify-center items-stretch gap-5 my-auto max-w-full">
               {/* Left Tray: Player's Starter Deck */}
-              <div className="relative flex flex-col items-center justify-between px-5 pt-3.5 pb-4 rounded-[3px] bg-[#0c0908]/72 border border-[#3d2d20]/80 shadow-[0_16px_38px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
+              <div className="relative flex flex-col items-center px-5 pt-3 pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#3d2d20]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
                 <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#7c5d3b]/65" />
                 <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#7c5d3b]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#7c5d3b]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#7c5d3b]/65" />
 
-                <div className="w-full flex items-center justify-between pb-2.5 mb-3 border-b border-[#3a2a1e]/75">
+                <div className="shrink-0 w-full flex items-center justify-between pb-2 mb-3 border-b border-[#3a2a1e]/75">
                   <h2 className="text-xs font-['Cinzel',_serif] font-bold text-[#e5c78a] uppercase tracking-[0.26em]">
-                    Your Creatures
+                    Your Satchel
                   </h2>
                   <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#a98d68]/75">
-                    {draftPlayerDeck.filter(c => c.name === "Trade Pelt").length} Tradeable
+                    {draftPlayerDeck.filter(c => c.name === "Trade Pelt").length} Pelts
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center justify-center gap-3.5 w-full my-auto">
-                  {/* Row 1: 3 Starter Creatures */}
-                  <div className="flex justify-center items-center gap-3.5 w-full">
+                <div className="flex flex-col items-center justify-center gap-3 my-auto">
+                  <div className="flex justify-center items-center gap-3">
                     {draftPlayerDeck.slice(0, 3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx))}
                   </div>
-
-                  {/* Row 2: 2 Trade Pelts / Claimed Replacements */}
-                  <div className="flex justify-center items-center gap-3.5 w-full">
+                  <div className="flex justify-center items-center gap-3">
                     {draftPlayerDeck.slice(3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx + 3))}
                   </div>
                 </div>
               </div>
 
-              {/* Right Tray: Merchant's Shop */}
-              <div className="relative flex flex-col items-center justify-between px-5 pt-3.5 pb-4 rounded-[3px] bg-[#0c0908]/72 border border-[#422823]/80 shadow-[0_16px_38px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,205,190,0.05)] backdrop-blur-[2px]">
+              {/* Right Tray: Trader's Table */}
+              <div className="relative flex flex-col items-center px-5 pt-3 pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#422823]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,205,190,0.05)] backdrop-blur-[2px]">
                 <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#8a4c42]/65" />
                 <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#8a4c42]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#8a4c42]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#8a4c42]/65" />
 
-                <div className="w-full flex items-center justify-between pb-2.5 mb-3 border-b border-[#3f2622]/75">
+                <div className="shrink-0 w-full flex items-center justify-between pb-2 mb-3 border-b border-[#3f2622]/75">
                   <h2 className="text-xs font-['Cinzel',_serif] font-bold text-[#e2a498] uppercase tracking-[0.26em]">
-                    Merchant's Shop
+                    The Trader&rsquo;s Table
                   </h2>
                   <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#b47c72]/80">
                     {draftRevealedIndices.length} Revealed
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center justify-center gap-3.5 w-full my-auto">
-                  {/* Row 1: Top 4 Cards */}
-                  <div className="flex justify-center items-center gap-3.5 w-full">
+                <div className="flex flex-col items-center justify-center gap-3 my-auto">
+                  <div className="flex justify-center items-center gap-3">
                     {draftTradePool.slice(0, 4).map((c, idx) => renderMerchantDraftSlot(c, idx))}
                   </div>
-
-                  {/* Row 2: Bottom 4 Cards */}
-                  <div className="flex justify-center items-center gap-3.5 w-full">
+                  <div className="flex justify-center items-center gap-3">
                     {draftTradePool.slice(4, 8).map((c, sliceIdx) => renderMerchantDraftSlot(c, sliceIdx + 4))}
                   </div>
                 </div>
@@ -9311,17 +9483,17 @@ export default function App() {
             </div>
 
             {/* Grounded Tactile Action Bar */}
-            <div className="relative z-10 flex items-center gap-4 px-5 py-2.5 rounded-[3px] bg-[#0c0807]/85 border border-[#3a2a1e]/80 shadow-[0_10px_28px_rgba(0,0,0,0.88)] backdrop-blur-[2px] shrink-0">
+            <div className="relative z-10 flex items-center gap-4 px-5 py-2 rounded-[3px] bg-[#0c0807]/88 border border-[#3a2a1e]/80 shadow-[0_10px_28px_rgba(0,0,0,0.88)] backdrop-blur-[2px] shrink-0">
               <button
                 onClick={executeDraftTrade}
                 disabled={!canConfirmTrade}
-                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] px-6 py-2.5 select-none ${
+                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] px-6 py-2 select-none ${
                   canConfirmTrade
                     ? 'bg-[#2c1512] hover:bg-[#3c1b17] active:translate-y-[1px] border-[#c46c56] text-[#ffe8d6] shadow-[0_2px_0_#0b0504,0_0_18px_rgba(196,108,86,0.28),inset_0_1px_0_rgba(255,220,200,0.18)] cursor-pointer'
                     : 'bg-[#15100d]/90 border-[#2f241c] text-[#7a6957] opacity-55 cursor-not-allowed'
                 }`}
               >
-                Confirm Trade
+                Strike Bargain
               </button>
 
               <div className="h-5 w-px bg-[#3a2a1e]/80" />
@@ -9329,16 +9501,11 @@ export default function App() {
               <button
                 onClick={finalizeDraft}
                 disabled={!canVentureOnward}
-                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] px-6 py-2.5 select-none ${
+                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] px-6 py-2 select-none ${
                   canVentureOnward
                     ? 'bg-[#271d12] hover:bg-[#362717] active:translate-y-[1px] border-[#d4af37]/90 text-[#fff2cf] shadow-[0_2px_0_#0b0704,0_0_20px_rgba(212,175,55,0.3),inset_0_1px_0_rgba(255,240,190,0.22)] cursor-pointer'
                     : 'bg-[#15100d]/90 border-[#2f241c] text-[#7a6957] opacity-55 cursor-not-allowed'
                 }`}
-                title={
-                  !canVentureOnward
-                    ? "You must trade all of your Pelts before venturing further"
-                    : "Venture Onward"
-                }
               >
                 Venture Onward
               </button>
@@ -9463,7 +9630,15 @@ export default function App() {
                 </div>
 
                 {/* Main Timber Display Cabinet */}
-                <div className="relative w-full flex flex-col justify-between rounded-[4px] bg-gradient-to-b from-[#160e09]/90 via-[#110b07]/94 to-[#090604]/97 border-2 border-[#4d3522]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,224,178,0.08)] px-5 sm:px-7 py-5 overflow-hidden">
+                <div
+                  className="relative w-full flex flex-col justify-between rounded-[4px] border-2 border-[#4d3522]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,224,178,0.08)] px-5 sm:px-7 py-5 overflow-hidden"
+                  style={{
+                    backgroundColor: '#110b07',
+                    backgroundImage: `linear-gradient(to bottom, rgba(22,14,9,0.76), rgba(15,10,6,0.82), rgba(8,5,3,0.9)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
+                    backgroundSize: 'cover, 200px 200px',
+                    backgroundRepeat: 'no-repeat, repeat',
+                  }}
+                >
                   {/* Top Timber Cornice with Flanking Hanging Lanterns */}
                   <div className="relative z-20 flex items-center justify-between border-b border-[#3f2b1c] pb-2.5 shrink-0">
                     <div className="flex items-center gap-2.5">
@@ -9509,9 +9684,15 @@ export default function App() {
                               onClick={() => handleSelectItem(itemId)}
                               className={`relative p-4 sm:p-5 rounded-[3px] border flex flex-col items-center justify-between text-center transition-all duration-200 overflow-hidden ${
                                 canAfford
-                                  ? 'bg-[radial-gradient(ellipse_at_50%_20%,#241510_0%,#120a07_75%)] border-[#5e3d26]/90 hover:border-[#e5c16b] hover:-translate-y-1.5 shadow-[inset_0_12px_28px_rgba(0,0,0,0.85),0_12px_26px_rgba(0,0,0,0.9)] hover:shadow-[0_16px_34px_rgba(212,175,55,0.22)] group cursor-pointer'
-                                  : 'bg-[#100b08]/88 border-[#38271b] opacity-60 cursor-not-allowed shadow-inner'
+                                  ? 'border-[#5e3d26]/90 hover:border-[#e5c16b] hover:-translate-y-1.5 shadow-[inset_0_12px_28px_rgba(0,0,0,0.85),0_12px_26px_rgba(0,0,0,0.9)] hover:shadow-[0_16px_34px_rgba(212,175,55,0.22)] group cursor-pointer'
+                                  : 'border-[#38271b] opacity-60 cursor-not-allowed shadow-inner'
                               }`}
+                              style={{
+                                backgroundColor: '#120a07',
+                                backgroundImage: `radial-gradient(ellipse at 50% 20%, rgba(44,24,18,0.52) 0%, rgba(14,8,6,0.78) 80%), url("${import.meta.env.BASE_URL || './'}assets/text/cloth.jpg")`,
+                                backgroundSize: 'cover, 160px 160px',
+                                backgroundRepeat: 'no-repeat, repeat',
+                              }}
                             >
                               {/* Velvet Backing Glow */}
                               <div
@@ -9618,7 +9799,7 @@ export default function App() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,8,5,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
-            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-center gap-5">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
@@ -9704,7 +9885,16 @@ export default function App() {
                           }}
                         >
                           {selectedCard ? (
-                            <div className="scale-[1.06] origin-center">
+                            <div
+                              onClick={() => {
+                                if (campfireStage === 0 && !isEventBusy) {
+                                  triggerSfx('draw');
+                                  setCampfireCardIdx(null);
+                                }
+                              }}
+                              title={campfireStage === 0 && !isEventBusy ? 'Click to return to deck' : undefined}
+                              className={`scale-[1.06] origin-center ${campfireStage === 0 && !isEventBusy ? 'cursor-pointer hover:-translate-y-1 transition-transform' : ''}`}
+                            >
                               {renderCard(selectedCard, { isClickable: false, disableHoverScale: true })}
                             </div>
                           ) : (
@@ -9835,7 +10025,8 @@ export default function App() {
                     <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
                       {masterDeck.map((c, idx) => {
                         const isSelected = campfireCardIdx === idx;
-                        const lockedOut = campfireStage > 0 && !isSelected;
+                        if (isSelected) return null;
+                        const lockedOut = campfireStage > 0;
                         return (
                           <div
                             key={c.id || `camp-${c.name}-${idx}`}
@@ -9905,7 +10096,7 @@ export default function App() {
                   <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-                  Sigil Transfer
+                  Crest Transfer
                 </h1>
               </div>
 
@@ -9975,7 +10166,16 @@ export default function App() {
                           }`}
                         >
                           {hostPreview ? (
-                            <div className="scale-[0.98] origin-center">
+                            <div
+                              onClick={() => {
+                                if (isAnimating) return;
+                                triggerSfx('draw');
+                                setAltarHostId(null);
+                                setAltarSacrificeId(null);
+                              }}
+                              title={!isAnimating ? 'Click to return Host to deck' : undefined}
+                              className={`scale-[0.98] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                            >
                               {renderCard(hostPreview, { isClickable: false, disableHoverScale: true })}
                             </div>
                           ) : (
@@ -10013,7 +10213,15 @@ export default function App() {
                           }}
                         >
                           {sacPreview ? (
-                            <div className="scale-[1.0] origin-center">
+                            <div
+                              onClick={() => {
+                                if (isAnimating) return;
+                                triggerSfx('draw');
+                                setAltarSacrificeId(null);
+                              }}
+                              title={!isAnimating ? 'Click to return Sacrifice to deck' : undefined}
+                              className={`scale-[1.0] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                            >
                               {renderCard(sacPreview, { isClickable: false, disableHoverScale: true, isMarkedSacrifice: true })}
                             </div>
                           ) : (
@@ -10120,6 +10328,7 @@ export default function App() {
                       {masterDeck.map(c => {
                         const isHost = altarHostId === c.id;
                         const isSac = altarSacrificeId === c.id;
+                        if (isHost || isSac) return null;
                         const hostCard = masterDeck.find(m => m.id === altarHostId);
                         const cannotBeHost = hasMoreSigilsThanOriginal(c);
 
@@ -10384,6 +10593,7 @@ export default function App() {
                     <div className="flex flex-wrap gap-2.5 justify-center content-start">
                       {masterDeck.map(c => {
                         const isPicked = anvilSelectedId === c.id;
+                        if (isPicked) return null;
                         return (
                           <div
                             key={c.id}
@@ -10674,14 +10884,24 @@ export default function App() {
               break;
           }
 
+          const patId = `carvingPatchTex-${tribe}-${isChosen ? 'hi' : 'lo'}`;
           return (
             <svg viewBox="0 0 180 184" className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-[0_14px_24px_rgba(0,0,0,0.9)]">
               <defs>
+                <pattern id={patId} patternUnits="userSpaceOnUse" width="180" height="184">
+                  <image
+                    href={`${import.meta.env.BASE_URL || './'}assets/text/patches.jpg`}
+                    width="180"
+                    height="184"
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                </pattern>
                 <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor={fillTop} />
-                  <stop offset="100%" stopColor={fillBot} />
+                  <stop offset="0%" stopColor={fillTop} stopOpacity={isChosen ? '0.42' : '0.52'} />
+                  <stop offset="100%" stopColor={fillBot} stopOpacity={isChosen ? '0.58' : '0.68'} />
                 </linearGradient>
               </defs>
+              <path d={outerPath} fill={`url(#${patId})`} />
               <path d={outerPath} fill={`url(#${gradId})`} stroke={strokeCol} strokeWidth={isChosen ? '2.2' : '1.6'} strokeLinejoin="round" />
               <path d={stitchPath} fill="none" stroke={isChosen ? '#f4d78b' : '#b48d59'} strokeWidth="1.2" strokeDasharray="4 3.5" opacity={isChosen ? '0.95' : '0.6'} />
             </svg>
@@ -10712,7 +10932,7 @@ export default function App() {
               </div>
 
               {/* Center Stage: Continuous Wooden Rod + Aligned Hooks + Shaped Patches + Curved Thread Connector */}
-              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-center rounded-[3px] bg-gradient-to-b from-[#130c08]/76 via-[#160e09]/85 to-[#0b0705]/94 border border-[#493221]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] px-6 py-4 overflow-hidden">
+              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-center rounded-[3px] bg-gradient-to-b from-[#130c08]/78 via-[#160e09]/86 to-[#0b0705]/95 border border-[#493221]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] px-6 py-4 overflow-hidden">
                 <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9a7342]/70" />
                 <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9a7342]/70" />
                 <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
@@ -10721,7 +10941,15 @@ export default function App() {
                 {/* Hanging Assembly (Crossbar + 3 Strictly Aligned Columns) */}
                 <div className="relative z-20 w-full max-w-3xl flex flex-col items-center">
                   {/* Continuous Timber Crossbar positioned directly behind the per-column brass rings */}
-                  <div className="pointer-events-none absolute top-[6px] left-2 right-2 h-3 rounded-full bg-gradient-to-b from-[#664933] via-[#3c281b] to-[#1d130d] border border-[#8c6747]/90 shadow-[0_6px_14px_rgba(0,0,0,0.95)] z-10">
+                  <div
+                    className="pointer-events-none absolute top-[6px] left-2 right-2 h-3 rounded-full border border-[#8c6747]/90 shadow-[0_6px_14px_rgba(0,0,0,0.95)] z-10"
+                    style={{
+                      backgroundColor: '#3c281b',
+                      backgroundImage: `linear-gradient(to bottom, rgba(112,80,54,0.5), rgba(50,33,21,0.64), rgba(22,14,9,0.84)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
+                      backgroundSize: '140px 140px',
+                      backgroundRepeat: 'repeat',
+                    }}
+                  >
                     <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#2c1d13] border-2 border-[#a87e52]" />
                     <span className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#2c1d13] border-2 border-[#a87e52]" />
                   </div>
@@ -11280,32 +11508,87 @@ export default function App() {
               </div>
 
               {!mycoHasDuplicates ? (
-                /* Single-Frame Loom Gift when player has no duplicates */
-                <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col items-center justify-center gap-4">
-                  <div className="relative w-full p-6 rounded-[3px] bg-[#0d0806]/85 border border-[#442c1c]/85 shadow-[0_20px_50px_rgba(0,0,0,0.92)] flex flex-col items-center text-center">
-                    <span className="pointer-events-none absolute top-2 left-2 w-2.5 h-2.5 border-t border-l border-[#9a7342]/75" />
-                    <span className="pointer-events-none absolute top-2 right-2 w-2.5 h-2.5 border-t border-r border-[#9a7342]/75" />
-                    <span className="pointer-events-none absolute bottom-2 left-2 w-2.5 h-2.5 border-b border-l border-[#9a7342]/75" />
-                    <span className="pointer-events-none absolute bottom-2 right-2 w-2.5 h-2.5 border-b border-r border-[#9a7342]/75" />
+                /* Loom-Matched Twin Gift Stage when player has no duplicates */
+                <div className="w-full max-w-4xl flex-1 min-h-0 flex flex-col items-center justify-between gap-3">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-5 rounded-[3px] bg-gradient-to-b from-[#130c15]/78 via-[#170e19]/88 to-[#0b070c]/96 border border-[#4a3052]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(233,213,255,0.08)] overflow-hidden flex flex-col items-center justify-center">
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-75"
+                      style={{
+                        background:
+                          'radial-gradient(circle at 50% 54%, rgba(168,85,247,0.28) 0%, rgba(153,27,27,0.16) 48%, transparent 74%)',
+                      }}
+                    />
 
-                    <p className="mb-5 font-['Cinzel',_serif] text-base sm:text-lg tracking-[0.08em] text-[#efe0be] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-                      No twins? She spins one from sinew.
-                    </p>
+                    <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-purple-400/60" />
+                    <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-purple-400/60" />
+                    <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-purple-400/60" />
+                    <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-purple-400/60" />
 
-                    {mycoOfferedCard && (
-                      <div className="relative mb-2 p-4 rounded-[3px] bg-[#140d17]/80 border border-purple-500/45 shadow-[0_0_32px_rgba(168,85,247,0.22)]">
-                        {renderCard(mycoOfferedCard, { isClickable: false, disableHoverScale: true })}
-                      </div>
-                    )}
+                    {/* Matching Full-Scale Loom Backdrop */}
+                    <svg
+                      viewBox="0 0 520 340"
+                      className="pointer-events-none absolute inset-0 w-full h-full z-0 opacity-95 drop-shadow-[0_18px_32px_rgba(0,0,0,0.96)]"
+                      preserveAspectRatio="xMidYMid meet"
+                    >
+                      <defs>
+                        <linearGradient id="loomTimberSolo" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#523b2c" />
+                          <stop offset="55%" stopColor="#2e2017" />
+                          <stop offset="100%" stopColor="#160f0b" />
+                        </linearGradient>
+                      </defs>
+                      <rect x="34" y="28" width="452" height="18" rx="2.5" fill="url(#loomTimberSolo)" stroke="#7a5943" strokeWidth="1.8" />
+                      <rect x="26" y="290" width="468" height="20" rx="2.5" fill="url(#loomTimberSolo)" stroke="#7a5943" strokeWidth="1.8" />
+                      <rect x="18" y="310" width="484" height="11" rx="2" fill="#1a120d" stroke="#594030" strokeWidth="1.3" />
+                      <rect x="56" y="18" width="18" height="302" rx="2" fill="url(#loomTimberSolo)" stroke="#6e503d" strokeWidth="1.6" />
+                      <rect x="446" y="18" width="18" height="302" rx="2" fill="url(#loomTimberSolo)" stroke="#6e503d" strokeWidth="1.6" />
+                      {[100, 132, 164, 196, 228, 260, 292, 324, 356, 388, 420].map((xPos, idx) => (
+                        <line
+                          key={idx}
+                          x1={xPos}
+                          y1="46"
+                          x2={xPos}
+                          y2="290"
+                          stroke="#9333ea"
+                          strokeWidth="1.25"
+                          strokeDasharray="4 3"
+                          opacity="0.58"
+                        />
+                      ))}
+                      <path
+                        d="M74 68 L446 270 M446 68 L74 270"
+                        stroke="#991b1b"
+                        strokeWidth="1.6"
+                        opacity="0.6"
+                      />
+                    </svg>
+
+                    <div className="relative z-10 flex flex-col items-center text-center">
+                      <span className="mb-3 px-3 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[9px] font-mono font-bold uppercase tracking-[0.22em] text-purple-200">
+                        Spun From Sinew
+                      </span>
+
+                      {mycoOfferedCard && (
+                        <div className="scale-[1.12] origin-center rounded-[4px] shadow-[0_0_44px_rgba(168,85,247,0.55),0_18px_36px_rgba(0,0,0,0.95)] my-2">
+                          {renderCard(mycoOfferedCard, { isClickable: false, disableHoverScale: true })}
+                        </div>
+                      )}
+
+                      <p className="mt-4 font-['Cinzel',_serif] italic text-sm sm:text-base tracking-[0.1em] text-[#e8d9f0] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                        &ldquo;No twins? Take one from the loom.&rdquo;
+                      </p>
+                    </div>
                   </div>
 
-                  <button
-                    onClick={claimMycologistDuplicate}
-                    disabled={!mycoOfferedCard || isEventBusy}
-                    className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
-                  >
-                    Claim Twin Creature
-                  </button>
+                  <div className="shrink-0">
+                    <button
+                      onClick={claimMycologistDuplicate}
+                      disabled={!mycoOfferedCard || isEventBusy}
+                      className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2f1d36] to-[#180f1c] hover:from-[#3e2647] hover:to-[#221528] active:translate-y-[1px] border border-purple-400/80 hover:border-purple-300 text-purple-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
+                    >
+                      Claim Twin
+                    </button>
+                  </div>
                 </div>
               ) : (
                 /* Two-Column Split: Weaver's Loom Stage Left, Deck Selector Right */
@@ -11402,7 +11685,15 @@ export default function App() {
                               </span>
                               <div className="w-[116px] h-[160px] flex items-center justify-center">
                                 {twin1 ? (
-                                  <div className="scale-[1.02] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)]">
+                                  <div
+                                    onClick={() => {
+                                      if (isAnimating) return;
+                                      triggerSfx('draw');
+                                      setMycoSelectedIndices(prev => prev.slice(1));
+                                    }}
+                                    title={!isAnimating ? 'Click to return Twin I to deck' : undefined}
+                                    className={`scale-[1.02] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                                  >
                                     {renderCard(twin1, { isClickable: false, disableHoverScale: true })}
                                   </div>
                                 ) : (
@@ -11425,7 +11716,15 @@ export default function App() {
                               </span>
                               <div className="w-[116px] h-[160px] flex items-center justify-center">
                                 {twin2 ? (
-                                  <div className="scale-[1.02] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)]">
+                                  <div
+                                    onClick={() => {
+                                      if (isAnimating) return;
+                                      triggerSfx('draw');
+                                      setMycoSelectedIndices(prev => prev.slice(0, 1));
+                                    }}
+                                    title={!isAnimating ? 'Click to return Twin II to deck' : undefined}
+                                    className={`scale-[1.02] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                                  >
                                     {renderCard(twin2, { isClickable: false, disableHoverScale: true })}
                                   </div>
                                 ) : (
@@ -11515,6 +11814,7 @@ export default function App() {
                         {masterDeck.map((c, idx) => {
                           const selPos = mycoSelectedIndices.indexOf(idx);
                           const isSelected = selPos !== -1;
+                          if (isSelected) return null;
                           const isDuplicateCard = masterDeck.filter(card => card.name === c.name).length >= 2;
                           const firstPickedName = mycoSelectedIndices.length > 0 ? masterDeck[mycoSelectedIndices[0]]?.name : null;
                           const wrongTwin = Boolean(firstPickedName && c.name !== firstPickedName);
@@ -11677,7 +11977,15 @@ export default function App() {
                             }}
                           >
                             {originalPreview ? (
-                              <div className="scale-[0.94] origin-bottom shadow-[0_14px_28px_rgba(0,0,0,0.92)]">
+                              <div
+                                onClick={() => {
+                                  if (isEventBusy || isAnimating) return;
+                                  triggerSfx('draw');
+                                  setGoobertSelectedIdx(null);
+                                }}
+                                title={!isEventBusy && !isAnimating ? 'Click to return card to deck' : undefined}
+                                className={`scale-[0.94] origin-bottom shadow-[0_14px_28px_rgba(0,0,0,0.92)] ${!isEventBusy && !isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                              >
                                 {renderCard(originalPreview, { isClickable: false, disableHoverScale: true })}
                               </div>
                             ) : (
@@ -11784,6 +12092,7 @@ export default function App() {
                     <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
                       {masterDeck.map((c, idx) => {
                         const isSelected = goobertSelectedIdx === idx;
+                        if (isSelected) return null;
                         return (
                           <div
                             key={c.id || `goo-${c.name}-${idx}`}
@@ -12299,14 +12608,24 @@ export default function App() {
               stitchPath = 'M 27 17 H 153 Q 161 17 161 26 V 114 Q 161 164 90 168 Q 19 164 19 114 V 26 Q 19 17 27 17 Z';
               break;
           }
+          const patId = `effigyPatchTex-${tribe}-${highlighted ? 'hi' : 'lo'}`;
           return (
             <svg viewBox="0 0 180 184" className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-[0_12px_22px_rgba(0,0,0,0.92)]">
               <defs>
+                <pattern id={patId} patternUnits="userSpaceOnUse" width="180" height="184">
+                  <image
+                    href={`${import.meta.env.BASE_URL || './'}assets/text/patches.jpg`}
+                    width="180"
+                    height="184"
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                </pattern>
                 <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor={fillTop} />
-                  <stop offset="100%" stopColor={fillBot} />
+                  <stop offset="0%" stopColor={fillTop} stopOpacity={highlighted ? '0.42' : '0.52'} />
+                  <stop offset="100%" stopColor={fillBot} stopOpacity={highlighted ? '0.58' : '0.68'} />
                 </linearGradient>
               </defs>
+              <path d={outerPath} fill={`url(#${patId})`} />
               <path d={outerPath} fill={`url(#${gradId})`} stroke={strokeCol} strokeWidth={highlighted ? '2.4' : '1.7'} strokeLinejoin="round" />
               <path d={stitchPath} fill="none" stroke={highlighted ? '#f4d78b' : '#b48d59'} strokeWidth="1.2" strokeDasharray="4 3.5" opacity={highlighted ? '0.95' : '0.6'} />
             </svg>
@@ -12320,7 +12639,7 @@ export default function App() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.92)_100%)] pointer-events-none" />
 
-            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-start gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
@@ -12335,10 +12654,10 @@ export default function App() {
                 </h1>
               </div>
 
-              {/* Two-Column Split: Live Stitched Effigy Stand Left, Claim/Assembly Rack Right */}
-              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-                {/* LEFT COLUMN: Physical Stitched Effigy Stand Prop */}
-                <div className="lg:col-span-5 relative flex flex-col items-center justify-between px-5 py-4 rounded-[3px] bg-gradient-to-b from-[#140e0a]/78 via-[#19110c]/88 to-[#0b0705]/95 border border-[#4a3322]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] overflow-hidden">
+              {/* Vertically Centered Two-Column Split: Stitched Effigy Left, Claim/Assembly Rack Right */}
+              <div className="w-full max-h-[540px] my-auto min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                {/* LEFT COLUMN: Physical Stitched Effigy */}
+                <div className="lg:col-span-4 relative flex flex-col items-center justify-center px-5 py-5 rounded-[3px] bg-gradient-to-b from-[#140e0a]/84 via-[#18100b]/90 to-[#0b0705]/96 border border-[#4a3322]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] overflow-hidden">
                   <div
                     className="pointer-events-none absolute inset-0"
                     style={{
@@ -12353,83 +12672,68 @@ export default function App() {
                   <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9a7342]/70" />
 
-                  <div className="relative z-20 text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
-                    {totemStage === 'REWARD' ? 'Effigy Stand' : 'Live Effigy Assembly'}
-                  </div>
-
-                  {/* Assembled Effigy Figure (Cutout Head Patch + Stitched Seam + Circular Body Crest + Timber Pedestal) */}
+                  {/* Physical Stitched Effigy Doll (effigy.png) with Pinned Head Patch & Torso Crest */}
                   <div
                     className="relative z-10 flex flex-col items-center justify-center my-auto"
                     style={{
                       animation: effigyStitchingAnim ? 'effigyStitchPulse 0.9s ease-in-out' : undefined,
                     }}
                   >
-                    {/* Crown / Tribal Patch Cutout Socket */}
-                    <div className="relative z-20 flex flex-col items-center">
-                      <span className="mb-1 text-[8px] font-mono uppercase tracking-[0.22em] text-[#bfa073]">
-                        {previewHead || 'No Patch'}
-                      </span>
-                      <div className="relative w-28 h-28 flex items-center justify-center">
+                    <div className="relative w-[225px] h-[315px] flex items-center justify-center select-none">
+                      <img
+                        src={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
+                        alt="Stitched Effigy"
+                        draggable={false}
+                        className="w-full h-full object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.95)]"
+                      />
+
+                      {/* Head Tribal Patch Pinned & Angled Along Doll Forehead */}
+                      <div className="absolute top-[8.5%] left-[45%] -translate-x-1/2 -rotate-[12deg] w-[78px] h-[78px] flex items-center justify-center">
                         {previewHead ? (
-                          <>
+                          <div className="relative w-full h-full flex items-center justify-center drop-shadow-[0_6px_12px_rgba(0,0,0,0.92)]">
                             {renderHeadCutoutSvg(previewHead, true)}
-                            <div className="relative z-10 [&>*]:scale-[2.8] -mt-1">
-                              {TRIBE_EMBROIDERY[previewHead as Tribe] || <span className="text-2xl">✦</span>}
+                            <div className="relative z-10 [&>*]:scale-[2.05] -mt-0.5">
+                              {TRIBE_EMBROIDERY[previewHead as Tribe] || <span className="text-lg">✦</span>}
                             </div>
-                          </>
+                          </div>
                         ) : (
-                          <div className="w-24 h-24 rounded-[4px] border-2 border-dashed bg-[#120c08]/80 border-[#5e442c]/70 text-[#7a6045] flex items-center justify-center">
-                            <span className="text-[9px] uppercase tracking-[0.2em]">Head</span>
+                          <div className="w-14 h-14 rounded-full border border-dashed border-[#4a321d]/75 bg-[#120b07]/45 flex items-center justify-center">
+                            <span className="text-[8px] font-mono uppercase tracking-[0.18em] text-[#e5cfa8]/70">Patch</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Torso Circular Crest Shifted & Rotated Along Doll Chest Seam */}
+                      <div className="absolute top-[42%] left-[52%] -translate-x-1/2 -rotate-[14deg] w-[86px] h-[86px] flex items-center justify-center">
+                        {previewBody ? (
+                          <div
+                            className="w-full h-full rounded-full border-2 border-dashed border-[#e5c16b]/90 flex items-center justify-center shadow-[0_8px_20px_rgba(0,0,0,0.92),0_0_20px_rgba(212,175,55,0.3)]"
+                            style={{
+                              backgroundColor: '#1d140d',
+                              backgroundImage: `radial-gradient(circle at 50% 35%, rgba(38,26,17,0.42), rgba(16,10,7,0.72)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }}
+                          >
+                            <img
+                              src={getSigilArtUrl(previewBody)}
+                              alt={previewBody}
+                              className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.45)]"
+                              style={{ imageRendering: 'pixelated' }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-full border border-dashed border-[#4a321d]/75 bg-[#120b07]/45 flex items-center justify-center">
+                            <span className="text-[8px] font-mono uppercase tracking-[0.18em] text-[#e5cfa8]/70">Crest</span>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Stitched Sinew Neck Seam */}
-                    <svg viewBox="0 0 80 28" className="w-16 h-7 -my-1 z-30 pointer-events-none">
-                      <line x1="40" y1="0" x2="40" y2="28" stroke="#8c6747" strokeWidth="6" />
-                      <path
-                        d="M28 6 L52 12 M52 6 L28 12 M28 16 L52 22 M52 16 L28 22"
-                        stroke={previewHead && previewBody ? '#f4d78b' : '#991b1b'}
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-
-                    {/* Torso / Circular Threadbound Crest Socket */}
-                    <div className="relative z-20 flex flex-col items-center -mb-2">
-                      <div
-                        className={`w-28 h-28 rounded-full border-2 border-dashed flex items-center justify-center transition-all duration-300 shadow-[0_14px_28px_rgba(0,0,0,0.92)] ${
-                          previewBody
-                            ? 'bg-gradient-to-b from-[#261a11] to-[#140d08] border-[#e5c16b]/90 shadow-[0_0_24px_rgba(212,175,55,0.28)]'
-                            : 'bg-[#120c08]/80 border-[#5e442c]/70 text-[#7a6045]'
-                        }`}
-                      >
-                        {previewBody ? (
-                          <img
-                            src={getSigilArtUrl(previewBody)}
-                            alt={previewBody}
-                            className="w-16 h-16 object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.35)]"
-                            style={{ imageRendering: 'pixelated' }}
-                          />
-                        ) : (
-                          <span className="text-[9px] uppercase tracking-[0.2em]">Crest</span>
-                        )}
-                      </div>
-                      <span className="mt-1.5 text-[8.5px] font-mono uppercase tracking-[0.2em] text-[#e5c996]">
-                        {previewBody || 'No Crest'}
-                      </span>
-                    </div>
-
-                    {/* Carved Wooden Effigy Pedestal Base */}
-                    <svg viewBox="0 0 260 44" className="w-56 h-auto drop-shadow-[0_12px_20px_rgba(0,0,0,0.96)] pointer-events-none mt-1">
-                      <polygon points="36,38 56,12 204,12 224,38" fill="#231710" stroke="#755538" strokeWidth="1.6" />
-                      <rect x="24" y="34" width="212" height="8" rx="1.5" fill="#160f0a" stroke="#5c422a" strokeWidth="1.2" />
-                    </svg>
                   </div>
 
                   {/* Active Effigy Status Footer */}
-                  <div className="relative z-20 w-full min-h-[32px] flex items-center justify-center text-center">
+                  <div className="relative z-20 w-full min-h-[24px] mt-2 flex items-center justify-center text-center">
                     {previewHead && previewBody && (
                       <div className="font-['Cinzel',_serif] text-sm tracking-[0.1em] text-[#f4d78b] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                         {previewHead} &mdash; {previewBody}
@@ -12439,18 +12743,21 @@ export default function App() {
                 </div>
 
                 {/* RIGHT COLUMN: Reward Selection OR Assembly Bench */}
-                <div className="lg:col-span-7 relative flex flex-col justify-between min-h-0 rounded-[3px] bg-[#0d0806]/86 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] p-5">
+                <div className="lg:col-span-8 relative flex flex-col justify-between min-h-0 rounded-[3px] bg-[#0d0806]/86 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] px-5 py-4">
                   <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
                   {totemStage === 'REWARD' ? (
-                    <div className="flex flex-col h-full justify-between">
-                      <div className={`text-left border-b border-[#3a2618]/80 pb-3 transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
-                        <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
-                          Step 1 — Claim an Effigy Scrap ({totemPieces.length}/7)
-                        </div>
+                    <div className="flex flex-col h-full justify-between gap-3">
+                      <div className={`flex items-center justify-between border-b border-[#3a2618]/80 pb-2 transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
+                        <span className="font-['Cinzel',_serif] text-xs font-bold uppercase tracking-[0.22em] text-[#dfc59a]">
+                          Claim a Scrap
+                        </span>
+                        <span className="text-[10px] font-mono tracking-[0.18em] text-[#9b8266]">
+                          {totemPieces.length}/7
+                        </span>
                       </div>
 
                       {!totemChoicesHidden ? (() => {
@@ -12509,15 +12816,23 @@ export default function App() {
                                       <div
                                         className={`w-[164px] h-[164px] p-4 rounded-full border-2 border-dashed text-center flex flex-col items-center justify-center transition-all duration-200 ${
                                           isSelected
-                                            ? 'border-[#e5c16b] bg-gradient-to-b from-[#2b1d12] to-[#160e09] shadow-[0_0_28px_rgba(212,175,55,0.34)]'
-                                            : 'border-[#8c6747]/80 hover:border-[#cfa159] bg-gradient-to-b from-[#1c130c] to-[#100a07] shadow-[0_10px_24px_rgba(0,0,0,0.88)]'
+                                            ? 'border-[#e5c16b] shadow-[0_0_28px_rgba(212,175,55,0.34)]'
+                                            : 'border-[#8c6747]/80 hover:border-[#cfa159] shadow-[0_10px_24px_rgba(0,0,0,0.88)]'
                                         }`}
+                                        style={{
+                                          backgroundColor: '#1a120b',
+                                          backgroundImage: isSelected
+                                            ? `radial-gradient(circle at 50% 35%, rgba(43,29,18,0.44), rgba(18,11,7,0.72)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`
+                                            : `radial-gradient(circle at 50% 35%, rgba(28,19,12,0.52), rgba(14,9,6,0.78)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`,
+                                          backgroundSize: 'cover',
+                                          backgroundPosition: 'center',
+                                        }}
                                       >
-                                        <div className="flex items-center justify-center w-14 h-14 mb-2 rounded-full bg-[#1a110b] border border-[#4f3824] shadow-inner">
+                                        <div className="flex items-center justify-center w-[76px] h-[76px] mb-1.5 rounded-full bg-[#1a110b] border border-[#5a412a] shadow-inner">
                                           <img
                                             src={getSigilArtUrl(tc.value)}
                                             alt={tc.value}
-                                            className="w-10 h-10 object-contain"
+                                            className="w-14 h-14 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]"
                                             style={{ imageRendering: 'pixelated' }}
                                           />
                                         </div>
@@ -12531,9 +12846,9 @@ export default function App() {
                               })}
                             </div>
 
-                            {/* Dedicated Full-Text Inspector Strip (no truncation inside circles) */}
-                            <div className="w-full max-w-lg min-h-[54px] px-4 py-2 rounded-[2px] bg-[#0b0705]/85 border border-[#3a2618]/80 flex flex-col items-center justify-center text-center">
-                              {inspectedChoice ? (
+                            {/* Compact Inspector Caption */}
+                            <div className="w-full max-w-md min-h-[38px] px-3 flex flex-col items-center justify-center text-center">
+                              {inspectedChoice && (
                                 inspectedChoice.type === 'body' ? (
                                   <>
                                     <span className="font-['Cinzel',_serif] text-[11px] font-bold uppercase tracking-[0.18em] text-[#f4d78b]">
@@ -12548,10 +12863,6 @@ export default function App() {
                                     {inspectedChoice.value} &mdash; Tribal Patch
                                   </span>
                                 )
-                              ) : (
-                                <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-[#8a7257]">
-                                  Inspect a piece
-                                </span>
                               )}
                             </div>
                           </div>
@@ -12611,17 +12922,17 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="flex flex-col h-full justify-between min-h-0">
-                      <div className="text-left border-b border-[#3a2618]/80 pb-2.5 shrink-0">
-                        <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
-                          Step 2 — Stitch Your Active Effigy
+                      <div className="text-left border-b border-[#3a2618]/80 pb-2 shrink-0">
+                        <div className="font-['Cinzel',_serif] text-xs font-bold uppercase tracking-[0.22em] text-[#dfc59a]">
+                          Stitch Effigy
                         </div>
                       </div>
 
-                      <div className="flex-1 min-h-0 overflow-y-auto py-3 flex flex-col gap-3.5">
+                      <div className="flex-1 min-h-0 overflow-y-auto py-3 flex flex-col gap-3">
                         {/* Tribal Patches Shelf */}
                         <div className="border border-dashed border-[#8c6747]/60 p-3.5 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
                           <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-2.5 border-b border-[#3a271a] pb-1.5 text-left">
-                            1. Tribal Patches ({totemPieces.filter(p => p.type === 'head').length})
+                            Tribal Patches ({totemPieces.filter(p => p.type === 'head').length})
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {totemPieces.map((p, idx) => p.type === 'head' && (
@@ -12634,9 +12945,17 @@ export default function App() {
                                 }}
                                 className={`px-2.5 py-2 border border-dashed rounded-[2px] text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
                                   assemblyHeadIdx === idx
-                                    ? 'border-[#e5c16b] bg-[#281b12] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
-                                    : 'border-[#7a5a3c]/65 bg-[#1a130d] text-[#cbb697]/80 hover:border-[#c89e4c]'
+                                    ? 'border-[#e5c16b] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
+                                    : 'border-[#7a5a3c]/65 text-[#cbb697]/90 hover:border-[#c89e4c]'
                                 }`}
+                                style={{
+                                  backgroundColor: '#1a130d',
+                                  backgroundImage: assemblyHeadIdx === idx
+                                    ? `linear-gradient(to bottom, rgba(44,29,18,0.52), rgba(22,14,9,0.74)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`
+                                    : `linear-gradient(to bottom, rgba(26,18,12,0.62), rgba(14,9,6,0.8)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`,
+                                  backgroundSize: 'cover',
+                                  backgroundPosition: 'center',
+                                }}
                               >
                                 <div className="w-6 h-6 flex items-center justify-center shrink-0 [&>*]:scale-[1.25]">
                                   {TRIBE_EMBROIDERY[p.value as Tribe] || <span>✦</span>}
@@ -12650,7 +12969,7 @@ export default function App() {
                         {/* Circular Threadbound Crests Shelf */}
                         <div className="border border-dashed border-[#8c6747]/60 p-3.5 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
                           <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-2.5 border-b border-[#3a271a] pb-1.5 text-left">
-                            2. Threadbound Crests ({totemPieces.filter(p => p.type === 'body').length})
+                            Threadbound Crests ({totemPieces.filter(p => p.type === 'body').length})
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {totemPieces.map((p, idx) => p.type === 'body' && (
@@ -12663,9 +12982,17 @@ export default function App() {
                                 }}
                                 className={`px-3 py-1.5 border border-dashed rounded-full text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
                                   assemblyBodyIdx === idx
-                                    ? 'border-[#e5c16b] bg-[#281b12] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
-                                    : 'border-[#7a5a3c]/65 bg-[#1a130d] text-[#cbb697]/80 hover:border-[#c89e4c]'
+                                    ? 'border-[#e5c16b] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
+                                    : 'border-[#7a5a3c]/65 text-[#cbb697]/90 hover:border-[#c89e4c]'
                                 }`}
+                                style={{
+                                  backgroundColor: '#1a130d',
+                                  backgroundImage: assemblyBodyIdx === idx
+                                    ? `linear-gradient(to bottom, rgba(44,29,18,0.52), rgba(22,14,9,0.74)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`
+                                    : `linear-gradient(to bottom, rgba(26,18,12,0.62), rgba(14,9,6,0.8)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`,
+                                  backgroundSize: 'cover',
+                                  backgroundPosition: 'center',
+                                }}
                               >
                                 <div className="w-6 h-6 rounded-full bg-[#140d08] border border-[#4f3824] flex items-center justify-center shrink-0">
                                   <img
@@ -12871,30 +13198,57 @@ export default function App() {
           HOARDER SEARCH SCREEN
          ========================================================================= */}
       {screen === 'EVENT_HOARDER_SEARCH' && (
-        <div className={`absolute inset-0 bg-[#090604]/55 backdrop-blur-md z-[110] flex flex-col items-center justify-center p-6 overflow-y-auto font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
-          <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- SLEIGHT OF HAND --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Hoarder Search</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">The Weaver taught you well. Select any creature from your deck to add to your hand.</p>
+        <div className={`absolute inset-0 bg-[#080504]/82 backdrop-blur-md z-[110] flex flex-col items-center justify-center px-5 py-5 overflow-hidden font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(26,15,9,0.38)_0%,rgba(4,3,2,0.92)_100%)] pointer-events-none" />
 
-            <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-6">
-              {deck.map((c, idx) => {
-                const isSelected = hoarderSelectedIdx === idx;
-                return (
-                  <div
-                    key={c.id || `hoarder-${idx}`}
-                    onClick={() => setHoarderSelectedIdx(idx)}
-                    className={`cursor-pointer transform transition-all duration-200 ${
-                      isSelected ? "scale-105 -translate-y-3.5 z-30" : "hover:scale-105"
-                    }`}
-                  >
-                    {renderCard(c, { isSelected })}
-                  </div>
-                );
-              })}
+          <div className="relative z-10 w-full max-w-5xl max-h-full min-h-0 flex flex-col items-center rounded-[3px] bg-[#0d0806]/92 border border-[#442d1d]/90 px-6 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.96)]">
+            <div className="shrink-0 flex flex-col items-center text-center pb-3">
+              <div className="flex items-center gap-3.5 mb-0.5">
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                  Sleight of Hand
+                </span>
+                <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                The Hoarder&rsquo;s Cache
+              </h1>
+              <p className="mt-1 font-['Cinzel',_serif] italic text-sm tracking-[0.1em] text-[#e5cfa8]">
+                &ldquo;Draw one vessel from the dark.&rdquo;
+              </p>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="w-full flex-1 min-h-0 overflow-y-auto rounded-[3px] bg-[#090604]/80 border border-[#342216]/85 p-4 my-2">
+              {deck.length > 0 ? (
+                <div className="flex flex-wrap gap-3.5 justify-center content-start">
+                  {deck.map((c, idx) => {
+                    const isSelected = hoarderSelectedIdx === idx;
+                    return (
+                      <div
+                        key={c.id || `hoarder-${idx}`}
+                        onClick={() => {
+                          triggerSfx('draw');
+                          setHoarderSelectedIdx(isSelected ? null : idx);
+                        }}
+                        className={`cursor-pointer transform transition-all duration-200 ${
+                          isSelected
+                            ? "scale-[1.03] -translate-y-2 z-30"
+                            : "scale-[0.94] opacity-85 hover:opacity-100 hover:scale-[1.0] hover:-translate-y-1"
+                        }`}
+                      >
+                        {renderCard(c, { isSelected, disableHoverScale: true })}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="h-40 flex items-center justify-center font-['Cinzel',_serif] italic text-sm text-[#8a7256]">
+                  No vessels remain in your draw pile.
+                </div>
+              )}
+            </div>
+
+            <div className="shrink-0 pt-3 flex items-center justify-center gap-4">
               <button
                 onClick={() => {
                   if (hoarderSelectedIdx === null) return;
@@ -12906,9 +13260,13 @@ export default function App() {
                   setScreen('DUEL');
                 }}
                 disabled={hoarderSelectedIdx === null}
-                className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] px-7 py-2.5 select-none ${
+                  hoarderSelectedIdx !== null
+                    ? 'bg-[#271d12] hover:bg-[#362717] active:translate-y-[1px] border-[#d4af37]/90 text-[#fff2cf] shadow-[0_2px_0_#0b0704,0_0_20px_rgba(212,175,55,0.28)] cursor-pointer'
+                    : 'bg-[#15100d]/90 border-[#2f241c] text-[#7a6957] opacity-50 cursor-not-allowed'
+                }`}
               >
-                RETRIEVE CREATURE
+                Claim Vessel
               </button>
             </div>
           </div>
@@ -12916,99 +13274,131 @@ export default function App() {
       )}
 
       {/* =========================================================================
-          VIEW DECK SCREEN MODAL (BORDERLESS SIDE-BY-SIDE SPLIT)
+          VIEW DECK SCREEN MODAL (WIDESCREEN NON-SCROLLING TWO-COLUMN SPLIT)
          ========================================================================= */}
       {(showViewDeck || screen === 'VIEW_DECK') && (() => {
         const activeDetailCard = selectedDeckCardDetail || masterDeck[0] || null;
         return (
-          <div className={`absolute inset-0 bg-[#090604]/58 backdrop-blur-md z-[110] flex flex-col items-center p-6 overflow-y-auto font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
-            {/* Header with Return Action */}
-            <div className="relative flex flex-col items-center justify-center w-full max-w-5xl mb-6 border-b border-amber-950/40 pb-4">
-              <div className="text-[10px] text-amber-700/80 uppercase tracking-widest mb-1">+-- DECK INSPECTION --+</div>
-              <h1 className="text-xl sm:text-2xl font-mono uppercase tracking-widest text-amber-200 text-center font-bold">
-                Your Creatures Huddle Closely Together…
-              </h1>
-              <p className="text-xs text-amber-400/60 uppercase tracking-wider mt-1">
-                {masterDeck.length} Creatures in your Deck
-              </p>
-              <button
-                onClick={() => {
-                  setShowViewDeck(false);
-                  if (screen === 'VIEW_DECK') setScreen(previousScreen || 'DUEL');
-                }}
-                className="absolute right-0 top-1 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer px-3 py-1.5"
-              >
-                RETURN
-              </button>
-            </div>
+          <div className={`absolute inset-0 bg-[#080504]/86 backdrop-blur-md z-[110] flex flex-col items-center justify-center px-5 py-4 sm:px-7 sm:py-5 overflow-hidden font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(24,14,9,0.36)_0%,rgba(4,3,2,0.92)_100%)] pointer-events-none" />
 
-            {/* Quick Strip of All Cards in Master Deck directly on table */}
-            <div className="flex flex-wrap gap-3 justify-center max-w-5xl mb-8">
-              {masterDeck.map((c, idx) => {
-                const isSelected = activeDetailCard?.id === c.id || (!selectedDeckCardDetail && idx === 0);
-                return (
-                  <div
-                    key={c.id || `view-${c.name}-${idx}`}
-                    onClick={() => setSelectedDeckCardDetail(c)}
-                    className={`cursor-pointer transform transition-all duration-200 ${isSelected ? 'scale-105 -translate-y-2 z-30' : 'opacity-70 hover:opacity-100 hover:scale-105'}`}
-                  >
-                    {renderCard(c, { isSelected })}
-                  </div>
-                );
-              })}
-            </div>
+            <div className="relative z-10 w-full max-w-6xl h-full min-h-0 flex flex-col">
+              {/* Engraved Header with Return Action */}
+              <div className="shrink-0 relative flex items-center justify-between border-b border-[#3e291b]/85 pb-3 mb-4">
+                <div className="flex flex-col text-left">
+                  <span className="text-[9.5px] font-mono font-bold uppercase tracking-[0.28em] text-[#b9935a]">
+                    Grimoire • {masterDeck.length} Vessels
+                  </span>
+                  <h1 className="text-xl sm:text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                    Your Creatures
+                  </h1>
+                </div>
 
-            {/* Borderless Two-Column Split: Card on Left, Plain Text Sigils & Stats on Right */}
-            {activeDetailCard && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl w-full items-center my-auto py-4">
-                {/* Left Column: Enlarged Card */}
-                <div className="flex justify-center items-center">
-                  <div className="scale-125 transform transition-transform">
-                    {renderCard(activeDetailCard, { showCost: true })}
+                <button
+                  onClick={() => {
+                    setShowViewDeck(false);
+                    if (screen === 'VIEW_DECK') setScreen(previousScreen || 'DUEL');
+                  }}
+                  className="bg-[#18120e] hover:bg-[#261c15] active:bg-[#120d0a] border border-[#5a412d] hover:border-[#cfa159] rounded-[2px] shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] text-[#e5cfa8] hover:text-white cursor-pointer px-5 py-2"
+                >
+                  Return
+                </button>
+              </div>
+
+              {/* Two-Column Split: Scrollable Deck Grid Left, Enlarged Specimen & Crests Right */}
+              <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                {/* Left Column: Scrollable Deck Tray */}
+                <div className="lg:col-span-7 min-h-0 flex flex-col rounded-[3px] bg-[#0d0806]/84 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] overflow-hidden">
+                  <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                    <div className="flex flex-wrap gap-3 justify-center content-start">
+                      {masterDeck.map((c, idx) => {
+                        const isSelected = activeDetailCard?.id === c.id || (!selectedDeckCardDetail && idx === 0);
+                        return (
+                          <div
+                            key={c.id || `view-${c.name}-${idx}`}
+                            onClick={() => {
+                              triggerSfx('draw');
+                              setSelectedDeckCardDetail(c);
+                            }}
+                            className={`cursor-pointer transform transition-all duration-200 ${
+                              isSelected
+                                ? 'scale-[0.98] -translate-y-1.5 z-30'
+                                : 'scale-[0.9] opacity-80 hover:opacity-100 hover:scale-[0.96] hover:-translate-y-0.5'
+                            }`}
+                          >
+                            {renderCard(c, { isSelected, disableHoverScale: true })}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
-                {/* Right Column: Plain Text List of Stats, Tribe, Sigils & Descriptions (No Containers) */}
-                <div className="flex flex-col text-left font-mono space-y-3">
-                  <div>
-                    <h2 className="text-xl font-bold uppercase tracking-widest text-amber-200">
-                      {activeDetailCard.name}
-                    </h2>
-                    <div className="text-xs text-amber-400/70 uppercase tracking-wider mt-1">
-                      [ Tribe: {activeDetailCard.class} ]
-                      {activeDetailCard.cost !== undefined && activeDetailCard.cost > 0 && ` • [ Cost: ${activeDetailCard.cost} Blood ]`}
-                      {activeDetailCard.boneCost !== undefined && activeDetailCard.boneCost > 0 && ` • [ Cost: ${activeDetailCard.boneCost} Bones ]`}
-                    </div>
-                    <div className="text-xs text-stone-400 uppercase tracking-wider mt-0.5">
-                      [ Power: {activeDetailCard.attack} ] • [ Health: {activeDetailCard.health} ]
-                    </div>
-                  </div>
-
-                  <div className="border-t border-amber-950/50 pt-3">
-                    <div className="text-[10px] uppercase tracking-widest text-amber-600/90 mb-2 font-bold">
-                      --- SIGILS & INTRINSICS ---
-                    </div>
-                    {activeDetailCard.sigils && activeDetailCard.sigils.length > 0 ? (
-                      <div className="space-y-2.5">
-                        {activeDetailCard.sigils.map(s => (
-                          <div key={s} className="space-y-0.5">
-                            <div className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                              <span>[ {s} ]</span>
-                              <span className="text-sm filter sepia-[0.35]">{SIGIL_MAPPING[s] || ''}</span>
-                            </div>
-                            <div className="text-[11px] text-stone-300/80 leading-relaxed font-mono pl-3">
-                              {SIGIL_DESCRIPTIONS[s] || 'Ancient sigil.'}
-                            </div>
-                          </div>
-                        ))}
+                {/* Right Column: Enlarged Specimen & Crest Inscriptions */}
+                <div className="lg:col-span-5 min-h-0 flex flex-col justify-between rounded-[3px] bg-[#0d0907]/88 border border-[#442f21]/85 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.92)] overflow-hidden">
+                  {activeDetailCard ? (
+                    <>
+                      {/* Specimen Pedestal */}
+                      <div className="shrink-0 flex flex-col items-center justify-center py-3 relative">
+                        <div className="pointer-events-none absolute inset-x-12 h-32 rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.14)_0%,transparent_70%)]" />
+                        <div className="scale-[1.15] transform transition-transform">
+                          {renderCard(activeDetailCard, { showCost: true, isClickable: false, disableHoverScale: true })}
+                        </div>
                       </div>
-                    ) : (
-                      <div className="text-xs text-stone-600 italic">No Crests imprinted upon this creature.</div>
-                    )}
-                  </div>
+
+                      {/* Vessel Title, Lineage & Cost */}
+                      <div className="shrink-0 border-t border-b border-[#3a271b]/80 py-2.5 my-2 flex items-center justify-between gap-2 text-left">
+                        <div>
+                          <h2 className="text-lg font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] text-[#f3dfb6]">
+                            {activeDetailCard.name}
+                          </h2>
+                          <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#b49365] mt-0.5">
+                            {activeDetailCard.class}
+                            {activeDetailCard.cost !== undefined && activeDetailCard.cost > 0 && ` • ${activeDetailCard.cost} Blood`}
+                            {activeDetailCard.boneCost !== undefined && activeDetailCard.boneCost > 0 && ` • ${activeDetailCard.boneCost} Bones`}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 px-3 py-1 rounded-[2px] bg-[#140d09] border border-[#3d291c] text-xs font-mono font-bold">
+                          <span className="text-amber-300">{activeDetailCard.attack} ATK</span>
+                          <span className="text-stone-600">/</span>
+                          <span className="text-red-300">{activeDetailCard.health} HP</span>
+                        </div>
+                      </div>
+
+                      {/* Bound Crests List */}
+                      <div className="flex-1 min-h-0 overflow-y-auto text-left pr-1">
+                        <div className="text-[9.5px] font-mono font-bold uppercase tracking-[0.26em] text-[#b9935a] mb-2">
+                          Bound Crests
+                        </div>
+                        {activeDetailCard.sigils && activeDetailCard.sigils.length > 0 ? (
+                          <div className="space-y-2.5">
+                            {activeDetailCard.sigils.map(s => (
+                              <div key={s} className="p-2.5 rounded-[2px] bg-[#130d09]/90 border border-[#342318]">
+                                <div className="font-['Cinzel',_serif] text-xs font-bold text-[#efd8aa] uppercase tracking-[0.16em] flex items-center gap-2">
+                                  <span className="text-sm filter sepia-[0.35]">{SIGIL_MAPPING[s] || '✦'}</span>
+                                  <span>{s}</span>
+                                </div>
+                                <div className="text-[11px] text-[#cbb89e]/85 leading-relaxed font-mono mt-1">
+                                  {SIGIL_DESCRIPTIONS[s] || 'An ancient mark etched in bone.'}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="font-['Cinzel',_serif] italic text-xs text-[#7c664e] py-2">
+                            Unmarked vessel.
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center font-['Cinzel',_serif] italic text-sm text-[#7c664e]">
+                      No creatures bound.
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         );
       })()}
@@ -13072,6 +13462,24 @@ export default function App() {
                 <button onClick={() => handleDevForce('items')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-amber-300 hover:text-amber-100 border border-amber-950/60 hover:border-amber-800 transition cursor-pointer">SURPLUS CACHE</button>
               </div>
             )}
+
+            {/* Act Jump Bar (Weather & Act Progression Sandbox) */}
+            <div className="grid grid-cols-4 gap-2 mb-4 pb-4 border-b border-amber-950/40">
+              {([
+                { act: 1 as const, label: 'ACT I · MIST', cls: 'text-stone-300 border-stone-700/70 hover:border-stone-400' },
+                { act: 2 as const, label: 'ACT II · RAIN', cls: 'text-sky-300 border-sky-900/70 hover:border-sky-500' },
+                { act: 3 as const, label: 'ACT III · STORM', cls: 'text-indigo-300 border-indigo-900/70 hover:border-indigo-400' },
+                { act: 4 as const, label: 'ACT IV · EMBER', cls: 'text-orange-300 border-orange-900/70 hover:border-orange-500' },
+              ]).map(item => (
+                <button
+                  key={item.act}
+                  onClick={() => handleDevJumpAct(item.act)}
+                  className={`py-1.5 px-2 bg-[#120d0a] hover:bg-[#1e1510] border rounded-sm font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer ${item.cls}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
 
             {/* Quick Actions (Tip Scales, Alter Deck, New Hand, Blood Injection) */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6 border-b border-amber-950/40 pb-5">
