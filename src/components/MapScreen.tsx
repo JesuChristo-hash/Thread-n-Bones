@@ -22,7 +22,7 @@ interface MapScreenProps {
 }
 
 const renderInkGlyph = (type: MapNodeType, isBoss?: boolean) => {
-  const stroke = isBoss ? '#f6d79c' : 'currentColor';
+  const stroke = isBoss ? '#f3e1be' : 'currentColor';
   switch (type) {
     case 'start':
       return (
@@ -147,9 +147,9 @@ const renderInkGlyph = (type: MapNodeType, isBoss?: boolean) => {
 };
 
 type DecorKind =
-  | 'pine'
-  | 'deadtree'
-  | 'reeds'
+  | 'obelisk'
+  | 'reliquary'
+  | 'sigilring'
   | 'ribcage'
   | 'skull'
   | 'cairn'
@@ -172,27 +172,32 @@ interface ParchmentDecor {
 
 const renderCartographyProp = (d: ParchmentDecor) => {
   const transform = `translate(${d.x} ${d.y}) rotate(${d.rot}) scale(${d.scale})`;
-  const ink = '#362313';
+  const ink = '#231f24';
   switch (d.kind) {
-    case 'pine':
+    case 'obelisk':
       return (
         <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M0 -14 L-6 -4 L-2 -4 L-8 5 L-3 5 L-9 13 L9 13 L3 5 L8 5 L2 -4 L6 -4 Z" fill="rgba(54,35,19,0.14)" />
-          <path d="M0 13 L0 18 M-5 18 Q0 16.5 5 18" />
+          <path d="M0 -15 L4.5 -9 L6 14 L-6 14 L-4.5 -9 Z" fill="rgba(35,31,36,0.16)" />
+          <path d="M0 -8 L0 9 M-2.8 -2 L2.8 -2" strokeWidth="0.95" />
+          <path d="M-9 14 L9 14 M-7 17 L7 17" strokeWidth="1" />
         </g>
       );
-    case 'deadtree':
+    case 'reliquary':
       return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.3" strokeLinecap="round">
-          <path d="M0 16 Q-1 6 0 -2 M0 4 L-9 -4 M-5 0 L-10 2 M0 -2 L8 -10 M4 -6 L10 -5 M0 -2 L-4 -12" />
-          <path d="M-6 16 Q0 14.5 6 16" strokeWidth="0.9" />
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M0 -15 L7 -5 L7 12 L-7 12 L-7 -5 Z" fill="rgba(35,31,36,0.12)" />
+          <path d="M0 -10 L4 -3 L4 9 L-4 9 L-4 -3 Z" strokeWidth="0.85" />
+          <path d="M0 -18 L0 -15 M-2 -16.5 L2 -16.5 M-9 12 L9 12" />
+          <circle cx="0" cy="2" r="1.5" fill={ink} />
         </g>
       );
-    case 'reeds':
+    case 'sigilring':
       return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.1" strokeLinecap="round">
-          <path d="M-5 10 Q-7 0 -4 -10 M0 10 Q1 -2 0 -13 M5 10 Q7 1 5 -8" />
-          <path d="M-9 10 Q0 8 9 10 M-7 13 Q0 11.5 7 13" strokeWidth="0.8" />
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.05" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="0" cy="0" r="11" />
+          <circle cx="0" cy="0" r="7.5" strokeDasharray="2.5 2.5" strokeWidth="0.85" />
+          <path d="M0 -10 L8.5 5.5 L-8.5 5.5 Z" fill="rgba(35,31,36,0.1)" />
+          <circle cx="0" cy="0.5" r="1.5" fill={ink} />
         </g>
       );
     case 'ribcage':
@@ -205,7 +210,7 @@ const renderCartographyProp = (d: ParchmentDecor) => {
     case 'skull':
       return (
         <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M-7 1 C-8 -8 8 -8 7 1 C7 5 4 6 4 9 L-4 9 C-4 6 -7 5 -7 1 Z" fill="rgba(54,35,19,0.1)" />
+          <path d="M-7 1 C-8 -8 8 -8 7 1 C7 5 4 6 4 9 L-4 9 C-4 6 -7 5 -7 1 Z" fill="rgba(35,31,36,0.12)" />
           <circle cx="-2.6" cy="0.5" r="1.4" fill={ink} />
           <circle cx="2.6" cy="0.5" r="1.4" fill={ink} />
           <path d="M0 3.2 L-0.8 4.8 L0.8 4.8 Z M-2 9 L-2 6.8 M0 9 L0 6.8 M2 9 L2 6.8" />
@@ -213,7 +218,7 @@ const renderCartographyProp = (d: ParchmentDecor) => {
       );
     case 'cairn':
       return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="rgba(54,35,19,0.12)" strokeWidth="1.15">
+        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="rgba(35,31,36,0.14)" strokeWidth="1.15">
           <ellipse cx="0" cy="8" rx="9" ry="3.5" />
           <ellipse cx="-0.5" cy="3" rx="6.5" ry="2.8" />
           <ellipse cx="0.5" cy="-1.5" rx="4.2" ry="2.1" />
@@ -238,7 +243,7 @@ const renderCartographyProp = (d: ParchmentDecor) => {
     case 'candle':
       return (
         <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.1" strokeLinecap="round">
-          <rect x="-3" y="-2" width="6" height="14" rx="1" fill="rgba(54,35,19,0.1)" />
+          <rect x="-3" y="-2" width="6" height="14" rx="1" fill="rgba(35,31,36,0.12)" />
           <path d="M0 -4 Q2.8 -8 0 -12 Q-2.8 -8 0 -4 Z" fill="rgba(140,42,20,0.22)" />
           <path d="M-7 12 L7 12" />
         </g>
@@ -258,8 +263,8 @@ const renderCartographyProp = (d: ParchmentDecor) => {
     case 'eclipse':
       return (
         <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15">
-          <circle cx="0" cy="0" r="8" fill="rgba(54,35,19,0.18)" />
-          <circle cx="3" cy="-1.5" r="7" fill="#d9c298" stroke="none" />
+          <circle cx="0" cy="0" r="8" fill="rgba(35,31,36,0.2)" />
+          <circle cx="3" cy="-1.5" r="7" fill="#afa89d" stroke="none" />
           <circle cx="0" cy="0" r="8" />
           <path d="M0 -12 L0 -10 M0 10 L0 12 M-12 0 L-10 0 M10 0 L12 0" strokeWidth="0.9" />
         </g>
@@ -334,8 +339,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
   const cartography = useMemo(() => {
     const rng = createSeededRng(`${mapData.seed || 'scroll'}:carto:${mapData.act}:${mapData.rows}`);
     const actPools: Record<number, DecorKind[]> = {
-      1: ['pine', 'pine', 'deadtree', 'reeds'],
-      2: ['ribcage', 'skull', 'cairn', 'deadtree'],
+      1: ['obelisk', 'sigilring', 'reliquary', 'arch'],
+      2: ['ribcage', 'skull', 'cairn', 'reliquary'],
       3: ['arch', 'candle', 'cobweb', 'skull'],
       4: ['spiral', 'fissure', 'eclipse', 'spiral'],
     };
@@ -377,7 +382,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
         x: Math.round(x),
         y: Math.round(y),
         scale: Number((0.78 + rng() * 0.55).toFixed(2)),
-        rot: kind === 'arch' || kind === 'candle' || kind === 'pine' ? Math.round((rng() - 0.5) * 10) : Math.round((rng() - 0.5) * 32),
+        rot: kind === 'arch' || kind === 'candle' || kind === 'obelisk' || kind === 'reliquary' ? Math.round((rng() - 0.5) * 10) : Math.round((rng() - 0.5) * 32),
         opacity: Number((0.24 + rng() * 0.18).toFixed(2)),
         kind,
       });
@@ -577,7 +582,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
   return (
     <div
-      className="absolute inset-0 bg-[#09080a] z-50 flex flex-col items-center justify-between px-4 sm:px-6 py-3 sm:py-4 overflow-y-auto md:overflow-hidden font-mono select-none animate-fade-up"
+      className="absolute inset-0 bg-[#09080a] z-50 flex flex-col items-center justify-between px-3 sm:px-5 py-2 sm:py-3 overflow-hidden font-mono select-none animate-fade-up"
       style={bgStyle}
     >
       {/* Atmospheric Stone & Cloth Vignette */}
@@ -660,9 +665,9 @@ const MapScreen: React.FC<MapScreenProps> = ({
       </div>
 
       {/* Main Split: Aged Parchment Scroll + Cartographer's Ledger */}
-      <div className="relative z-10 flex flex-col md:flex-row items-center md:items-stretch justify-center gap-4 lg:gap-6 w-full max-w-[1120px] flex-1 min-h-0 my-2 sm:my-3">
+      <div className="relative z-10 flex flex-col sm:flex-row items-stretch justify-center gap-3 lg:gap-6 w-full max-w-[1120px] flex-1 min-h-0 my-1.5 sm:my-2.5 overflow-hidden">
         {/* CENTERPIECE: Unrolled Aged Parchment Map */}
-        <div className="relative flex flex-col w-full max-w-[560px] flex-1 min-h-[380px] md:min-h-0">
+        <div className="relative flex flex-col w-full sm:max-w-[560px] flex-1 min-h-0">
           {/* Top Wrought-Iron & Slate Scroll Rod */}
           <div className="relative z-20 h-6 w-[104%] -ml-[2%] rounded-[2px] bg-gradient-to-b from-[#2c282e] via-[#171519] to-[#0b0a0c] border border-[#524a48]/80 shadow-[0_6px_16px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.08)] flex items-center justify-between px-2 shrink-0">
             <span className="w-3 h-2.5 rounded-[1px] bg-gradient-to-b from-[#a8957a] to-[#4a413b] border border-[#141215] shrink-0" />
@@ -716,7 +721,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   width={cartography.vw - 20}
                   height={cartography.vh - 20}
                   fill="none"
-                  stroke="#3b2615"
+                  stroke="#231f24"
                   strokeOpacity="0.34"
                   strokeWidth="1.4"
                 />
@@ -726,7 +731,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   width={cartography.vw - 30}
                   height={cartography.vh - 30}
                   fill="none"
-                  stroke="#3b2615"
+                  stroke="#231f24"
                   strokeOpacity="0.22"
                   strokeWidth="0.9"
                   strokeDasharray="6 4"
@@ -734,7 +739,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 {/* Ornate Corner Ticks */}
                 <path
                   d={`M 10 28 L 28 10 M ${cartography.vw - 10} 28 L ${cartography.vw - 28} 10 M 10 ${cartography.vh - 28} L 28 ${cartography.vh - 10} M ${cartography.vw - 10} ${cartography.vh - 28} L ${cartography.vw - 28} ${cartography.vh - 10}`}
-                  stroke="#3b2615"
+                  stroke="#231f24"
                   strokeOpacity="0.38"
                   strokeWidth="1.2"
                 />
@@ -769,7 +774,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
                 {/* Topographic Elevation Contours */}
                 {cartography.contours.map(ct => (
-                  <g key={ct.id} transform={`translate(${ct.cx} ${ct.cy}) rotate(${ct.rot})`} fill="none" stroke="#3b2615" strokeOpacity="0.14">
+                  <g key={ct.id} transform={`translate(${ct.cx} ${ct.cy}) rotate(${ct.rot})`} fill="none" stroke="#231f24" strokeOpacity="0.14">
                     <ellipse cx="0" cy="0" rx={ct.rx} ry={ct.ry} strokeWidth="1" strokeDasharray="5 4" />
                     <ellipse cx="0" cy="0" rx={ct.rx * 0.66} ry={ct.ry * 0.66} strokeWidth="0.85" />
                     <ellipse cx="0" cy="0" rx={ct.rx * 0.34} ry={ct.ry * 0.34} strokeWidth="0.7" strokeDasharray="3 3" />
@@ -793,7 +798,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   if (!rowNode) return null;
                   const ry = (rowNode.y / 100) * cartography.vh;
                   return (
-                    <g key={`tick-${r}`} opacity="0.32" stroke="#3b2615" fill="#3b2615">
+                    <g key={`tick-${r}`} opacity="0.32" stroke="#231f24" fill="#3b2615">
                       <line x1="15" y1={ry} x2="23" y2={ry} strokeWidth="1" />
                       <text x="26" y={ry + 3} fontSize="7.5" fontFamily="monospace" letterSpacing="0.8">
                         {r === 0 ? 'START' : r === mapData.rows - 1 ? 'APEX' : String(r).padStart(2, '0')}
@@ -861,14 +866,14 @@ const MapScreen: React.FC<MapScreenProps> = ({
                               : isWalked
                                 ? '#5f1812'
                                 : isEdgeLockedOut
-                                  ? 'rgba(54, 36, 20, 0.16)'
+                                  ? 'rgba(32, 28, 34, 0.16)'
                                   : isActiveChoice
                                     ? hasActiveTrace
                                       ? 'rgba(140, 34, 24, 0.35)'
                                       : '#8c2218'
                                     : hasActiveTrace
-                                      ? 'rgba(54, 36, 20, 0.2)'
-                                      : 'rgba(54, 36, 20, 0.45)'
+                                      ? 'rgba(32, 28, 34, 0.22)'
+                                      : 'rgba(32, 28, 34, 0.48)'
                           }
                           strokeWidth={
                             isTraced
@@ -933,69 +938,73 @@ const MapScreen: React.FC<MapScreenProps> = ({
                         isBoss ? 'w-14 h-14' : 'w-11 h-11'
                       } ${
                         isOnTracedPath && !isBoss
-                          ? 'ring-2 ring-[#d4af37]/90 shadow-[0_0_16px_rgba(212,175,55,0.55)] scale-105 '
+                          ? 'ring-2 ring-[#cbb698]/90 shadow-[0_0_16px_rgba(199,172,134,0.55)] scale-105 '
                           : ''
                       }${
                         isBoss
                           ? isReachable
-                            ? 'bg-[#4f1310] border-2 border-[#f1ca79] shadow-[0_0_22px_rgba(145,25,18,0.85),0_4px_12px_rgba(0,0,0,0.6)] hover:scale-115 cursor-pointer animate-pulse'
-                            : 'bg-[#36110e] border-2 border-[#8c6438] shadow-[0_4px_12px_rgba(0,0,0,0.55)] hover:border-[#e6be72] hover:scale-105 cursor-help'
+                            ? 'bg-gradient-to-b from-[#3d1113] to-[#170709] border-2 border-[#d6b888] text-[#f3e1be] shadow-[0_0_24px_rgba(165,28,24,0.85),0_6px_14px_rgba(0,0,0,0.75)] hover:scale-115 cursor-pointer animate-pulse'
+                            : 'bg-gradient-to-b from-[#251012] to-[#11080a] border-2 border-[#6e5c4c] text-[#cbb698] shadow-[0_5px_14px_rgba(0,0,0,0.7)] hover:border-[#d6b888] hover:scale-105 cursor-help'
                           : isCurrent
-                            ? 'bg-[#e9d5aa] border-2 border-[#6e1c14] text-[#3a120d] shadow-[0_0_16px_rgba(110,28,20,0.45)] cursor-default'
+                            ? 'bg-[#161418] border-2 border-[#a83228] text-[#ebe3d5] shadow-[0_0_16px_rgba(145,28,22,0.55),0_4px_10px_rgba(0,0,0,0.75)] cursor-default'
                             : isReachable
                               ? isCombat
-                                ? 'bg-[#e6c99b] hover:bg-[#f2dfb7] border-2 border-[#8a1f16] text-[#6d1610] shadow-[0_0_18px_rgba(166,34,24,0.48),0_3px_8px_rgba(0,0,0,0.45)] hover:scale-115 cursor-pointer'
-                                : 'bg-[#e8d2a6] hover:bg-[#f6e6c2] border-2 border-[#6c441c] text-[#28180c] shadow-[0_0_16px_rgba(176,120,38,0.45),0_3px_8px_rgba(0,0,0,0.42)] hover:scale-115 cursor-pointer'
+                                ? 'bg-gradient-to-b from-[#2b1214] to-[#13090b] hover:from-[#3d171a] hover:to-[#1b0c0f] border-2 border-[#b5372e] text-[#f0b4aa] shadow-[0_0_18px_rgba(166,34,24,0.55),0_4px_10px_rgba(0,0,0,0.7)] hover:scale-115 cursor-pointer'
+                                : 'bg-gradient-to-b from-[#242027] to-[#110f14] hover:from-[#322d36] hover:to-[#19161e] border-2 border-[#9e8a70] text-[#ebe1cf] shadow-[0_0_16px_rgba(143,121,96,0.45),0_4px_10px_rgba(0,0,0,0.7)] hover:scale-115 cursor-pointer'
                               : isVisited
-                                ? 'bg-[#b3986c]/75 border border-[#543c24]/60 text-[#4a3520]/55 hover:brightness-110 hover:scale-105 cursor-help'
+                                ? 'bg-[#18161a]/75 border border-[#4a413b]/60 text-[#7d736c]/60 hover:brightness-110 hover:scale-105 cursor-help'
                                 : isCombat
-                                  ? 'bg-[#c9ae80]/85 border border-[#6e2d24]/70 text-[#5e1f18]/80 hover:brightness-110 hover:scale-105 cursor-help'
-                                  : 'bg-[#ceb589]/85 border border-[#5c4227]/65 text-[#332214]/75 hover:brightness-110 hover:scale-105 cursor-help'
+                                  ? 'bg-[#1c1214]/90 border border-[#6e2d29]/80 text-[#cf9088]/90 hover:brightness-115 hover:scale-105 cursor-help'
+                                  : 'bg-[#17151a]/90 border border-[#524844]/80 text-[#c7bdb0]/85 hover:brightness-115 hover:scale-105 cursor-help'
                       }`}
                     >
-                      {/* Pulsing Outer Wax Ring for Reachable Choices */}
+                      {/* Pulsing Outer Ring for Reachable Choices */}
                       {isReachable && !isBoss && (
                         <span
                           className={`pointer-events-none absolute -inset-1.5 rounded-full border-2 animate-ping [animation-duration:2.2s] ${
-                            isCombat ? 'border-[#8f1f16]/55' : 'border-[#8a5b1f]/50'
+                            isCombat ? 'border-[#b5372e]/60' : 'border-[#9e8a70]/55'
                           }`}
                         />
                       )}
 
                       {isCurrent ? (
-                        <svg viewBox="0 0 24 28" className="w-6 h-7 -translate-y-0.5 drop-shadow-[0_3px_4px_rgba(0,0,0,0.65)] animate-bounce [animation-duration:2.4s]">
-                          <circle cx="12" cy="6.5" r="4.5" fill="#1e130c" stroke="#e3bc73" strokeWidth="1.7" />
-                          <path d="M6 24.5c.6-6.2 2.4-10.2 6-10.2s5.4 4 6 10.2H6Z" fill="#1e130c" stroke="#e3bc73" strokeWidth="1.7" />
+                        <svg viewBox="0 0 24 28" className="w-6 h-7 -translate-y-0.5 drop-shadow-[0_3px_4px_rgba(0,0,0,0.8)] animate-bounce [animation-duration:2.4s]">
+                          <circle cx="12" cy="6.5" r="4.5" fill="#100e12" stroke="#d6c2a5" strokeWidth="1.7" />
+                          <path d="M6 24.5c.6-6.2 2.4-10.2 6-10.2s5.4 4 6 10.2H6Z" fill="#100e12" stroke="#d6c2a5" strokeWidth="1.7" />
                         </svg>
                       ) : (
                         renderInkGlyph(node.type, isBoss)
                       )}
 
-                      {/* Hand-Inked Charcoal X over Visited Nodes */}
+                      {/* Crimson Wax X over Visited Nodes */}
                       {isVisited && (
-                        <svg viewBox="0 0 24 24" className="pointer-events-none absolute inset-0 w-full h-full text-[#3f140f]/75" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                        <svg viewBox="0 0 24 24" className="pointer-events-none absolute inset-0 w-full h-full text-[#9c2a22]/85" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                           <path d="M5 5l14 14M19 5L5 19" />
                         </svg>
                       )}
                     </button>
 
-                    {/* Compact Ink Caption Under Current / Boss / Reachable / Hovered Nodes */}
-                    {isCurrent && !isBoss && (
-                      <span className="mt-1 px-1.5 py-0.5 rounded-[2px] bg-[#160e09]/92 border border-[#cfa159]/85 text-[7.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#f4d793] shadow-sm whitespace-nowrap">
-                        You
-                      </span>
-                    )}
-                    {(isBoss || isReachable || isHovered) && (
-                      <span
-                        className={`mt-1 px-1.5 py-0.5 rounded-[2px] text-[8.5px] font-bold uppercase tracking-[0.14em] whitespace-nowrap shadow-sm ${
-                          isBoss
-                            ? 'bg-[#2a0c09]/92 text-[#f4d793] border border-[#8e5f34]/75 font-[\'Cinzel\',_serif]'
-                            : 'bg-[#1a110a]/85 text-[#ecd7ae] border border-[#5e4226]/70'
-                        }`}
-                      >
-                        {meta.title}
-                      </span>
-                    )}
+                    {/* Carved-Slate Caption (Out-of-flow so hover never shifts the node) */}
+                    {(isCurrent && !isBoss) || isBoss || isReachable || isHovered ? (
+                      <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1 flex flex-col items-center gap-0.5 z-40">
+                        {isCurrent && !isBoss && (
+                          <span className="px-1.5 py-0.5 rounded-[2px] bg-[#100e10]/94 border border-[#8f7960]/85 text-[7.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#ebe1cf] shadow-sm whitespace-nowrap">
+                            You
+                          </span>
+                        )}
+                        {(isBoss || isReachable || isHovered) && (
+                          <span
+                            className={`px-1.5 py-0.5 rounded-[2px] text-[8.5px] font-bold uppercase tracking-[0.14em] whitespace-nowrap shadow-sm ${
+                              isBoss
+                                ? 'bg-[#250b0c]/94 text-[#f3e1be] border border-[#8f7960]/80 font-[\'Cinzel\',_serif]'
+                                : 'bg-[#121014]/92 text-[#e6dac6] border border-[#524844]/80'
+                            }`}
+                          >
+                            {meta.title}
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -1010,7 +1019,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
         </div>
 
         {/* RIGHT FLANK: Cartographer's Omen Inspector & Expedition Ledger */}
-        <div className="w-full max-w-[560px] md:max-w-none md:w-[280px] lg:w-[330px] grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-col justify-between gap-3.5 lg:gap-4 shrink-0">
+        <div className="w-full sm:w-[240px] md:w-[280px] lg:w-[330px] max-h-[38%] sm:max-h-none flex flex-row sm:flex-col justify-between gap-2.5 lg:gap-4 shrink-0 min-h-0 overflow-y-auto sm:overflow-y-auto">
           {/* Omen / Node Inspector Plaque (Carved Slate & Ritual Cloth) */}
           <div
             className="relative flex-1 flex flex-col justify-between p-4 lg:p-5 rounded-[2px] border border-[#4a413b]/85 shadow-[0_18px_42px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.07),inset_0_0_28px_rgba(0,0,0,0.75)] backdrop-blur-[3px] overflow-hidden"
