@@ -676,6 +676,131 @@ const MapScreen: React.FC<MapScreenProps> = ({
         ))}
       </div>
 
+      {/* Act 1-4 Atmospheric Weather Behind Map, Survey & Ledger (z-[4] < z-10) */}
+      {(() => {
+        const weatherAct = Math.min(4, Math.max(1, mapData.act));
+        const hasMist = weatherAct === 1 || weatherAct === 2 || weatherAct === 3;
+        const rainCount = weatherAct === 3 ? 58 : weatherAct === 2 ? 28 : 0;
+        const hasLightning = weatherAct === 3;
+        const hasFire = weatherAct === 4;
+
+        return (
+          <div className="pointer-events-none absolute inset-0 z-[4] overflow-hidden select-none">
+            {hasMist && (
+              <>
+                <div
+                  className="absolute -inset-x-[15%] bottom-[-12%] h-[58%]"
+                  style={{
+                    background:
+                      weatherAct === 3
+                        ? 'radial-gradient(ellipse at 30% 80%, rgba(165,180,196,0.22) 0%, rgba(110,125,140,0.12) 45%, transparent 74%)'
+                        : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.2) 0%, rgba(135,132,124,0.1) 45%, transparent 74%)',
+                    filter: 'blur(28px)',
+                    animation: 'weatherMistDriftA 22s ease-in-out infinite',
+                  }}
+                />
+                <div
+                  className="absolute -inset-x-[15%] bottom-[-8%] h-[46%]"
+                  style={{
+                    background:
+                      weatherAct === 3
+                        ? 'radial-gradient(ellipse at 72% 85%, rgba(155,172,190,0.2) 0%, rgba(95,112,130,0.1) 48%, transparent 76%)'
+                        : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.18) 0%, rgba(120,116,108,0.09) 48%, transparent 76%)',
+                    filter: 'blur(34px)',
+                    animation: 'weatherMistDriftB 29s ease-in-out infinite',
+                  }}
+                />
+              </>
+            )}
+
+            {rainCount > 0 && (
+              <div className="absolute inset-0">
+                {Array.from({ length: rainCount }, (_, i) => {
+                  const leftPct = ((i * 37.3 + (i % 5) * 3.1) % 112) - 4;
+                  const duration = weatherAct === 3
+                    ? (0.48 + ((i * 19) % 10) * 0.032).toFixed(2)
+                    : (0.78 + ((i * 17) % 10) * 0.045).toFixed(2);
+                  const delay = -(((i * 0.23) % 1.8).toFixed(2));
+                  const heightPx = weatherAct === 3 ? 28 + (i % 4) * 9 : 18 + (i % 4) * 6;
+                  const opacity = weatherAct === 3 ? 0.22 + (i % 3) * 0.08 : 0.14 + (i % 3) * 0.06;
+                  return (
+                    <span
+                      key={`map-rain-${weatherAct}-${i}`}
+                      className="absolute top-0 rounded-full"
+                      style={{
+                        left: `${leftPct}%`,
+                        width: weatherAct === 3 ? '1.35px' : '1px',
+                        height: `${heightPx}px`,
+                        opacity,
+                        background: 'linear-gradient(to bottom, transparent, rgba(208,224,242,0.85), rgba(186,208,232,0.25))',
+                        animation: `weatherRainFall ${duration}s linear ${delay}s infinite`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {hasLightning && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 50% 15%, rgba(215,232,255,0.85) 0%, rgba(168,196,238,0.35) 55%, rgba(120,145,190,0.12) 100%)',
+                  mixBlendMode: 'screen',
+                  animation: 'weatherLightningFlash 11.5s linear infinite',
+                }}
+              />
+            )}
+
+            {hasFire && (
+              <>
+                <div
+                  className="absolute inset-x-0 bottom-0 h-[44%] origin-bottom"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse at 50% 100%, rgba(234,88,12,0.34) 0%, rgba(185,28,28,0.2) 45%, transparent 78%)',
+                    mixBlendMode: 'screen',
+                    animation: 'weatherFireGlow 4.8s ease-in-out infinite',
+                  }}
+                />
+                <div
+                  className="absolute -inset-x-[12%] bottom-[-5%] h-[62%]"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse at 40% 75%, rgba(92,82,78,0.26) 0%, rgba(45,40,38,0.14) 50%, transparent 76%)',
+                    filter: 'blur(36px)',
+                    animation: 'weatherSmokeDrift 20s ease-in-out infinite',
+                  }}
+                />
+                {Array.from({ length: 30 }, (_, i) => {
+                  const leftPct = (i * 33.7 + 4) % 96;
+                  const sizePx = 2 + (i % 3) * 1.4;
+                  const duration = (4.2 + ((i * 13) % 10) * 0.42).toFixed(2);
+                  const delay = -(((i * 0.67) % 6.5).toFixed(2));
+                  const drift = ((i % 2 === 0 ? 1 : -1) * (18 + (i % 5) * 14));
+                  return (
+                    <span
+                      key={`map-ember-${i}`}
+                      className="absolute -bottom-3 rounded-full"
+                      style={{
+                        left: `${leftPct}%`,
+                        width: `${sizePx}px`,
+                        height: `${sizePx}px`,
+                        backgroundColor: i % 3 === 0 ? '#fde68a' : i % 2 === 0 ? '#fb923c' : '#ef4444',
+                        boxShadow: '0 0 8px rgba(251,146,60,0.85), 0 0 14px rgba(239,68,68,0.55)',
+                        ['--ember-drift' as any]: `${drift}px`,
+                        animation: `weatherEmberRise ${duration}s ease-out ${delay}s infinite`,
+                      }}
+                    />
+                  );
+                })}
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Engraved Stone Act Title Banner */}
       <div className="relative z-10 flex flex-col items-center text-center shrink-0 pt-0.5">
         <div className="flex items-center gap-3.5">
