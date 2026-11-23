@@ -9299,7 +9299,7 @@ export default function App() {
           return (
             <div
               key={c.id || `draft-p-${c.name}-${idx}`}
-              className="relative w-[124px] h-[174px] shrink-0 flex items-center justify-center"
+              className="relative w-[78px] h-[112px] sm:w-[104px] sm:h-[148px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -9313,10 +9313,10 @@ export default function App() {
                     : "opacity-75 saturate-[0.82] cursor-default"
                 } ${
                   isSelected
-                    ? "scale-[1.13] -translate-y-2 z-30"
+                    ? "scale-[0.74] sm:scale-[0.96] lg:scale-[1.13] -translate-y-1.5 lg:-translate-y-2 z-30"
                     : canTradePelt
-                      ? "scale-[1.06] hover:scale-[1.11] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
-                      : "scale-[1.06]"
+                      ? "scale-[0.68] sm:scale-[0.9] lg:scale-[1.06] hover:scale-[0.72] sm:hover:scale-[0.94] lg:hover:scale-[1.11] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
+                      : "scale-[0.68] sm:scale-[0.9] lg:scale-[1.06]"
                 }`}
               >
                 {isSelected && (
@@ -9335,9 +9335,9 @@ export default function App() {
             return (
               <div
                 key={`draft-slot-empty-${idx}`}
-                className="relative w-[124px] h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[78px] h-[112px] sm:w-[104px] sm:h-[148px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
-                <div className="w-[114px] h-[162px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
+                <div className="w-[72px] h-[104px] sm:w-[96px] sm:h-[138px] lg:w-[114px] lg:h-[162px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
                   <span className="text-[9px] font-['Cinzel',_serif] uppercase tracking-[0.25em] text-[#6e5642]/70">
                     Claimed
                   </span>
@@ -9353,10 +9353,10 @@ export default function App() {
             return (
               <div
                 key={`draft-back-${idx}`}
-                className="relative w-[124px] h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[78px] h-[112px] sm:w-[104px] sm:h-[148px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
                 <div
-                  className={`w-[114px] h-[162px] rounded-[3px] transition-all duration-200 ${
+                  className={`w-[72px] h-[104px] sm:w-[96px] sm:h-[138px] lg:w-[114px] lg:h-[162px] rounded-[3px] transition-all duration-200 ${
                     draftFlippingDown ? 'animate-flip-down' : 'opacity-65 filter brightness-75'
                   }`}
                 >
@@ -9375,7 +9375,7 @@ export default function App() {
           return (
             <div
               key={c.id || `draft-t-${c.name}-${idx}`}
-              className="relative w-[124px] h-[174px] shrink-0 flex items-center justify-center"
+              className="relative w-[78px] h-[112px] sm:w-[104px] sm:h-[148px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -9386,8 +9386,8 @@ export default function App() {
                   draftFlippingUp ? 'animate-flip-up' : ''
                 } ${
                   isSelected
-                    ? "scale-[1.13] -translate-y-2 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
-                    : "scale-[1.06] hover:scale-[1.11] hover:-translate-y-1"
+                    ? "scale-[0.74] sm:scale-[0.96] lg:scale-[1.13] -translate-y-1.5 lg:-translate-y-2 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
+                    : "scale-[0.68] sm:scale-[0.9] lg:scale-[1.06] hover:scale-[0.72] sm:hover:scale-[0.94] lg:hover:scale-[1.11] hover:-translate-y-1"
                 }`}
               >
                 {isSelected && (
@@ -9403,7 +9403,7 @@ export default function App() {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-6 py-4 overflow-hidden font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-start lg:justify-between gap-3 sm:gap-4 px-2.5 sm:px-6 py-3 sm:py-4 overflow-y-auto overflow-x-hidden font-mono select-none"
             style={getScreenBgStyle('draft.jpg')}
           >
             {/* Atmospheric Dark Vignette */}
@@ -9411,7 +9411,7 @@ export default function App() {
 
             {/* Header & Ritual Status */}
             <div className="relative z-10 flex flex-col items-center text-center shrink-0">
-              <h1 className="text-xl sm:text-2xl font-['Cinzel',_serif] text-[#e5c57c] tracking-[0.18em] italic drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+              <h1 className="text-sm sm:text-xl lg:text-2xl font-['Cinzel',_serif] text-[#e5c57c] tracking-[0.12em] sm:tracking-[0.18em] italic drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                 · Fortasse propositum facultates tuas superat ·
               </h1>
               <div className="mt-1.5 flex items-center gap-3 px-4 py-1 rounded-[2px] bg-[#0b0807]/80 border border-[#3a2a1e]/80 backdrop-blur-[2px]">
@@ -9428,9 +9428,9 @@ export default function App() {
             </div>
 
             {/* Dual Smoked-Wood & Iron Tabletop Trays (Snug Fit) */}
-            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[auto_auto] justify-center items-stretch gap-5 my-auto max-w-full">
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[auto_auto] justify-center items-stretch gap-3 sm:gap-5 lg:my-auto max-w-full">
               {/* Left Tray: Player's Starter Deck */}
-              <div className="relative flex flex-col items-center px-5 pt-3 pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#3d2d20]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
+              <div className="relative flex flex-col items-center px-2.5 sm:px-5 pt-2.5 sm:pt-3 pb-3 sm:pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#3d2d20]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
                 <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#7c5d3b]/65" />
                 <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#7c5d3b]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#7c5d3b]/65" />
@@ -9445,18 +9445,18 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center justify-center gap-3 my-auto">
-                  <div className="flex justify-center items-center gap-3">
+                <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 my-auto">
+                  <div className="flex justify-center items-center gap-1.5 sm:gap-3">
                     {draftPlayerDeck.slice(0, 3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx))}
                   </div>
-                  <div className="flex justify-center items-center gap-3">
+                  <div className="flex justify-center items-center gap-1.5 sm:gap-3">
                     {draftPlayerDeck.slice(3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx + 3))}
                   </div>
                 </div>
               </div>
 
               {/* Right Tray: Trader's Table */}
-              <div className="relative flex flex-col items-center px-5 pt-3 pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#422823]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,205,190,0.05)] backdrop-blur-[2px]">
+              <div className="relative flex flex-col items-center px-2.5 sm:px-5 pt-2.5 sm:pt-3 pb-3 sm:pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#422823]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,205,190,0.05)] backdrop-blur-[2px]">
                 <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#8a4c42]/65" />
                 <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#8a4c42]/65" />
                 <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#8a4c42]/65" />
@@ -9471,11 +9471,11 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center justify-center gap-3 my-auto">
-                  <div className="flex justify-center items-center gap-3">
+                <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 my-auto">
+                  <div className="flex justify-center items-center gap-1.5 sm:gap-3">
                     {draftTradePool.slice(0, 4).map((c, idx) => renderMerchantDraftSlot(c, idx))}
                   </div>
-                  <div className="flex justify-center items-center gap-3">
+                  <div className="flex justify-center items-center gap-1.5 sm:gap-3">
                     {draftTradePool.slice(4, 8).map((c, sliceIdx) => renderMerchantDraftSlot(c, sliceIdx + 4))}
                   </div>
                 </div>
@@ -9483,11 +9483,11 @@ export default function App() {
             </div>
 
             {/* Grounded Tactile Action Bar */}
-            <div className="relative z-10 flex items-center gap-4 px-5 py-2 rounded-[3px] bg-[#0c0807]/88 border border-[#3a2a1e]/80 shadow-[0_10px_28px_rgba(0,0,0,0.88)] backdrop-blur-[2px] shrink-0">
+            <div className="sticky bottom-1 lg:static z-30 flex items-center gap-2.5 sm:gap-4 px-3 sm:px-5 py-2 rounded-[3px] bg-[#0c0807]/95 border border-[#3a2a1e]/85 shadow-[0_10px_28px_rgba(0,0,0,0.92)] backdrop-blur-[2px] shrink-0">
               <button
                 onClick={executeDraftTrade}
                 disabled={!canConfirmTrade}
-                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] px-6 py-2 select-none ${
+                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-[10px] sm:text-xs uppercase tracking-[0.16em] sm:tracking-[0.22em] px-3.5 sm:px-6 py-2 select-none ${
                   canConfirmTrade
                     ? 'bg-[#2c1512] hover:bg-[#3c1b17] active:translate-y-[1px] border-[#c46c56] text-[#ffe8d6] shadow-[0_2px_0_#0b0504,0_0_18px_rgba(196,108,86,0.28),inset_0_1px_0_rgba(255,220,200,0.18)] cursor-pointer'
                     : 'bg-[#15100d]/90 border-[#2f241c] text-[#7a6957] opacity-55 cursor-not-allowed'
@@ -9501,7 +9501,7 @@ export default function App() {
               <button
                 onClick={finalizeDraft}
                 disabled={!canVentureOnward}
-                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] px-6 py-2 select-none ${
+                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-[10px] sm:text-xs uppercase tracking-[0.16em] sm:tracking-[0.22em] px-3.5 sm:px-6 py-2 select-none ${
                   canVentureOnward
                     ? 'bg-[#271d12] hover:bg-[#362717] active:translate-y-[1px] border-[#d4af37]/90 text-[#fff2cf] shadow-[0_2px_0_#0b0704,0_0_20px_rgba(212,175,55,0.3),inset_0_1px_0_rgba(255,240,190,0.22)] cursor-pointer'
                     : 'bg-[#15100d]/90 border-[#2f241c] text-[#7a6957] opacity-55 cursor-not-allowed'
