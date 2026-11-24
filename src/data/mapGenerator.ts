@@ -74,13 +74,13 @@ export const MAP_NODE_META: Record<MapNodeType, NodeMeta> = {
   elite_combat: {
     title: 'Effigy Ward',
     tag: 'Cursed Battle',
-    desc: 'An enemy empowered by a stitched Tribal Effigy.',
+    desc: 'An enemy empowered by a stitched Effigy.',
     tone: 'combat',
   },
   boss: {
     title: 'Sanctum Threshold',
     tag: 'Act Boss',
-    desc: 'A dread sovereign awaits at the end of this trail.',
+    desc: 'A dread sovereign awaits at the end of this path.',
     tone: 'boss',
   },
   campfire: {
@@ -187,9 +187,9 @@ export const BOSS_DISPLAY_META: Record<ActBossType, { name: string; title: strin
 };
 
 const ACT_THEMES: Record<number, { title: string; subtitle: string }> = {
-  1: { title: 'The Sodden Approach', subtitle: 'Act I — Outer Thicket' },
-  2: { title: 'The Ossuary Hollow', subtitle: 'Act II — Scrap Heap' },
-  3: { title: 'The Chapel of Bones', subtitle: 'Act III — Woven Catacombs' },
+  1: { title: 'The Veiled Approach', subtitle: 'Act I — Mist Cloaked Cemetary' },
+  2: { title: 'The Weeping Ossuary', subtitle: 'Act II — Sodden Scrap Heap' },
+  3: { title: 'The Storm-Wracked Chapel', subtitle: 'Act III — City of the Dead' },
   4: { title: 'The End of the World', subtitle: 'Act IV — Uzumaki' },
 };
 

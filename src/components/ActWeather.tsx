@@ -71,10 +71,10 @@ export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefi
             style={{
               background:
                 weatherAct === 1
-                  ? 'radial-gradient(ellipse at 30% 78%, rgba(212,208,198,0.38) 0%, rgba(152,148,140,0.22) 48%, transparent 76%)'
+                  ? 'radial-gradient(ellipse at 30% 78%, rgba(212,208,198,0.17) 0%, rgba(152,148,140,0.09) 48%, transparent 76%)'
                   : weatherAct === 3
-                    ? 'radial-gradient(ellipse at 30% 80%, rgba(165,180,196,0.24) 0%, rgba(110,125,140,0.13) 45%, transparent 74%)'
-                    : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.22) 0%, rgba(135,132,124,0.11) 45%, transparent 74%)',
+                    ? 'radial-gradient(ellipse at 30% 80%, rgba(12,16,24,0.68) 0%, rgba(8,10,16,0.44) 50%, transparent 74%)'
+                    : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.36) 0%, rgba(135,132,124,0.2) 48%, transparent 74%)',
               filter: 'blur(26px)',
               animation: 'weatherMistDriftA 22s ease-in-out infinite',
             }}
@@ -84,10 +84,10 @@ export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefi
             style={{
               background:
                 weatherAct === 1
-                  ? 'radial-gradient(ellipse at 72% 84%, rgba(206,200,188,0.34) 0%, rgba(138,134,126,0.19) 50%, transparent 78%)'
+                  ? 'radial-gradient(ellipse at 72% 84%, rgba(206,200,188,0.15) 0%, rgba(138,134,126,0.08) 50%, transparent 78%)'
                   : weatherAct === 3
-                    ? 'radial-gradient(ellipse at 72% 85%, rgba(155,172,190,0.22) 0%, rgba(95,112,130,0.11) 48%, transparent 76%)'
-                    : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.2) 0%, rgba(120,116,108,0.1) 48%, transparent 76%)',
+                    ? 'radial-gradient(ellipse at 72% 85%, rgba(10,14,22,0.62) 0%, rgba(6,8,14,0.38) 52%, transparent 76%)'
+                    : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.32) 0%, rgba(120,116,108,0.17) 50%, transparent 76%)',
               filter: 'blur(32px)',
               animation: 'weatherMistDriftB 29s ease-in-out infinite',
             }}
@@ -97,7 +97,7 @@ export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefi
               className="absolute -inset-x-[12%] top-[14%] h-[42%]"
               style={{
                 background:
-                  'radial-gradient(ellipse at 52% 50%, rgba(202,198,188,0.2) 0%, rgba(140,136,128,0.1) 52%, transparent 78%)',
+                  'radial-gradient(ellipse at 52% 50%, rgba(202,198,188,0.09) 0%, rgba(140,136,128,0.04) 52%, transparent 78%)',
                 filter: 'blur(38px)',
                 animation: 'weatherMistDriftB 34s ease-in-out -11s infinite',
               }}
@@ -133,10 +133,10 @@ export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefi
       {hasFire && (
         <>
           <div
-            className="absolute inset-x-0 bottom-0 h-[44%] origin-bottom"
+            className="absolute inset-x-0 bottom-0 h-[56%] origin-bottom"
             style={{
               background:
-                'radial-gradient(ellipse at 50% 100%, rgba(234,88,12,0.34) 0%, rgba(185,28,28,0.2) 45%, transparent 78%)',
+                'radial-gradient(ellipse at 50% 100%, rgba(249,115,22,0.58) 0%, rgba(220,38,38,0.36) 44%, rgba(153,27,27,0.14) 68%, transparent 86%)',
               mixBlendMode: 'screen',
               animation: 'weatherFireGlow 4.8s ease-in-out infinite',
             }}

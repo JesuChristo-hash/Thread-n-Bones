@@ -64,8 +64,8 @@ export const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalism
         cx="50"
         cy="50"
         r="8.5"
-        fill={isTalismanPricked ? "#220507" : "#130c09"}
-        stroke={isTalismanPricked ? "#7f1d1d" : "#2a1b14"}
+        fill={isTalismanPricked ? "#220507" : "#141314"}
+        stroke={isTalismanPricked ? "#7f1d1d" : "#2e2a2c"}
         strokeWidth="1.2"
         className="transition-colors duration-200"
       />
@@ -73,7 +73,7 @@ export const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalism
       {/* Organic Capillaries in Sclera */}
       <path
         d="M 44.5 48.5 Q 46.5 49.5 48 49.8 M 55.5 51 Q 53.5 50.5 52 50.2 M 49.5 44 Q 50 46 50.2 47.5"
-        stroke={isTalismanPricked ? "rgba(239, 68, 68, 0.7)" : "rgba(185, 28, 28, 0.35)"}
+        stroke={isTalismanPricked ? "rgba(239, 68, 68, 0.7)" : "rgba(110, 102, 106, 0.32)"}
         strokeWidth="0.5"
         fill="none"
         strokeLinecap="round"
@@ -87,8 +87,8 @@ export const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalism
             cx="50"
             cy="50"
             r={isTalismanPricked ? "6.2" : "5.4"}
-            fill={isTalismanPricked ? "#dc2626" : "#45140e"}
-            stroke={isTalismanPricked ? "#ef4444" : "#7f1d1d"}
+            fill={isTalismanPricked ? "#dc2626" : "#2d292b"}
+            stroke={isTalismanPricked ? "#ef4444" : "#524b4d"}
             strokeWidth="0.8"
             className="transition-colors duration-200 group-hover:fill-[#991b1b] group-hover:stroke-[#ef4444]"
           />
@@ -98,8 +98,8 @@ export const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalism
             cx="50"
             cy="50"
             r={isTalismanPricked ? "3.8" : "3.0"}
-            fill={isTalismanPricked ? "#7f1d1d" : "#080403"}
-            stroke={isTalismanPricked ? "#ef4444" : "#1a0805"}
+            fill={isTalismanPricked ? "#7f1d1d" : "#0a090a"}
+            stroke={isTalismanPricked ? "#ef4444" : "#1e1b1c"}
             strokeWidth="0.6"
             className="transition-all duration-200 group-hover:fill-[#000000]"
           />
@@ -128,7 +128,7 @@ export const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalism
         cy="50"
         r="8.5"
         fill="none"
-        stroke={isTalismanPricked ? "#ef4444" : "#38251b"}
+        stroke={isTalismanPricked ? "#ef4444" : "#3c3739"}
         strokeWidth="0.9"
         className="transition-colors duration-200 group-hover:stroke-[#ef4444]"
         style={{
