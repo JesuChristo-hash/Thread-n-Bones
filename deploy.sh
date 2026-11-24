@@ -19,7 +19,7 @@ git init -q
 git checkout -B gh-pages -q
 git add -A
 git commit -m "deploy: Beta 5 update" -q
-git push -f https://github.com/JesuChristo-hash/Sacrificial-Scales.git gh-pages
+git push -f https://github.com/JesuChristo-hash/Thread-n-Bones.git gh-pages
 cd ..
 
 # 4. Sync source code to origin/main
