@@ -141,6 +141,7 @@ export default function EventScreens({ ctx }: { ctx: {
     scale,
     scheduleEventTimer,
     screen,
+    setShowPauseMenu,
     selectedDeckCardDetail,
     selectedTotemRewardIdx,
     setActiveTotem,
@@ -483,6 +484,7 @@ export default function EventScreens({ ctx }: { ctx: {
           runSeed={runSeed}
           activeVows={activeVows}
           onSelectNode={handleSelectMapNode}
+          onOpenPauseMenu={() => setShowPauseMenu(true)}
         />
       )}
 
@@ -1883,7 +1885,7 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('tribeeventbg.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
@@ -1899,14 +1901,14 @@ export default function EventScreens({ ctx }: { ctx: {
                   </span>
                   <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Tribal Patches
                 </h1>
 
               </div>
 
               {/* Center Stage: Continuous Wooden Rod + Aligned Hooks + Shaped Patches + Curved Thread Connector */}
-              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-start px-6 pt-6 pb-4">
+              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-center px-2 sm:px-4 lg:px-6 pt-2 sm:pt-4 lg:pt-6 pb-2 sm:pb-4">
                 <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9a7342]/70" />
                 <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9a7342]/70" />
                 <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
@@ -1952,7 +1954,7 @@ export default function EventScreens({ ctx }: { ctx: {
                             type="button"
                             disabled={isEventBusy}
                             onClick={() => !isEventBusy && claimCarvingTribe(tribe)}
-                            className={`relative w-[176px] sm:w-[192px] h-[182px] sm:h-[192px] px-4 pt-4 pb-6 text-center transition-all duration-300 flex flex-col items-center justify-start select-none ${
+                            className={`relative w-[108px] sm:w-[148px] lg:w-[192px] h-[112px] sm:h-[152px] lg:h-[192px] px-2 sm:px-3 lg:px-4 pt-2 sm:pt-3 lg:pt-4 pb-3 sm:pb-5 lg:pb-6 text-center transition-all duration-300 flex flex-col items-center justify-start select-none ${
                               isChosen
                                 ? 'scale-105 z-20 cursor-default drop-shadow-[0_0_24px_rgba(212,175,55,0.4)]'
                                 : isDimmed
@@ -1965,7 +1967,7 @@ export default function EventScreens({ ctx }: { ctx: {
                             {/* Brass Grommet Pin */}
                             <span className="relative z-10 w-2.5 h-2.5 rounded-full bg-[#d4af37] border border-[#3a2614] shadow-[0_0_6px_rgba(212,175,55,0.8)] mb-2.5" />
 
-                            <div className="relative z-10 w-14 h-14 mb-2 bg-[#1c130c]/90 border border-[#5a412a]/85 rounded-[2px] flex items-center justify-center group-hover:border-[#e5c16b]/85 shadow-inner transition-colors [&>*]:scale-[2.15]">
+                            <div className="relative z-10 w-8 h-8 sm:w-11 sm:h-11 lg:w-14 lg:h-14 mb-1 sm:mb-1.5 lg:mb-2 bg-[#1c130c]/90 border border-[#5a412a]/85 rounded-[2px] flex items-center justify-center group-hover:border-[#e5c16b]/85 shadow-inner transition-colors [&>*]:scale-[1.25] sm:[&>*]:scale-[1.7] lg:[&>*]:scale-[2.15]">
                               {TRIBE_EMBROIDERY[tribe] || <span className="text-xl">✦</span>}
                             </div>
                             <div className="relative z-10 font-['Cinzel',_serif] font-bold text-[#f2ddb7] group-hover:text-white text-sm uppercase tracking-[0.18em]">
@@ -1982,7 +1984,7 @@ export default function EventScreens({ ctx }: { ctx: {
                   </div>
 
                   {/* Curved Crimson-Gold Thread Bridge connecting whichever patch was picked directly into the box below */}
-                  <div className="pointer-events-none relative w-full h-10 -my-1 z-10">
+                  <div className="pointer-events-none relative w-full h-5 sm:h-7 lg:h-10 -my-1 z-10">
                     <svg viewBox="0 0 600 44" preserveAspectRatio="none" className="w-full h-full overflow-visible">
                       {pickedIdx !== -1 ? (
                         <>
@@ -2024,7 +2026,7 @@ export default function EventScreens({ ctx }: { ctx: {
                 </div>
 
                 {/* Lower Woven Summoning Cloth (anchored cleanly at center x=300 where the thread lands) */}
-                <div className="relative z-10 w-full max-w-[236px] min-h-[152px] flex flex-col items-center justify-center rounded-[3px] bg-[#0c0806]/90 border border-[#4a3322]/85 px-4 py-3 shadow-[inset_0_0_24px_rgba(0,0,0,0.85)]">
+                <div className="relative z-10 w-full max-w-[210px] sm:max-w-[236px] min-h-[96px] sm:min-h-[124px] lg:min-h-[152px] flex flex-col items-center justify-center rounded-[3px] bg-[#0c0806]/90 border border-[#4a3322]/85 px-3 sm:px-4 py-2 sm:py-3 shadow-[inset_0_0_24px_rgba(0,0,0,0.85)]">
                   <span className="pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-[#1a120b] border-t border-l border-[#9a7342]/80" />
                   <span className="pointer-events-none absolute inset-1.5 rounded-[2px] border border-dashed border-[#5c4028]/35" />
                   {carvingSummonedCard ? (
@@ -3630,13 +3632,13 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('weaverevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.92)_100%)] pointer-events-none" />
             {renderActWeather('absolute inset-0 z-[5]', 'build-totem')}
 
-            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-start gap-3">
+            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-1.5 sm:gap-2.5 lg:gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
@@ -3646,15 +3648,15 @@ export default function EventScreens({ ctx }: { ctx: {
                   </span>
                   <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Needle &amp; Threadcraft
                 </h1>
               </div>
 
               {/* Vertically Centered Two-Column Split: Stitched Effigy Left, Claim/Assembly Rack Right */}
-              <div className="w-full max-h-[540px] my-auto min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              <div className="w-full flex-1 lg:max-h-[540px] my-auto min-h-0 grid grid-cols-1 md:grid-cols-12 gap-2.5 sm:gap-4 lg:gap-5 items-stretch">
                 {/* LEFT COLUMN: Physical Stitched Effigy */}
-                <div className="lg:col-span-4 relative flex flex-col items-center justify-center px-5 py-5">
+                <div className="md:col-span-4 relative flex flex-col items-center justify-center px-2 sm:px-4 lg:px-5 py-1.5 sm:py-3 lg:py-5 min-h-0">
                   <div
                     className="pointer-events-none absolute inset-0"
                     style={{
@@ -3676,7 +3678,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       animation: effigyStitchingAnim ? 'effigyStitchPulse 0.9s ease-in-out' : undefined,
                     }}
                   >
-                    <div className="relative w-[225px] h-[315px] flex items-center justify-center select-none">
+                    <div className="relative w-[148px] h-[208px] sm:w-[186px] sm:h-[260px] lg:w-[225px] lg:h-[315px] flex items-center justify-center select-none">
                       <img
                         src={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
                         alt="Stitched Effigy"
@@ -3691,7 +3693,7 @@ export default function EventScreens({ ctx }: { ctx: {
                             className="relative w-full h-full flex items-center justify-center mix-blend-multiply opacity-[0.88]"
                             style={{ transform: 'perspective(140px) rotateY(-10deg) rotateX(6deg)' }}
                           >
-                            <div className="relative z-10 [&>*]:scale-[3.95] [filter:brightness(0.16)_contrast(1.85)_saturate(0.55)_drop-shadow(0_1px_1px_rgba(40,20,8,0.55))]">
+                            <div className="relative z-10 [&>*]:scale-[2.6] sm:[&>*]:scale-[3.25] lg:[&>*]:scale-[3.95] [filter:brightness(0.16)_contrast(1.85)_saturate(0.55)_drop-shadow(0_1px_1px_rgba(40,20,8,0.55))]">
                               {TRIBE_EMBROIDERY[previewHead as Tribe] || <span className="text-lg">✦</span>}
                             </div>
                           </div>
@@ -3708,7 +3710,7 @@ export default function EventScreens({ ctx }: { ctx: {
                           <img
                             src={getSigilArtUrl(previewBody)}
                             alt={previewBody}
-                            className="w-[70px] h-[70px] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.92)]"
+                            className="w-[46px] h-[46px] sm:w-[58px] sm:h-[58px] lg:w-[70px] lg:h-[70px] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.92)]"
                             style={{ imageRendering: 'pixelated' }}
                           />
                         ) : (
@@ -3722,7 +3724,7 @@ export default function EventScreens({ ctx }: { ctx: {
                   </div>
 
                   {/* Active Effigy Status Footer */}
-                  <div className="relative z-20 w-full min-h-[24px] mt-2 flex items-center justify-center text-center">
+                  <div className="relative z-20 w-full min-h-[18px] sm:min-h-[24px] mt-1 sm:mt-2 flex items-center justify-center text-center">
                     {previewHead && previewBody && (
                       <div className="font-['Cinzel',_serif] text-sm tracking-[0.1em] text-[#f4d78b] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                         {previewHead} &mdash; {previewBody}
@@ -3732,14 +3734,14 @@ export default function EventScreens({ ctx }: { ctx: {
                 </div>
 
                 {/* RIGHT COLUMN: Reward Selection OR Assembly Bench */}
-                <div className="lg:col-span-8 relative flex flex-col justify-between min-h-0 rounded-[3px] bg-[#0d0806]/86 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] px-5 py-4">
+                <div className="md:col-span-8 relative flex flex-col justify-between min-h-0 rounded-[3px] bg-[#0d0806]/86 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] px-3 sm:px-4 lg:px-5 py-2 sm:py-3 lg:py-4">
                   <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
                   {totemStage === 'REWARD' ? (
-                    <div className="flex flex-col h-full justify-between gap-3">
+                    <div className="flex flex-col h-full justify-between gap-1.5 sm:gap-2 lg:gap-3 min-h-0">
                       <div className={`flex items-center justify-between border-b border-[#3a2618]/80 pb-2 transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
                         <span className="font-['Cinzel',_serif] text-xs font-bold uppercase tracking-[0.22em] text-[#dfc59a]">
                           Claim a Scrap
@@ -3754,8 +3756,8 @@ export default function EventScreens({ ctx }: { ctx: {
                         const inspectedChoice = inspectedIdx !== null ? totemRewardChoices[inspectedIdx] || null : null;
 
                         return (
-                          <div className="flex-1 flex flex-col items-center justify-center gap-5 py-3">
-                            <div className="flex flex-wrap gap-6 items-start justify-center">
+                          <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-1.5 sm:gap-3 lg:gap-5 py-1 sm:py-2 lg:py-3">
+                            <div className="flex flex-wrap gap-2.5 sm:gap-4 lg:gap-6 items-start justify-center">
                               {totemRewardChoices.map((tc, idx) => {
                                 const isSelected = selectedTotemRewardIdx === idx;
                                 const fadeAnim = isTotemFadingOut
@@ -3783,18 +3785,18 @@ export default function EventScreens({ ctx }: { ctx: {
                                           : 'hover:-translate-y-1 cursor-pointer'
                                     }`}
                                   >
-                                    <span className="mb-2 text-[8.5px] font-mono uppercase tracking-[0.24em] text-[#b48f5a]">
+                                    <span className="mb-1 sm:mb-1.5 lg:mb-2 text-[7.5px] sm:text-[8.5px] font-mono uppercase tracking-[0.24em] text-[#b48f5a]">
                                       {tc.type === 'head' ? 'Tribal Patch' : 'Crest'}
                                     </span>
 
                                     {tc.type === 'head' ? (
                                       <div
-                                        className={`relative w-[160px] h-[168px] px-4 pb-3 text-center flex flex-col items-center justify-center ${
+                                        className={`relative w-[96px] h-[102px] sm:w-[128px] sm:h-[136px] lg:w-[160px] lg:h-[168px] px-2 sm:px-3 lg:px-4 pb-2 sm:pb-3 text-center flex flex-col items-center justify-center ${
                                           isSelected ? 'drop-shadow-[0_0_24px_rgba(212,175,55,0.4)]' : ''
                                         }`}
                                       >
                                         {renderHeadCutoutSvg(tc.value, isSelected)}
-                                        <div className="relative z-10 flex items-center justify-center w-14 h-14 mb-2 bg-[#1c130c]/90 border border-[#523b26] rounded-[2px] shadow-inner [&>*]:scale-[2.2]">
+                                        <div className="relative z-10 flex items-center justify-center w-9 h-9 sm:w-12 sm:h-12 lg:w-14 lg:h-14 mb-1 sm:mb-1.5 lg:mb-2 bg-[#1c130c]/90 border border-[#523b26] rounded-[2px] shadow-inner [&>*]:scale-[1.4] sm:[&>*]:scale-[1.8] lg:[&>*]:scale-[2.2]">
                                           {TRIBE_EMBROIDERY[tc.value as Tribe] || <span className="text-2xl">✦</span>}
                                         </div>
                                         <div className="relative z-10 font-['Cinzel',_serif] font-bold text-[#f2ddb7] text-xs uppercase tracking-[0.18em]">
@@ -3803,7 +3805,7 @@ export default function EventScreens({ ctx }: { ctx: {
                                       </div>
                                     ) : (
                                       <div
-                                        className={`w-[164px] h-[164px] p-4 rounded-full border-2 border-dashed text-center flex flex-col items-center justify-center transition-all duration-200 ${
+                                        className={`w-[98px] h-[98px] sm:w-[130px] sm:h-[130px] lg:w-[164px] lg:h-[164px] p-2 sm:p-3 lg:p-4 rounded-full border-2 border-dashed text-center flex flex-col items-center justify-center transition-all duration-200 ${
                                           isSelected
                                             ? 'border-[#e5c16b] shadow-[0_0_28px_rgba(212,175,55,0.34)]'
                                             : 'border-[#8c6747]/80 hover:border-[#cfa159] shadow-[0_10px_24px_rgba(0,0,0,0.88)]'
@@ -3817,11 +3819,11 @@ export default function EventScreens({ ctx }: { ctx: {
                                           backgroundPosition: 'center',
                                         }}
                                       >
-                                        <div className="flex items-center justify-center w-[76px] h-[76px] mb-1.5 rounded-full bg-[#1a110b] border border-[#5a412a] shadow-inner">
+                                        <div className="flex items-center justify-center w-[44px] h-[44px] sm:w-[60px] sm:h-[60px] lg:w-[76px] lg:h-[76px] mb-1 sm:mb-1.5 rounded-full bg-[#1a110b] border border-[#5a412a] shadow-inner">
                                           <img
                                             src={getSigilArtUrl(tc.value)}
                                             alt={tc.value}
-                                            className="w-14 h-14 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]"
+                                            className="w-8 h-8 sm:w-11 sm:h-11 lg:w-14 lg:h-14 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]"
                                             style={{ imageRendering: 'pixelated' }}
                                           />
                                         </div>
@@ -3836,7 +3838,7 @@ export default function EventScreens({ ctx }: { ctx: {
                             </div>
 
                             {/* Compact Inspector Caption (fixed height prevents box/rack resizing) */}
-                            <div className="w-full max-w-md h-[64px] shrink-0 px-3 flex flex-col items-center justify-center text-center overflow-hidden">
+                            <div className="w-full max-w-md min-h-[34px] max-h-[46px] sm:h-[56px] lg:h-[64px] shrink-0 px-2 sm:px-3 flex flex-col items-center justify-center text-center overflow-hidden">
                               {inspectedChoice && (
                                 inspectedChoice.type === 'body' ? (
                                   <>
@@ -3900,7 +3902,7 @@ export default function EventScreens({ ctx }: { ctx: {
                               }
                             }}
                             disabled={selectedTotemRewardIdx === null || isEventBusy}
-                            className={`px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all duration-300 select-none ${
+                            className={`px-5 sm:px-6 lg:px-8 py-1.5 sm:py-2 lg:py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-[10.5px] sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all duration-300 select-none ${
                               isTotemFadingOut ? 'opacity-0 pointer-events-none' : ''
                             }`}
                           >
@@ -4015,7 +4017,7 @@ export default function EventScreens({ ctx }: { ctx: {
                                 returnToMap(undefined, newTotem);
                               }, 950);
                             }}
-                            className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-45 shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
+                            className="px-5 sm:px-6 lg:px-8 py-1.5 sm:py-2 lg:py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-[10.5px] sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.22em] cursor-pointer disabled:opacity-45 shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
                           >
                             {effigyStitchingAnim ? 'Stitching Effigy...' : 'Stitch Effigy'}
                           </button>
@@ -4030,7 +4032,7 @@ export default function EventScreens({ ctx }: { ctx: {
                               setActiveTotem(newTotem);
                               returnToMap(undefined, newTotem);
                             }}
-                            className="px-7 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
+                            className="px-5 sm:px-6 lg:px-7 py-1.5 sm:py-2 lg:py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-[10.5px] sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
                           >
                             Store Pieces &amp; Proceed
                           </button>

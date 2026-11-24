@@ -48,6 +48,22 @@ export default function SplashScreen({
   showDiscordPrompt,
   unlockedDiscordUrl
 }: SplashScreenProps) {
+  React.useEffect(() => {
+    if (!showContinueModal) return;
+    const handleModalKey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (e.code === 'Space' || e.key === ' ' || e.key === 'Escape') {
+        e.preventDefault();
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        setShowContinueModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleModalKey);
+    return () => window.removeEventListener('keydown', handleModalKey);
+  }, [showContinueModal]);
+
   return (
     <>
         <div 

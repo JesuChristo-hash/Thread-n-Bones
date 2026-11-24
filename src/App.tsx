@@ -2695,6 +2695,9 @@ export default function App() {
     showPauseMenu,
     showAudioSettings,
     showViewDeck,
+    modalAlert,
+    sigilDetailModal,
+    bossIntroBanner,
     selectedHandIndex,
     sacrificingLane,
     isTalismanPricked,
@@ -2703,6 +2706,9 @@ export default function App() {
     setShowPauseMenu,
     setShowAudioSettings,
     setShowViewDeck,
+    setSigilDetailModal,
+    setBossIntroBanner,
+    bossIntroTimerRef,
     cancelHandSelection,
     handleTalismanPrick,
     handleDraw,
@@ -2713,6 +2719,9 @@ export default function App() {
     showPauseMenu,
     showAudioSettings,
     showViewDeck,
+    modalAlert,
+    sigilDetailModal,
+    bossIntroBanner,
     selectedHandIndex,
     sacrificingLane,
     isTalismanPricked,
@@ -2721,6 +2730,9 @@ export default function App() {
     setShowPauseMenu,
     setShowAudioSettings,
     setShowViewDeck,
+    setSigilDetailModal,
+    setBossIntroBanner,
+    bossIntroTimerRef,
     cancelHandSelection,
     handleTalismanPrick,
     handleDraw,
@@ -2804,21 +2816,61 @@ export default function App() {
 
       if (e.code === 'Space' || e.key === ' ') {
         if (isTyping || e.repeat) return;
+        const blurActive = () => {
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
+        };
+        if (s.modalAlert) {
+          e.preventDefault();
+          blurActive();
+          s.modalAlert.onAction();
+          return;
+        }
+        if (s.sigilDetailModal) {
+          e.preventDefault();
+          blurActive();
+          s.setSigilDetailModal(null);
+          return;
+        }
+        if (s.bossIntroBanner) {
+          e.preventDefault();
+          blurActive();
+          if (s.bossIntroTimerRef.current) {
+            window.clearTimeout(s.bossIntroTimerRef.current);
+            s.bossIntroTimerRef.current = null;
+          }
+          s.setBossIntroBanner(null);
+          return;
+        }
+        if (s.showAudioSettings) {
+          e.preventDefault();
+          blurActive();
+          s.setShowAudioSettings(false);
+          return;
+        }
+        if (s.showViewDeck) {
+          e.preventDefault();
+          blurActive();
+          s.setShowViewDeck(false);
+          return;
+        }
+        if (s.showPauseMenu) {
+          e.preventDefault();
+          blurActive();
+          s.setShowPauseMenu(false);
+          return;
+        }
         if (
           s.screen === 'DUEL' &&
           s.phase === 'PLAY' &&
-          !s.showPauseMenu &&
-          !s.showAudioSettings &&
-          !s.showViewDeck &&
           !s.hasActiveDialogue &&
           s.sacrificingLane === null &&
           !s.isTalismanPricked &&
           s.blood === 0
         ) {
           e.preventDefault();
-          if (document.activeElement instanceof HTMLElement) {
-            document.activeElement.blur();
-          }
+          blurActive();
           s.handleTalismanPrick();
         }
       }
