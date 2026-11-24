@@ -222,7 +222,7 @@ export default function EventScreens({ ctx }: { ctx: {
           return (
             <div
               key={c.id || `draft-p-${c.name}-${idx}`}
-              className="relative w-[38px] h-[54px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
+              className="relative w-[56px] h-[80px] sm:w-[88px] sm:h-[124px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -236,10 +236,10 @@ export default function EventScreens({ ctx }: { ctx: {
                     : "opacity-75 saturate-[0.82] cursor-default"
                 } ${
                   isSelected
-                    ? "scale-[0.38] sm:scale-[0.69] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30"
+                    ? "scale-[0.54] sm:scale-[0.82] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30"
                     : canTradePelt
-                      ? "scale-[0.33] sm:scale-[0.62] lg:scale-[1.06] hover:scale-[0.36] sm:hover:scale-[0.66] lg:hover:scale-[1.11] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
-                      : "scale-[0.33] sm:scale-[0.62] lg:scale-[1.06]"
+                      ? "scale-[0.48] sm:scale-[0.76] lg:scale-[1.06] hover:scale-[0.52] sm:hover:scale-[0.80] lg:hover:scale-[1.11] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
+                      : "scale-[0.48] sm:scale-[0.76] lg:scale-[1.06]"
                 }`}
               >
                 {isSelected && (
@@ -258,9 +258,9 @@ export default function EventScreens({ ctx }: { ctx: {
             return (
               <div
                 key={`draft-slot-empty-${idx}`}
-                className="relative w-[38px] h-[54px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[56px] h-[80px] sm:w-[88px] sm:h-[124px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
-                <div className="w-[35px] h-[50px] sm:w-[66px] sm:h-[94px] lg:w-[114px] lg:h-[162px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
+                <div className="w-[52px] h-[74px] sm:w-[82px] sm:h-[116px] lg:w-[114px] lg:h-[162px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
                   <span className="text-[9px] font-['Cinzel',_serif] uppercase tracking-[0.25em] text-[#6e5642]/70">
                     Claimed
                   </span>
@@ -276,10 +276,10 @@ export default function EventScreens({ ctx }: { ctx: {
             return (
               <div
                 key={`draft-back-${idx}`}
-                className="relative w-[38px] h-[54px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[56px] h-[80px] sm:w-[88px] sm:h-[124px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
                 <div
-                  className={`w-[35px] h-[50px] sm:w-[66px] sm:h-[94px] lg:w-[114px] lg:h-[162px] rounded-[3px] transition-all duration-200 ${
+                  className={`w-[52px] h-[74px] sm:w-[82px] sm:h-[116px] lg:w-[114px] lg:h-[162px] rounded-[3px] transition-all duration-200 ${
                     draftFlippingDown ? 'animate-flip-down' : 'opacity-65 filter brightness-75'
                   }`}
                 >
@@ -298,7 +298,7 @@ export default function EventScreens({ ctx }: { ctx: {
           return (
             <div
               key={c.id || `draft-t-${c.name}-${idx}`}
-              className="relative w-[38px] h-[54px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
+              className="relative w-[56px] h-[80px] sm:w-[88px] sm:h-[124px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -309,8 +309,8 @@ export default function EventScreens({ ctx }: { ctx: {
                   draftFlippingUp ? 'animate-flip-up' : ''
                 } ${
                   isSelected
-                    ? "scale-[0.38] sm:scale-[0.69] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
-                    : "scale-[0.33] sm:scale-[0.62] lg:scale-[1.06] hover:scale-[0.36] sm:hover:scale-[0.66] lg:hover:scale-[1.11] hover:-translate-y-1"
+                    ? "scale-[0.54] sm:scale-[0.82] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
+                    : "scale-[0.48] sm:scale-[0.76] lg:scale-[1.06] hover:scale-[0.52] sm:hover:scale-[0.80] lg:hover:scale-[1.11] hover:-translate-y-1"
                 }`}
               >
                 {isSelected && (
@@ -549,7 +549,7 @@ export default function EventScreens({ ctx }: { ctx: {
                     </span>
                     <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                  <h1 className="text-lg sm:text-2xl lg:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                     Relic Cache
                   </h1>
                 </div>
@@ -719,7 +719,7 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('campfireevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,8,5,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
@@ -741,9 +741,9 @@ export default function EventScreens({ ctx }: { ctx: {
               </div>
 
               {/* Two-Column Split: Boiling Font Stage Left, Deck Panel Right */}
-              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              <div className="w-full flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-3 lg:gap-5 items-stretch">
                 {/* LEFT COLUMN: Stone Baptismal Font Prop + Action Buttons */}
-                <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
+                <div className="md:col-span-7 flex flex-col items-center justify-between gap-1.5 sm:gap-2 lg:gap-3 min-h-0">
                   <div className="relative w-full flex-1 min-h-0 px-6 py-4 flex flex-col items-center justify-between">
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
@@ -929,7 +929,7 @@ export default function EventScreens({ ctx }: { ctx: {
 
                 {/* RIGHT COLUMN: Side Deck Selector Panel */}
                 <div
-                  className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#422719]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,220,180,0.06)] backdrop-blur-[2px] transition-opacity duration-300 ${
+                  className={`md:col-span-5 relative flex flex-col min-h-[160px] md:min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#422719]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,220,180,0.06)] backdrop-blur-[2px] transition-opacity duration-300 ${
                     isEventBusy ? 'opacity-40 pointer-events-none' : 'opacity-100'
                   }`}
                 >
@@ -1031,7 +1031,7 @@ export default function EventScreens({ ctx }: { ctx: {
               <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                 {/* LEFT COLUMN: Dominant Stone Altar Stage + Ritual Action */}
                 <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 flex flex-col items-center justify-center">
+                  <div className="relative w-full flex-1 min-h-0 px-2 sm:px-4 lg:px-6 py-1 sm:py-2 lg:py-4 flex flex-col items-center justify-center">
                     {/* Ambient crimson / gold ritual glow */}
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
@@ -1084,7 +1084,7 @@ export default function EventScreens({ ctx }: { ctx: {
                         </span>
 
                         <div
-                          className={`w-[114px] h-[154px] flex items-center justify-center rounded-[4px] transition-all duration-500 ${
+                          className={`w-[68px] h-[92px] sm:w-[88px] sm:h-[118px] lg:w-[114px] lg:h-[154px] flex items-center justify-center rounded-[4px] transition-all duration-500 ${
                             altarAnimPhase === 'descending' || altarAnimPhase === 'done'
                               ? 'shadow-[0_0_40px_rgba(234,179,8,0.65),0_0_20px_rgba(220,38,38,0.5)]'
                               : hostPreview
@@ -1101,12 +1101,12 @@ export default function EventScreens({ ctx }: { ctx: {
                                 setAltarSacrificeId(null);
                               }}
                               title={!isAnimating ? 'Click to return Host to deck' : undefined}
-                              className={`scale-[0.98] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                              className={`scale-[0.58] sm:scale-[0.76] lg:scale-[0.98] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
                             >
                               {renderCard(hostPreview, { isClickable: false, disableHoverScale: true })}
                             </div>
                           ) : (
-                            <div className="w-[108px] h-[150px] rounded-[4px] border border-dashed border-[#7a5a3a]/75 bg-[#0d0907]/75 flex flex-col items-center justify-center gap-1.5 text-[#9a7d5e]">
+                            <div className="w-[64px] h-[88px] sm:w-[84px] sm:h-[114px] lg:w-[108px] lg:h-[150px] rounded-[4px] border border-dashed border-[#7a5a3a]/75 bg-[#0d0907]/75 flex flex-col items-center justify-center gap-1 text-[#9a7d5e]">
                               <span className="text-xl opacity-65">✧</span>
                               <span className="text-[9.5px] uppercase tracking-[0.22em]">Host</span>
                             </div>
@@ -1131,9 +1131,9 @@ export default function EventScreens({ ctx }: { ctx: {
                       )}
 
                       {/* Lower Carved Stone Altar Pedestal + Sacrifice Slot */}
-                      <div className="relative z-20 mt-3 flex flex-col items-center w-full">
+                      <div className="relative z-20 mt-1.5 sm:mt-2 lg:mt-3 flex flex-col items-center w-full">
                         <div
-                          className="relative z-20 w-[114px] h-[154px] -mb-7 flex items-center justify-center transition-opacity duration-300"
+                          className="relative z-20 w-[68px] h-[92px] sm:w-[88px] sm:h-[118px] lg:w-[114px] lg:h-[154px] -mb-4 sm:-mb-5 lg:-mb-7 flex items-center justify-center transition-opacity duration-300"
                           style={{
                             animation: altarAnimPhase === 'sacrificing' ? 'altarSacrificeBurn 0.85s ease-in forwards' : undefined,
                             opacity: altarAnimPhase === 'descending' || altarAnimPhase === 'done' ? 0 : 1,
@@ -1147,12 +1147,12 @@ export default function EventScreens({ ctx }: { ctx: {
                                 setAltarSacrificeId(null);
                               }}
                               title={!isAnimating ? 'Click to return Sacrifice to deck' : undefined}
-                              className={`scale-[1.0] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                              className={`scale-[0.60] sm:scale-[0.78] lg:scale-[1.0] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
                             >
                               {renderCard(sacPreview, { isClickable: false, disableHoverScale: true, isMarkedSacrifice: true })}
                             </div>
                           ) : (
-                            <div className="w-[108px] h-[150px] rounded-[4px] border border-dashed border-red-900/75 bg-[#120807]/80 flex flex-col items-center justify-center gap-1.5 text-red-400/70">
+                            <div className="w-[64px] h-[88px] sm:w-[84px] sm:h-[114px] lg:w-[108px] lg:h-[150px] rounded-[4px] border border-dashed border-red-900/75 bg-[#120807]/80 flex flex-col items-center justify-center gap-1 text-red-400/70">
                               <span className="text-xl opacity-75">†</span>
                               <span className="text-[9.5px] uppercase tracking-[0.22em]">Sacrifice</span>
                             </div>
@@ -1162,7 +1162,7 @@ export default function EventScreens({ ctx }: { ctx: {
                         {/* Heavy Carved Stone Altar Slab SVG Prop */}
                         <svg
                           viewBox="0 0 460 106"
-                          className="w-full max-w-[470px] h-auto drop-shadow-[0_16px_26px_rgba(0,0,0,0.96)] pointer-events-none"
+                          className="w-full max-w-[230px] sm:max-w-[320px] lg:max-w-[470px] h-auto drop-shadow-[0_16px_26px_rgba(0,0,0,0.96)] pointer-events-none"
                         >
                           <defs>
                             <linearGradient id="altarStoneTop" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -1209,7 +1209,7 @@ export default function EventScreens({ ctx }: { ctx: {
                     <button
                       onClick={applyAltarTransfer}
                       disabled={!altarHostId || !altarSacrificeId || isEventBusy || isAnimating}
-                      className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#3b1410] to-[#1d0907] hover:from-[#501b16] hover:to-[#280d0a] active:translate-y-[1px] border border-[#b3473a]/90 hover:border-[#e67365] text-[#f7cfc6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
+                      className="px-5 sm:px-6 lg:px-8 py-1.5 sm:py-2 lg:py-2.5 rounded-[2px] bg-gradient-to-b from-[#3b1410] to-[#1d0907] hover:from-[#501b16] hover:to-[#280d0a] active:translate-y-[1px] border border-[#b3473a]/90 hover:border-[#e67365] text-[#f7cfc6] hover:text-white font-['Cinzel',_serif] font-bold text-[10.5px] sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
                     >
                       {isAnimating ? 'Binding Crests...' : 'Commit to Your Actions'}
                     </button>
