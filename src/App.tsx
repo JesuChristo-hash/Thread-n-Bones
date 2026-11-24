@@ -8132,7 +8132,7 @@ export default function App() {
             const phaseTitle = isBL
               ? (bossPhase === 3 ? 'THE BLOOD MOON DESCENDS' : 'SHADOW INVERSION')
               : bossState.type === 'The Weaver'
-                ? 'THE LOOM RE-THREADS'
+                ? 'THE WEAVER REFUSES'
                 : bossState.type === 'Zealot'
                   ? 'THE ZEALOT ASCENDS'
                   : 'THE PRESS AWAKENS';
@@ -8140,7 +8140,7 @@ export default function App() {
               ? (bossPhase === 3
                   ? 'The ossuary sky splits open — endure the Eclipse.'
                   : 'Power and flesh invert beneath the Bone Lord’s gaze.')
-              : 'The scales reset. Brace for the second movement.';
+              : 'The gauge resets. Brace for the second movement.';
 
             return (
               <div className="fixed inset-0 z-[58] pointer-events-none flex items-center justify-center px-4 select-none">
@@ -8289,7 +8289,7 @@ export default function App() {
                   The Bone Lord Lies Bound
                 </h2>
                 <p className="font-['Cinzel',_serif] italic text-xs sm:text-sm text-[#d4bea0]/90 mb-7 leading-relaxed">
-                  The scales stand triumphant. Will you seal the archives in victory, or descend once more into a heavier cycle?
+                  The sacred ritual has been completed. Will you seal the archive, or descend further into madness?
                 </p>
 
                 <div className="flex flex-col gap-3">
