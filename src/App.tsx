@@ -7738,6 +7738,7 @@ export default function App() {
               setChoiceSelectedIdx,
               setDeck,
               setDraftSelectedDeckIdx,
+              setShowPauseMenu,
               setDraftSelectedTradeIdx,
               setEffigyStitchingAnim,
               setFlockRemovalSelectedIds,

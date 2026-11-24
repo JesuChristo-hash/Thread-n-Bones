@@ -453,22 +453,6 @@ export default function EventScreens({ ctx }: { ctx: {
         </div>
       )}
 
-      {/* Floating persistent Sanctuary button in top-left on the map screen */}
-      {screen === 'EVENT_CROSSROADS' && (
-        <div className="fixed top-3 left-4 z-[60] flex items-center select-none pointer-events-auto">
-          <button
-            type="button"
-            onClick={() => setShowPauseMenu(true)}
-            className="relative bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/85 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_6px_16px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer px-3.5 py-1.5"
-            title="Sanctuary & Settings"
-          >
-            <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
-            <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
-            SANCTUARY
-          </button>
-        </div>
-      )}
-
       {/* Floating persistent Dev Tools & Deck access during all events */}
       {screen.startsWith('EVENT_') && (
         <div className="fixed top-3 right-4 z-[60] flex items-center gap-3 select-none">
