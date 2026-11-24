@@ -11246,6 +11246,7 @@ export default function App() {
             style={getScreenBgStyle('tribeeventbg.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
+            {renderActWeather('absolute inset-0 z-[5]', 'totem-carving')}
 
             <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
               {/* Top Header */}
@@ -11450,6 +11451,7 @@ export default function App() {
             style={getScreenBgStyle('costeventbg.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.92)_100%)] pointer-events-none" />
+            {renderActWeather('absolute inset-0 z-[5]', 'cost-bargain')}
 
             <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
               {/* Top Header */}
@@ -12566,6 +12568,7 @@ export default function App() {
                     : 'radial-gradient(ellipse at 50% 35%, rgba(30,19,12,0.34) 0%, rgba(10,7,5,0.74) 55%, rgba(4,2,2,0.95) 100%)',
               }}
             />
+            {renderActWeather('absolute inset-0 z-[5]', 'cave-trial')}
 
             <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
               {/* Top Header */}
@@ -12973,6 +12976,7 @@ export default function App() {
             style={getScreenBgStyle('weaverevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.92)_100%)] pointer-events-none" />
+            {renderActWeather('absolute inset-0 z-[5]', 'build-totem')}
 
             <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-start gap-3">
               {/* Top Header */}
