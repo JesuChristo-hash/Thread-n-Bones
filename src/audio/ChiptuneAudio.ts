@@ -68,6 +68,7 @@ export const ChiptuneAudio: any = {
   musicGain: null as GainNode | null,
   musicToneFilter: null as BiquadFilterNode | null,
   musicDuckFilter: null as BiquadFilterNode | null,
+  musicDuckGain: null as GainNode | null,
   isOverlayDucked: false,
   musicCompressor: null as DynamicsCompressorNode | null,
   reverbNode: null as ConvolverNode | null,
@@ -118,8 +119,15 @@ export const ChiptuneAudio: any = {
         duckFilter.type = 'lowpass';
         duckFilter.frequency.setValueAtTime(this.isOverlayDucked ? 900 : 22000, now);
         duckFilter.Q.setValueAtTime(0.65, now);
-        duckFilter.connect(this.ctx.destination);
+
+        const duckGain = this.ctx.createGain();
+        duckGain.gain.value = 1.0;
+        duckGain.gain.setValueAtTime(1.0, now);
+
+        duckFilter.connect(duckGain);
+        duckGain.connect(this.ctx.destination);
         this.musicDuckFilter = duckFilter;
+        this.musicDuckGain = duckGain;
 
         this.musicGain.connect(tone);
         tone.connect(comp);
@@ -268,6 +276,21 @@ export const ChiptuneAudio: any = {
       freq.exponentialRampToValueAtTime(targetHz, now + (ducked ? 0.16 : 0.22));
     } catch {
       freq.setValueAtTime(targetHz, now);
+    }
+  },
+
+  duckMusic(targetGain = 0.62, releaseSec = 0.2) {
+    if (!this.ctx || !this.musicDuckGain) return;
+    const now = this.ctx.currentTime;
+    const g = this.musicDuckGain.gain;
+    const clampedTarget = Math.max(0.25, Math.min(1.0, targetGain));
+    try {
+      g.cancelScheduledValues(now);
+      g.setValueAtTime(Math.max(0.25, g.value || 1.0), now);
+      g.linearRampToValueAtTime(clampedTarget, now + 0.014);
+      g.exponentialRampToValueAtTime(1.0, now + 0.014 + Math.max(0.08, releaseSec));
+    } catch {
+      g.setValueAtTime(1.0, now);
     }
   },
 
@@ -1212,7 +1235,15 @@ export const ChiptuneAudio: any = {
   playBattle(fadeTime = 0.9) {
     this.transitionToSample('battle', 'assets/audio/duel_theme.ogg', (inst: TrackInstance) => {
       if (!this.ctx) return;
-      const chamberEcho = this.createEchoBus(inst, 0.33, 0.24, 960);
+      const midNotch = this.ctx.createBiquadFilter();
+      midNotch.type = 'peaking';
+      midNotch.frequency.setValueAtTime(780, this.ctx.currentTime);
+      midNotch.Q.setValueAtTime(1.4, this.ctx.currentTime);
+      midNotch.gain.setValueAtTime(-6.5, this.ctx.currentTime);
+      midNotch.connect(inst.bus);
+      inst.nodes.push(midNotch);
+
+      const chamberEcho = this.createEchoBus({ ...inst, bus: midNotch }, 0.33, 0.24, 960);
       const pizzPanL = this.createPanNode(chamberEcho, -0.32);
       const pizzPanR = this.createPanNode(chamberEcho, 0.32);
       const bonePan = this.createPanNode(inst.bus, 0.26);
@@ -1921,9 +1952,32 @@ const chiptuneAudio = ChiptuneAudio;
 // =========================================================================
 // DRY, PUNCHY CLOSE-MIC TABLETOP FOLEY ENGINE (Dedicated Saturated SFX Bus)
 // =========================================================================
-export const playSound = (
-  type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone' | 'defeat' | 'victory' | 'armor' | 'blood_fill' | 'blood_drain'
-) => {
+export type SoundEffectType =
+  | 'draw'
+  | 'sacrifice'
+  | 'play'
+  | 'hit'
+  | 'heavy_hit'
+  | 'bell'
+  | 'bone'
+  | 'defeat'
+  | 'victory'
+  | 'armor'
+  | 'blood_fill'
+  | 'blood_drain'
+  | 'flip'
+  | 'cauldron_boil'
+  | 'needle_stitch'
+  | 'whoosh'
+  | 'talisman_prick'
+  | 'stamp_press'
+  | 'stone_move'
+  | 'sheep_baa'
+  | 'cauldron_devour'
+  | 'overkill'
+  | 'ritual_begin';
+
+export const playSound = (type: SoundEffectType) => {
   try {
     const sfxMult = typeof ChiptuneAudio.sfxVolume === 'number' ? ChiptuneAudio.sfxVolume : 0.5;
     if (sfxMult <= 0) return;
@@ -1944,10 +1998,12 @@ export const playSound = (
       freqEnd: number,
       q: number,
       vol: number,
-      delay = 0
+      delay = 0,
+      useBrown = false,
+      attack = 0.002
     ) => {
-      if (!ChiptuneAudio.whiteNoiseBuffer) ChiptuneAudio.init();
-      const buf = ChiptuneAudio.whiteNoiseBuffer;
+      if (!ChiptuneAudio.whiteNoiseBuffer || !ChiptuneAudio.noiseBuffer) ChiptuneAudio.init();
+      const buf = useBrown ? ChiptuneAudio.noiseBuffer : ChiptuneAudio.whiteNoiseBuffer;
       if (!buf) return;
 
       const srcNode = ctx.createBufferSource();
@@ -1960,14 +2016,16 @@ export const playSound = (
       filter.frequency.exponentialRampToValueAtTime(Math.max(80, freqEnd), now + delay + dur);
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.001, now + delay);
-      gain.gain.linearRampToValueAtTime(vol, now + delay + 0.002);
+      const atk = Math.min(attack, dur * 0.45);
+      gain.gain.setValueAtTime(0.0008, now + delay);
+      gain.gain.linearRampToValueAtTime(vol, now + delay + atk);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
 
       srcNode.connect(filter);
       filter.connect(gain);
       gain.connect(dest);
-      srcNode.start(now + delay, Math.random() * 0.35, dur + 0.01);
+      const maxOffset = Math.max(0.01, buf.duration - dur - 0.02);
+      srcNode.start(now + delay, Math.random() * maxOffset, dur + 0.02);
     };
 
     const dryTone = (
@@ -1986,7 +2044,7 @@ export const playSound = (
       osc.frequency.exponentialRampToValueAtTime(Math.max(24, freqEnd), now + delay + dur);
 
       gain.gain.setValueAtTime(0.001, now + delay);
-      gain.gain.linearRampToValueAtTime(vol, now + delay + 0.003);
+      gain.gain.linearRampToValueAtTime(vol, now + delay + 0.002);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
 
       if (lpCutoff) {
@@ -2004,41 +2062,185 @@ export const playSound = (
     };
 
     if (type === 'draw') {
-      // Snappy dry cardstock slide + subtle thumb flick (zero tail)
-      crispNoise(0.068, 'bandpass', 1550 * jitter, 2750 * jitter, 1.9, 0.55);
-      dryTone('triangle', 280 * jitter, 420 * jitter, 0.042, 0.2, 0.008, 1200);
+      // Dry card-stock slide pulled off a deck (pure paper friction + crisp edge release)
+      crispNoise(0.055, 'bandpass', 1800 * jitter, 3100 * jitter, 1.4, 0.58, 0, false, 0.008);
+      crispNoise(0.032, 'highpass', 3200 * jitter, 2400 * jitter, 0.8, 0.36, 0.022, false, 0.002);
+    } else if (type === 'flip') {
+      // Dry 350gsm playing-card bend & paper flick (low-Q broadband paper, zero metallic ring)
+      crispNoise(0.042, 'bandpass', 980 * jitter, 1950 * jitter, 0.72, 0.62, 0, false, 0.009);
+      crispNoise(0.028, 'bandpass', 1750 * jitter, 1150 * jitter, 0.85, 0.56, 0.024, false, 0.002);
+      crispNoise(0.034, 'lowpass', 2100 * jitter, 900 * jitter, 0.7, 0.26, 0.032, true, 0.004);
+    } else if (type === 'whoosh') {
+      // Heavy billowing smoke curtain roll (subdued volume, pure low-passed brown noise swell)
+      crispNoise(0.64, 'lowpass', 140 * jitter, 370 * jitter, 0.7, 0.46, 0, true, 0.22);
+      crispNoise(0.52, 'lowpass', 340 * jitter, 125 * jitter, 0.7, 0.38, 0.18, true, 0.14);
+      crispNoise(0.40, 'bandpass', 230 * jitter, 420 * jitter, 0.65, 0.2, 0.08, true, 0.16);
+    } else if (type === 'talisman_prick') {
+      // Sharp needle prick + taut wet snap + stone bezel lock (no chiptune sweep)
+      ChiptuneAudio.duckMusic?.(0.62, 0.22);
+      crispNoise(0.018, 'bandpass', 4100 * jitter, 2200 * jitter, 3.8, 0.85, 0, false, 0.001);
+      crispNoise(0.048, 'bandpass', 880 * jitter, 340 * jitter, 2.2, 0.68, 0.014, true, 0.002);
+      dryTone('sine', 135 * jitter, 78 * jitter, 0.075, 0.72, 0.014);
+      crispNoise(0.035, 'bandpass', 1550 * jitter, 900 * jitter, 3.4, 0.48, 0.055, false, 0.002);
+    } else if (type === 'cauldron_boil') {
+      // Wet boiling blood cauldron: Minnaert liquid bubble bursts + wet splash & simmer steam
+      ChiptuneAudio.duckMusic?.(0.58, 0.68);
+      const bubble = (fStart: number, fEnd: number, dur: number, vol: number, delay: number) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(fStart * jitter, now + delay);
+        osc.frequency.exponentialRampToValueAtTime(fEnd * jitter, now + delay + dur);
+        g.gain.setValueAtTime(0.0005, now + delay);
+        g.gain.linearRampToValueAtTime(vol, now + delay + 0.006);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+        osc.connect(g);
+        g.connect(dest);
+        osc.start(now + delay);
+        osc.stop(now + delay + dur + 0.01);
+      };
+      // Wet plunge splash + simmering steam bed
+      crispNoise(0.14, 'bandpass', 1400 * jitter, 3200 * jitter, 1.6, 0.56, 0, false, 0.008);
+      crispNoise(0.58, 'bandpass', 2200 * jitter, 3600 * jitter, 1.4, 0.24, 0.04, false, 0.08);
+      // Staggered rolling liquid boil bubbles
+      bubble(210, 490, 0.055, 0.42, 0.02);
+      bubble(320, 740, 0.042, 0.36, 0.09);
+      bubble(185, 440, 0.062, 0.44, 0.16);
+      bubble(410, 880, 0.036, 0.32, 0.24);
+      bubble(250, 590, 0.052, 0.4, 0.31);
+      bubble(360, 790, 0.044, 0.34, 0.41);
+      bubble(230, 520, 0.058, 0.38, 0.50);
+    } else if (type === 'stamp_press') {
+      // Heavy iron platen slam + wet Goobert slime/ink squelch & viscous bubble squeeze
+      ChiptuneAudio.duckMusic?.(0.56, 0.42);
+      const squelchBubble = (fStart: number, fEnd: number, dur: number, vol: number, delay: number) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(fStart * jitter, now + delay);
+        osc.frequency.exponentialRampToValueAtTime(fEnd * jitter, now + delay + dur);
+        g.gain.setValueAtTime(0.0005, now + delay);
+        g.gain.linearRampToValueAtTime(vol, now + delay + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+        osc.connect(g);
+        g.connect(dest);
+        osc.start(now + delay);
+        osc.stop(now + delay + dur + 0.01);
+      };
+      // 1. Iron press clunk
+      crispNoise(0.045, 'bandpass', 1200 * jitter, 420 * jitter, 2.2, 0.68, 0, false, 0.002);
+      dryTone('sine', 138 * jitter, 68 * jitter, 0.075, 0.72, 0);
+      // 2. Wet viscous ooze squelch (formant sweep + wet splatter + bubble pops)
+      crispNoise(0.24, 'bandpass', 520 * jitter, 1850 * jitter, 4.8, 0.68, 0.035, false, 0.025);
+      crispNoise(0.18, 'bandpass', 2400 * jitter, 980 * jitter, 3.6, 0.54, 0.09, false, 0.02);
+      squelchBubble(190, 540, 0.065, 0.44, 0.05);
+      squelchBubble(340, 820, 0.048, 0.38, 0.11);
+      squelchBubble(260, 660, 0.055, 0.4, 0.18);
+      squelchBubble(440, 960, 0.04, 0.32, 0.25);
+    } else if (type === 'needle_stitch') {
+      // 3-pass bone-needle pierce & taut sinew draw spanning the ~950ms Weaver stitching animation
+      ChiptuneAudio.duckMusic?.(0.54, 0.92);
+      const stitchStarts = [0, 0.27, 0.55];
+      stitchStarts.forEach((t, idx) => {
+        const pitchStep = 1 + idx * 0.08;
+        // 1. Sharp bone-needle puncture through taut hide/fabric
+        crispNoise(0.022, 'bandpass', 2200 * jitter * pitchStep, 1150 * jitter, 1.4, 0.9, t, false, 0.001);
+        crispNoise(0.042, 'bandpass', 480 * jitter, 210 * jitter, 1.6, 0.78, t + 0.002, true, 0.002);
+        // 2. Audible sinew/thread zip pulled tight across the canvas
+        crispNoise(0.145, 'bandpass', 1350 * jitter * pitchStep, 2950 * jitter * pitchStep, 1.5, 0.72, t + 0.032, false, 0.018);
+        crispNoise(0.11, 'bandpass', 720 * jitter * pitchStep, 1380 * jitter, 1.4, 0.44, t + 0.04, true, 0.015);
+      });
+      // Final knot cinch snap as the effigy locks together
+      crispNoise(0.028, 'bandpass', 2650 * jitter, 1400 * jitter, 1.8, 0.85, 0.79, false, 0.001);
+      crispNoise(0.052, 'lowpass', 420 * jitter, 180 * jitter, 1.0, 0.72, 0.792, true, 0.002);
     } else if (type === 'play') {
-      // Heavy wood-table card slam: punchy low-mid knock + sub thud + crisp card slap
-      dryTone('sine', 145 * jitter, 44 * jitter, 0.145, 0.72);
-      dryTone('triangle', 270 * jitter, 78 * jitter, 0.085, 0.48, 0, 680);
-      crispNoise(0.042, 'bandpass', 1450 * jitter, 620 * jitter, 1.8, 0.58);
+      // Flat card-stock slap onto a felt/wood table (trapped-air paper smack + dry edge slide, zero axe/wood thwack)
+      crispNoise(0.024, 'bandpass', 1350 * jitter, 2350 * jitter, 0.8, 0.68, 0, false, 0.003);
+      crispNoise(0.018, 'bandpass', 2200 * jitter, 1180 * jitter, 0.9, 0.82, 0.012, false, 0.001);
+      crispNoise(0.032, 'lowpass', 680 * jitter, 260 * jitter, 0.75, 0.58, 0.014, true, 0.002);
     } else if (type === 'sacrifice') {
-      // Heavy ritual blood thud + low-mid body crunch + damped steel slice
-      dryTone('sine', 112 * jitter, 34 * jitter, 0.26, 0.78);
-      dryTone('triangle', 210 * jitter, 58 * jitter, 0.19, 0.52, 0, 560);
-      crispNoise(0.095, 'bandpass', 2400 * jitter, 820 * jitter, 1.7, 0.56);
+      // Visceral ritual sever & blood splash (sits squarely above 95Hz HPF so it cuts through cleanly)
+      ChiptuneAudio.duckMusic?.(0.52, 0.32);
+      // 1. Sharp blade / parchment tear
+      crispNoise(0.042, 'bandpass', 3600 * jitter, 1250 * jitter, 2.0, 0.96, 0, false, 0.001);
+      // 2. Heavy meaty sever thud (brown noise body + short punch above HPF)
+      crispNoise(0.16, 'bandpass', 460 * jitter, 165 * jitter, 1.4, 1.0, 0.018, true, 0.002);
+      dryTone('sine', 158 * jitter, 82 * jitter, 0.095, 0.85, 0.018);
+      // 3. Wet blood spatter & ritual drain tail
+      crispNoise(0.14, 'bandpass', 1850 * jitter, 520 * jitter, 2.6, 0.72, 0.042, false, 0.008);
+      crispNoise(0.09, 'bandpass', 1150 * jitter, 380 * jitter, 4.5, 0.56, 0.11, true, 0.006);
     } else if (type === 'hit') {
-      // Heavy, meaty card-on-card physical impact (sub chest-thump + low-mid flesh mass + bone crunch)
-      dryTone('sine', 128 * jitter, 30 * jitter, 0.21, 0.95);
-      dryTone('sawtooth', 220 * jitter, 52 * jitter, 0.125, 0.58, 0, 540);
-      dryTone('triangle', 280 * jitter, 64 * jitter, 0.11, 0.64, 0.004, 720);
-      crispNoise(0.024, 'bandpass', 1650 * jitter, 520 * jitter, 1.25, 0.86, 0);
-      crispNoise(0.095, 'bandpass', 760 * jitter, 210 * jitter, 1.55, 0.78, 0.012);
+      // Meaty flesh slap + crisp dry bone snap + subtle wet sinew crunch
+      ChiptuneAudio.duckMusic?.(0.62, 0.2);
+      // 1. Heavy meat thud (low flesh punch + damped low-mid body)
+      dryTone('sine', 155 * jitter, 68 * jitter, 0.085, 0.96, 0);
+      crispNoise(0.095, 'lowpass', 360 * jitter, 130 * jitter, 0.9, 1.0, 0, true, 0.002);
+      // 2. Wet flesh smack (mid-band formant slap)
+      crispNoise(0.042, 'bandpass', 920 * jitter, 380 * jitter, 2.1, 0.88, 0.003, true, 0.002);
+      // 3. Sharp dry bone crack (tight calcium transient + micro-splinter)
+      crispNoise(0.015, 'bandpass', 2450 * jitter, 1550 * jitter, 4.2, 0.84, 0.006, false, 0.001);
+      crispNoise(0.024, 'bandpass', 1720 * jitter, 940 * jitter, 3.4, 0.62, 0.019, false, 0.001);
+      // 4. Short wet tissue settle
+      crispNoise(0.055, 'bandpass', 1280 * jitter, 540 * jitter, 3.8, 0.36, 0.026, false, 0.006);
+    } else if (type === 'heavy_hit') {
+      // Brutal visceral flesh impact + two-stage bone fracture + deep wet crunch
+      ChiptuneAudio.duckMusic?.(0.46, 0.3);
+      // 1. Deep heavy flesh slam
+      dryTone('sine', 138 * jitter, 56 * jitter, 0.135, 1.0, 0);
+      crispNoise(0.16, 'lowpass', 320 * jitter, 110 * jitter, 0.85, 1.0, 0, true, 0.002);
+      // 2. Wet visceral meat slap
+      crispNoise(0.072, 'bandpass', 840 * jitter, 310 * jitter, 2.2, 0.96, 0.004, true, 0.002);
+      // 3. Primary bone break + staggered secondary splinter
+      crispNoise(0.018, 'bandpass', 2350 * jitter, 1350 * jitter, 4.0, 0.95, 0.007, false, 0.001);
+      crispNoise(0.022, 'bandpass', 2950 * jitter, 1680 * jitter, 4.6, 0.78, 0.028, false, 0.001);
+      crispNoise(0.036, 'bandpass', 1480 * jitter, 680 * jitter, 3.2, 0.74, 0.034, false, 0.002);
+      // 4. Wet gore/sinew tear tail
+      crispNoise(0.095, 'bandpass', 1380 * jitter, 440 * jitter, 4.2, 0.48, 0.038, false, 0.008);
     } else if (type === 'blood_fill') {
-      // Pressurized viscous blood surging upward into the glass gauge
-      dryTone('sine', 86 * jitter, 54 * jitter, 0.085, 0.42);
-      crispNoise(0.105, 'bandpass', 420 * jitter, 1480 * jitter, 2.7, 0.62, 0);
-      dryTone('sine', 240 * jitter, 520 * jitter, 0.075, 0.46, 0.008, 920);
-      dryTone('triangle', 520 * jitter, 960 * jitter, 0.048, 0.24, 0.024, 1500);
-      dryTone('sine', 1320 * jitter, 1345 * jitter, 0.055, 0.14, 0.012);
+      // Wet liquidy/bubbling blood pulse surging up the glass tube (Minnaert bubbles + wet fizz, zero woody knock)
+      ChiptuneAudio.duckMusic?.(0.76, 0.1);
+      const bPop = (fStart: number, fEnd: number, dur: number, vol: number, delay: number) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(fStart * jitter, now + delay);
+        osc.frequency.exponentialRampToValueAtTime(fEnd * jitter, now + delay + dur);
+        g.gain.setValueAtTime(0.0005, now + delay);
+        g.gain.linearRampToValueAtTime(vol, now + delay + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+        osc.connect(g);
+        g.connect(dest);
+        osc.start(now + delay);
+        osc.stop(now + delay + dur + 0.008);
+      };
+      bPop(290, 680, 0.038, 0.56, 0);
+      bPop(460, 960, 0.032, 0.44, 0.022);
+      crispNoise(0.055, 'bandpass', 2200 * jitter, 3800 * jitter, 2.8, 0.36, 0.004, false, 0.006);
     } else if (type === 'blood_drain') {
-      // Hollow negative-pressure siphon draining blood out of the glass gauge
-      dryTone('sine', 94 * jitter, 32 * jitter, 0.23, 0.68);
-      crispNoise(0.24, 'bandpass', 1380 * jitter, 270 * jitter, 2.5, 0.64, 0);
-      dryTone('sine', 460 * jitter, 135 * jitter, 0.21, 0.5, 0.008, 860);
-      dryTone('triangle', 680 * jitter, 230 * jitter, 0.135, 0.28, 0.045, 1150);
+      // Wet gurgling negative-pressure siphon draining down the glass tube (falling bubble cluster + wet slurp)
+      ChiptuneAudio.duckMusic?.(0.76, 0.12);
+      const bDrain = (fStart: number, fEnd: number, dur: number, vol: number, delay: number) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(fStart * jitter, now + delay);
+        osc.frequency.exponentialRampToValueAtTime(fEnd * jitter, now + delay + dur);
+        g.gain.setValueAtTime(0.0005, now + delay);
+        g.gain.linearRampToValueAtTime(vol, now + delay + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+        osc.connect(g);
+        g.connect(dest);
+        osc.start(now + delay);
+        osc.stop(now + delay + dur + 0.008);
+      };
+      // Each bubble detaches upward slightly while the sequence drops in pitch like an emptying drain
+      bDrain(520, 740, 0.028, 0.46, 0);
+      bDrain(310, 490, 0.036, 0.54, 0.024);
+      bDrain(195, 310, 0.042, 0.44, 0.048);
+      crispNoise(0.068, 'bandpass', 2800 * jitter, 1150 * jitter, 2.6, 0.34, 0.005, false, 0.008);
     } else if (type === 'armor') {
-      // Heavy iron plate deflection & shatter (low-mid metal clunk + staggered plate crunch, zero high beep)
+      ChiptuneAudio.duckMusic?.(0.62, 0.2);
+      // Heavy iron plate deflection & shatter (low-mid metal clunk + staggered plate crunch)
       const metalClank = (freq: number, modRatio: number, dur: number, vol: number, delay = 0) => {
         const car = ctx.createOscillator();
         const mod = ctx.createOscillator();
@@ -2074,49 +2276,241 @@ export const playSound = (
         mod.stop(now + delay + dur + 0.02);
       };
 
-      // Mass impact thud
-      dryTone('sine', 175 * jitter, 44 * jitter, 0.14, 0.78);
-      dryTone('triangle', 250 * jitter, 72 * jitter, 0.085, 0.45, 0, 580);
-      // Damped iron clank & secondary plate drop
+      crispNoise(0.045, 'bandpass', 1450 * jitter, 620 * jitter, 2.1, 0.72, 0, false, 0.001);
+      dryTone('sine', 155 * jitter, 74 * jitter, 0.085, 0.72, 0);
       metalClank(295 * jitter, 2.37, 0.14, 0.52, 0);
       metalClank(442 * jitter, 3.14, 0.11, 0.34, 0.028);
-      // Coarse iron scrape / crackle
-      crispNoise(0.045, 'bandpass', 1450 * jitter, 620 * jitter, 2.1, 0.62, 0);
-      crispNoise(0.065, 'bandpass', 980 * jitter, 390 * jitter, 2.4, 0.46, 0.032);
+      crispNoise(0.065, 'bandpass', 980 * jitter, 390 * jitter, 2.4, 0.52, 0.032, true, 0.002);
     } else if (type === 'bone') {
       // Crisp, dry skeletal clack: twin tight knocks with calcium wood resonance
-      crispNoise(0.022, 'bandpass', 2250 * jitter, 1750 * jitter, 5.5, 0.65);
-      dryTone('triangle', 1620 * jitter, 1180 * jitter, 0.024, 0.34);
-      crispNoise(0.022, 'bandpass', 3100 * jitter, 2450 * jitter, 6.0, 0.48, 0.02);
-      dryTone('triangle', 2280 * jitter, 1650 * jitter, 0.022, 0.24, 0.02);
+      crispNoise(0.018, 'bandpass', 2450 * jitter, 1850 * jitter, 6.2, 0.78, 0, false, 0.001);
+      crispNoise(0.022, 'bandpass', 1550 * jitter, 1180 * jitter, 5.5, 0.52, 0.002, true, 0.001);
+      crispNoise(0.018, 'bandpass', 3250 * jitter, 2550 * jitter, 6.8, 0.62, 0.022, false, 0.001);
+    } else if (type === 'stone_move') {
+      // Lighter carved figurine stone-on-stone slide for board map movement
+      ChiptuneAudio.duckMusic?.(0.72, 0.22);
+      const grainOffsets = [0, 0.022, 0.048, 0.071, 0.098, 0.128, 0.156, 0.184];
+      grainOffsets.forEach((off, idx) => {
+        const fHi = (1150 + (idx % 3) * 420) * jitter;
+        const fLo = (340 + (idx % 2) * 140) * jitter;
+        crispNoise(0.026, 'bandpass', fHi, fHi * 0.82, 4.2, 0.36, off, false, 0.003);
+        crispNoise(0.032, 'bandpass', fLo, fLo * 0.88, 3.0, 0.46, off, true, 0.004);
+      });
+      crispNoise(0.21, 'bandpass', 580 * jitter, 760 * jitter, 2.2, 0.42, 0.005, true, 0.015);
+      crispNoise(0.022, 'bandpass', 1680 * jitter, 980 * jitter, 4.5, 0.68, 0.205, false, 0.001);
+      crispNoise(0.042, 'bandpass', 460 * jitter, 220 * jitter, 2.8, 0.72, 0.206, true, 0.002);
     } else if (type === 'bell') {
-      // Heavy carved stone glyph depressing and locking into a granite socket
-      // 1. Dry granite-on-granite friction scrape as the glyph slides down
-      crispNoise(0.088, 'bandpass', 1050 * jitter, 420 * jitter, 2.2, 0.52, 0);
-      crispNoise(0.072, 'bandpass', 2150 * jitter, 980 * jitter, 3.0, 0.28, 0.008);
-      // 2. Heavy stone-slab lock & socket seat thud
-      dryTone('sine', 98 * jitter, 34 * jitter, 0.22, 0.85, 0.062);
-      dryTone('triangle', 165 * jitter, 52 * jitter, 0.14, 0.56, 0.062, 420);
-      crispNoise(0.048, 'bandpass', 720 * jitter, 280 * jitter, 2.8, 0.68, 0.062);
-      // 3. Muted hollow stone chamber resonance tail
-      dryTone('sine', 196 * jitter, 188 * jitter, 0.34, 0.22, 0.068, 360);
-      dryTone('triangle', 293.66 * jitter, 278 * jitter, 0.24, 0.12, 0.07, 480);
+      // Heavy monolithic stone plinth scraping & slamming home (deeper, slower, weightier than stone_move)
+      ChiptuneAudio.duckMusic?.(0.52, 0.38);
+      const heavyGrains = [0, 0.032, 0.068, 0.104, 0.145, 0.186, 0.228, 0.268];
+      heavyGrains.forEach((off, idx) => {
+        const fHi = (780 + (idx % 3) * 260) * jitter;
+        const fLo = (210 + (idx % 2) * 85) * jitter;
+        crispNoise(0.038, 'bandpass', fHi, fHi * 0.78, 3.4, 0.48, off, false, 0.005);
+        crispNoise(0.046, 'bandpass', fLo, fLo * 0.84, 2.4, 0.72, off, true, 0.006);
+      });
+      // Deep granite grinding mass
+      crispNoise(0.32, 'lowpass', 420 * jitter, 240 * jitter, 1.2, 0.88, 0.005, true, 0.025);
+      crispNoise(0.28, 'bandpass', 540 * jitter, 380 * jitter, 1.9, 0.52, 0.015, true, 0.02);
+      // Heavy monolith socket lock thud
+      dryTone('sine', 118 * jitter, 54 * jitter, 0.14, 0.92, 0.295);
+      crispNoise(0.095, 'lowpass', 310 * jitter, 115 * jitter, 0.9, 0.98, 0.295, true, 0.003);
+      crispNoise(0.034, 'bandpass', 1120 * jitter, 560 * jitter, 3.8, 0.72, 0.296, false, 0.001);
     } else if (type === 'victory') {
-      // Heavy occult seal-break & dark low brass/stone resonance (no chiptune arpeggio)
-      // 1. Deep chamber impact & stone crack
-      dryTone('sine', 112 * jitter, 34 * jitter, 0.36, 0.85, 0);
-      crispNoise(0.065, 'bandpass', 1400 * jitter, 380 * jitter, 1.8, 0.62, 0);
-      // 2. Dark filtered fifth swell (D2 + A2) with slow decay
-      dryTone('sawtooth', 73.42 * jitter, 72.8 * jitter, 0.95, 0.38, 0.025, 340);
-      dryTone('triangle', 110.0 * jitter, 109.2 * jitter, 0.88, 0.32, 0.04, 480);
-      dryTone('sine', 146.83 * jitter, 145.9 * jitter, 0.72, 0.26, 0.055, 520);
-      // 3. Subtle settling stone/ash tail
-      crispNoise(0.24, 'bandpass', 620 * jitter, 240 * jitter, 2.4, 0.26, 0.05);
+      ChiptuneAudio.duckMusic?.(0.45, 1.45);
+      // Deliberate 3-note ascending gothic brass/organ jingle (D3 -> F3 -> A3)
+      const brassNote = (freq: number, delay: number, dur: number, vol: number, cutoffPeak: number) => {
+        [1, 1.005].forEach((detune, idx) => {
+          const osc = ctx.createOscillator();
+          const lp = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+          osc.type = idx === 0 ? 'sawtooth' : 'triangle';
+          osc.frequency.setValueAtTime(freq * detune * jitter, now + delay);
+          lp.type = 'lowpass';
+          lp.frequency.setValueAtTime(220, now + delay);
+          lp.frequency.linearRampToValueAtTime(cutoffPeak, now + delay + 0.14);
+          lp.frequency.exponentialRampToValueAtTime(200, now + delay + dur);
+          g.gain.setValueAtTime(0.0008, now + delay);
+          g.gain.linearRampToValueAtTime(idx === 0 ? vol : vol * 0.82, now + delay + 0.09);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+          osc.connect(lp);
+          lp.connect(g);
+          g.connect(dest);
+          osc.start(now + delay);
+          osc.stop(now + delay + dur + 0.03);
+        });
+      };
+      // Subtle low chamber strike on note 1
+      crispNoise(0.18, 'lowpass', 220 * jitter, 105 * jitter, 0.8, 0.4, 0, true, 0.015);
+      brassNote(146.83, 0.0, 0.42, 0.15, 620);   // D3
+      brassNote(174.61, 0.28, 0.44, 0.16, 700);  // F3
+      brassNote(220.00, 0.56, 0.95, 0.18, 840);  // A3 (held resolve)
+      brassNote(293.66, 0.58, 0.88, 0.08, 760);  // D4 subtle octave harmonic
     } else if (type === 'defeat') {
-      // Snuffed flame hiss & hollow wooden/sub collapse
-      dryTone('sine', 82 * jitter, 28 * jitter, 0.55, 0.72, 0);
-      crispNoise(0.32, 'bandpass', 1800 * jitter, 320 * jitter, 1.6, 0.44, 0.01);
-      dryTone('triangle', 98 * jitter, 42 * jitter, 0.42, 0.38, 0.03, 280);
+      ChiptuneAudio.duckMusic?.(0.42, 1.55);
+      // Mirror-opposite deliberate 3-note descending gothic brass/organ jingle (A3 -> F3 -> D3 with somber sag)
+      const dirgeNote = (freq: number, freqEnd: number, delay: number, dur: number, vol: number, cutoffPeak: number) => {
+        [1, 0.995].forEach((detune, idx) => {
+          const osc = ctx.createOscillator();
+          const lp = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+          osc.type = idx === 0 ? 'sawtooth' : 'triangle';
+          osc.frequency.setValueAtTime(freq * detune * jitter, now + delay);
+          if (freqEnd !== freq) {
+            osc.frequency.linearRampToValueAtTime(freqEnd * detune * jitter, now + delay + dur);
+          }
+          lp.type = 'lowpass';
+          lp.frequency.setValueAtTime(200, now + delay);
+          lp.frequency.linearRampToValueAtTime(cutoffPeak, now + delay + 0.14);
+          lp.frequency.exponentialRampToValueAtTime(150, now + delay + dur);
+          g.gain.setValueAtTime(0.0008, now + delay);
+          g.gain.linearRampToValueAtTime(idx === 0 ? vol : vol * 0.82, now + delay + 0.1);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+          osc.connect(lp);
+          lp.connect(g);
+          g.connect(dest);
+          osc.start(now + delay);
+          osc.stop(now + delay + dur + 0.03);
+        });
+      };
+      // Snuffed-candle air sigh on entry
+      crispNoise(0.24, 'lowpass', 240 * jitter, 100 * jitter, 0.8, 0.36, 0, true, 0.02);
+      dirgeNote(220.00, 218.5, 0.0, 0.44, 0.16, 660);  // A3
+      dirgeNote(174.61, 173.0, 0.30, 0.46, 0.16, 560); // F3
+      dirgeNote(146.83, 141.5, 0.60, 1.05, 0.18, 460); // D3 sagging resolve
+    } else if (type === 'overkill') {
+      ChiptuneAudio.duckMusic?.(0.5, 1.0);
+      // Punchy 2-note ascending variant of the victory brass/organ cue (F3 -> A3)
+      const okNote = (freq: number, delay: number, dur: number, vol: number, cutoffPeak: number) => {
+        [1, 1.005].forEach((detune, idx) => {
+          const osc = ctx.createOscillator();
+          const lp = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+          osc.type = idx === 0 ? 'sawtooth' : 'triangle';
+          osc.frequency.setValueAtTime(freq * detune * jitter, now + delay);
+          lp.type = 'lowpass';
+          lp.frequency.setValueAtTime(240, now + delay);
+          lp.frequency.linearRampToValueAtTime(cutoffPeak, now + delay + 0.12);
+          lp.frequency.exponentialRampToValueAtTime(220, now + delay + dur);
+          g.gain.setValueAtTime(0.0008, now + delay);
+          g.gain.linearRampToValueAtTime(idx === 0 ? vol : vol * 0.82, now + delay + 0.075);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+          osc.connect(lp);
+          lp.connect(g);
+          g.connect(dest);
+          osc.start(now + delay);
+          osc.stop(now + delay + dur + 0.03);
+        });
+      };
+      okNote(220.00, 0.0, 0.34, 0.16, 840);  // A3
+      okNote(174.61, 0.24, 0.72, 0.19, 720); // F3
+      okNote(349.23, 0.26, 0.64, 0.07, 760); // F4 sheen
+    } else if (type === 'ritual_begin') {
+      ChiptuneAudio.duckMusic?.(0.68, 1.1);
+      // Softened ceremonial 2-note gothic fifth (A2 -> D3) for pressing Begin Ritual
+      const ritualNote = (freq: number, delay: number, dur: number, vol: number, cutoffPeak: number) => {
+        [1, 1.004].forEach((detune, idx) => {
+          const osc = ctx.createOscillator();
+          const lp = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+          osc.type = idx === 0 ? 'sawtooth' : 'triangle';
+          osc.frequency.setValueAtTime(freq * detune * jitter, now + delay);
+          lp.type = 'lowpass';
+          lp.frequency.setValueAtTime(160, now + delay);
+          lp.frequency.linearRampToValueAtTime(cutoffPeak, now + delay + 0.2);
+          lp.frequency.exponentialRampToValueAtTime(150, now + delay + dur);
+          g.gain.setValueAtTime(0.0008, now + delay);
+          g.gain.linearRampToValueAtTime(idx === 0 ? vol : vol * 0.8, now + delay + 0.13);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+          osc.connect(lp);
+          lp.connect(g);
+          g.connect(dest);
+          osc.start(now + delay);
+          osc.stop(now + delay + dur + 0.03);
+        });
+      };
+      crispNoise(0.16, 'lowpass', 190 * jitter, 95 * jitter, 0.8, 0.22, 0, true, 0.025);
+      ritualNote(110.00, 0.0, 0.44, 0.125, 450); // A2
+      ritualNote(146.83, 0.28, 0.92, 0.135, 580); // D3
+      ritualNote(220.00, 0.30, 0.82, 0.065, 510); // A3 fifth overtone
+    } else if (type === 'cauldron_devour') {
+      // Lower-pitched, heavier viscous boiling submergence when a card is consumed
+      ChiptuneAudio.duckMusic?.(0.48, 0.85);
+      const deepBubble = (fStart: number, fEnd: number, dur: number, vol: number, delay: number) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(fStart * jitter, now + delay);
+        osc.frequency.exponentialRampToValueAtTime(fEnd * jitter, now + delay + dur);
+        g.gain.setValueAtTime(0.0005, now + delay);
+        g.gain.linearRampToValueAtTime(vol, now + delay + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+        osc.connect(g);
+        g.connect(dest);
+        osc.start(now + delay);
+        osc.stop(now + delay + dur + 0.012);
+      };
+      // Heavy plunge + thick low simmer
+      crispNoise(0.22, 'bandpass', 780 * jitter, 1650 * jitter, 1.5, 0.64, 0, true, 0.01);
+      crispNoise(0.75, 'bandpass', 1200 * jitter, 2100 * jitter, 1.4, 0.26, 0.05, false, 0.1);
+      // Slower, deeper liquid glugs (~0.62x pitch of cauldron_boil)
+      deepBubble(130, 290, 0.075, 0.52, 0.02);
+      deepBubble(195, 420, 0.062, 0.44, 0.11);
+      deepBubble(118, 255, 0.085, 0.56, 0.21);
+      deepBubble(240, 480, 0.055, 0.4, 0.32);
+      deepBubble(150, 325, 0.078, 0.48, 0.44);
+      deepBubble(125, 240, 0.095, 0.46, 0.58);
+    } else if (type === 'sheep_baa') {
+      // Short formant-filtered sheep bleat with wide per-click pitch variation & vocal vibrato
+      const sheepPitch = 0.78 + Math.random() * 0.52;
+      const dur = 0.25 + Math.random() * 0.08;
+      const baseFreq = 255 * sheepPitch;
+
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(baseFreq * 1.06, now);
+      osc.frequency.linearRampToValueAtTime(baseFreq, now + 0.06);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.88, now + dur);
+
+      // Fast bleating vocal flutter (vibrato LFO)
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(17 + Math.random() * 6, now);
+      lfoGain.gain.setValueAtTime(baseFreq * 0.065, now);
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+
+      // Dual nasal formant resonators ("baa" vowel)
+      const f1 = ctx.createBiquadFilter();
+      f1.type = 'bandpass';
+      f1.frequency.setValueAtTime(740 * Math.pow(sheepPitch, 0.45), now);
+      f1.Q.setValueAtTime(4.2, now);
+
+      const f2 = ctx.createBiquadFilter();
+      f2.type = 'bandpass';
+      f2.frequency.setValueAtTime(1720 * Math.pow(sheepPitch, 0.45), now);
+      f2.Q.setValueAtTime(5.5, now);
+
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.0008, now);
+      env.gain.linearRampToValueAtTime(0.42, now + 0.022);
+      env.gain.setValueAtTime(0.38, now + dur * 0.62);
+      env.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+      osc.connect(f1);
+      osc.connect(f2);
+      f1.connect(env);
+      f2.connect(env);
+      env.connect(dest);
+
+      // Soft breathy lip onset
+      crispNoise(0.032, 'bandpass', 1400 * sheepPitch, 2200 * sheepPitch, 2.2, 0.18, 0, false, 0.004);
+
+      osc.start(now);
+      lfo.start(now);
+      osc.stop(now + dur + 0.02);
+      lfo.stop(now + dur + 0.02);
     }
   } catch {
     // Audio context may require user gesture

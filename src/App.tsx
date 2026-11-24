@@ -113,7 +113,7 @@ import {
 // --- Built-in Chiptune Audio Synthesizer ---
 
 
-import { ChiptuneAudio, playSound, getAudioEngine } from './audio/ChiptuneAudio';
+import { ChiptuneAudio, playSound, getAudioEngine, type SoundEffectType } from './audio/ChiptuneAudio';
 import { loadArchive, recordBossVictory, recordDiscoveredCards, recordRunCompletion, resetArchive, type PersistentArchive } from './data/archive';
 import { ArchiveModal } from './components/ArchiveModal';
 const chiptuneAudio = ChiptuneAudio;
@@ -295,6 +295,7 @@ export default function App() {
 
       // Phase 1 (550ms): Soft volumetric smoke clouds roll inward from flanks
       setSmokePhase('IN');
+      triggerSfx('whoosh');
 
       transitionTimerRef.current = setTimeout(() => {
         // Phase 2: Mount new screen safely behind pitch-black smoke blanket
@@ -1185,7 +1186,7 @@ export default function App() {
 
   const animateCardDamage = async (isPlayer: boolean, lane: number, dmgAmount = 1, isLethal = false) => {
     const isHeavy = dmgAmount >= 4 || isLethal;
-    triggerSfx('hit');
+    triggerSfx(dmgAmount >= 2 || isLethal ? 'heavy_hit' : 'hit');
     if (isHeavy) {
       setIsHeavyRecoil(true);
       await triggerMicroHitstop(dmgAmount >= 5 ? 65 : 50);
@@ -1204,7 +1205,7 @@ export default function App() {
 
   const animateDirectDamageRumble = async (dmgAmount = 1, isLethalSwing = false) => {
     const isHeavy = dmgAmount >= 4 || isLethalSwing;
-    triggerSfx('hit');
+    triggerSfx(dmgAmount >= 2 || isLethalSwing ? 'heavy_hit' : 'hit');
     if (isHeavy) {
       setIsHeavyRecoil(true);
       triggerScaleHeavySlam();
@@ -1353,7 +1354,7 @@ export default function App() {
     });
   }, []);
 
-  const triggerSfx = useCallback((type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone' | 'defeat' | 'victory' | 'armor') => {
+  const triggerSfx = useCallback((type: SoundEffectType) => {
     if (audioEnabled) playSound(type);
   }, [audioEnabled]);
 
@@ -2681,7 +2682,7 @@ export default function App() {
   const handleTalismanPrick = () => {
     if (phase !== 'PLAY' || isTalismanPricked) return;
     setIsTalismanPricked(true);
-    triggerSfx('bell');
+    triggerSfx('talisman_prick');
     setTimeout(() => {
       handleEndTurn(false, true);
     }, 220);
@@ -3473,12 +3474,12 @@ export default function App() {
                       trampleVented += 1;
                       setIsAmpouleCracked(true);
                       setTotalOverkillDamage(prev => (prev || 0) + 1);
-                      triggerSfx('hit');
+                      triggerSfx('blood_fill');
                       await sleep(60);
                     } else {
                       currentScale += 1;
                       setScale(currentScale);
-                      triggerSfx('hit');
+                      triggerSfx('blood_fill');
                       await sleep(80);
                     }
                   }
@@ -3545,12 +3546,12 @@ export default function App() {
               ventedThisStrike += 1;
               setIsAmpouleCracked(true);
               setTotalOverkillDamage(prev => (prev || 0) + 1);
-              triggerSfx('hit');
+              triggerSfx('blood_fill');
               await sleep(60);
             } else {
               currentScale += 1;
               setScale(currentScale);
-              triggerSfx('hit');
+              triggerSfx('blood_fill');
               await sleep(80);
             }
           }
@@ -3857,7 +3858,7 @@ export default function App() {
 
               setIsBoardRumbling(true);
               setIsBloodMoonDropping(true);
-              triggerSfx('hit');
+              triggerSfx('heavy_hit');
               if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).playFinalBossPhase3) {
                 (ChiptuneAudio as any).playFinalBossPhase3(0.6);
               }
@@ -3941,12 +3942,25 @@ export default function App() {
       }));
 
       if (overkillTotal > 0) {
-        currentScale -= overkillTotal;
-        setTotalOverkillDamage(prev => prev + overkillTotal);
         setHighestOverkill(prev => Math.max(prev, overkillTotal));
         setIsOverkill(true);
         setIsEnemyRetracting(true);
-        setScale(currentScale);
+        const tickCount = Math.min(overkillTotal, 10);
+        const stepSize = overkillTotal / tickCount;
+        let credited = 0;
+        for (let ok = 0; ok < tickCount; ok++) {
+          const nextCredited = ok === tickCount - 1 ? overkillTotal : Math.round(stepSize * (ok + 1));
+          const delta = nextCredited - credited;
+          credited = nextCredited;
+          if (delta > 0) {
+            currentScale -= delta;
+            setScale(currentScale);
+            setTotalOverkillDamage(prev => prev + delta);
+          }
+          triggerSfx('blood_fill');
+          await sleep(75);
+        }
+        triggerSfx('overkill');
 
         // 1. Give the CSS transition 750ms to finish translating off the top
         await sleep(750);
@@ -4148,7 +4162,8 @@ export default function App() {
           } else {
             // Damage Reaction:
             // "Card Damaged: Target card applies a 0.15s shake animation and red hue flash. Displayed Health value must flash and decrement ONLY after the shake completes."
-            await animateCardDamage(true, effectivePlayerLane);
+            const isEnemyTouchOfDeath = eCard.sigils.includes('Touch of Death') && !pCard.sigils.includes('Made of Stone');
+            await animateCardDamage(true, effectivePlayerLane, eAtk, isEnemyTouchOfDeath || pCard.health - eAtk <= 0);
 
             const prevPHealth = pCard.health;
 
@@ -4273,9 +4288,13 @@ export default function App() {
                 const excess = eAtk - prevPHealth;
                 await triggerSigilJitter(false, lane);
                 await animateDirectDamageRumble(excess, currentScale - excess <= -5);
-                currentScale -= excess;
+                for (let pt = 0; pt < excess; pt++) {
+                  currentScale -= 1;
+                  setScale(currentScale);
+                  triggerSfx('blood_drain');
+                  await sleep(80);
+                }
                 setRunStats(s => ({ ...s, scaleDamageTaken: s.scaleDamageTaken + excess }));
-                setScale(currentScale);
                 addLog(`Enemy ${eCard.name}'s Trample drove ${excess} excess damage directly into your scale!`);
               }
             }
@@ -4283,9 +4302,13 @@ export default function App() {
         } else {
           // Direct Enemy Damage with scaled hitstop & blood-runnel weight
           await animateDirectDamageRumble(eAtk, currentScale - eAtk <= -5);
-          currentScale -= eAtk;
+          for (let pt = 0; pt < eAtk; pt++) {
+            currentScale -= 1;
+            setScale(currentScale);
+            triggerSfx('blood_drain');
+            await sleep(80);
+          }
           setRunStats(s => ({ ...s, scaleDamageTaken: s.scaleDamageTaken + eAtk }));
-          setScale(currentScale);
           addLog(`Enemy ${eCard.name} struck you directly for ${eAtk}!`);
         }
 
@@ -5369,7 +5392,7 @@ export default function App() {
       }
 
       setEnemyWavesLeft(2);
-      triggerSfx('victory');
+      triggerSfx('bell');
     } else {
       if (typeof ChiptuneAudio !== 'undefined' && ChiptuneAudio.playBattle) {
         ChiptuneAudio.playBattle(1.5);
@@ -5739,6 +5762,7 @@ export default function App() {
   // Restrict pre-run draft to foundational creatures; sweeps and combo engines are earned later
 
   const handleSelectLineage = (lineageId: string) => {
+    triggerSfx('draw');
     setSelectedLineage(lineageId);
     setStartingBones(0);
     startingBonesRef.current = 0;
@@ -5992,16 +6016,16 @@ export default function App() {
     actMapRef.current = updatedMap;
 
     if (node.type === 'combat') {
-      triggerSfx('bell');
+      triggerSfx('stone_move');
       startNextDuel(false);
     } else if (node.type === 'elite_combat') {
-      triggerSfx('bell');
+      triggerSfx('stone_move');
       startNextDuel(false, undefined, undefined, { forceEnemyTotem: true });
     } else if (node.type === 'boss') {
-      triggerSfx('bell');
+      triggerSfx('stone_move');
       startNextDuel(node.bossType || updatedMap.bossType);
     } else {
-      triggerSfx('play');
+      triggerSfx('stone_move');
       if (node.type === 'items') startItemEvent();
       else if (node.type === 'campfire') initCampfire();
       else if (node.type === 'altar') initAltar();
@@ -6053,7 +6077,7 @@ export default function App() {
 
     setCampfireHolding(true);
     setCampfireAnimState(willDevour ? 'drowning' : 'dipping');
-    triggerSfx('bone');
+    triggerSfx('cauldron_boil');
 
     scheduleEventTimer(() => {
       setCampfireHolding(false);
@@ -6065,7 +6089,7 @@ export default function App() {
         setCampfireCardIdx(null);
         setMasterDeck(nextDeck);
         masterDeckRef.current = nextDeck;
-        triggerSfx('defeat');
+        triggerSfx('cauldron_devour');
 
         scheduleEventTimer(() => {
           setCampfireAnimState('idle');
@@ -6826,7 +6850,7 @@ export default function App() {
     setGoobertOriginalSnapshot(original);
     setGoobertStampedCard(null);
     setGoobertStamping(true);
-    triggerSfx('hit');
+    triggerSfx('stamp_press');
 
     const clone = cloneCard(original);
     clone.isGoobertClone = true;

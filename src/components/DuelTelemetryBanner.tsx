@@ -102,7 +102,7 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
           </div>
 
           {/* 2. RELICS (3-SLOT STACK) */}
-          <div className="w-full flex flex-col items-center gap-2">
+          <div className="w-full flex flex-col items-center gap-2 pb-3">
             <span className="text-[8px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.24em] text-[#e6cca8]/90 leading-none">
               Relics
             </span>

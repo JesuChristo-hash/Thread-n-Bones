@@ -98,6 +98,11 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
   const discoveredCardCount = allCards.filter((c) => seenCardSet.has(c.name)).length;
   const discoveredSigilCount = allSigils.filter((s) => seenSigilSet.has(s)).length;
 
+  const baseUrl = import.meta.env.BASE_URL || './';
+  const panelStyle: React.CSSProperties = activeTab === 'LEDGER'
+    ? { backgroundImage: `linear-gradient(180deg, rgba(10,9,12,0.55), rgba(6,5,8,0.7)), url("${baseUrl}assets/text/slate.jpg")`, backgroundSize: 'cover, cover' }
+    : { backgroundImage: `linear-gradient(180deg, rgba(40,8,10,0.35), rgba(14,3,4,0.6)), url("${baseUrl}assets/text/cloth.jpg")`, backgroundSize: 'cover, cover' };
+
   return (
     <div
       onClick={onClose}
@@ -105,10 +110,11 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        style={panelStyle}
         className="w-full max-w-4xl h-[672px] max-h-[94%] flex flex-col rounded-[2px] bg-[#0d0b0f] border border-[#4a413b]/85 shadow-[0_24px_60px_rgba(0,0,0,0.96),inset_0_1px_0_rgba(255,255,255,0.06)] overflow-hidden"
       >
         {/* Top Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#342c27] bg-[#131015]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#342c27] bg-[#131015]/55">
           <div className="flex items-center gap-2 sm:gap-4">
             <button
               onClick={() => setActiveTab('COMPENDIUM')}
@@ -147,7 +153,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
         {activeTab === 'COMPENDIUM' && (
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* Sub-navigation & Filters */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-[#110f13] border-b border-[#2c2629]">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-[#110f13]/50 border-b border-[#2c2629]">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSubTab('CARDS')}

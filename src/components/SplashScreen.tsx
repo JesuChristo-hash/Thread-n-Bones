@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChiptuneAudio } from '../audio/ChiptuneAudio';
+import { ChiptuneAudio , playSound } from '../audio/ChiptuneAudio';
 
 export interface SplashScreenProps {
   discordGif: any;
@@ -305,6 +305,8 @@ export default function SplashScreen({
               disabled={!isRitualReady}
               onClick={() => {
                 if (!isRitualReady) return;
+              ChiptuneAudio.init();
+              playSound('ritual_begin');
                 try {
                   ChiptuneAudio.init();
                   ChiptuneAudio.playAmbient();

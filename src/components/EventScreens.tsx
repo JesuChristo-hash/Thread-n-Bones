@@ -228,6 +228,7 @@ export default function EventScreens({ ctx }: { ctx: {
               <div
                 onClick={() => {
                   if (canTradePelt) {
+                    triggerSfx('draw');
                     setDraftSelectedDeckIdx(draftSelectedDeckIdx === idx ? null : idx);
                   }
                 }}
@@ -304,6 +305,7 @@ export default function EventScreens({ ctx }: { ctx: {
               <div
                 onClick={() => {
                   if (draftFlippingDown || draftFlippingUp) return;
+                  triggerSfx('draw');
                   setDraftSelectedTradeIdx(draftSelectedTradeIdx === idx ? null : idx);
                 }}
                 className={`relative cursor-pointer transform origin-center transition-all duration-200 ${
@@ -1256,6 +1258,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       <button
                         type="button"
                         onClick={() => {
+                          triggerSfx('draw');
                           setAltarHostId(null);
                           setAltarSacrificeId(null);
                         }}
@@ -1298,8 +1301,10 @@ export default function EventScreens({ ctx }: { ctx: {
                                   addLog(`${c.name} cannot receive more crests: it already bears more than its original nature allows.`);
                                   return;
                                 }
+                                triggerSfx('draw');
                                 setAltarHostId(c.id || null);
                               } else if (altarHostId === c.id) {
+                                triggerSfx('draw');
                                 setAltarHostId(null);
                                 setAltarSacrificeId(null);
                               } else if (!altarSacrificeId) {
@@ -1308,9 +1313,11 @@ export default function EventScreens({ ctx }: { ctx: {
                                   return;
                                 }
                                 if (c.sigils && c.sigils.length > 0) {
+                                  triggerSfx('draw');
                                   setAltarSacrificeId(c.id || null);
                                 }
                               } else if (altarSacrificeId === c.id) {
+                                triggerSfx('draw');
                                 setAltarSacrificeId(null);
                               }
                             }}
@@ -1696,7 +1703,7 @@ export default function EventScreens({ ctx }: { ctx: {
                           disabled={Boolean(sheep.dismissed) || (Boolean(selectedSheep) && !isPicked)}
                           onClick={() => {
                             if (sheep.dismissed || selectedSheep) return;
-                            triggerSfx('draw');
+                            triggerSfx('sheep_baa');
                             setFlockSelectedSheepId(sheep.id);
                           }}
                           className={`absolute -translate-x-1/2 -translate-y-1/2 p-1 rounded-full transition-all duration-300 focus:outline-none ${
@@ -4025,7 +4032,7 @@ export default function EventScreens({ ctx }: { ctx: {
                               const newTotem = { head: hVal, body: bVal };
                               setActiveTotem(newTotem);
                               setEffigyStitchingAnim(true);
-                              triggerSfx('bell');
+                              triggerSfx('needle_stitch');
                               addLog(`Effigy stitched: ${hVal} + ${bVal}`);
                               scheduleEventTimer(() => {
                                 setEffigyStitchingAnim(false);
@@ -4297,7 +4304,7 @@ export default function EventScreens({ ctx }: { ctx: {
                           <div
                             key={c.id || `view-${c.name}-${idx}`}
                             onClick={() => {
-                              triggerSfx('draw');
+                              triggerSfx('flip');
                               setSelectedDeckCardDetail(c);
                             }}
                             className={`cursor-pointer transform transition-all duration-200 ${

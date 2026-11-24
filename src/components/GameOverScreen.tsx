@@ -48,20 +48,8 @@ export default function GameOverScreen({
           />
 
           <div
-            className={`relative z-10 max-w-5xl w-full max-h-full min-h-0 flex flex-col items-center rounded-[3px] px-6 py-5 backdrop-blur-[2px] ${
-              isVictory
-                ? 'bg-[radial-gradient(ellipse_at_top,rgba(34,22,12,0.94)_0%,rgba(13,9,7,0.96)_68%)] border border-[#c89d4c]/85 shadow-[0_28px_70px_rgba(0,0,0,0.98),0_0_65px_rgba(212,175,55,0.22)]'
-                : 'bg-[#0d0806]/92 border border-[#442819] shadow-[0_24px_60px_rgba(0,0,0,0.96)]'
-            }`}
+            className="relative z-10 max-w-5xl w-full max-h-full min-h-0 flex flex-col items-center px-6 py-5"
           >
-            {isVictory && (
-              <>
-                <span className="pointer-events-none absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-[#e5c16b]/85" />
-                <span className="pointer-events-none absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-[#e5c16b]/85" />
-                <span className="pointer-events-none absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#e5c16b]/85" />
-                <span className="pointer-events-none absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#e5c16b]/85" />
-              </>
-            )}
 
             {/* Engraved Header */}
             <div className="shrink-0 flex flex-col items-center text-center mb-4">
