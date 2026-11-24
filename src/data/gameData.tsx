@@ -263,6 +263,7 @@ export const SIGIL_MAPPING: Record<string, string> = {
   'Forager': '🌿',
   'Leech': '🩸',
   'Pack-Animal': '🐺',
+  'Trample': '🐘',
 };
 
 export const SIGIL_DESCRIPTIONS: Record<string, string> = {
@@ -310,6 +311,7 @@ export const SIGIL_DESCRIPTIONS: Record<string, string> = {
   'Forager': "Whenever this creature deals direct scale damage, draw 1 card from your main deck.",
   'Leech': "Whenever this creature kills an opposing creature, it steals that creature's total Health.",
   'Pack-Animal': "When sacrificed, this card is placed on the bottom of your main deck instead of being discarded, retaining any stat buffs and transferred sigils.",
+  'Trample': "Excess combat damage dealt to an opposing creature carries over directly to the opponent's scale.",
 };
 
 // Base Cards & Tokens
@@ -480,7 +482,13 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Silkworm", class: "Insect", attack: 0, health: 1, cost: 0, emoji: "🐛", sigils: ["Fledgling"], evolvesInto: "Silken Moth" },
   { name: "Silken Moth", class: "Insect", attack: 2, health: 1, cost: 0, emoji: "🐛", sigils: ["Airborne"] },
   { name: "Hyphae", class: "No Class", attack: 0, health: 2, cost: 0, emoji: "🍄", sigils: ["Morsel", "Fledgling"], evolvesInto: "Mycelium" },
-  { name: "Mycelium", class: "No Class", attack: 1, health: 3, cost: 0, emoji: "🍄", sigils: ["Stinky", "Rampager"] }
+  { name: "Mycelium", class: "No Class", attack: 1, health: 3, cost: 0, emoji: "🍄", sigils: ["Stinky", "Rampager"] },
+  { name: "Iguana", class: "Reptile", attack: 1, health: 3, cost: 1, emoji: "🦎", sigils: [] },
+  { name: "Dromedary", class: "Hooved", attack: 1, health: 2, cost: 1, emoji: "🐪", sigils: ["Pack-Animal"] },
+  { name: "Rhino", class: "Hooved", attack: 3, health: 5, cost: 3, emoji: "🦏", sigils: ["Armored"] },
+  { name: "Maritimus", class: "No Class", attack: 4, health: 3, cost: 3, emoji: "🐻‍❄️", sigils: ["Waterborne", "Bloodlust"] },
+  { name: "Elephant", class: "No Class", attack: 4, health: 8, cost: 4, emoji: "🐘", sigils: ["Trample"] },
+  { name: "Hyena", class: "Canine", attack: 3, health: 3, boneCost: 6, emoji: "🐕", sigils: ["Scavenger", "Bloodlust"] }
 ];
 
 export const ALL_CARD_LOOKUP: Record<string, CardDef> = {

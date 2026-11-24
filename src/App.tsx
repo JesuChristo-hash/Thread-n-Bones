@@ -5,6 +5,9 @@
 
 import React, { useState, useEffect, useRef, useCallback, type JSX } from 'react';
 import cardBaseImg from './assets/card/card_base.png';
+
+const isCardNamed = (name: string | undefined, target: string): boolean =>
+  (name || '').replace(/^Elder\s+/i, '').trim().toLowerCase() === target.toLowerCase();
 import MapScreen from './components/MapScreen';
 import { ActMapData, MapNode, generateActMap, getBossForAct, getOrInitBossOrder } from './data/mapGenerator';
 import {
@@ -2066,7 +2069,7 @@ export default function App() {
       base = card.attack || 0;
     } else if (card.tags?.includes('Ant')) {
       base = getAntCount(currentPBoard, currentEBoard) + (card.attack || 0);
-    } else if (card.name === "Lammergeier") {
+    } else if (isCardNamed(card.name, "Lammergeier")) {
       base = (isPlayer !== false ? Math.floor((bones || 0) / 2) : 0) + (card.attack || 0);
     }
 
@@ -2093,10 +2096,10 @@ export default function App() {
 
       // Vertibrae had the exact same bug with Demon Elk, so we fix that too
       if (card.name === "Vertibrae") {
-        if (leftNeighbor && (leftNeighbor.health || 0) > 0 && leftNeighbor.name === "Demon Elk") {
+        if (leftNeighbor && (leftNeighbor.health || 0) > 0 && isCardNamed(leftNeighbor.name, "Demon Elk")) {
           vertibraeBonus += 1;
         }
-        if (rightNeighbor && (rightNeighbor.health || 0) > 0 && rightNeighbor.name === "Demon Elk") {
+        if (rightNeighbor && (rightNeighbor.health || 0) > 0 && isCardNamed(rightNeighbor.name, "Demon Elk")) {
           vertibraeBonus += 1;
         }
       }
@@ -2307,11 +2310,11 @@ export default function App() {
       {
         triggerSfx('sacrifice');
 
-        if (existingCard.name === "Ouroboros") {
+        if (isCardNamed(existingCard.name, "Ouroboros")) {
           const nextBuff = ouroborosBuffs + 1;
           setOuroborosBuffs(nextBuff);
           setMasterDeck(prev => prev.map(c => {
-            if (c.name === "Ouroboros") {
+            if (isCardNamed(c.name, "Ouroboros")) {
               return { ...c, attack: (c.attack || 0) + 1, health: (c.health || 0) + 1 };
             }
             return c;
@@ -2370,7 +2373,7 @@ export default function App() {
             setSacrificedUnkillableCardIds(prev => [...prev, cardIdentifier]);
             const masterCard = masterDeck.find(c => c.id === existingCard.id);
             const returned = cloneCard(masterCard || existingCard, ouroborosBuffs);
-            if (existingCard.name === 'Ouroboros') {
+            if (isCardNamed(existingCard.name, 'Ouroboros')) {
               returned.attack = (existingCard.attack || 0) + 1;
               returned.health = (existingCard.health || 0) + 1;
             }
@@ -2381,7 +2384,7 @@ export default function App() {
             const returned = cloneCard(masterCard || existingCard, ouroborosBuffs);
             returned.attack = Math.max(returned.attack || 0, existingCard.attack || 0);
             returned.health = Math.max(returned.health || 0, existingCard.health || 0);
-            if (existingCard.name === 'Ouroboros') {
+            if (isCardNamed(existingCard.name, 'Ouroboros')) {
               returned.attack = (existingCard.attack || 0) + 1;
               returned.health = (existingCard.health || 0) + 1;
             }
@@ -3470,6 +3473,12 @@ export default function App() {
     'warren',
     'wolfcub',
     'wolf cub',
+    'dromedary',
+    'elephant',
+    'hyena',
+    'iguana',
+    'maritimus',
+    'rhino',
   ]);
 
   const isLeftFacingCard = (name?: string): boolean => {
@@ -3507,7 +3516,7 @@ export default function App() {
           if (canMove) {
             await triggerLateralMove(card.id, target - i);
             nextBoard[target] = card;
-            if (card.name === "Demon Elk") {
+            if (isCardNamed(card.name, "Demon Elk")) {
               nextBoard[i] = isPlayer ? applyPlayerTotem(cloneCard(TOKEN_VERTIBRAE), activeTotem) : cloneCard(TOKEN_VERTIBRAE);
             } else {
               nextBoard[i] = null;
@@ -3583,7 +3592,7 @@ export default function App() {
               nextBoard[j] = nextBoard[j - dir];
             }
             nextBoard[target] = card;
-            if (card.name === "Demon Elk") {
+            if (isCardNamed(card.name, "Demon Elk")) {
               nextBoard[i] = isPlayer ? applyPlayerTotem(cloneCard(TOKEN_VERTIBRAE), activeTotem) : cloneCard(TOKEN_VERTIBRAE);
             } else {
               nextBoard[i] = null;
@@ -3885,6 +3894,36 @@ export default function App() {
               pCard.health += stolenHealth;
               spawnSigilBadge(true, lane, `LEECH +${stolenHealth} HP`, 'emerald');
               triggerHpFlash(true, lane);
+
+              // Caiman hidden ability: permanently gains half of all health drained via Leech
+              if (isCardNamed(pCard.name, 'Caiman')) {
+                const prevRem = (pCard as any).caimanLeechRemainder || 0;
+                const totalPool = prevRem + stolenHealth;
+                const permGain = Math.floor(totalPool / 2);
+                const nextRem = totalPool % 2;
+                (pCard as any).caimanLeechRemainder = nextRem;
+                if (permGain > 0) {
+                  (pCard as any).caimanPermHpGained = ((pCard as any).caimanPermHpGained || 0) + permGain;
+                  setMasterDeck(prev =>
+                    prev.map(c =>
+                      c.id === pCard.id
+                        ? {
+                            ...c,
+                            health: (c.health || 0) + permGain,
+                            caimanPermHpGained: ((c as any).caimanPermHpGained || 0) + permGain,
+                            caimanLeechRemainder: nextRem,
+                          } as any
+                        : c
+                    )
+                  );
+                  addLog(`${pCard.name} permanently grew (+${permGain} Max HP)!`);
+                } else {
+                  setMasterDeck(prev =>
+                    prev.map(c => (c.id === pCard.id ? ({ ...c, caimanLeechRemainder: nextRem } as any) : c))
+                  );
+                }
+              }
+
               setPlayerBoard([...currPBoard]);
               addLog(`${pCard.name}'s Leech drained ${stolenHealth} Health from ${eCard.name}!`);
             }
@@ -3923,9 +3962,9 @@ export default function App() {
                 setBones(currBones);
                 addLog(`Your ${pCard.name} perished from Sharp Quills. (+${bYield} Bones)`);
 
-                if (pCard.name === "Ouroboros") {
+                if (isCardNamed(pCard.name, "Ouroboros")) {
                   setOuroborosBuffs(prev => prev + 1);
-                  setMasterDeck(prev => prev.map(c => c.name === "Ouroboros" ? { ...c, attack: (c.attack || 0) + 1, health: (c.health || 0) + 1 } : c));
+                  setMasterDeck(prev => prev.map(c => isCardNamed(c.name, "Ouroboros") ? { ...c, attack: (c.attack || 0) + 1, health: (c.health || 0) + 1 } : c));
                 }
 
                 if (pCard.sigils.includes('Unkillable')) {
@@ -3960,10 +3999,10 @@ export default function App() {
                 pCard.attack = (pCard.attack || 0) + 1;
 
                 // Hodag's Bloodlust permanently commits its attack growth to masterDeck
-                if (pCard.name === 'Hodag') {
+                if (isCardNamed(pCard.name, 'Hodag')) {
                   setMasterDeck(prev =>
                     prev.map(c =>
-                      c.id === pCard.id || c.name === 'Hodag'
+                      c.id === pCard.id || isCardNamed(c.name, 'Hodag')
                         ? { ...c, attack: (c.attack || 0) + 1 }
                         : c
                     )
@@ -3979,7 +4018,31 @@ export default function App() {
                 const excess = pAtk - prevEHealth;
                 const backRowCard = currEQueue[effectiveEnemyLane];
 
-                if (backRowCard) {
+                if (pCard.sigils.includes('Trample')) {
+                  await triggerSigilJitter(true, lane);
+                  await animateDirectDamageRumble(excess, currentScale + excess >= 5);
+                  let trampleVented = 0;
+                  for (let pt = 0; pt < excess; pt++) {
+                    if (turnNumber === 1 && currentScale >= 4) {
+                      trampleVented += 1;
+                      setIsAmpouleCracked(true);
+                      setTotalOverkillDamage(prev => (prev || 0) + 1);
+                      triggerSfx('hit');
+                      await sleep(60);
+                    } else {
+                      currentScale += 1;
+                      setScale(currentScale);
+                      triggerSfx('hit');
+                      await sleep(80);
+                    }
+                  }
+                  spawnSigilBadge(true, lane, `TRAMPLE +${excess}`, 'gold');
+                  if (trampleVented > 0) {
+                    addLog(`${pCard.name}'s Trample drove ${excess} excess damage into the scale (shunt vented ${trampleVented} oz)!`);
+                  } else {
+                    addLog(`${pCard.name}'s Trample drove ${excess} excess damage directly into the opponent's scale!`);
+                  }
+                } else if (backRowCard) {
                   if (backRowCard.sigils.includes('Armored') && !backRowCard.shieldBroken) {
                     await triggerSigilJitter(false, effectiveEnemyLane);
                     backRowCard.shieldBroken = true;
@@ -4402,7 +4465,13 @@ export default function App() {
         currBones += 2;
         currPBoard[c] = null;
         spawnSigilBadge(true, c, 'BRITTLE +2 BONES', 'bone');
-        addLog(`Your ${card.name} perished from Brittle (+2 Bones).`);
+        if (isCardNamed(card.name, 'Arachnid')) {
+          const m = masterDeck.find(mc => mc.id === card.id);
+          setHand(prev => [...prev, applyPlayerTotem(cloneCard(m || card, ouroborosBuffs), activeTotem)]);
+          addLog(`Your ${card.name} shed its brittle husk and returned to your hand (+2 Bones)!`);
+        } else {
+          addLog(`Your ${card.name} perished from Brittle (+2 Bones).`);
+        }
       } else if (card) {
         card.hasAttackedThisTurn = false;
       }
@@ -4663,7 +4732,7 @@ export default function App() {
 
             // The Daus Retribution
             if (pCard.name === "Chime") {
-              const dausIdx = currPBoard.findIndex(c => c?.name === "The Daus");
+              const dausIdx = currPBoard.findIndex(c => isCardNamed(c?.name, "The Daus"));
               if (dausIdx !== -1) {
                 const dausAtk = getCardAttack(currPBoard[dausIdx], dausIdx, true, currPBoard, currEBoard);
                 const dausDir: 'left' | 'right' | 'straight' = lane < dausIdx ? 'left' : lane > dausIdx ? 'right' : 'straight';
@@ -4718,9 +4787,9 @@ export default function App() {
               setBones(currBones);
               addLog(`Your ${pCard.name} perished. (+${bYield} Bones)`);
 
-              if (pCard.name === "Ouroboros") {
+              if (isCardNamed(pCard.name, "Ouroboros")) {
                 setOuroborosBuffs(prev => prev + 1);
-                setMasterDeck(prev => prev.map(c => c.name === "Ouroboros" ? { ...c, attack: (c.attack || 0) + 1, health: (c.health || 0) + 1 } : c));
+                setMasterDeck(prev => prev.map(c => isCardNamed(c.name, "Ouroboros") ? { ...c, attack: (c.attack || 0) + 1, health: (c.health || 0) + 1 } : c));
               }
 
               if (pCard?.sigils.includes('Unkillable')) {
@@ -4753,6 +4822,16 @@ export default function App() {
                   currPBoard[effectivePlayerLane] = null;
                 }
                 setPlayerBoard([...currPBoard]);
+
+              if (eCard.sigils.includes('Trample') && eAtk > prevPHealth && prevPHealth > 0) {
+                const excess = eAtk - prevPHealth;
+                await triggerSigilJitter(false, lane);
+                await animateDirectDamageRumble(excess, currentScale - excess <= -5);
+                currentScale -= excess;
+                setRunStats(s => ({ ...s, scaleDamageTaken: s.scaleDamageTaken + excess }));
+                setScale(currentScale);
+                addLog(`Enemy ${eCard.name}'s Trample drove ${excess} excess damage directly into your scale!`);
+              }
             }
           }
         } else {
@@ -5135,7 +5214,7 @@ export default function App() {
     if (isBossMatch) {
       if (bossState.type === 'Zealot') {
         const reptilePool = MAIN_DECK_POOL.filter(
-          c => c.class === 'Reptile' || c.name === 'Amalgam' || c.name === 'Hodag'
+          c => c.class === 'Reptile' || c.name === 'Amalgam' || isCardNamed(c.name, 'Hodag')
         );
         const base = reptilePool[Math.floor(Math.random() * reptilePool.length)] || ALL_CARD_LOOKUP['Bullfrog'];
         const card = cloneCard(base, 0);
@@ -8201,6 +8280,9 @@ export default function App() {
               style={{
                 imageRendering: 'pixelated',
                 filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.5))',
+                scale: isCardNamed(card.name, 'Caiman') && ((card as any).caimanPermHpGained || 0) >= 2
+                  ? String(1 + Math.min(Math.floor(((card as any).caimanPermHpGained || 0) / 2), 6) * 0.1)
+                  : undefined,
               }}
               draggable={false}
               onError={(e) => {
@@ -10103,7 +10185,7 @@ export default function App() {
               <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                 {/* LEFT COLUMN: Stone Baptismal Font Prop + Action Buttons */}
                 <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 rounded-[3px] bg-gradient-to-b from-[#140a07]/74 via-[#1c0d09]/85 to-[#0c0605]/95 border border-[#4e281b]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,210,175,0.08)] overflow-hidden flex flex-col items-center justify-between">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 flex flex-col items-center justify-between">
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
                         isAnimating
@@ -10390,7 +10472,7 @@ export default function App() {
               <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                 {/* LEFT COLUMN: Dominant Stone Altar Stage + Ritual Action */}
                 <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 rounded-[3px] bg-gradient-to-b from-[#120b09]/72 via-[#18100d]/84 to-[#0b0706]/95 border border-[#4a3222]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] overflow-hidden flex flex-col items-center justify-center">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 flex flex-col items-center justify-center">
                     {/* Ambient crimson / gold ritual glow */}
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
@@ -10741,7 +10823,7 @@ export default function App() {
               {/* Two-Column Split: Forge Stage Left, Scrollable Deck Right */}
               <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch">
                 {/* Left Column: Iron Anvil + Diegetic Tools */}
-                <div className="lg:col-span-7 min-h-0 flex flex-col justify-between p-4 sm:p-5 rounded-[3px] bg-[#0d0907]/85 border border-[#442f21]/85 shadow-[0_20px_50px_rgba(0,0,0,0.92)] backdrop-blur-[2px]">
+                <div className="lg:col-span-7 min-h-0 flex flex-col justify-between p-4 sm:p-5">
                   {/* Anvil Prop Stage */}
                   <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative">
                     <div
@@ -10768,7 +10850,7 @@ export default function App() {
                     {/* Heavy Blacksmith Anvil SVG Prop */}
                     <svg
                       viewBox="0 0 320 112"
-                      className="w-full max-w-[285px] h-auto drop-shadow-[0_14px_22px_rgba(0,0,0,0.95)] pointer-events-none"
+                      className="w-full max-w-[350px] h-auto translate-y-4 scale-y-[1.18] origin-bottom drop-shadow-[0_14px_22px_rgba(0,0,0,0.95)] pointer-events-none"
                     >
                       <defs>
                         <linearGradient id="anvilIron" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -11265,7 +11347,7 @@ export default function App() {
               </div>
 
               {/* Center Stage: Continuous Wooden Rod + Aligned Hooks + Shaped Patches + Curved Thread Connector */}
-              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-center rounded-[3px] bg-gradient-to-b from-[#130c08]/78 via-[#160e09]/86 to-[#0b0705]/95 border border-[#493221]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] px-6 py-4 overflow-hidden">
+              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-start px-6 pt-6 pb-4">
                 <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9a7342]/70" />
                 <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9a7342]/70" />
                 <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
@@ -11383,10 +11465,11 @@ export default function App() {
                 </div>
 
                 {/* Lower Woven Summoning Cloth (anchored cleanly at center x=300 where the thread lands) */}
-                <div className="relative z-10 w-full max-w-md min-h-[168px] flex flex-col items-center justify-center rounded-[3px] bg-[#0c0806]/88 border border-[#4a3322]/85 px-4 py-3 shadow-[inset_0_0_24px_rgba(0,0,0,0.85)]">
+                <div className="relative z-10 w-full max-w-[236px] min-h-[152px] flex flex-col items-center justify-center rounded-[3px] bg-[#0c0806]/90 border border-[#4a3322]/85 px-4 py-3 shadow-[inset_0_0_24px_rgba(0,0,0,0.85)]">
                   <span className="pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-[#1a120b] border-t border-l border-[#9a7342]/80" />
+                  <span className="pointer-events-none absolute inset-1.5 rounded-[2px] border border-dashed border-[#5c4028]/35" />
                   {carvingSummonedCard ? (
-                    <div className="flex flex-col items-center animate-menu-fade-in">
+                    <div className="relative z-10 flex flex-col items-center animate-menu-fade-in">
                       <span className="mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1f160c]/95 border border-[#d4af37]/85 text-[8.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#f4d78b]">
                         Woven From {carvingPickedTribe}
                       </span>
@@ -11395,18 +11478,17 @@ export default function App() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center gap-2 text-[#9c8262]">
-                      {/* Crisp SVG Sewing Needle & Thread Icon */}
-                      <svg viewBox="0 0 32 32" className="w-7 h-7 text-[#c79d5a]/80" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M25 5L7 25" />
-                        <ellipse cx="23.5" cy="6.5" rx="1.6" ry="3" transform="rotate(45 23.5 6.5)" />
-                        <path d="M24 6C28 10 26 18 19 20C14 21.5 13 26 17 27" stroke="#b91c1c" strokeWidth="1.3" strokeDasharray="2.5 2" />
-                      </svg>
-                      {carvingPickedTribe && (
-                        <span className="font-['Cinzel',_serif] text-xs uppercase tracking-[0.24em] text-[#e5cfa8]">
-                          Weaving {carvingPickedTribe}...
-                        </span>
-                      )}
+                    <div className="relative z-10 flex flex-col items-center gap-2.5 text-[#9c8262]">
+                      <div className="w-14 h-14 rounded-full bg-[#150e09]/90 border border-dashed border-[#7a5838]/65 shadow-[inset_0_0_14px_rgba(0,0,0,0.85)] flex items-center justify-center">
+                        <svg viewBox="0 0 32 32" className="w-8 h-8 text-[#d4ad6a]/90" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M25 5L7 25" />
+                          <ellipse cx="23.5" cy="6.5" rx="1.6" ry="3" transform="rotate(45 23.5 6.5)" />
+                          <path d="M24 6C28 10 26 18 19 20C14 21.5 13 26 17 27" stroke="#dc2626" strokeWidth="1.4" strokeDasharray="2.5 2" />
+                        </svg>
+                      </div>
+                      <span className="font-['Cinzel',_serif] text-[10px] uppercase tracking-[0.22em] text-[#cbb28a]/85">
+                        {carvingPickedTribe ? `Weaving ${carvingPickedTribe}...` : 'Pull a Patch'}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -11469,11 +11551,7 @@ export default function App() {
               </div>
 
               {/* Candlelit Merchant Counter Stage */}
-              <div className="relative w-full max-w-3xl my-auto flex flex-col items-center justify-center gap-6 rounded-[4px] bg-gradient-to-b from-[#160f0a]/60 via-[#120c08]/70 to-[#090604]/78 backdrop-blur-[2px] border border-[#4a3322]/85 shadow-[0_24px_60px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,224,178,0.08)] px-8 py-7 overflow-hidden">
-                <span className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-[#9a7342]/75" />
-                <span className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-[#9a7342]/75" />
-                <span className="pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-[#9a7342]/75" />
-                <span className="pointer-events-none absolute bottom-2 right-2 w-3.5 h-3.5 border-b border-r border-[#9a7342]/75" />
+              <div className="relative w-full max-w-3xl my-auto flex flex-col items-center justify-center gap-6 px-8 py-7">
 
                 {/* Subtle Countertop Wood Plank Line */}
                 <div className="pointer-events-none absolute inset-x-0 bottom-14 h-px bg-gradient-to-r from-transparent via-[#5e4128]/70 to-transparent" />
@@ -11608,7 +11686,7 @@ export default function App() {
               <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                 {/* LEFT COLUMN: Ossuary Pedestal & Horned Skull Prop + Stylized Inscription + Offer Button */}
                 <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-5 rounded-[3px] bg-gradient-to-b from-[#131110]/76 via-[#171412]/86 to-[#090807]/95 border border-[#474038]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(235,225,210,0.08)] overflow-hidden flex flex-col items-center justify-between">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-5 flex flex-col items-center justify-between">
                     {/* Ambient Ivory / Ember Aura */}
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
@@ -11696,7 +11774,7 @@ export default function App() {
                       {/* Carved Ossuary Skull & Ribcage Pedestal SVG Prop */}
                       <svg
                         viewBox="0 0 460 124"
-                        className="w-full max-w-[475px] h-auto drop-shadow-[0_18px_28px_rgba(0,0,0,0.98)] pointer-events-none relative z-20"
+                        className="w-full max-w-[475px] h-auto translate-y-4 scale-y-[1.18] origin-bottom drop-shadow-[0_18px_28px_rgba(0,0,0,0.98)] pointer-events-none relative z-20"
                       >
                         <defs>
                           <linearGradient id="ossuaryBone" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -11846,7 +11924,7 @@ export default function App() {
               {!mycoHasDuplicates ? (
                 /* Loom-Matched Twin Gift Stage when player has no duplicates */
                 <div className="w-full max-w-4xl flex-1 min-h-0 flex flex-col items-center justify-between gap-3">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-5 rounded-[3px] bg-gradient-to-b from-[#130c15]/78 via-[#170e19]/88 to-[#0b070c]/96 border border-[#4a3052]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(233,213,255,0.08)] overflow-hidden flex flex-col items-center justify-center">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-5 flex flex-col items-center justify-center">
                     <div
                       className="pointer-events-none absolute inset-0 opacity-75"
                       style={{
@@ -11931,7 +12009,7 @@ export default function App() {
                 <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                   {/* LEFT COLUMN: Weaver's Loom Prop + Sew Button */}
                   <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                    <div className="relative w-full flex-1 min-h-0 px-6 py-4 rounded-[3px] bg-gradient-to-b from-[#130c15]/76 via-[#170e19]/86 to-[#0b070c]/95 border border-[#4a3052]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(233,213,255,0.08)] overflow-hidden flex flex-col items-center justify-center">
+                    <div className="relative w-full flex-1 min-h-0 px-6 py-4 flex flex-col items-center justify-center">
                       <div
                         className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
                           mycoAnimPhase === 'sewing'
@@ -12232,7 +12310,7 @@ export default function App() {
               <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                 {/* LEFT COLUMN: Heavy Rotary Printing Press Prop + Stamp Button */}
                 <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 rounded-[3px] bg-gradient-to-b from-[#0b1512]/78 via-[#0e1a16]/88 to-[#060b09]/95 border border-teal-900/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(153,246,228,0.08)] overflow-hidden flex flex-col items-center justify-between">
+                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 flex flex-col items-center justify-between">
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
                         goobertStampedCard ? 'opacity-95' : goobertStamping ? 'opacity-80' : 'opacity-40'
@@ -12271,15 +12349,41 @@ export default function App() {
                               <stop offset="100%" stopColor="#0d1210" />
                             </linearGradient>
                           </defs>
-                          {/* Long Threaded Screw Shaft */}
-                          <rect x="221" y="0" width="18" height="234" rx="2" fill="#465450" stroke="#748a82" strokeWidth="1.2" />
-                          {[18, 34, 50, 66, 82, 98, 114, 130, 146, 162, 178, 194, 210].map((ty) => (
-                            <line key={ty} x1="221" y1={ty} x2="239" y2={ty + 4} stroke="#26302d" strokeWidth="1.5" />
-                          ))}
-                          {/* Crossbar Torque Lever */}
-                          <rect x="168" y="206" width="124" height="8" rx="3" fill="#2c3834" stroke="#647a72" strokeWidth="1.2" />
-                          <circle cx="168" cy="210" r="5.5" fill="#52665f" />
-                          <circle cx="292" cy="210" r="5.5" fill="#52665f" />
+                          {/* Turned Stamp Handle & Brass Collar */}
+                          <defs>
+                            <linearGradient id="stampHandleWood" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#1b2421" />
+                              <stop offset="35%" stopColor="#3b4d47" />
+                              <stop offset="68%" stopColor="#26332f" />
+                              <stop offset="100%" stopColor="#121816" />
+                            </linearGradient>
+                          </defs>
+                          {/* Ergonomic Bulbous Stamp Grip */}
+                          <path
+                            d="M230 112 C202 112, 192 134, 198 156 C203 174, 214 186, 214 204 L214 218 L246 218 L246 204 C246 186, 257 174, 262 156 C268 134, 258 112, 230 112 Z"
+                            fill="url(#stampHandleWood)"
+                            stroke="#6c857d"
+                            strokeWidth="1.6"
+                            strokeLinejoin="round"
+                          />
+                          {/* Specular Highlight on Handle Dome */}
+                          <path
+                            d="M214 126 C207 136, 207 150, 212 162"
+                            fill="none"
+                            stroke="#8aa89e"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            opacity="0.45"
+                          />
+                          {/* Flared Metal Ferrule / Collar Seated on Platen */}
+                          <path
+                            d="M206 218 L254 218 L264 232 L196 232 Z"
+                            fill="#2b3834"
+                            stroke="#6f877f"
+                            strokeWidth="1.5"
+                            strokeLinejoin="round"
+                          />
+                          <line x1="208" y1="224" x2="252" y2="224" stroke="#141c19" strokeWidth="1.4" />
                           {/* Heavy Cast-Iron Stamp Head & Platen Block */}
                           <rect x="52" y="232" width="356" height="24" rx="2" fill="url(#pressIronBeam)" stroke="#5f7870" strokeWidth="1.8" />
                           <rect x="64" y="256" width="332" height="28" rx="1.5" fill="url(#pressFacePlate)" stroke="#4d635c" strokeWidth="1.5" />
@@ -12586,12 +12690,7 @@ export default function App() {
               </div>
 
               {/* MAIN CATHEDRAL TRIPTYCH STAGE */}
-              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-between rounded-[4px] bg-gradient-to-b from-[#130d09]/84 via-[#110b08]/90 to-[#080504]/96 border border-[#4a3423]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,224,178,0.08)] px-5 sm:px-8 py-4 overflow-hidden">
-                {/* Corner Brass Filigree */}
-                <span className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-[#a88246]/75" />
-                <span className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-[#a88246]/75" />
-                <span className="pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-[#a88246]/75" />
-                <span className="pointer-events-none absolute bottom-2 right-2 w-3.5 h-3.5 border-b border-r border-[#a88246]/75" />
+              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-between px-5 sm:px-8 py-4">
 
                 {/* Subtle Gothic Rose Window Tracery Behind Stage */}
                 <svg
@@ -12613,7 +12712,7 @@ export default function App() {
                 <div className="relative z-20 w-full flex flex-col items-center shrink-0">
                   {!caveSelectedTrial ? null : (
                     <div
-                      className={`w-full max-w-2xl px-5 py-2.5 rounded-[3px] border flex flex-col sm:flex-row items-center justify-between gap-2 shadow-[0_10px_28px_rgba(0,0,0,0.85)] transition-all duration-300 ${
+                      className={`w-full max-w-3xl px-5 py-2.5 rounded-[3px] border flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-5 shadow-[0_10px_28px_rgba(0,0,0,0.85)] transition-all duration-300 ${
                         !caveVerdictReady
                           ? 'bg-[#17110b]/94 border-[#9c7840]/85 text-[#f0d5a1]'
                           : cavePassed
@@ -12624,12 +12723,12 @@ export default function App() {
                         animation: caveVerdictReady ? 'steepleVerdictSlam 0.42s ease-out forwards' : undefined,
                       }}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="font-['Cinzel',_serif] text-sm sm:text-base font-bold uppercase tracking-[0.2em]">
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="font-['Cinzel',_serif] text-sm sm:text-base font-bold uppercase tracking-[0.18em] whitespace-nowrap">
                           {caveSelectedTrial}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded-[2px] text-[9px] font-mono font-bold uppercase tracking-[0.22em] border ${
+                          className={`px-2.5 py-0.5 rounded-[2px] text-[9px] font-mono font-bold uppercase tracking-[0.2em] border whitespace-nowrap shrink-0 ${
                             !caveVerdictReady
                               ? 'bg-[#241a0e] border-[#a88246] text-[#f4d78b]'
                               : cavePassed
@@ -12642,9 +12741,9 @@ export default function App() {
                       </div>
 
                       {rule && liveResult && (
-                        <div className="text-[10.5px] font-mono uppercase tracking-[0.12em] text-[#ede0c8]/95">
+                        <div className="flex flex-wrap sm:flex-nowrap items-center justify-center sm:justify-end gap-x-2 text-[10.5px] font-mono uppercase tracking-[0.1em] text-[#ede0c8]/95 whitespace-nowrap">
                           <span className="font-bold">{liveResult.detail}</span>
-                          <span className="text-[#9e825f] mx-2">|</span>
+                          <span className="text-[#9e825f]">|</span>
                           <span className="opacity-80">Need {rule.requirement}</span>
                         </div>
                       )}
@@ -12996,7 +13095,7 @@ export default function App() {
               {/* Vertically Centered Two-Column Split: Stitched Effigy Left, Claim/Assembly Rack Right */}
               <div className="w-full max-h-[540px] my-auto min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                 {/* LEFT COLUMN: Physical Stitched Effigy */}
-                <div className="lg:col-span-4 relative flex flex-col items-center justify-center px-5 py-5 rounded-[3px] bg-gradient-to-b from-[#140e0a]/84 via-[#18100b]/90 to-[#0b0705]/96 border border-[#4a3322]/85 shadow-[0_22px_54px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,224,178,0.08)] overflow-hidden">
+                <div className="lg:col-span-4 relative flex flex-col items-center justify-center px-5 py-5">
                   <div
                     className="pointer-events-none absolute inset-0"
                     style={{
@@ -13414,30 +13513,9 @@ export default function App() {
             </div>
 
             {/* Moonlit Briar Stage with Three Distinct Creature Pedestals */}
-            <div className="relative w-full max-w-3xl my-auto flex flex-col items-center justify-center gap-6 rounded-[4px] bg-gradient-to-b from-[#11120e]/58 via-[#0f0c09]/68 to-[#070504]/76 backdrop-blur-[2px] border border-[#443121]/85 shadow-[0_24px_60px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,228,185,0.08)] px-8 py-7 overflow-hidden">
-              <span className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-[#9a7342]/75" />
-              <span className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-[#9a7342]/75" />
-              <span className="pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-[#9a7342]/75" />
-              <span className="pointer-events-none absolute bottom-2 right-2 w-3.5 h-3.5 border-b border-r border-[#9a7342]/75" />
+            <div className="relative w-full max-w-3xl my-auto flex flex-col items-center justify-center gap-6 px-8 pt-14 pb-8">
 
-              {/* Moonlit Haze & Layered Briar Silhouettes */}
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  background:
-                    'radial-gradient(ellipse at 50% 24%, rgba(212,186,128,0.16) 0%, rgba(42,32,20,0.12) 48%, transparent 76%)',
-                }}
-              />
-              <svg
-                viewBox="0 0 800 120"
-                preserveAspectRatio="none"
-                className="pointer-events-none absolute bottom-0 inset-x-0 w-full h-24 opacity-45"
-              >
-                <path
-                  d="M0 120 L0 64 Q45 36 86 72 Q132 48 188 84 Q245 64 310 92 Q400 72 490 92 Q560 58 625 82 Q690 42 742 74 Q775 56 800 68 L800 120 Z"
-                  fill="#090705"
-                />
-              </svg>
+
 
               {/* Three Emergent Beasts */}
               <div
@@ -14827,11 +14905,18 @@ export default function App() {
                                 : "The Weaver")
                         : currentStageName}
                     </h2>
-                    <div className={`mt-1 inline-flex items-center justify-center px-3 py-1.5 rounded-[2px] border shadow-[inset_0_1px_6px_rgba(0,0,0,0.75)] ${
-                      isBossMatch && bossState.type === 'BoneLord'
-                        ? 'bg-[#1a0708]/92 border-red-800/85'
-                        : 'bg-[#100e10]/88 border-[#4a413b]/75'
-                    }`}>
+                    <div
+                      style={{
+                        backgroundImage: `linear-gradient(180deg, ${isBossMatch && bossState.type === 'BoneLord' ? 'rgba(26,7,8,0.82), rgba(18,5,6,0.9)' : 'rgba(16,14,16,0.72), rgba(12,10,12,0.86)'}), url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                      className={`mt-1 inline-flex items-center justify-center px-3 py-1.5 rounded-[2px] border shadow-[inset_0_1px_6px_rgba(0,0,0,0.75)] ${
+                        isBossMatch && bossState.type === 'BoneLord'
+                          ? 'border-red-800/85'
+                          : 'border-[#4a413b]/75'
+                      }`}
+                    >
                       <span className={`font-['Cinzel',_serif] font-semibold text-[10px] leading-none tracking-[0.22em] pl-[0.22em] uppercase ${
                         isBossMatch && bossState.type === 'BoneLord'
                           ? 'text-red-200/95'
@@ -14910,6 +14995,7 @@ export default function App() {
                           : 'text-[#f4d78b]';
 
                       const crestDesc = `All ${isWeaver || isFoe ? 'enemy ' : ''}${tribeName} creatures bear the ${sigilName || 'unmarked'} Crest.`;
+                      const sigilDesc = sigilName ? (SIGIL_DESCRIPTIONS as Record<string, string>)[sigilName] : '';
 
                       return (
                         <div key={uid} className="group relative flex flex-col items-center select-none cursor-help">
@@ -14935,7 +15021,7 @@ export default function App() {
 
                           {/* Hover Inspection Plaque */}
                           <div
-                            className={`pointer-events-none opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 absolute left-full ml-2.5 top-1/2 -translate-y-1/2 z-[70] w-48 rounded-[2px] bg-[#0e0a09]/96 border ${tooltipBorderClass} px-3 py-2.5 text-left shadow-[0_14px_30px_rgba(0,0,0,0.95)]`}
+                            className={`pointer-events-none opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 absolute left-full ml-2.5 top-1/2 -translate-y-1/2 z-[70] w-56 rounded-[2px] bg-[#0e0a09]/96 border ${tooltipBorderClass} px-3 py-2.5 text-left shadow-[0_14px_30px_rgba(0,0,0,0.95)]`}
                           >
                             <div className={`font-['Cinzel',_serif] text-[9px] font-bold uppercase tracking-[0.2em] ${tooltipTitleClass}`}>
                               {tooltipTitle}
@@ -14947,6 +15033,14 @@ export default function App() {
                             <p className="font-mono text-[9.5px] text-[#cbb89d] leading-relaxed">
                               {crestDesc}
                             </p>
+                            {sigilDesc && (
+                              <>
+                                <div className="h-px w-full bg-[#3a2a1e]/60 my-1.5" />
+                                <p className="font-mono text-[9px] text-[#e6d2b5]/90 leading-relaxed">
+                                  <span className="font-bold text-[#f4d78b]">{sigilName}:</span> {sigilDesc}
+                                </p>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
@@ -14984,8 +15078,9 @@ export default function App() {
                           disabled={phase !== 'PLAY' || isTalismanPricked}
                           title={phase === 'PLAY' ? "Prick your finger upon the iron dish to seal your assault" : "Awaiting your turn..."}
                           style={{
-                            backgroundImage: `radial-gradient(circle at 38% 30%, rgba(58,52,48,0.48), rgba(18,16,18,0.92) 72%, rgba(9,8,10,0.98) 100%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)' opacity='0.55'/%3E%3C/svg%3E")`,
-                            backgroundSize: 'cover, 160px 160px',
+                            backgroundImage: `radial-gradient(circle at 38% 30%, rgba(36,32,30,0.42), rgba(14,12,14,0.82) 72%, rgba(8,7,9,0.94) 100%), url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
+                            backgroundSize: 'cover, cover',
+                            backgroundPosition: 'center, center',
                           }}
                           className={`relative overflow-hidden w-[125px] h-[125px] sm:w-[140px] sm:h-[140px] rounded-full bg-[#151316] border-2 flex items-center justify-center select-none outline-none transition-all duration-200 ${
                             isTalismanPricked
@@ -15308,8 +15403,16 @@ export default function App() {
                                return (
                                  <div
                                    key={`e-queue-slot-${idx}`}
-                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#5e564f]/28 bg-[#0b0a0c]/42 shadow-[inset_0_2px_12px_rgba(0,0,0,0.72)] overflow-visible ${isDropping ? 'z-40' : card ? 'z-20' : 'z-0'}`}
+                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#7f1d1d]/65 bg-[#0b0a0c]/48 shadow-[inset_0_2px_12px_rgba(0,0,0,0.82),0_0_8px_rgba(127,29,29,0.24)] overflow-visible ${isDropping ? 'z-40' : card ? 'z-20' : 'z-0'}`}
                                   >
+                                    <div
+                                      className="pointer-events-none absolute inset-0 rounded-[2px] opacity-[0.34]"
+                                      style={{
+                                        backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
+                                        backgroundSize: '260px 260px',
+                                        backgroundPosition: `${idx * 73 + 12}px ${idx * 41 + 18}px`,
+                                      }}
+                                    />
                                     {(!card || isDropping) && (
                                       <svg
                                         className="w-5 h-5 sm:w-6 sm:h-6 text-[#c4a47c]/75 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] pointer-events-none select-none"
@@ -15370,7 +15473,7 @@ export default function App() {
                                          handleItemTargetLane(idx);
                                        }
                                      }}
-                                     className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#6e645b]/38 bg-[#0d0c0e]/56 shadow-[inset_0_2px_14px_rgba(0,0,0,0.82),0_1px_0_rgba(255,255,255,0.03)] overflow-visible ${
+                                     className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#991b1b]/75 bg-[#0d0c0e]/52 shadow-[inset_0_2px_14px_rgba(0,0,0,0.84),0_0_10px_rgba(153,27,27,0.28)] overflow-visible ${
                                        isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
                                      } ${
                                        itemTargetMode && card
@@ -15378,6 +15481,14 @@ export default function App() {
                                          : ''
                                      }`}
                                    >
+                                     <div
+                                       className="pointer-events-none absolute inset-0 rounded-[2px] opacity-[0.40]"
+                                       style={{
+                                         backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
+                                         backgroundSize: '260px 260px',
+                                         backgroundPosition: `${idx * 89 + 115}px ${idx * 53 + 94}px`,
+                                       }}
+                                     />
                                      {/* Large Matchbook True Incinerate & Ash Rig */}
                                      {isIncineratingThisLane && (
                                        <div className="absolute inset-0 z-50 pointer-events-none overflow-visible flex items-center justify-center">
@@ -15555,13 +15666,13 @@ export default function App() {
                         )}
 
                         {/* Gothic Ritual-Cloth Battle Seam */}
-                        <div className="pointer-events-none flex items-center justify-center gap-3 w-[94%] mx-auto my-1.5 select-none">
+                        <div className="pointer-events-none flex items-center justify-center gap-3 w-[94%] mx-auto -mt-0.5 mb-1 select-none">
                           <span className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#7a2420]/55 to-[#9c7a4c]/60" />
                           <span className="w-1.5 h-1.5 rotate-45 bg-[#2a0d0d] border border-[#9c7a4c]/75 shadow-[0_0_6px_rgba(122,36,32,0.65)]" />
                           <span className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#7a2420]/55 to-[#9c7a4c]/60" />
                         </div>
 
-                        <div className="flex justify-center items-center gap-2 sm:gap-4 w-full overflow-visible">
+                        <div className="flex justify-center items-center gap-2 sm:gap-4 w-full -mt-0.5 overflow-visible">
                           {playerBoard.map((card, idx) => {
                             const canSacrificeThis = Boolean(needsSacrifice && isCardSacrificable(card) && sacrificingLane === null);
                             const canPlaceHere = Boolean(readyToPlace && !card && sacrificingLane === null);
@@ -15583,7 +15694,7 @@ export default function App() {
                               ? 'border-amber-400/80 bg-amber-950/25 hover:bg-amber-900/35 hover:border-amber-200 shadow-[inset_0_2px_12px_rgba(0,0,0,0.75),0_0_14px_rgba(217,119,6,0.34)] cursor-pointer'
                               : isDimmedTarget
                               ? 'border-[#5e564f]/20 bg-[#0b0a0c]/30 opacity-45 cursor-not-allowed'
-                              : 'border-[#6e645b]/40 hover:border-[#b59c7c]/60 bg-[#0d0c0e]/58 hover:bg-[#141215]/72 shadow-[inset_0_2px_14px_rgba(0,0,0,0.82),0_1px_0_rgba(255,255,255,0.03)] cursor-pointer';
+                              : 'border-[#991b1b]/75 hover:border-[#dc2626]/85 bg-[#0d0c0e]/58 hover:bg-[#1a0b0c]/72 shadow-[inset_0_2px_14px_rgba(0,0,0,0.82),0_0_10px_rgba(153,27,27,0.28)] cursor-pointer';
 
                             return (
                               <div
@@ -15593,10 +15704,18 @@ export default function App() {
                                   isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
                                 }`}
                               >
-                                <span className="pointer-events-none absolute top-1 left-1 w-2 h-2 border-t border-l border-[#9c8c78]/40" />
-                                <span className="pointer-events-none absolute top-1 right-1 w-2 h-2 border-t border-r border-[#9c8c78]/40" />
-                                <span className="pointer-events-none absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#9c8c78]/40" />
-                                <span className="pointer-events-none absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#9c8c78]/40" />
+                                <div
+                                  className="pointer-events-none absolute inset-0 rounded-[2px] opacity-[0.40]"
+                                  style={{
+                                    backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
+                                    backgroundSize: '260px 260px',
+                                    backgroundPosition: `${idx * 67 + 190}px ${idx * 59 + 170}px`,
+                                  }}
+                                />
+                                <span className="pointer-events-none absolute top-1 left-1 w-2 h-2 border-t border-l border-[#b91c1c]/65" />
+                                <span className="pointer-events-none absolute top-1 right-1 w-2 h-2 border-t border-r border-[#b91c1c]/65" />
+                                <span className="pointer-events-none absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#b91c1c]/65" />
+                                <span className="pointer-events-none absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#b91c1c]/65" />
                                 {(!card || isAttackingThisLane) && (
                                   <span
                                     className={`absolute font-mono select-none pointer-events-none transition-colors ${
@@ -15661,10 +15780,7 @@ export default function App() {
                   })()}
                       {/* Row 4: Player Hand */}
                 <div
-                  className="w-full flex items-center justify-center min-h-[140px] sm:min-h-[150px] mt-2.5 sm:mt-3.5 mb-0 px-1 overflow-visible z-20"
-                  style={{
-                    transform: 'none',
-                  }}
+                  className="w-full flex items-center justify-center min-h-[156px] sm:min-h-[172px] mt-1.5 sm:mt-2 mb-0 px-1 overflow-visible z-20 origin-top scale-[1.1] sm:scale-[1.14]"
                 >
                   {hand.map((card, idx) => {
                           // Loosened overlap ladder so cards fan out legibly without choking the art
@@ -15753,8 +15869,9 @@ export default function App() {
     {/* 1. THE BLEEDING STONE RUNNEL (Carved Stone Housing) */}
     <div
     style={{
-      backgroundImage: `linear-gradient(180deg, rgba(44,38,34,0.52) 0%, rgba(19,16,15,0.88) 45%, rgba(11,9,9,0.96) 100%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)' opacity='0.55'/%3E%3C/svg%3E")`,
-      backgroundSize: 'cover, 150px 150px',
+      backgroundImage: `linear-gradient(180deg, rgba(36,30,26,0.48) 0%, rgba(18,15,14,0.78) 50%, rgba(10,8,8,0.9) 100%), url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
+      backgroundSize: 'cover, cover',
+      backgroundPosition: 'center, center',
     }}
     className={`w-12 h-80 bg-[#171412] border border-[#4a3e35]/85 rounded-sm relative flex flex-col items-center justify-between py-2.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,235,210,0.08),0_6px_16px_rgba(0,0,0,0.88)] select-none transition-all ${
       isScaleHeavySlam ? 'animate-scale-heavy-slam shadow-[0_0_28px_rgba(220,38,38,0.85)]' : scaleRumble ? 'animate-scale-rumble shadow-[0_0_20px_rgba(220,38,38,0.55)]' : ''
@@ -16154,13 +16271,10 @@ export default function App() {
                     </button>
                     </div>
 
-                    {/* Stack Count Below Deck */}
-                    <span className="deck-count-red text-[11px] sm:text-xs font-mono font-bold tracking-wider select-none pointer-events-none">
-                      (∞)
-                    </span>
                   </div>
 
                   {/* Creature Deck */}
+                  {deck.length > 0 && (
                   <div className="group flex flex-col items-center gap-1.5">
                     <div className="relative">
                       {deck.length >= 4 && (
@@ -16211,11 +16325,8 @@ export default function App() {
                     </button>
                     </div>
 
-                    {/* Stack Count Below Deck */}
-                    <span className="deck-count-red text-[11px] sm:text-xs font-mono font-bold tracking-wider select-none pointer-events-none">
-                      ({deck.length})
-                    </span>
                   </div>
+                  )}
                 </div>
 
   {/* Vertical 3-Slot Hanging Crimson Cloth Relic Banner */}

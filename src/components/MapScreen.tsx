@@ -1248,14 +1248,14 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
             <div className="relative z-10 flex flex-col h-full min-h-0">
               {/* Header Bar */}
-              <div className="shrink-0 flex items-center justify-between pb-2 mb-2.5 border-b border-[#7c2620]/80">
-                <span className="flex items-center gap-1.5 text-xs font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ecd8b8] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+              <div className="shrink-0 flex flex-col items-center justify-center gap-1.5 pb-2 mb-2.5 border-b border-[#7c2620]/80 text-center">
+                <span className="flex items-center justify-center gap-1.5 text-xs font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ecd8b8] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)] text-center">
                   <span className="text-[#c99b56]">◆</span>
                   {isInspectedReachable ? 'Reachable Omen' : 'Map Survey'}
                 </span>
                 {inspectedMeta && (
                   <span
-                    className={`px-2 py-0.5 rounded-[2px] border text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] ${
+                    className={`px-2.5 py-0.5 rounded-[2px] border text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] text-center ${
                       inspectedMeta.tone === 'boss' || inspectedMeta.tone === 'combat'
                         ? 'bg-[#2b0607]/90 border-red-600/85 text-red-200'
                         : 'bg-[#22090a]/90 border-[#8a5d42]/85 text-[#f0dec0]'
@@ -1294,7 +1294,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                     <span className="h-px flex-1 max-w-[58px] bg-gradient-to-l from-transparent via-[#b52c26]/75 to-[#c49a5c]/85" />
                   </div>
 
-                  <p className="text-xs lg:text-[13.5px] font-['Cinzel',_serif] italic tracking-[0.04em] text-[#f2e2c9] leading-snug px-1.5 drop-shadow-[0_1px_6px_rgba(0,0,0,0.95)]">
+                  <p className="w-full text-center text-xs lg:text-[13.5px] font-['Cinzel',_serif] italic tracking-[0.04em] text-[#f2e2c9] leading-snug px-1.5 drop-shadow-[0_1px_6px_rgba(0,0,0,0.95)]">
                     {inspectedMeta.desc}
                   </p>
                 </div>
@@ -1337,8 +1337,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
               <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#3a0a0a] via-[#cca059]/80 to-[#3a0a0a]" />
 
             <div className="relative z-10">
-              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#6b3428]/80">
-                <span className="flex items-center gap-1.5 text-xs font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#ecd8b8] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+              <div className="flex items-center justify-center pb-2.5 mb-2.5 border-b border-[#6b3428]/80 text-center">
+                <span className="flex items-center justify-center gap-1.5 text-xs font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#ecd8b8] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)] text-center">
                   <span className="text-[#c99b56]">◆</span>
                   Expedition Ledger
                 </span>
