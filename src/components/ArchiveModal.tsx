@@ -337,8 +337,8 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
 
         {/* LEDGER (LIFETIME RUN STATS) TAB */}
         {activeTab === 'LEDGER' && (
-          <div className="flex-1 overflow-y-auto p-5 sm:p-8">
-            <div className="text-center mb-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col justify-center">
+            <div className="text-center mb-4">
               <div className="text-[10px] text-[#8f7960] uppercase tracking-[0.25em] mb-1">
                 +-- A MONUMENT TO ALL YOUR SINS --+
               </div>
@@ -347,8 +347,8 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 max-w-2xl mx-auto">
-              <div className="bg-[#141216] border border-[#3a3330] p-4 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 max-w-2xl w-full mx-auto">
+              <div className="bg-[#141216] border border-[#3a3330] p-3 text-center">
                 <div className="text-[10px] text-[#9c9084] uppercase tracking-wider mb-1">
                   Rituals Concluded
                 </div>
@@ -360,7 +360,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className="bg-[#141216] border border-[#3a3330] p-4 text-center">
+              <div className="bg-[#141216] border border-[#3a3330] p-3 text-center">
                 <div className="text-[10px] text-[#9c9084] uppercase tracking-wider mb-1">
                   Highest Overkill
                 </div>
@@ -369,7 +369,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className="bg-[#141216] border border-[#3a3330] p-4 text-center">
+              <div className="bg-[#141216] border border-[#3a3330] p-3 text-center">
                 <div className="text-[10px] text-[#9c9084] uppercase tracking-wider mb-1">
                   Bosses Slain
                 </div>
@@ -378,7 +378,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className="bg-[#141216] border border-[#3a3330] p-4 text-center">
+              <div className="bg-[#141216] border border-[#3a3330] p-3 text-center">
                 <div className="text-[10px] text-[#9c9084] uppercase tracking-wider mb-1">
                   Cards Sacrificed
                 </div>
@@ -387,7 +387,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className="bg-[#141216] border border-[#3a3330] p-4 text-center">
+              <div className="bg-[#141216] border border-[#3a3330] p-3 text-center">
                 <div className="text-[10px] text-[#9c9084] uppercase tracking-wider mb-1">
                   Beasts Felled
                 </div>
@@ -396,7 +396,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className="bg-[#141216] border border-[#3a3330] p-4 text-center">
+              <div className="bg-[#141216] border border-[#3a3330] p-3 text-center">
                 <div className="text-[10px] text-[#9c9084] uppercase tracking-wider mb-1">
                   Stages Traversed
                 </div>
@@ -405,7 +405,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className="col-span-2 sm:col-span-3 bg-[#141216] border border-[#3a3330] p-4 flex items-center justify-around text-center">
+              <div className="col-span-2 sm:col-span-3 bg-[#141216] border border-[#3a3330] p-3 flex items-center justify-around text-center">
                 <div>
                   <div className="text-[10px] text-[#9c9084] uppercase tracking-wider mb-1">
                     Total Scale Damage Dealt
@@ -426,8 +426,8 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
               </div>
 
               {/* Lineages Proven Trophy Shelf */}
-              <div className="col-span-2 sm:col-span-3 bg-[#141216] border border-[#3a3330] p-4">
-                <div className="flex items-center justify-between mb-3">
+              <div className="col-span-2 sm:col-span-3 bg-[#141216] border border-[#3a3330] p-3">
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] text-[#9c9084] uppercase tracking-widest">
                     Lineages Proven
                   </span>
@@ -458,7 +458,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                     return (
                       <div
                         key={lin.id}
-                        className={`px-2.5 py-2 border text-center transition-colors ${
+                        className={`px-2.5 py-1.5 border text-center transition-colors ${
                           proven
                             ? 'bg-[#161c19] border-emerald-800/70 text-emerald-200'
                             : 'bg-[#0b0a0d] border-[#221f24] text-stone-600'

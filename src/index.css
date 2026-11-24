@@ -1012,3 +1012,71 @@
   50%  { transform: translate3d(5%, -5%, 0) scale(1.1); opacity: 0.24; }
   100% { transform: translate3d(-5%, 4%, 0) scale(1.02); opacity: 0.14; }
 }
+
+/* GPU-composited Runnel & Telemetry Animations */
+@keyframes bloodWaveScroll {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes bloodBubbleAscendA {
+  0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+  15% { opacity: 0.85; }
+  50% { transform: translate3d(1px, -130px, 0) scale(0.9); }
+  85% { opacity: 0.7; transform: translate3d(-0.5px, -220px, 0) scale(1.05); }
+  100% { transform: translate3d(0, -260px, 0) scale(1.2); opacity: 0; }
+}
+@keyframes bloodBubbleAscendB {
+  0% { transform: translate3d(0, 0, 0) scale(0.5); opacity: 0; }
+  20% { opacity: 0.75; }
+  60% { transform: translate3d(-1px, -155px, 0) scale(0.85); }
+  85% { opacity: 0.65; transform: translate3d(0.5px, -225px, 0) scale(1); }
+  100% { transform: translate3d(0, -265px, 0) scale(1.1); opacity: 0; }
+}
+@keyframes bloodBubbleAscendC {
+  0% { transform: translate3d(0, 0, 0) scale(0.7); opacity: 0; }
+  25% { opacity: 0.9; }
+  45% { transform: translate3d(-0.5px, -115px, 0) scale(0.95); }
+  75% { opacity: 0.8; transform: translate3d(1px, -195px, 0) scale(1.1); }
+  100% { transform: translate3d(0, -255px, 0) scale(1.25); opacity: 0; }
+}
+@keyframes telemetryPop {
+  0% { transform: translate3d(0, 4px, 0) scale(0.8); opacity: 0; }
+  20% { transform: translate3d(0, 0, 0) scale(1.1); opacity: 1; }
+  100% { transform: translate3d(0, -10px, 0) scale(0.95); opacity: 0; }
+}
+.animate-telemetry-pop {
+  animation: telemetryPop 0.95s ease-out forwards;
+}
+.deck-glyph-red {
+  filter: invert(77%) sepia(81%) saturate(4003%) hue-rotate(345deg) brightness(123%) contrast(88%) drop-shadow(0 3px 5px rgba(0, 0, 0, 0.95)) drop-shadow(0 1px 2px rgba(0, 0, 0, 1));
+  transition: filter 0.15s ease-out, transform 0.15s ease-out;
+}
+.group:hover .deck-glyph-red {
+  filter: invert(77%) sepia(81%) saturate(4003%) hue-rotate(345deg) brightness(132%) contrast(92%) drop-shadow(0 3px 5px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 8px rgba(240, 55, 64, 0.55));
+  transform: scale(1.08);
+}
+.deck-count-red {
+  color: #f03740;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 1), 0 0 2px rgba(0, 0, 0, 0.8);
+  transition: color 0.15s ease-out, text-shadow 0.15s ease-out;
+}
+.group:hover .deck-count-red {
+  color: #ff525c;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 1), 0 0 6px rgba(240, 55, 64, 0.5);
+}
+
+/* Overkill Siphon Hose Blood Surge */
+@keyframes hoseBloodRush {
+  0% { stroke-dashoffset: 96; opacity: 0.95; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+@keyframes hoseBloodFlow {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+.animate-hose-rush {
+  animation: hoseBloodRush 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.animate-hose-flow {
+  animation: hoseBloodFlow 0.35s linear infinite;
+}

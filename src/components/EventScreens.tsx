@@ -4106,20 +4106,14 @@ export default function EventScreens({ ctx }: { ctx: {
                         </span>
                       )}
                       <div
-                        className={`rounded-[4px] transition-shadow duration-300 ${
+                        className={`transition-[filter] duration-300 ${
                           isSelected
-                            ? 'shadow-[0_0_38px_rgba(212,175,55,0.52),0_18px_32px_rgba(0,0,0,0.95)]'
-                            : 'shadow-[0_16px_30px_rgba(0,0,0,0.92)]'
+                            ? 'drop-shadow-[0_0_20px_rgba(212,175,55,0.55)] drop-shadow-[0_18px_22px_rgba(0,0,0,0.95)]'
+                            : 'drop-shadow-[0_14px_18px_rgba(0,0,0,0.9)]'
                         }`}
                       >
                         {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
                       </div>
-                      {/* Ground Shadow Oval */}
-                      <div
-                        className={`mt-3 h-2 rounded-full blur-[3px] transition-all duration-300 ${
-                          isSelected ? 'w-28 bg-amber-500/30' : 'w-24 bg-black/75'
-                        }`}
-                      />
                     </div>
                   );
                 })}

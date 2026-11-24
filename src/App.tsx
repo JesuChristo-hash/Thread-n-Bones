@@ -11,6 +11,7 @@ import { isCardNamed, getStageBgClass, applyBegottenStamp, buildStrikeTargets, i
 export { getStageBgClass };
 import CardView, { type RenderCardOptions } from './components/CardView';
 import ActWeather from './components/ActWeather';
+import DuelTelemetryBanner, { BloodBankVessel, BoneOssuaryPlaque } from './components/DuelTelemetryBanner';
 const DevMenuScreen = React.lazy(() => import('./components/DevMenuScreen'));
 const GameOverScreen = React.lazy(() => import('./components/GameOverScreen'));
 const SplashScreen = React.lazy(() => import('./components/SplashScreen'));
@@ -7550,7 +7551,7 @@ export default function App() {
       {/* =========================================================================
           DRAFT SCREEN (PELT TRADING)
          ========================================================================= */}
-      {['DRAFT', 'EVENT_CROSSROADS', 'EVENT_ITEMS', 'EVENT_CAMPFIRE', 'EVENT_ALTAR', 'EVENT_ANVIL', 'EVENT_FLOCK', 'EVENT_TOTEM_CARVING', 'EVENT_COST_BARGAIN', 'EVENT_BONE_LORD', 'EVENT_MYCOLOGIST', 'EVENT_GOOBERT', 'EVENT_CAVE_TRIAL', 'EVENT_BUILD_TOTEM', 'EVENT_CARD_CHOICE', 'EVENT_HOARDER_SEARCH'].includes(screen) && (
+      {((['DRAFT', 'EVENT_CROSSROADS', 'EVENT_ITEMS', 'EVENT_CAMPFIRE', 'EVENT_ALTAR', 'EVENT_ANVIL', 'EVENT_FLOCK', 'EVENT_TOTEM_CARVING', 'EVENT_COST_BARGAIN', 'EVENT_BONE_LORD', 'EVENT_MYCOLOGIST', 'EVENT_GOOBERT', 'EVENT_CAVE_TRIAL', 'EVENT_BUILD_TOTEM', 'EVENT_CARD_CHOICE', 'EVENT_HOARDER_SEARCH'].includes(screen) ) || showViewDeck) && (
         <React.Suspense fallback={null}>
           <EventScreens
             ctx={{
@@ -8269,10 +8270,10 @@ export default function App() {
                       const isFoe = theme === 'foe';
 
                       const dollFilterClass = isWeaver
-                        ? '-scale-x-100 brightness-[0.58] contrast-[1.18] saturate-[0.78] drop-shadow-[0_8px_16px_rgba(88,28,135,0.75)]'
+                        ? 'hue-rotate-[255deg] saturate-[1.35] brightness-[0.82] contrast-[1.15] drop-shadow-[0_8px_16px_rgba(88,28,135,0.6)]'
                         : isFoe
-                          ? '-scale-x-100 brightness-[0.55] contrast-[1.2] saturate-[0.72] drop-shadow-[0_8px_16px_rgba(153,27,27,0.75)]'
-                          : 'drop-shadow-[0_10px_16px_rgba(0,0,0,0.95)]';
+                          ? 'hue-rotate-[-32deg] saturate-[1.35] brightness-[0.76] contrast-[1.15] drop-shadow-[0_8px_16px_rgba(127,29,29,0.55)]'
+                          : 'drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]';
 
                       const badgeClass = isWeaver
                         ? 'border-purple-700/75 bg-[#120b18]/92 text-purple-200'
@@ -8296,20 +8297,20 @@ export default function App() {
                       const sigilDesc = sigilName ? (SIGIL_DESCRIPTIONS as Record<string, string>)[sigilName] : '';
 
                       return (
-                        <div key={uid} className="group relative flex flex-col items-center select-none cursor-help">
+                        <div key={uid} className={`group relative flex flex-col items-center select-none cursor-help ${isWeaver || isFoe ? '-translate-y-1.5' : ''}`}>
                           {/* Physical Burlap Doll Container */}
                           <div className={`relative flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.05] ${isDual ? 'w-[74px] h-[102px]' : 'w-[80px] h-[110px]'}`}>
                             <img
                               src={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
                               alt={tooltipTitle}
                               draggable={false}
-                              className={`w-full h-full object-contain pointer-events-none ${dollFilterClass}`}
+                              className={`w-full h-full object-contain pointer-events-none ${isWeaver || isFoe ? '-scale-x-100' : ''} ${dollFilterClass}`}
                             />
                           </div>
 
                           {/* Compact Nameplate Under Doll */}
                           <div className={`-mt-1 px-1.5 py-0.5 rounded-[2px] border shadow-[0_4px_10px_rgba(0,0,0,0.85)] text-center max-w-[96px] ${badgeClass}`}>
-                            <div className="font-['Cinzel',_serif] font-bold text-[7px] uppercase tracking-[0.16em] leading-tight">
+                            <div className="font-['Cinzel',_serif] font-bold text-[7px] uppercase tracking-[0.14em] leading-tight whitespace-nowrap">
                               {roleLabel}
                             </div>
                             <div className="font-mono text-[7px] opacity-85 truncate leading-tight">
@@ -8380,7 +8381,7 @@ export default function App() {
                             backgroundSize: 'cover, cover',
                             backgroundPosition: 'center, center',
                           }}
-                          className={`relative overflow-hidden w-[125px] h-[125px] sm:w-[140px] sm:h-[140px] rounded-full bg-[#151316] border-2 flex items-center justify-center select-none outline-none transition-all duration-200 ${
+                          className={`relative overflow-hidden w-[138px] h-[138px] sm:w-[154px] sm:h-[154px] rounded-full bg-[#151316] border-2 flex items-center justify-center select-none outline-none transition-all duration-200 ${
                             isTalismanPricked
                               ? 'translate-y-1 scale-[0.98] border-[#ef4444] shadow-[0_1px_0_#070504,inset_0_5px_14px_rgba(0,0,0,0.98),0_0_28px_rgba(239,68,68,0.85)] cursor-default'
                               : phase === 'PLAY'
@@ -8412,7 +8413,7 @@ export default function App() {
                               className={`font-mono text-[3.8px] font-bold select-none tracking-[0.03em] transition-all duration-200 ${
                                 isTalismanPricked
                                   ? 'fill-[#ef4444] drop-shadow-[0_0_3px_rgba(239,68,68,0.7)]'
-                                  : 'fill-[#262328] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
+                                  : 'fill-[#0a090b] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
                               }`}
                             >
                               <textPath
@@ -8430,11 +8431,11 @@ export default function App() {
                           <div className={`absolute inset-3 sm:inset-3.5 rounded-full border border-dashed transition-all duration-200 pointer-events-none ${
                             isTalismanPricked
                               ? 'border-red-900/60 shadow-[0_0_8px_rgba(185,28,28,0.25)]'
-                              : 'border-[#262328] group-hover:border-[#b91c1c]/90 group-hover:shadow-[0_0_6px_rgba(185,28,28,0.4)]'
+                              : 'border-[#0a090b] group-hover:border-[#b91c1c]/90 group-hover:shadow-[0_0_6px_rgba(185,28,28,0.4)]'
                           }`} />
 
                           {/* Inner Core SVG */}
-                          <svg viewBox="0 0 100 100" className="w-[84px] h-[84px] sm:w-[104px] sm:h-[104px] overflow-visible pointer-events-none transition-transform duration-150">
+                          <svg viewBox="0 0 100 100" className="w-[96px] h-[96px] sm:w-[116px] sm:h-[116px] overflow-visible pointer-events-none transition-transform duration-150">
                             <defs>
                               <path
                                 id="talismanInnerZalgoPath"
@@ -8448,7 +8449,7 @@ export default function App() {
                               cy="50"
                               r="44"
                               fill="none"
-                              stroke={isTalismanPricked ? "#7f1d1d" : "#262328"}
+                              stroke={isTalismanPricked ? "#7f1d1d" : "#0a090b"}
                               strokeWidth="2.5"
                               className="transition-colors duration-200 group-hover:stroke-[#7f1d1d]"
                             />
@@ -8458,7 +8459,7 @@ export default function App() {
                               className={`font-mono text-[4.1px] font-bold select-none tracking-[0.04em] transition-all duration-200 ${
                                 isTalismanPricked
                                   ? 'fill-[#ef4444] drop-shadow-[0_0_3px_rgba(239,68,68,0.75)]'
-                                  : 'fill-[#262328] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
+                                  : 'fill-[#0a090b] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
                               }`}
                             >
                               <textPath
@@ -8475,7 +8476,7 @@ export default function App() {
                             <path
                               d="M 50 12 L 72.3 80.7 L 13.9 38.3 L 86.1 38.3 L 27.7 80.7 Z"
                               fill={isTalismanPricked ? "#991b1b" : "transparent"}
-                              stroke={isTalismanPricked ? "#ef4444" : phase === 'PLAY' ? "#262328" : "#1c1a1e"}
+                              stroke={isTalismanPricked ? "#ef4444" : phase === 'PLAY' ? "#0a090b" : "#050506"}
                               className={`transition-all duration-200 group-hover:stroke-[#ef4444] ${
                                 isTalismanPricked
                                   ? 'drop-shadow-[0_0_12px_rgba(239,68,68,0.95)]'
@@ -8493,12 +8494,12 @@ export default function App() {
 
                       <pre
                         style={{ fontFamily: '"Courier New", Courier, monospace', letterSpacing: '0px' }}
-                        className={`text-[5px] leading-[4.5px] whitespace-pre select-none pointer-events-none origin-top mt-2 transition-all duration-200 text-center ${
+                        className={`text-[5px] leading-[4.5px] whitespace-pre select-none pointer-events-none origin-top mt-1.5 transition-all duration-200 text-center ${
                           isTalismanPricked
-                            ? 'scale-[0.45] text-red-400 font-bold drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]'
+                            ? 'scale-[0.38] text-red-400 font-bold drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]'
                             : phase === 'PLAY'
-                              ? 'scale-[0.55] text-[#a3907c] group-hover:text-red-400 group-hover:drop-shadow-[0_0_6px_rgba(239,68,68,0.7)]'
-                              : 'scale-[0.55] text-stone-700'
+                              ? 'scale-[0.46] text-[#a3907c] group-hover:text-red-400 group-hover:drop-shadow-[0_0_6px_rgba(239,68,68,0.7)]'
+                              : 'scale-[0.46] text-stone-700'
                         }`}
                       >
                         {isTalismanPricked ? (
@@ -8701,28 +8702,26 @@ export default function App() {
                                return (
                                  <div
                                    key={`e-queue-slot-${idx}`}
-                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#7f1d1d]/65 bg-[#0b0a0c]/48 shadow-[inset_0_2px_12px_rgba(0,0,0,0.82),0_0_8px_rgba(127,29,29,0.24)] overflow-visible ${isDropping ? 'z-40' : card ? 'z-20' : 'z-0'}`}
+                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-black/70 bg-[#0b0a0c]/48 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] overflow-visible ${isDropping ? 'z-40' : card ? 'z-20' : 'z-0'}`}
                                   >
                                     <div
-                                      className="pointer-events-none absolute inset-0 rounded-[2px] opacity-[0.34]"
+                                      className="pointer-events-none absolute inset-0 rounded-[2px] opacity-[0.22] brightness-[0.55]"
                                       style={{
                                         backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
                                         backgroundSize: '260px 260px',
                                         backgroundPosition: `${idx * 73 + 12}px ${idx * 41 + 18}px`,
                                       }}
                                     />
+                                    <div className="pointer-events-none absolute inset-[4px] rounded-[1px] border border-[#7f1d1d]/65 shadow-[0_0_6px_rgba(127,29,29,0.22)]" />
                                     {(!card || isDropping) && (
                                       <svg
-                                        className="w-5 h-5 sm:w-6 sm:h-6 text-[#c4a47c]/75 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] pointer-events-none select-none"
-                                        viewBox="0 0 24 24"
+                                        className="w-7 h-7 sm:w-8 sm:h-8 text-[#c4a47c]/80 drop-shadow-[0_3px_5px_rgba(0,0,0,0.95)] pointer-events-none select-none"
+                                        viewBox="0 0 24 28"
                                         fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="3.5"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
                                       >
-                                        <line x1="12" y1="4" x2="12" y2="20" />
-                                        <polyline points="18 14 12 20 6 14" />
+                                        <polygon points="12,1.5 14.2,4 12,6.5 9.8,4" fill="currentColor" opacity="0.85" />
+                                        <path d="M12 6.5 L12 21.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="square" />
+                                        <path d="M5.5 15.5 L12 25.5 L18.5 15.5 L12 18.8 Z" fill="currentColor" />
                                       </svg>
                                     )}
 
@@ -8752,7 +8751,7 @@ export default function App() {
                            </div>
 
                            {/* Row 2: Opponent Active Board Slots */}
-                           <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 w-full overflow-visible">
+                           <div className="flex justify-center items-center gap-2 sm:gap-4 mt-1 mb-0 w-full overflow-visible">
                              {enemyBoard.map((rawCard, idx) => {
                                  const card = hideBossCards ? null : rawCard;
                                  const isAttackingThisLane = activeAttacker?.isPlayer === false && activeAttacker?.lane === idx;
@@ -8771,7 +8770,7 @@ export default function App() {
                                          handleItemTargetLane(idx);
                                        }
                                      }}
-                                     className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-[#991b1b]/75 bg-[#0d0c0e]/52 shadow-[inset_0_2px_14px_rgba(0,0,0,0.84),0_0_10px_rgba(153,27,27,0.28)] overflow-visible ${
+                                     className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-black/75 bg-[#0d0c0e]/52 shadow-[inset_0_2px_14px_rgba(0,0,0,0.86)] overflow-visible ${
                                        isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
                                      } ${
                                        itemTargetMode && card
@@ -8780,13 +8779,14 @@ export default function App() {
                                      }`}
                                    >
                                      <div
-                                       className="pointer-events-none absolute inset-0 rounded-[2px] opacity-[0.40]"
+                                       className="pointer-events-none absolute inset-0 rounded-[2px] opacity-[0.26] brightness-[0.55]"
                                        style={{
                                          backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
                                          backgroundSize: '260px 260px',
                                          backgroundPosition: `${idx * 89 + 115}px ${idx * 53 + 94}px`,
                                        }}
                                      />
+                                     <div className="pointer-events-none absolute inset-[4px] rounded-[1px] border border-[#991b1b]/75 shadow-[0_0_8px_rgba(153,27,27,0.26)]" />
                                      {/* Large Matchbook True Incinerate & Ash Rig */}
                                      {isIncineratingThisLane && (
                                        <div className="absolute inset-0 z-50 pointer-events-none overflow-visible flex items-center justify-center">
@@ -8964,13 +8964,13 @@ export default function App() {
                         )}
 
                         {/* Gothic Ritual-Cloth Battle Seam */}
-                        <div className="pointer-events-none flex items-center justify-center gap-3 w-[94%] mx-auto -mt-0.5 mb-1 select-none">
+                        <div className="pointer-events-none flex items-center justify-center gap-3 w-[94%] mx-auto my-0 -translate-y-[3px] select-none">
                           <span className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#7a2420]/55 to-[#9c7a4c]/60" />
                           <span className="w-1.5 h-1.5 rotate-45 bg-[#2a0d0d] border border-[#9c7a4c]/75 shadow-[0_0_6px_rgba(122,36,32,0.65)]" />
                           <span className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#7a2420]/55 to-[#9c7a4c]/60" />
                         </div>
 
-                        <div className="flex justify-center items-center gap-2 sm:gap-4 w-full -mt-0.5 overflow-visible">
+                        <div className="flex justify-center items-center gap-2 sm:gap-4 w-full overflow-visible">
                           {playerBoard.map((card, idx) => {
                             const canSacrificeThis = Boolean(needsSacrifice && isCardSacrificable(card) && sacrificingLane === null);
                             const canPlaceHere = Boolean(readyToPlace && !card && sacrificingLane === null);
@@ -8992,7 +8992,7 @@ export default function App() {
                               ? 'border-amber-400/80 bg-amber-950/25 hover:bg-amber-900/35 hover:border-amber-200 shadow-[inset_0_2px_12px_rgba(0,0,0,0.75),0_0_14px_rgba(217,119,6,0.34)] cursor-pointer'
                               : isDimmedTarget
                               ? 'border-[#5e564f]/20 bg-[#0b0a0c]/30 opacity-45 cursor-not-allowed'
-                              : 'border-[#991b1b]/75 hover:border-[#dc2626]/85 bg-[#0d0c0e]/58 hover:bg-[#1a0b0c]/72 shadow-[inset_0_2px_14px_rgba(0,0,0,0.82),0_0_10px_rgba(153,27,27,0.28)] cursor-pointer';
+                              : 'border-black/75 hover:border-[#7f1d1d]/80 bg-[#0d0c0e]/58 hover:bg-[#1a0b0c]/72 shadow-[inset_0_2px_14px_rgba(0,0,0,0.88)] cursor-pointer';
 
                             return (
                               <div
@@ -9003,13 +9003,14 @@ export default function App() {
                                 }`}
                               >
                                 <div
-                                  className="pointer-events-none absolute inset-0 rounded-[2px] opacity-[0.40]"
+                                  className="pointer-events-none absolute inset-0 rounded-[2px] opacity-[0.26] brightness-[0.55]"
                                   style={{
                                     backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
                                     backgroundSize: '260px 260px',
                                     backgroundPosition: `${idx * 67 + 190}px ${idx * 59 + 170}px`,
                                   }}
                                 />
+                                <div className="pointer-events-none absolute inset-[4px] rounded-[1px] border border-[#991b1b]/75 shadow-[0_0_8px_rgba(153,27,27,0.26)]" />
                                 <span className="pointer-events-none absolute top-1 left-1 w-2 h-2 border-t border-l border-[#b91c1c]/65" />
                                 <span className="pointer-events-none absolute top-1 right-1 w-2 h-2 border-t border-r border-[#b91c1c]/65" />
                                 <span className="pointer-events-none absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#b91c1c]/65" />
@@ -9078,7 +9079,7 @@ export default function App() {
                   })()}
                       {/* Row 4: Player Hand */}
                 <div
-                  className="w-full flex items-center justify-center min-h-[156px] sm:min-h-[172px] mt-1.5 sm:mt-2 mb-0 px-1 overflow-visible z-20 origin-top scale-[1.1] sm:scale-[1.14]"
+                  className="relative w-full flex items-center justify-center min-h-[148px] sm:min-h-[164px] mt-3 sm:mt-4 pb-1.5 sm:pb-2 px-1 overflow-visible z-30 origin-bottom scale-[1.02] sm:scale-[1.05]"
                 >
                   {hand.map((card, idx) => {
                           // Loosened overlap ladder so cards fan out legibly without choking the art
@@ -9156,7 +9157,8 @@ export default function App() {
                 </div>
 
               {/* FIXED FLANK: Bleeding Stone Runnel & Blood Ampoule Rack + S & C Draw Decks directly beneath */}
-<div className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-3 w-44 select-none pointer-events-auto z-20">
+<div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-3 w-auto select-none pointer-events-auto z-20">
+  <div className="flex items-start justify-center gap-6 translate-x-2 sm:translate-x-3">
     {/* Floating OVERKILL text anchored above runnel without displacing layout */}
     {isOverkill && (
       <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm font-mono font-black text-red-500 uppercase tracking-widest animate-bounce drop-shadow-[0_0_12px_rgba(239,68,68,1)] text-center leading-none whitespace-nowrap pointer-events-none z-30">
@@ -9171,7 +9173,7 @@ export default function App() {
       backgroundSize: 'cover, cover',
       backgroundPosition: 'center, center',
     }}
-    className={`w-12 h-80 bg-[#171412] border border-[#4a3e35]/85 rounded-sm relative flex flex-col items-center justify-between py-2.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,235,210,0.08),0_6px_16px_rgba(0,0,0,0.88)] select-none transition-all ${
+    className={`w-14 h-[396px] bg-[#171412] border border-[#4a3e35]/85 rounded-sm relative flex flex-col items-center justify-between py-2.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,235,210,0.08),0_6px_16px_rgba(0,0,0,0.88)] select-none transition-all ${
       isScaleHeavySlam ? 'animate-scale-heavy-slam shadow-[0_0_28px_rgba(220,38,38,0.85)]' : scaleRumble ? 'animate-scale-rumble shadow-[0_0_20px_rgba(220,38,38,0.55)]' : ''
     }`}
     title={`Runnel Balance: ${scale === 0 ? '0 (Balanced)' : scale > 0 ? `+${scale}` : `${scale}`}`}
@@ -9239,40 +9241,13 @@ export default function App() {
       )}
 
       {/* THE GLASS AMPOULE (Integrated Cylindrical Specimen Tube) */}
-      <div className="relative w-4 h-full flex flex-col items-center justify-between z-10">
+      <div className="relative w-5 h-full flex flex-col items-center justify-between z-10">
         {/* Top Brass Ferrule Collar */}
         <div className="w-5 h-1.5 bg-gradient-to-b from-[#3a281c] to-[#1d140e] border border-[#523927] rounded-t-xs shadow-sm z-20" />
 
         {/* Glass Cylinder Body */}
           <div className="relative w-full flex-1 rounded-full bg-[#0a0505] border border-white/20 shadow-[inset_0_2px_8px_rgba(0,0,0,0.95),0_0_8px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col justify-end">
-            {/* Inline Fluid Mechanics Keyframes */}
-            <style>{`
-              @keyframes bloodWaveScroll {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(-50%); }
-              }
-              @keyframes bloodBubbleAscendA {
-                0% { bottom: 2%; transform: translateX(0) scale(0.6); opacity: 0; }
-                15% { opacity: 0.85; }
-                50% { transform: translateX(1px) scale(0.9); }
-                85% { opacity: 0.7; transform: translateX(-0.5px) scale(1.05); }
-                100% { bottom: 92%; transform: translateX(0) scale(1.2); opacity: 0; }
-              }
-              @keyframes bloodBubbleAscendB {
-                0% { bottom: 4%; transform: translateX(0) scale(0.5); opacity: 0; }
-                20% { opacity: 0.75; }
-                60% { transform: translateX(-1px) scale(0.85); }
-                85% { opacity: 0.65; transform: translateX(0.5px) scale(1); }
-                100% { bottom: 94%; transform: translateX(0) scale(1.1); opacity: 0; }
-              }
-              @keyframes bloodBubbleAscendC {
-                0% { bottom: 1%; transform: translateX(0) scale(0.7); opacity: 0; }
-                25% { opacity: 0.9; }
-                45% { transform: translateX(-0.5px) scale(0.95); }
-                75% { opacity: 0.8; transform: translateX(1px) scale(1.1); }
-                100% { bottom: 90%; transform: translateX(0) scale(1.25); opacity: 0; }
-              }
-            `}</style>
+            
 
             {/* Glass Specular Glint (Continuous Curved Longitudinal Reflection) */}
             <div className="absolute top-0 bottom-0 left-[2px] w-[1.5px] bg-gradient-to-b from-white/40 via-white/10 to-white/20 rounded-full z-20 pointer-events-none" />
@@ -9304,15 +9279,15 @@ export default function App() {
             {fillPercent > 8 && (
               <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div
-                  className="absolute left-[20%] w-[3px] h-[3px] rounded-full bg-rose-200/40 border border-white/60 shadow-[0_0_2px_rgba(255,255,255,0.7)]"
+                  className="absolute bottom-1 left-[20%] w-[3px] h-[3px] rounded-full bg-rose-200/40 border border-white/60 will-change-transform"
                   style={{ animation: 'bloodBubbleAscendA 3.2s ease-in infinite' }}
                 />
                 <div
-                  className="absolute left-[62%] w-[2px] h-[2px] rounded-full bg-rose-200/40 border border-white/50 shadow-[0_0_2px_rgba(255,255,255,0.5)]"
+                  className="absolute bottom-1 left-[62%] w-[2px] h-[2px] rounded-full bg-rose-200/40 border border-white/50 will-change-transform"
                   style={{ animation: 'bloodBubbleAscendB 4.1s ease-in infinite 1.2s' }}
                 />
                 <div
-                  className="absolute left-[38%] w-[2.5px] h-[2.5px] rounded-full bg-rose-200/40 border border-white/60 shadow-[0_0_2px_rgba(255,255,255,0.6)]"
+                  className="absolute bottom-1 left-[38%] w-[2.5px] h-[2.5px] rounded-full bg-rose-200/40 border border-white/60 will-change-transform"
                   style={{ animation: 'bloodBubbleAscendC 2.7s ease-in infinite 0.6s' }}
                 />
               </div>
@@ -9323,7 +9298,7 @@ export default function App() {
               <div className="absolute -top-[3.5px] left-0 right-0 h-[7px] overflow-hidden pointer-events-none z-10">
                 <svg
                   viewBox="0 0 64 8"
-                  className="w-[200%] h-full"
+                  className="w-[200%] h-full will-change-transform"
                   style={{ animation: 'bloodWaveScroll 2.2s linear infinite' }}
                   preserveAspectRatio="none"
                 >
@@ -9337,7 +9312,7 @@ export default function App() {
                     stroke="#fecdd3"
                     strokeWidth="1.6"
                     strokeLinecap="round"
-                    className="filter drop-shadow-[0_0_4px_rgba(254,202,202,0.95)]"
+                    
                   />
                 </svg>
                 </div>
@@ -9403,125 +9378,35 @@ export default function App() {
     </div>
   </div>
 
-  {/* 2. HANGING CRIMSON CLOTH TELEMETRY BANNER (Turn, Bones & Blood Bank Vial) */}
-  {(() => {
-    const winThreshold = typeof getRequiredScaleWinDamage === 'function' ? getRequiredScaleWinDamage() : 5;
-    const liveBattleOverkill = Math.max(0, scale - winThreshold);
-    const displayBloodOz = (totalOverkillDamage || 0) + (isOverkill ? 0 : liveBattleOverkill);
-    const vialFillPct = displayBloodOz > 0 ? Math.min(100, Math.max(18, displayBloodOz * 8)) : 0;
-
-    return (
-      <div className="relative w-full max-w-[172px] mt-1.5 flex flex-col items-center select-none">
-        {/* Top Wooden Banner Rod with Brass Finials */}
-        <div
-          className="relative z-10 w-[calc(100%+10px)] h-2.5 rounded-full border border-[#6e4a2b]/90 shadow-[0_3px_8px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,224,175,0.22)] flex items-center justify-between"
-          style={{
-            backgroundColor: '#2d1b10',
-            backgroundImage: `linear-gradient(180deg, rgba(255,215,165,0.16), rgba(0,0,0,0.45)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
-            backgroundSize: 'cover, 160px 160px',
-          }}
-        >
-          <span className="-ml-1 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#e2be76] via-[#9c7238] to-[#3f2912] border border-[#2a190a] shadow-sm" />
-          <span className="-mr-1 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#e2be76] via-[#9c7238] to-[#3f2912] border border-[#2a190a] shadow-sm" />
+  {/* 2. TURN (ROMAN) & RELICS BANNER + BLOOD/BONES COLUMN (Right of Runnel) */}
+  <div className="flex flex-col items-center gap-2 w-[84px] sm:w-[90px]">
+    <DuelTelemetryBanner
+      turnNumber={turnNumber}
+      isTurnOneDanger={turnNumber === 1 && scale >= 4}
+      items={items.map((id) => (id && ALL_ITEMS[id] ? ALL_ITEMS[id] : null))}
+      phase={phase}
+      itemTargetSourceSlot={itemTargetSourceSlot}
+      onUseItem={handleUseItem}
+    />
+    {(() => {
+      const winThreshold = typeof getRequiredScaleWinDamage === 'function' ? getRequiredScaleWinDamage() : 5;
+      const liveBattleOverkill = Math.max(0, scale - winThreshold);
+      const displayBloodOz = (totalOverkillDamage || 0) + (isOverkill ? 0 : liveBattleOverkill);
+      return (
+        <div className="flex flex-col items-center mt-7">
+          <BloodBankVessel displayBloodOz={displayBloodOz} isOverkill={isOverkill} />
         </div>
+      );
+    })()}
+  </div>
+  </div> {/* End Runnel + Banner Column Row */}
 
-        {/* Hanging Crimson Cloth Body */}
-        <div
-          className={`relative w-full -mt-0.5 px-2.5 pt-2 pb-2.5 rounded-b-[10px] border-x border-b overflow-hidden shadow-[0_12px_26px_rgba(0,0,0,0.9),inset_0_8px_18px_rgba(0,0,0,0.62)] transition-all duration-300 ${
-            turnNumber === 1 && scale >= 4
-              ? 'border-red-500/90 shadow-[0_0_16px_rgba(220,38,38,0.55)]'
-              : 'border-[#7a3c2e]/90'
-          }`}
-          style={{
-            background: 'radial-gradient(ellipse at 50% 0%, #6b0f12 0%, #44080a 54%, #1d0405 100%)',
-          }}
-        >
-          {/* Multiplied Cloth Weave Texture */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
-            style={{
-              backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/cloth.jpg")`,
-              backgroundSize: '150px 150px',
-              backgroundRepeat: 'repeat',
-            }}
-          />
-          {/* Stitched Gold-Thread Banner Seam */}
-          <div className="pointer-events-none absolute inset-1.5 border border-dashed border-[#c49a5c]/45 rounded-b-[7px]" />
-          {/* Woven Center Fringe Accent at Bottom Hem */}
-          <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1 bg-gradient-to-r from-[#3a0a0a] via-[#cca059]/80 to-[#3a0a0a]" />
-
-          <div className="relative z-10">
-            {/* Top Row: Turn & Bones */}
-            <div className="flex items-center justify-between gap-2 pt-1 pb-1 mb-1.5 border-b border-[#7c2620]/80 px-1">
-              <span className="font-['Cinzel',_serif] font-bold text-[10px] tracking-[0.2em] uppercase text-[#f0dec0] drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                Turn {turnNumber}
-              </span>
-              <div className="flex items-center gap-1" title={`Bones: ${bones}`}>
-                <span className={`text-[11px] filter contrast-125 brightness-95 select-none ${boneShaking ? 'animate-bone-shake' : ''}`}>
-                  🦴
-                </span>
-                <span className="font-['Cinzel',_serif] font-black text-xs text-[#f6e6c8] tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
-                  {bones}
-                </span>
-              </div>
-            </div>
-
-            {/* Bottom Row: Dark Glass & Iron Blood Bank Vial */}
-            <div
-              className="relative overflow-hidden flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-[2px] bg-[#140707]/90 border border-[#7c2e25]/85 shadow-[inset_0_2px_9px_rgba(0,0,0,0.94)]"
-              title={`Blood Bank: ${displayBloodOz} oz (Overkill Blood)`}
-            >
-              <div
-                className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#7f1215]/75 via-[#991b1b]/40 to-transparent transition-all duration-500"
-                style={{ height: `${vialFillPct}%` }}
-              />
-              <div className="pointer-events-none absolute inset-x-1 top-0.5 h-px bg-gradient-to-r from-transparent via-red-200/20 to-transparent" />
-
-              <div className="relative z-10 flex items-center gap-1.5 min-w-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.95)] shrink-0" />
-                <span className="text-[8.5px] font-mono uppercase tracking-[0.15em] text-[#e2c6b0] font-bold truncate">
-                  Blood Bank
-                </span>
-              </div>
-
-              <span className="relative z-10 h-3.5 w-px bg-[#6e241d] shrink-0" />
-
-              <div className="relative z-10 flex items-baseline gap-1 shrink-0">
-                <span className="font-['Cinzel',_serif] text-sm font-black text-red-300 tracking-wider leading-none drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
-                  {displayBloodOz}
-                </span>
-                <span className="text-[8.5px] font-mono uppercase font-bold text-red-300/80 leading-none">
-                  OZ
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  })()}
-
-                {/* S & C Draw Decks directly beneath Turn & Bones */}
-                <style>{`
-                  .deck-glyph-red {
-                    filter: invert(77%) sepia(81%) saturate(4003%) hue-rotate(345deg) brightness(123%) contrast(88%) drop-shadow(0 3px 5px rgba(0, 0, 0, 0.95)) drop-shadow(0 1px 2px rgba(0, 0, 0, 1));
-                    transition: filter 0.15s ease-out, transform 0.15s ease-out;
-                  }
-                  .group:hover .deck-glyph-red {
-                    filter: invert(77%) sepia(81%) saturate(4003%) hue-rotate(345deg) brightness(132%) contrast(92%) drop-shadow(0 3px 5px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 8px rgba(240, 55, 64, 0.55));
-                    transform: scale(1.08);
-                  }
-                  .deck-count-red {
-                    color: #f03740;
-                    text-shadow: 0 2px 4px rgba(0, 0, 0, 1), 0 0 2px rgba(0, 0, 0, 0.8);
-                    transition: color 0.15s ease-out, text-shadow 0.15s ease-out;
-                  }
-                  .group:hover .deck-count-red {
-                    color: #ff525c;
-                    text-shadow: 0 2px 4px rgba(0, 0, 0, 1), 0 0 6px rgba(240, 55, 64, 0.5);
-                  }
-                `}</style>
-                <div className="flex items-center justify-center gap-3.5 w-full relative mt-4 sm:mt-5 translate-y-1 font-mono">
+  {/* Lower Flank: Centered Bones Counter directly above lowered S & C Decks */}
+  <div className="flex flex-col items-center gap-2.5 w-full relative mt-3 sm:mt-4 translate-y-4 sm:translate-y-5 translate-x-2.5 sm:translate-x-3.5">
+    <div className="w-[74px] sm:w-[80px]">
+      <BoneOssuaryPlaque bones={bones} boneShaking={boneShaking} />
+    </div>
+    <div className="flex items-center justify-center gap-4 w-full relative font-mono">
                   {/* Squirrel Deck */}
                   <div className="group flex flex-col items-center gap-1.5">
                     <div className="relative">
@@ -9542,7 +9427,7 @@ export default function App() {
                     <button
                       disabled={phase !== 'DRAW'}
                       onClick={() => handleDraw('sacrifice')}
-                      className={`w-[76px] h-[108px] sm:w-[80px] sm:h-[114px] rounded flex items-center justify-center border-2 transition-all select-none relative overflow-hidden bg-[#140e0a] ${
+                      className={`w-[84px] h-[119px] sm:w-[88px] sm:h-[125px] rounded flex items-center justify-center border-2 transition-all select-none relative overflow-hidden bg-[#140e0a] ${
                         phase === 'DRAW'
                           ? 'cursor-pointer hover:scale-105 active:scale-95 animate-deck-glow z-20'
                           : 'border-[#3d2719] opacity-75 cursor-not-allowed shadow-[2px_2px_0_#1c140e,4px_4px_0_#140e0a,6px_6px_8px_rgba(0,0,0,0.8)]'
@@ -9562,7 +9447,7 @@ export default function App() {
                         <img
                           src={`${BASE}/assets/cardbases/S.png`}
                           alt="S"
-                          className="deck-glyph-red h-12 sm:h-14 w-auto object-contain pointer-events-none select-none"
+                          className="deck-glyph-red h-14 sm:h-16 w-auto object-contain pointer-events-none select-none"
                           style={{ imageRendering: 'pixelated' }}
                         />
                       </div>
@@ -9596,7 +9481,7 @@ export default function App() {
                     <button
                       disabled={phase !== 'DRAW'}
                       onClick={() => handleDraw('main')}
-                      className={`w-[76px] h-[108px] sm:w-[80px] sm:h-[114px] rounded flex items-center justify-center border-2 transition-all select-none relative overflow-hidden bg-[#140e0a] ${
+                      className={`w-[84px] h-[119px] sm:w-[88px] sm:h-[125px] rounded flex items-center justify-center border-2 transition-all select-none relative overflow-hidden bg-[#140e0a] ${
                         phase === 'DRAW'
                           ? 'cursor-pointer hover:scale-105 active:scale-95 animate-deck-glow z-20'
                           : 'border-[#3d2719] opacity-75 cursor-not-allowed shadow-[2px_2px_0_#1c140e,4px_4px_0_#140e0a,6px_6px_8px_rgba(0,0,0,0.8)]'
@@ -9616,7 +9501,7 @@ export default function App() {
                         <img
                           src={`${BASE}/assets/cardbases/C.png`}
                           alt="C"
-                          className="deck-glyph-red h-12 sm:h-14 w-auto object-contain pointer-events-none select-none"
+                          className="deck-glyph-red h-14 sm:h-16 w-auto object-contain pointer-events-none select-none"
                           style={{ imageRendering: 'pixelated' }}
                         />
                       </div>
@@ -9627,75 +9512,7 @@ export default function App() {
                   )}
                 </div>
 
-  {/* Vertical 3-Slot Hanging Crimson Cloth Relic Banner */}
-  <div className="absolute left-[calc(50%+44px)] top-10 flex flex-col items-center z-30 select-none">
-    {/* Top Wooden Banner Rod with Brass Finials */}
-    <div
-      className="relative z-10 w-[calc(100%+10px)] h-2.5 rounded-full border border-[#6e4a2b]/90 shadow-[0_3px_8px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,224,175,0.22)] flex items-center justify-between"
-      style={{
-        backgroundColor: '#2d1b10',
-        backgroundImage: `linear-gradient(180deg, rgba(255,215,165,0.16), rgba(0,0,0,0.45)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
-        backgroundSize: 'cover, 160px 160px',
-      }}
-    >
-      <span className="-ml-1 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#e2be76] via-[#9c7238] to-[#3f2912] border border-[#2a190a] shadow-sm" />
-      <span className="-mr-1 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#e2be76] via-[#9c7238] to-[#3f2912] border border-[#2a190a] shadow-sm" />
-    </div>
-
-    {/* Hanging Crimson Cloth Body */}
-    <div
-      className="relative -mt-0.5 flex flex-col items-center justify-center gap-2 px-2.5 pt-2 pb-3 rounded-b-[10px] border-x border-b border-[#7a3c2e]/90 shadow-[0_12px_26px_rgba(0,0,0,0.9),inset_0_8px_18px_rgba(0,0,0,0.62)] overflow-hidden"
-      style={{
-        background: 'radial-gradient(ellipse at 50% 0%, #6b0f12 0%, #44080a 54%, #1d0405 100%)',
-      }}
-    >
-      {/* Multiplied Cloth Weave Texture */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
-        style={{
-          backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/cloth.jpg")`,
-          backgroundSize: '150px 150px',
-          backgroundRepeat: 'repeat',
-        }}
-      />
-      {/* Stitched Gold-Thread Banner Seam */}
-      <div className="pointer-events-none absolute inset-1.5 border border-dashed border-[#c49a5c]/45 rounded-b-[7px]" />
-      {/* Woven Center Fringe Accent at Bottom Hem */}
-      <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1 bg-gradient-to-r from-[#3a0a0a] via-[#cca059]/80 to-[#3a0a0a]" />
-
-      <div className="relative z-10 text-[8px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] text-[#f0dec0] border-b border-[#7c2620]/80 pb-1 w-full text-center drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-        RELICS
-      </div>
-
-      {items.map((itemId, idx) => {
-        const item = itemId ? ALL_ITEMS[itemId] : null;
-        const isTargetingThis = itemTargetSourceSlot === idx;
-
-        return (
-          <button
-            key={idx}
-            onClick={() => handleUseItem(idx)}
-            disabled={phase !== 'PLAY' || !item}
-            title={item ? `${item.name}: ${item.description}` : 'Empty Slot'}
-            className={`relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-[2px] border flex items-center justify-center text-lg outline-none transition-all duration-150 ${
-              item
-                ? isTargetingThis
-                  ? 'border-red-400 bg-red-950/75 shadow-[0_0_12px_rgba(239,68,68,0.85)] scale-105 animate-pulse cursor-pointer'
-                  : 'border-[#8c5a3c]/85 bg-gradient-to-b from-[#230b0c]/95 to-[#120506]/95 hover:border-[#e5c16b] hover:scale-105 active:scale-95 shadow-[inset_0_1px_0_rgba(255,220,180,0.12),0_3px_8px_rgba(0,0,0,0.85)] cursor-pointer'
-                : 'border-[#5a241e]/60 bg-[#140606]/65 cursor-not-allowed opacity-50 shadow-[inset_0_2px_6px_rgba(0,0,0,0.85)]'
-            }`}
-          >
-            {item ? (
-              <span>{item.emoji}</span>
-            ) : (
-              <span className="text-[#8a5d42]/70 text-xs font-mono">•</span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  </div>
-
+    </div> {/* End Lower Bones + Decks Wrapper */}
 </div> {/* End FIXED FLANK wrapper */}
             </div>
           </div>    

@@ -337,20 +337,24 @@ export default function SplashScreen({
         </button>
 
         {isRitualReady && (
-          <div className="mt-4 flex items-center justify-center gap-4 sm:gap-6 font-mono text-[11px] uppercase tracking-[0.22em]">
+          <div className="mt-5 flex items-center justify-center gap-4 sm:gap-5">
             <button
               type="button"
               onClick={() => setArchiveModalTab('COMPENDIUM')}
-              className="px-3 py-1.5 bg-black/50 hover:bg-red-950/40 border border-red-950/70 hover:border-red-700/70 text-amber-200/80 hover:text-amber-100 transition-colors cursor-pointer"
+              className="group relative px-5 py-2 bg-[#110a0a]/85 hover:bg-[#1e1010]/95 active:translate-y-[1px] border border-[#5c3c2e]/80 hover:border-[#c9a368]/85 rounded-[2px] shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,224,180,0.08)] font-['Cinzel',_serif] font-bold text-[11px] sm:text-xs uppercase tracking-[0.24em] text-[#dec7a2] hover:text-[#fdf0d5] transition-all duration-150 cursor-pointer"
             >
-              [ Compendium ]
+              <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#a37d4c]/70 group-hover:border-[#e5c16b]" />
+              <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#a37d4c]/70 group-hover:border-[#e5c16b]" />
+              Compendium
             </button>
             <button
               type="button"
               onClick={() => setArchiveModalTab('LEDGER')}
-              className="px-3 py-1.5 bg-black/50 hover:bg-red-950/40 border border-red-950/70 hover:border-red-700/70 text-amber-200/80 hover:text-amber-100 transition-colors cursor-pointer"
+              className="group relative px-5 py-2 bg-[#110a0a]/85 hover:bg-[#1e1010]/95 active:translate-y-[1px] border border-[#5c3c2e]/80 hover:border-[#c9a368]/85 rounded-[2px] shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,224,180,0.08)] font-['Cinzel',_serif] font-bold text-[11px] sm:text-xs uppercase tracking-[0.24em] text-[#dec7a2] hover:text-[#fdf0d5] transition-all duration-150 cursor-pointer"
             >
-              [ Ledger ]
+              <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#a37d4c]/70 group-hover:border-[#e5c16b]" />
+              <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#a37d4c]/70 group-hover:border-[#e5c16b]" />
+              Ledger
             </button>
           </div>
         )}
