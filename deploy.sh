@@ -18,7 +18,7 @@ rm -rf .git
 git init -q
 git checkout -B gh-pages -q
 git add -A
-git commit -m "deploy: Nightly update" -q
+git commit -m "deploy: Beta 5 update" -q
 git push -f https://github.com/JesuChristo-hash/Thread-n-Bones.git gh-pages
 cd ..
 

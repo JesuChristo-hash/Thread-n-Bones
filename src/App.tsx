@@ -8543,6 +8543,35 @@ export default function App() {
                             </text>
                           </svg>
 
+                          {/* Plinth Fissures: hairline cracks running in from the rim */}
+                          <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 w-full h-full z-[5]" aria-hidden="true">
+                            <defs>
+                              <g id="plinthFissures" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M 8 24 L 14 27 L 13 33 L 21 36 L 24 43 L 31 45" />
+                                <path d="M 13 33 L 6 37" />
+                                <path d="M 21 36 L 24 30 L 22 25" />
+                                <path d="M 91 74 L 85 72 L 84 66 L 77 64 L 74 57" />
+                                <path d="M 84 66 L 90 63" />
+                                <path d="M 77 64 L 79 70 L 76 76" />
+                                <path d="M 26 92 L 29 86 L 27 80 L 33 76 L 32 70" />
+                                <path d="M 29 86 L 36 88" />
+                                <path d="M 76 9 L 72 14 L 75 19 L 70 23 L 71 29" />
+                                <path d="M 98 48 L 92 50 L 90 55" />
+                                <path d="M 2 55 L 8 57 L 10 62" />
+                              </g>
+                            </defs>
+                            <use href="#plinthFissures" stroke="rgba(255,235,210,0.14)" strokeWidth="0.5" transform="translate(0.5 0.6)" className={`transition-opacity duration-200 ${isTalismanPricked ? 'opacity-0' : 'group-hover:opacity-0'}`} />
+                            <use
+                              href="#plinthFissures"
+                              strokeWidth="0.9"
+                              className={`transition-all duration-200 ${
+                                isTalismanPricked
+                                  ? 'stroke-[#ef4444] drop-shadow-[0_0_3px_rgba(239,68,68,0.8)]'
+                                  : 'stroke-[#050405] opacity-90 group-hover:stroke-[#ef4444] group-hover:opacity-100 group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.7)]'
+                              }`}
+                            />
+                          </svg>
+
                           {/* Mid Dashed Ring */}
                           <div className={`absolute inset-3 sm:inset-3.5 rounded-full border border-dashed transition-all duration-200 pointer-events-none ${
                             isTalismanPricked
@@ -9299,15 +9328,32 @@ export default function App() {
     {/* 1. THE BLEEDING STONE RUNNEL (Carved Stone Housing) */}
     <div
     style={{
-      backgroundImage: `linear-gradient(180deg, rgba(36,30,26,0.48) 0%, rgba(18,15,14,0.78) 50%, rgba(10,8,8,0.9) 100%), url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
-      backgroundSize: 'cover, cover',
-      backgroundPosition: 'center, center',
+      isolation: 'isolate',
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
+      boxShadow: isScaleHeavySlam || scaleRumble ? undefined : 'none',
     }}
     className={`w-14 h-[396px] bg-[#171412] border border-[#4a3e35]/85 rounded-sm relative flex flex-col items-center justify-between py-2.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,235,210,0.08),0_6px_16px_rgba(0,0,0,0.88)] select-none transition-all ${
       isScaleHeavySlam ? 'animate-scale-heavy-slam shadow-[0_0_28px_rgba(220,38,38,0.85)]' : scaleRumble ? 'animate-scale-rumble shadow-[0_0_20px_rgba(220,38,38,0.55)]' : ''
     }`}
     title={`Runnel Balance: ${scale === 0 ? '0 (Balanced)' : scale > 0 ? `+${scale}` : `${scale}`}`}
   >
+    {/* runnelEdgeLayer: hand-chiselled, non-parallel outline behind all runnel contents */}
+    <div aria-hidden="true" className="pointer-events-none absolute -inset-px -z-10" style={{ filter: 'drop-shadow(0 5px 7px rgba(0,0,0,0.85))' }}>
+      <div
+        className="absolute inset-0"
+        style={{
+          clipPath: 'polygon(1.4px 1.6px, 8px 0.9px, 14px 0.6px, 21px 1.5px, 27px 1.9px, 34px 0.8px, 41px 0.5px, 48px 1.2px, 54.2px 1.3px, 52.7px 8px, 52.8px 16px, 53.2px 22px, 53.3px 26px, 53px 34px, 52.3px 41px, 53.9px 46px, 53.3px 55px, 50.8px 59px, 53px 66px, 52.4px 70px, 53.7px 73px, 53.5px 85px, 53.3px 89px, 53.2px 97px, 53.9px 104px, 54.1px 117px, 53.2px 120px, 53.7px 133px, 53.6px 137px, 53.6px 141px, 53.4px 147px, 53.5px 156px, 53.4px 161px, 53.9px 170px, 54.3px 174px, 53.4px 181px, 52.7px 189px, 53.3px 198px, 53.3px 208px, 52.8px 219px, 53.5px 227px, 53.4px 239px, 53.5px 250px, 51.5px 257px, 53.5px 264px, 54.3px 276px, 53.2px 286px, 53.5px 296px, 54.6px 306px, 52.2px 316px, 53.7px 327px, 51.5px 331px, 54.1px 336px, 52.1px 348px, 54.2px 351px, 53.6px 360px, 52.4px 366px, 54.5px 372px, 54px 374px, 53.5px 379px, 53.8px 394.7px, 49px 395.1px, 42px 395.5px, 35px 394.4px, 28px 394px, 20px 394.9px, 13px 395.2px, 7px 394.3px, 2px 394.5px, 3.2px 380px, 4.3px 375px, 3.3px 371px, 4.3px 367px, 3.9px 360px, 4.7px 352px, 4.2px 347px, 3px 337px, 3.5px 331px, 4px 327px, 3.9px 316px, 3.4px 307px, 4.8px 297px, 3.2px 287px, 2.9px 276px, 3.8px 265px, 3.9px 258px, 3.3px 249px, 2.5px 238px, 3.7px 227px, 2.6px 219px, 2.1px 208px, 2.9px 197px, 2.3px 189px, 2.7px 180px, 1.9px 174px, 2.2px 169px, 2.3px 161px, 2.9px 156px, 1.8px 147px, 2.4px 142px, 2.1px 136px, 3px 132px, 2.4px 121px, 4.2px 116px, 1.2px 105px, 2.5px 98px, 1.4px 90px, 2.5px 84px, 2px 74px, 4.6px 69px, 1px 65px, 1.1px 59px, 1.7px 55px, 1.7px 46px, 2.2px 41px, 2.2px 35px, 1.6px 27px, 2px 23px, 3.6px 15px, 2px 7px)', /* runnelEdgeV2 */
+          backgroundImage: `linear-gradient(180deg, rgba(36,30,26,0.48) 0%, rgba(18,15,14,0.78) 50%, rgba(10,8,8,0.9) 100%), url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
+          backgroundSize: 'cover, cover',
+          backgroundPosition: 'center, center',
+          boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.92), inset 0 1px 0 rgba(255,235,210,0.08)',
+        }}
+      />
+      <svg viewBox="0 0 56 396" preserveAspectRatio="none" className="absolute inset-0 w-full h-full overflow-visible">
+        <polygon points="1.4,1.6 8,0.9 14,0.6 21,1.5 27,1.9 34,0.8 41,0.5 48,1.2 54.2,1.3 52.7,8 52.8,16 53.2,22 53.3,26 53,34 52.3,41 53.9,46 53.3,55 50.8,59 53,66 52.4,70 53.7,73 53.5,85 53.3,89 53.2,97 53.9,104 54.1,117 53.2,120 53.7,133 53.6,137 53.6,141 53.4,147 53.5,156 53.4,161 53.9,170 54.3,174 53.4,181 52.7,189 53.3,198 53.3,208 52.8,219 53.5,227 53.4,239 53.5,250 51.5,257 53.5,264 54.3,276 53.2,286 53.5,296 54.6,306 52.2,316 53.7,327 51.5,331 54.1,336 52.1,348 54.2,351 53.6,360 52.4,366 54.5,372 54,374 53.5,379 53.8,394.7 49,395.1 42,395.5 35,394.4 28,394 20,394.9 13,395.2 7,394.3 2,394.5 3.2,380 4.3,375 3.3,371 4.3,367 3.9,360 4.7,352 4.2,347 3,337 3.5,331 4,327 3.9,316 3.4,307 4.8,297 3.2,287 2.9,276 3.8,265 3.9,258 3.3,249 2.5,238 3.7,227 2.6,219 2.1,208 2.9,197 2.3,189 2.7,180 1.9,174 2.2,169 2.3,161 2.9,156 1.8,147 2.4,142 2.1,136 3,132 2.4,121 4.2,116 1.2,105 2.5,98 1.4,90 2.5,84 2,74 4.6,69 1,65 1.1,59 1.7,55 1.7,46 2.2,41 2.2,35 1.6,27 2,23 3.6,15 2,7" fill="none" stroke="#4a3e35" strokeWidth="1.4" strokeLinejoin="miter" />
+      </svg>
+    </div>
     {/* Escalated Cycle Seal (+7 / +13) */}
     {getRequiredScaleWinDamage() > 5 && (
       <div
