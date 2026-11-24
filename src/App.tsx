@@ -895,6 +895,54 @@ export default function App() {
   const [hasDefeatedWeaver, setHasDefeatedWeaver] = useState<boolean>(false);
   const [woodcarverClasses, setWoodcarverClasses] = useState<Tribe[]>([]);
   const [isPhaseTransition, setIsPhaseTransition] = useState<boolean>(false);
+  const [bossIntroBanner, setBossIntroBanner] = useState<{
+    type: 'BoneLord' | 'The Weaver' | 'Zealot' | 'The Begotten';
+    eyebrow: string;
+    subtitle: string;
+    img: string;
+    accent: 'crimson' | 'violet' | 'amber' | 'emerald';
+  } | null>(null);
+  const bossIntroTimerRef = useRef<number | null>(null);
+
+  const triggerBossIntroBanner = useCallback((bType: 'BoneLord' | 'The Weaver' | 'Zealot' | 'The Begotten') => {
+    if (bossIntroTimerRef.current) {
+      window.clearTimeout(bossIntroTimerRef.current);
+      bossIntroTimerRef.current = null;
+    }
+    const base = import.meta.env.BASE_URL || './';
+    const metaMap = {
+      BoneLord: {
+        eyebrow: 'Final Reckoning · Act IV',
+        subtitle: 'Pitch-black eye sockets turn toward the scales.',
+        img: `${base}assets/text/bone-lord-final-boss.png`,
+        accent: 'crimson' as const,
+      },
+      'The Weaver': {
+        eyebrow: 'Act Boss · The Loom',
+        subtitle: 'Hunched over sinew and burlap, threading your doom.',
+        img: `${base}assets/text/weaver.png`,
+        accent: 'violet' as const,
+      },
+      Zealot: {
+        eyebrow: 'Act Boss · The Steeple',
+        subtitle: 'The Altar of the Old One remembers every drop spilled.',
+        img: `${base}assets/text/zealot.png`,
+        accent: 'amber' as const,
+      },
+      'The Begotten': {
+        eyebrow: 'Act Boss · The Rotary Press',
+        subtitle: 'Wet ink and living caricatures spill across the slab.',
+        img: `${base}assets/text/begotten.png`,
+        accent: 'emerald' as const,
+      },
+    };
+    const m = metaMap[bType];
+    setBossIntroBanner({ type: bType, ...m });
+    bossIntroTimerRef.current = window.setTimeout(() => {
+      setBossIntroBanner(null);
+      bossIntroTimerRef.current = null;
+    }, bType === 'BoneLord' ? 3400 : 2800);
+  }, []);
   const [isBloodMoonDropping, setIsBloodMoonDropping] = useState<boolean>(false);
   const [isOverkill, setIsOverkill] = useState<boolean>(false);
   const [sacrificedUnkillableCardIds, setSacrificedUnkillableCardIds] = useState<string[]>([]);
@@ -1930,6 +1978,7 @@ export default function App() {
     setEffigyStitchingAnim(false);
     setAnvilSelectedId(null);
     setAnvilStrikeAnim('idle');
+    setIsCampfireSafe(false);
     setFlockUsedOptions([]);
     setFlockDisappearingRelics(false);
     flockDisappearingRelicsRef.current = false;
@@ -2796,10 +2845,101 @@ export default function App() {
         nextItems[slotIndex] = null;
         triggerSfx('hit');
 
-        if (bossPhase === 1 || bossPhase === 2) {
-          addLog("The Bronze Crucifix radiates blinding radiance! The phase is severed.");
-          setBossPhase(p => p + 1);
+        if (bossPhase === 1) {
+          addLog("The Bronze Crucifix radiates blinding radiance! Phase 1 is severed.");
+          setScale(0);
+
+          const nextEBoard: (CardDef | null)[] = [null, null, null, null];
+          const nextEQueue: (CardDef | null)[] = [null, null, null, null];
+
+          let reaperCol = -1;
+          const emptyCols = [0, 1, 2, 3].filter(c => playerBoard[c] === null);
+          if (emptyCols.length > 0) {
+            reaperCol = emptyCols[0];
+          } else {
+            let maxAtk = -1;
+            for (let c = 0; c < 4; c++) {
+              const pCard = playerBoard[c];
+              if (pCard) {
+                const atk = getCardAttack(pCard, c, true, playerBoard, nextEBoard);
+                if (atk > maxAtk) {
+                  maxAtk = atk;
+                  reaperCol = c;
+                }
+              }
+            }
+          }
+          if (reaperCol === -1) reaperCol = 0;
+
+          nextEBoard[reaperCol] = cloneCard(ALL_CARD_LOOKUP['Reaper'], 0);
+          const treeCard = ALL_CARD_LOOKUP['Felled Tree'] || {
+            name: 'Felled Tree',
+            class: 'No Class',
+            attack: 0,
+            health: 3,
+            emoji: '🌳',
+            sigils: ['Made of Stone'],
+            unsacrificable: true,
+          };
+          const queueCols = [0, 1, 2, 3].filter(c => c !== reaperCol);
+          nextEQueue[queueCols[0] ?? 0] = cloneCard(treeCard, 0);
+          nextEQueue[queueCols[1] ?? 1] = cloneCard(ALL_CARD_LOOKUP['Skeleton'], 0);
+
+          const nextPBoard = playerBoard.map((c, idx) => {
+            if (!c) return null;
+            const currentEffectiveAttack = getCardAttack(c, idx, true, playerBoard, nextEBoard);
+            return {
+              ...c,
+              attack: Math.max(0, c.health || 0),
+              health: Math.max(1, currentEffectiveAttack),
+              sigils: Array.from(new Set([...c.sigils, 'Shadow'])),
+            };
+          });
+
+          setEnemyBoard(nextEBoard);
+          setEnemyQueue(nextEQueue);
+          setPlayerBoard(nextPBoard);
+          setBossPhase(2);
+          setBossState(prev => ({
+            ...prev,
+            phase: 2,
+            activeDialogue: null,
+            bgHex: '#230618',
+            bgTransitionDuration: 4,
+          }));
+          addLog("=== THE BONE LORD: PHASE 2 INITIALIZED ===");
+          addLog("Shadow envelops your creatures! Power and health inverted!");
+        } else if (bossPhase === 2) {
+          addLog("The Bronze Crucifix radiates blinding radiance! Phase 2 is severed.");
+          setScale(0);
+
+          const bloodMoonCard = {
+            ...cloneCard(ALL_CARD_LOOKUP['BLOOD MOON'], 0),
+            id: `blood-moon-${Date.now()}`,
+          };
+          setEnemyBoard([bloodMoonCard, null, null, null]);
+          setEnemyQueue([null, null, null, null]);
+          setBossPhase(3);
+          setBossState(prev => ({
+            ...prev,
+            phase: 3,
+            activeDialogue: null,
+            bgHex: '#300202',
+            bgTransitionDuration: 5,
+          }));
+          setIsBoardRumbling(true);
+          setIsBloodMoonDropping(true);
+          if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).playFinalBossPhase3) {
+            (ChiptuneAudio as any).playFinalBossPhase3(0.6);
+          }
+          setTimeout(() => {
+            setIsBoardRumbling(false);
+            setIsBloodMoonDropping(false);
+          }, 1400);
+          addLog("=== THE BONE LORD: PHASE 3 - THE BLOOD MOON DESCENDS ===");
         } else if (bossPhase === 3) {
+          setEnemyBoard([null, null, null, null]);
+          setEnemyQueue([null, null, null, null]);
           setBossState(prev => ({ ...prev, isBloodMoonDarkened: true }));
           addLog("...the moon turns dark...");
           setModalAlert({
@@ -2808,7 +2948,7 @@ export default function App() {
             btnText: 'Witness',
             onAction: () => {
               setModalAlert(null as any);
-              setBossPhase(p => p + 1);
+              handleWinMatch();
             }
           });
         }
@@ -3172,6 +3312,172 @@ export default function App() {
   }, []);
 
   // --- Movement Resolution with Lateral Translation Animations ---
+  const renderActWeather = (posClass: string, keyPrefix: string) => {
+    const weatherAct = Math.min(4, Math.max(1, actMap?.act ?? displayStage));
+    const hasMist = weatherAct === 1 || weatherAct === 2 || weatherAct === 3;
+    const rainCount = weatherAct === 3 ? 84 : weatherAct === 2 ? 36 : 0;
+    const hasLightning = weatherAct === 3;
+    const hasFire = weatherAct === 4;
+
+    return (
+      <div className={`pointer-events-none ${posClass} overflow-hidden select-none`}>
+        {hasMist && (
+          <>
+            <div
+              className="absolute -inset-x-[15%] bottom-[-12%] h-[62%]"
+              style={{
+                background:
+                  weatherAct === 1
+                    ? 'radial-gradient(ellipse at 30% 78%, rgba(212,208,198,0.38) 0%, rgba(152,148,140,0.22) 48%, transparent 76%)'
+                    : weatherAct === 3
+                      ? 'radial-gradient(ellipse at 30% 80%, rgba(165,180,196,0.24) 0%, rgba(110,125,140,0.13) 45%, transparent 74%)'
+                      : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.22) 0%, rgba(135,132,124,0.11) 45%, transparent 74%)',
+                filter: 'blur(26px)',
+                animation: 'weatherMistDriftA 22s ease-in-out infinite',
+              }}
+            />
+            <div
+              className="absolute -inset-x-[15%] bottom-[-8%] h-[50%]"
+              style={{
+                background:
+                  weatherAct === 1
+                    ? 'radial-gradient(ellipse at 72% 84%, rgba(206,200,188,0.34) 0%, rgba(138,134,126,0.19) 50%, transparent 78%)'
+                    : weatherAct === 3
+                      ? 'radial-gradient(ellipse at 72% 85%, rgba(155,172,190,0.22) 0%, rgba(95,112,130,0.11) 48%, transparent 76%)'
+                      : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.2) 0%, rgba(120,116,108,0.1) 48%, transparent 76%)',
+                filter: 'blur(32px)',
+                animation: 'weatherMistDriftB 29s ease-in-out infinite',
+              }}
+            />
+            {weatherAct === 1 && (
+              <div
+                className="absolute -inset-x-[12%] top-[14%] h-[42%]"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 52% 50%, rgba(202,198,188,0.2) 0%, rgba(140,136,128,0.1) 52%, transparent 78%)',
+                  filter: 'blur(38px)',
+                  animation: 'weatherMistDriftB 34s ease-in-out -11s infinite',
+                }}
+              />
+            )}
+          </>
+        )}
+
+        {rainCount > 0 && (
+          <div className="absolute inset-0">
+            {Array.from({ length: rainCount }, (_, i) => {
+              const h1 = Math.abs(Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
+              const h2 = Math.abs(Math.sin(i * 93.9898 + 67.345) * 24634.6345) % 1;
+              const h3 = Math.abs(Math.sin(i * 41.2317 + 19.871) * 15731.7431) % 1;
+              const leftPct = h1 * 118 - 2;
+              const durNum = weatherAct === 3
+                ? 0.42 + h3 * 0.28
+                : 0.72 + h3 * 0.38;
+              const duration = durNum.toFixed(2);
+              const delay = (-(h2 * durNum)).toFixed(3);
+              const heightPx = weatherAct === 3 ? 30 + (i % 4) * 10 : 18 + (i % 4) * 6;
+              const opacity = weatherAct === 3 ? 0.24 + (i % 3) * 0.09 : 0.15 + (i % 3) * 0.06;
+              return (
+                <span
+                  key={`${keyPrefix}-rain-${weatherAct}-${i}`}
+                  className="absolute top-0 rounded-full"
+                  style={{
+                    left: `${leftPct}%`,
+                    width: weatherAct === 3 ? '1.4px' : '1px',
+                    height: `${heightPx}px`,
+                    opacity,
+                    background: 'linear-gradient(to bottom, transparent, rgba(208,224,242,0.88), rgba(186,208,232,0.28))',
+                    animation: `weatherRainFall ${duration}s linear ${delay}s infinite`,
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {hasLightning && (
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(ellipse at 50% 15%, rgba(215,232,255,0.85) 0%, rgba(168,196,238,0.35) 55%, rgba(120,145,190,0.12) 100%)',
+              mixBlendMode: 'screen',
+              animation: 'weatherLightningFlash 6.8s linear infinite',
+            }}
+          />
+        )}
+
+        {hasFire && (
+          <>
+            <div
+              className="absolute inset-x-0 bottom-0 h-[44%] origin-bottom"
+              style={{
+                background:
+                  'radial-gradient(ellipse at 50% 100%, rgba(234,88,12,0.34) 0%, rgba(185,28,28,0.2) 45%, transparent 78%)',
+                mixBlendMode: 'screen',
+                animation: 'weatherFireGlow 4.8s ease-in-out infinite',
+              }}
+            />
+            <div
+              className="absolute -inset-x-[12%] bottom-[-5%] h-[62%]"
+              style={{
+                background:
+                  'radial-gradient(ellipse at 40% 75%, rgba(92,82,78,0.26) 0%, rgba(45,40,38,0.14) 50%, transparent 76%)',
+                filter: 'blur(36px)',
+                animation: 'weatherSmokeDrift 20s ease-in-out infinite',
+              }}
+            />
+            {Array.from({ length: 24 }, (_, i) => {
+              const leftPct = (i * 33.7 + 4) % 96;
+              const sizePx = 2 + (i % 3) * 1.4;
+              const duration = (4.2 + ((i * 13) % 10) * 0.42).toFixed(2);
+              const delay = -(((i * 0.67) % 6.5).toFixed(2));
+              const drift = ((i % 2 === 0 ? 1 : -1) * (18 + (i % 5) * 14));
+              return (
+                <span
+                  key={`${keyPrefix}-ember-${i}`}
+                  className="absolute -bottom-3 rounded-full"
+                  style={{
+                    left: `${leftPct}%`,
+                    width: `${sizePx}px`,
+                    height: `${sizePx}px`,
+                    backgroundColor: i % 3 === 0 ? '#fde68a' : i % 2 === 0 ? '#fb923c' : '#ef4444',
+                    boxShadow: '0 0 8px rgba(251,146,60,0.85), 0 0 14px rgba(239,68,68,0.55)',
+                    ['--ember-drift' as any]: `${drift}px`,
+                    animation: `weatherEmberRise ${duration}s ease-out ${delay}s infinite`,
+                  }}
+                />
+              );
+            })}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const LEFT_FACING_CARD_NAMES = new Set([
+    'alpha',
+    'bullfrog',
+    'coyote',
+    'demon elk',
+    'elk',
+    'elk fawn',
+    'moose buck',
+    'mycelium',
+    'ouroboros',
+    'pronghorn',
+    'silkworm',
+    'warren',
+    'wolfcub',
+    'wolf cub',
+  ]);
+
+  const isLeftFacingCard = (name?: string): boolean => {
+    if (!name) return false;
+    const norm = name.trim().toLowerCase();
+    return LEFT_FACING_CARD_NAMES.has(norm) || LEFT_FACING_CARD_NAMES.has(norm.replace(/\s+/g, ''));
+  };
+
   const resolveMovements = async (isPlayer: boolean, board: (CardDef | null)[]): Promise<(CardDef | null)[]> => {
     const nextBoard = [...board];
     const movedSet = new Set<string>();
@@ -3186,7 +3492,7 @@ export default function App() {
       if (!hasSprint && !hasRampager && !hasHefty) continue;
 
       movedSet.add(card.id);
-      let dir = card.sprintDir ?? 1;
+      let dir = card.sprintDir ?? (isLeftFacingCard(card.name) ? -1 : 1);
         let target = i + dir;
 
         // 1. SPRINTER: Moves into open space; bounces immediately off board edges
@@ -4016,23 +4322,42 @@ export default function App() {
               setBossState(prev => ({
                 ...prev,
                 phase: 2,
-                activeDialogue: '......',
+                activeDialogue: null,
+                bgHex: '#230618',
+                bgTransitionDuration: 4,
               }));
 
               addLog("=== THE BONE LORD: PHASE 2 INITIALIZED ===");
               addLog("Shadow envelops your creatures! Power and health inverted!");
             } else if (bossPhase === 2) {
-              // Phase 3: Battlefield is stripped clean; the Blood Moon descends once the seal breaks
-              currEBoard = [null, null, null, null];
+              // Phase 3: Battlefield is stripped clean & the Blood Moon descends immediately
+              const bloodMoonCard = {
+                ...cloneCard(ALL_CARD_LOOKUP['BLOOD MOON'], 0),
+                id: `blood-moon-${Date.now()}`,
+              };
+              currEBoard = [bloodMoonCard, null, null, null];
               currEQueue = [null, null, null, null];
 
               setBossState(prev => ({
                 ...prev,
                 phase: 3,
-                activeDialogue: '....the Bone Lord’s gaze intensifies….',
+                activeDialogue: null,
+                bgHex: '#300202',
+                bgTransitionDuration: 5,
               }));
 
-              addLog("=== THE BONE LORD: PHASE 3 - AN UNHOLY ECLIPSE GATHERS ===");
+              setIsBoardRumbling(true);
+              setIsBloodMoonDropping(true);
+              triggerSfx('hit');
+              if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).playFinalBossPhase3) {
+                (ChiptuneAudio as any).playFinalBossPhase3(0.6);
+              }
+              setTimeout(() => {
+                setIsBoardRumbling(false);
+                setIsBloodMoonDropping(false);
+              }, 2400);
+
+              addLog("=== THE BONE LORD: PHASE 3 - THE BLOOD MOON DESCENDS ===");
             }
           }
 
@@ -4453,7 +4778,7 @@ export default function App() {
           triggerSfx('defeat');
           await sleep(420);
           setIsHeavyRecoil(false);
-          await sleep(1050);
+          await sleep(2800);
           setIsLossSequenceActive(false);
           handleLossMatch();
           return;
@@ -4968,6 +5293,9 @@ export default function App() {
   };
 
   const handleEndRitual = () => {
+    try {
+      localStorage.removeItem(RUN_SAVE_KEY);
+    } catch (_) {}
     setBossState(prev => ({
       ...prev,
       isRitualComplete: false,
@@ -5074,14 +5402,16 @@ export default function App() {
       setLevel(prev => prev + 1);
     }
 
-    // Run trackers update
-    setRunStats(prev => ({
-      ...prev,
-      clearedStages: prev.clearedStages + 1,
-      bossesDefeated: isBossMatch ? prev.bossesDefeated + 1 : prev.bossesDefeated,
-      finalBossesDefeated: (isBossMatch && bossState.type === 'BoneLord') ? prev.finalBossesDefeated + 1 : prev.finalBossesDefeated,
-      grizzlyWallsSurvived: grizzlyWallActiveInDuel ? prev.grizzlyWallsSurvived + 1 : prev.grizzlyWallsSurvived,
-    }));
+    // Run trackers update (skip Dev Sandbox forced bosses so Endless thresholds never trigger accidentally)
+    if (!wasForcedDevBoss) {
+      setRunStats(prev => ({
+        ...prev,
+        clearedStages: prev.clearedStages + 1,
+        bossesDefeated: isBossMatch ? prev.bossesDefeated + 1 : prev.bossesDefeated,
+        finalBossesDefeated: (isBossMatch && bossState.type === 'BoneLord') ? prev.finalBossesDefeated + 1 : prev.finalBossesDefeated,
+        grizzlyWallsSurvived: grizzlyWallActiveInDuel ? prev.grizzlyWallsSurvived + 1 : prev.grizzlyWallsSurvived,
+      }));
+    }
 
     // Anti-OTK resolution and streak tracking
     if (grizzlyWallActiveInDuel) {
@@ -5456,13 +5786,14 @@ export default function App() {
           phase: 1,
           phase1CardsPlayed: 0,
           skipNextPlayerTurn: false,
-          activeDialogue: 'The Altar of the Old One remembers every drop spilled upon it... kneel before your God, interloper.',
+          activeDialogue: null,
           bgHex: '#251c19',
           bgTransitionDuration: 3,
           isRitualComplete: false,
           ritualEndedVoluntarily: false,
         });
 
+        triggerBossIntroBanner('Zealot');
         addLog('=== BOSS BATTLE: The Zealot awakens in the cave! ===');
       } else if (bossType === 'The Begotten') {
         // Lane 0: Shifting Living Slime
@@ -5489,13 +5820,14 @@ export default function App() {
           phase: 1,
           phase1CardsPlayed: 0,
           skipNextPlayerTurn: false,
-          activeDialogue: 'My Ink has run dry! YOU! It must have been your doing you cretin...',
+          activeDialogue: null,
           bgHex: '#082613',
           bgTransitionDuration: 2.5,
           isRitualComplete: false,
           ritualEndedVoluntarily: false,
         });
 
+        triggerBossIntroBanner('The Begotten');
         addLog('=== BOSS BATTLE: The Begotten prepares its canvas with living caricatures! ===');
       } else if (bossType === 'BoneLord') {
         initBoard[0] = cloneCard(ALL_CARD_LOOKUP['Geist'], 0);
@@ -5515,7 +5847,7 @@ export default function App() {
           phase: 1,
           phase1CardsPlayed: 3,
           skipNextPlayerTurn: false,
-          activeDialogue: '..the Bone Lord’s pitch black eye sockets somehow seem to shift to look at you…',
+          activeDialogue: null,
           bgHex: '#300207',
           bgTransitionDuration: 3,
           isRitualComplete: false,
@@ -5526,6 +5858,7 @@ export default function App() {
           ChiptuneAudio.playFinalBoss(1.8);
         }
 
+        triggerBossIntroBanner('BoneLord');
         addLog('=== BOSS BATTLE: The Bone Lord rises! ===');
       } else if (bossType === 'The Weaver') {
         const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved"];
@@ -5541,12 +5874,13 @@ export default function App() {
           : WOODCARVER_BOSS_TOTEM_SIGILS[0];
 
         setBossTotem({ class: bossTribe, sigil: chosenSigil });
+        triggerBossIntroBanner('The Weaver');
         setBossState({
           type: 'The Weaver',
           phase: 1,
           phase1CardsPlayed: 0,
           skipNextPlayerTurn: false,
-          activeDialogue: 'The Weaver is hunched over her Loom. Wholly uninterested in your presence.',
+          activeDialogue: null,
           bgHex: '#24080e',
           bgTransitionDuration: 2,
           isRitualComplete: false,
@@ -7102,11 +7436,9 @@ export default function App() {
 
     const nextDeck = [...masterDeck, clone];
 
-    // Beat 1 (860ms): Swap blank plate for stamped clone mid-clamp while crushed flat against the press bed
+    // Beat 1 (860ms): Swap blank plate for stamped clone mid-clamp (keep masterDeck untouched until reveal)
     scheduleEventTimer(() => {
       setGoobertStampedCard(clone);
-      setMasterDeck(nextDeck);
-      masterDeckRef.current = nextDeck;
       triggerSfx('play');
     }, 860);
 
@@ -7115,8 +7447,10 @@ export default function App() {
       setGoobertStamping(false);
     }, 1860);
 
-    // Beat 3 (3150ms): Pause so the player sees the stamped clone on the press bed before the modal opens
+    // Beat 3 (3150ms): Commit stamped clone to masterDeck only once the reveal modal opens
     scheduleEventTimer(() => {
+      setMasterDeck(nextDeck);
+      masterDeckRef.current = nextDeck;
       setModalAlert({
         title: "THE BEGOTTEN SNEERS",
         message: desc,
@@ -7839,18 +8173,25 @@ export default function App() {
               className={`max-w-[92%] max-h-[92%] w-auto h-auto object-contain pointer-events-none select-none transition-transform ${
                 CARD_ART_OFFSETS[card.name] || ''
               } ${(() => {
-                const isDirectionalBeast = ['Elk', 'Elk Fawn', 'Pronghorn', 'Moose Buck', 'Demon Elk'].some(n => card.name?.includes(n));
+                const hasMovementCrest = Boolean(
+                  card.sigils?.some(s => s === 'Sprinter' || s === 'Hefty' || s === 'Rampager')
+                );
                 
                 // Never flip in hand, deck inspection, or outside the combat lanes
-                if (!isDirectionalBeast || options?.laneIndex === undefined) {
+                if (!hasMovementCrest || options?.laneIndex === undefined) {
                   return card.isMycologistCombined ? 'scale-110' : '';
                 }
 
-                // If sprintDir is unset (freshly played), default to right (+1) unless dropped into lane 3
-                const currentDir = card.sprintDir ?? (options.laneIndex === 3 ? -1 : 1);
+                const isLeftFacingBase = isLeftFacingCard(card.name);
 
-                // Base sprite faces RIGHT: only mirror horizontally when travelling LEFT (-1)
-                const shouldFlip = currentDir === -1;
+                // If sprintDir is unset (freshly played), default to natural facing unless dropped on its facing edge
+                const defaultDir = isLeftFacingBase
+                  ? (options.laneIndex === 0 ? 1 : -1)
+                  : (options.laneIndex === 3 ? -1 : 1);
+                const currentDir = card.sprintDir ?? defaultDir;
+
+                // Left-facing art mirrors when moving RIGHT (+1); right-facing art mirrors when moving LEFT (-1)
+                const shouldFlip = isLeftFacingBase ? currentDir === -1 : currentDir === 1;
 
                 if (shouldFlip) {
                   return card.isMycologistCombined ? '-scale-x-110 scale-y-110' : '-scale-x-100';
@@ -8171,140 +8512,6 @@ export default function App() {
           className={`flex flex-col text-slate-200 overflow-hidden font-sans select-none ${getStageBgClass(stage, isBossMatch)} ${isTutorialGlitching ? 'animate-tutorial-glitch' : ''}`}
         >
         {/* =========================================================================
-            GLOBAL ACT 1-4 ATMOSPHERE & WEATHER OVERLAY
-           ========================================================================= */}
-        {screen !== 'SPLASH' && screen !== 'DECK_SELECT' && screen !== 'GAME_OVER' && (() => {
-          const weatherAct = Math.min(4, Math.max(1, actMap?.act ?? displayStage));
-          const hasMist = weatherAct === 1 || weatherAct === 2 || weatherAct === 3;
-          const rainCount = weatherAct === 3 ? 58 : weatherAct === 2 ? 28 : 0;
-          const hasLightning = weatherAct === 3;
-          const hasFire = weatherAct === 4;
-
-          return (
-            <div className="pointer-events-none fixed inset-0 z-[25] overflow-hidden select-none">
-              {/* Act 1-3: Drifting Mist Layers */}
-              {hasMist && (
-                <>
-                  <div
-                    className="absolute -inset-x-[15%] bottom-[-12%] h-[58%]"
-                    style={{
-                      background:
-                        weatherAct === 3
-                          ? 'radial-gradient(ellipse at 30% 80%, rgba(165,180,196,0.22) 0%, rgba(110,125,140,0.12) 45%, transparent 74%)'
-                          : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.2) 0%, rgba(135,132,124,0.1) 45%, transparent 74%)',
-                      filter: 'blur(28px)',
-                      animation: 'weatherMistDriftA 22s ease-in-out infinite',
-                    }}
-                  />
-                  <div
-                    className="absolute -inset-x-[15%] bottom-[-8%] h-[46%]"
-                    style={{
-                      background:
-                        weatherAct === 3
-                          ? 'radial-gradient(ellipse at 72% 85%, rgba(155,172,190,0.2) 0%, rgba(95,112,130,0.1) 48%, transparent 76%)'
-                          : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.18) 0%, rgba(120,116,108,0.09) 48%, transparent 76%)',
-                      filter: 'blur(34px)',
-                      animation: 'weatherMistDriftB 29s ease-in-out infinite',
-                    }}
-                  />
-                </>
-              )}
-
-              {/* Act 2 (Rain) & Act 3 (Heavy Storm Rain) */}
-              {rainCount > 0 && (
-                <div className="absolute inset-0">
-                  {Array.from({ length: rainCount }, (_, i) => {
-                    const leftPct = ((i * 37.3 + (i % 5) * 3.1) % 112) - 4;
-                    const duration = weatherAct === 3
-                      ? (0.48 + ((i * 19) % 10) * 0.032).toFixed(2)
-                      : (0.78 + ((i * 17) % 10) * 0.045).toFixed(2);
-                    const delay = -(((i * 0.23) % 1.8).toFixed(2));
-                    const heightPx = weatherAct === 3 ? 28 + (i % 4) * 9 : 18 + (i % 4) * 6;
-                    const opacity = weatherAct === 3 ? 0.22 + (i % 3) * 0.08 : 0.14 + (i % 3) * 0.06;
-                    return (
-                      <span
-                        key={`rain-${weatherAct}-${i}`}
-                        className="absolute top-0 rounded-full"
-                        style={{
-                          left: `${leftPct}%`,
-                          width: weatherAct === 3 ? '1.35px' : '1px',
-                          height: `${heightPx}px`,
-                          opacity,
-                          background: 'linear-gradient(to bottom, transparent, rgba(208,224,242,0.85), rgba(186,208,232,0.25))',
-                          animation: `weatherRainFall ${duration}s linear ${delay}s infinite`,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Act 3: Intermittent Lightning Flash */}
-              {hasLightning && (
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      'radial-gradient(ellipse at 50% 15%, rgba(215,232,255,0.85) 0%, rgba(168,196,238,0.35) 55%, rgba(120,145,190,0.12) 100%)',
-                    mixBlendMode: 'screen',
-                    animation: 'weatherLightningFlash 11.5s linear infinite',
-                  }}
-                />
-              )}
-
-              {/* Act 4: Fire Underglow, Embers & Light Smoke */}
-              {hasFire && (
-                <>
-                  {/* Warm Pulsing Fire Underglow */}
-                  <div
-                    className="absolute inset-x-0 bottom-0 h-[44%] origin-bottom"
-                    style={{
-                      background:
-                        'radial-gradient(ellipse at 50% 100%, rgba(234,88,12,0.34) 0%, rgba(185,28,28,0.2) 45%, transparent 78%)',
-                      mixBlendMode: 'screen',
-                      animation: 'weatherFireGlow 4.8s ease-in-out infinite',
-                    }}
-                  />
-                  {/* Light Drifting Smoke Plume */}
-                  <div
-                    className="absolute -inset-x-[12%] bottom-[-5%] h-[62%]"
-                    style={{
-                      background:
-                        'radial-gradient(ellipse at 40% 75%, rgba(92,82,78,0.26) 0%, rgba(45,40,38,0.14) 50%, transparent 76%)',
-                      filter: 'blur(36px)',
-                      animation: 'weatherSmokeDrift 20s ease-in-out infinite',
-                    }}
-                  />
-                  {/* Rising Embers */}
-                  {Array.from({ length: 30 }, (_, i) => {
-                    const leftPct = (i * 33.7 + 4) % 96;
-                    const sizePx = 2 + (i % 3) * 1.4;
-                    const duration = (4.2 + ((i * 13) % 10) * 0.42).toFixed(2);
-                    const delay = -(((i * 0.67) % 6.5).toFixed(2));
-                    const drift = ((i % 2 === 0 ? 1 : -1) * (18 + (i % 5) * 14));
-                    return (
-                      <span
-                        key={`ember-${i}`}
-                        className="absolute -bottom-3 rounded-full"
-                        style={{
-                          left: `${leftPct}%`,
-                          width: `${sizePx}px`,
-                          height: `${sizePx}px`,
-                          backgroundColor: i % 3 === 0 ? '#fde68a' : i % 2 === 0 ? '#fb923c' : '#ef4444',
-                          boxShadow: '0 0 8px rgba(251,146,60,0.85), 0 0 14px rgba(239,68,68,0.55)',
-                          ['--ember-drift' as any]: `${drift}px`,
-                          animation: `weatherEmberRise ${duration}s ease-out ${delay}s infinite`,
-                        }}
-                      />
-                    );
-                  })}
-                </>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* =========================================================================
             SPLASH SCREEN
            ========================================================================= */}
         {screen === 'SPLASH' && (
@@ -8329,6 +8536,50 @@ export default function App() {
             }}
           />
           
+          {/* Splash Ambient Atmosphere: Drifting Ritual Mist & Slow-Rising Embers */}
+          <div className="pointer-events-none absolute inset-0 z-[12] overflow-hidden">
+            <div
+              className="absolute -inset-x-[15%] bottom-[-14%] h-[56%]"
+              style={{
+                background:
+                  'radial-gradient(ellipse at 32% 82%, rgba(153,27,27,0.28) 0%, rgba(90,18,18,0.14) 48%, transparent 76%)',
+                filter: 'blur(30px)',
+                animation: 'weatherMistDriftA 24s ease-in-out infinite',
+              }}
+            />
+            <div
+              className="absolute -inset-x-[15%] bottom-[-10%] h-[46%]"
+              style={{
+                background:
+                  'radial-gradient(ellipse at 70% 85%, rgba(120,45,32,0.22) 0%, rgba(60,20,16,0.1) 50%, transparent 76%)',
+                filter: 'blur(34px)',
+                animation: 'weatherMistDriftB 31s ease-in-out infinite',
+              }}
+            />
+            {Array.from({ length: 18 }, (_, i) => {
+              const leftPct = (i * 37.9 + 5) % 94;
+              const sizePx = 1.8 + (i % 3) * 1.1;
+              const duration = (5.4 + ((i * 11) % 8) * 0.55).toFixed(2);
+              const delay = -(((i * 0.83) % 7.2).toFixed(2));
+              const drift = (i % 2 === 0 ? 1 : -1) * (14 + (i % 4) * 10);
+              return (
+                <span
+                  key={`splash-ember-${i}`}
+                  className="absolute -bottom-3 rounded-full"
+                  style={{
+                    left: `${leftPct}%`,
+                    width: `${sizePx}px`,
+                    height: `${sizePx}px`,
+                    backgroundColor: i % 3 === 0 ? '#fca5a5' : i % 2 === 0 ? '#f97316' : '#dc2626',
+                    boxShadow: '0 0 8px rgba(239,68,68,0.75), 0 0 14px rgba(185,28,28,0.45)',
+                    ['--ember-drift' as any]: `${drift}px`,
+                    animation: `weatherEmberRise ${duration}s ease-out ${delay}s infinite`,
+                  }}
+                />
+              );
+            })}
+          </div>
+
           {/* Centered Glowing Stylized SVG Pentagram with Esoteric Runes */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
             <div
@@ -8808,48 +9059,74 @@ export default function App() {
       {/* =========================================================================
           GENERIC GAME OVER SCREEN
          ========================================================================= */}
-      {screen === 'GAME_OVER' && (
+      {screen === 'GAME_OVER' && (() => {
+        const isVictory = Boolean(bossState.ritualEndedVoluntarily);
+        return (
         <div
           className="absolute inset-0 bg-[#080204] z-50 flex flex-col items-center justify-center px-5 py-4 text-center select-none overflow-hidden animate-fade-up font-mono"
-          style={getScreenBgStyle('gameover.jpg')}
+          style={getScreenBgStyle(isVictory ? 'finalboss.jpg' : 'gameover.jpg')}
         >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,6,6,0.35)_0%,rgba(4,2,3,0.9)_100%)] pointer-events-none" />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: isVictory
+                ? 'radial-gradient(ellipse at 50% 24%, rgba(212,175,55,0.22) 0%, rgba(28,15,8,0.68) 48%, rgba(6,4,3,0.95) 100%)'
+                : 'radial-gradient(ellipse at center, rgba(12,6,6,0.35) 0%, rgba(4,2,3,0.9) 100%)',
+            }}
+          />
 
-          <div className="relative z-10 max-w-5xl w-full max-h-full min-h-0 flex flex-col items-center bg-[#0d0806]/92 border border-[#442819] rounded-[3px] px-6 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.96)] backdrop-blur-[2px]">
+          <div
+            className={`relative z-10 max-w-5xl w-full max-h-full min-h-0 flex flex-col items-center rounded-[3px] px-6 py-5 backdrop-blur-[2px] ${
+              isVictory
+                ? 'bg-[radial-gradient(ellipse_at_top,rgba(34,22,12,0.94)_0%,rgba(13,9,7,0.96)_68%)] border border-[#c89d4c]/85 shadow-[0_28px_70px_rgba(0,0,0,0.98),0_0_65px_rgba(212,175,55,0.22)]'
+                : 'bg-[#0d0806]/92 border border-[#442819] shadow-[0_24px_60px_rgba(0,0,0,0.96)]'
+            }`}
+          >
+            {isVictory && (
+              <>
+                <span className="pointer-events-none absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-[#e5c16b]/85" />
+                <span className="pointer-events-none absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-[#e5c16b]/85" />
+                <span className="pointer-events-none absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#e5c16b]/85" />
+                <span className="pointer-events-none absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#e5c16b]/85" />
+              </>
+            )}
+
             {/* Engraved Header */}
             <div className="shrink-0 flex flex-col items-center text-center mb-4">
               <div className="flex items-center gap-3.5 mb-0.5">
                 <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#8a5d36]/75 to-[#d4af37]/85" />
-                <span className={`text-[10px] font-mono font-bold uppercase tracking-[0.3em] ${
-                  bossState.ritualEndedVoluntarily ? 'text-[#d4af37]' : 'text-red-400/90'
+                <span className={`text-[10px] font-mono font-bold uppercase tracking-[0.32em] ${
+                  isVictory ? 'text-[#f4d78b]' : 'text-red-400/90'
                 }`}>
-                  {bossState.ritualEndedVoluntarily
-                    ? 'Seal Complete'
+                  {isVictory
+                    ? '✦ Victory · The Archives Sealed ✦'
                     : bossState.ritualSurrendered
                       ? 'Candle Snuffed'
-                      : 'Scales Tipped'}
+                      : 'RUN FAILED'}
                 </span>
                 <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#8a5d36]/75 to-[#d4af37]/85" />
               </div>
               <h1
-                className={`text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.22em] leading-tight ${
-                  bossState.ritualEndedVoluntarily
-                    ? 'text-[#f2dca8] drop-shadow-[0_2px_14px_rgba(251,191,36,0.35)]'
+                className={`text-2xl sm:text-4xl font-['Cinzel',_serif] font-black uppercase tracking-[0.22em] leading-tight ${
+                  isVictory
+                    ? 'text-transparent bg-clip-text bg-gradient-to-b from-[#fff7d1] via-[#e8c166] to-[#a97828] drop-shadow-[0_4px_20px_rgba(234,179,8,0.45)]'
                     : 'text-red-500 drop-shadow-[0_2px_14px_rgba(239,68,68,0.45)]'
                 }`}
               >
-                {bossState.ritualEndedVoluntarily
-                  ? 'Ritual Concluded'
+                {isVictory
+                  ? 'Stitched in Sinew'
                   : bossState.ritualSurrendered
                     ? 'Forfeited to the Dark'
                     : 'The Old One Awaits'}
               </h1>
-              <p className="mt-1 font-['Cinzel',_serif] italic text-xs sm:text-sm tracking-[0.1em] text-[#cfb794]/85">
-                {bossState.ritualEndedVoluntarily
-                  ? 'The Bone Lord lies bound beneath stone.'
+              <p className={`mt-1 font-['Cinzel',_serif] italic text-xs sm:text-sm tracking-[0.1em] ${
+                isVictory ? 'text-[#e8d3ad]' : 'text-[#cfb794]/85'
+              }`}>
+                {isVictory
+                  ? 'The Bone Lord lies bound beneath stone, and your lineage is etched into the ledger.'
                   : bossState.ritualSurrendered
                     ? 'You turned away before the altar.'
-                    : 'Your blood runs cold upon the scales.'}
+                    : 'Your blood runs cold.'}
               </p>
             </div>
 
@@ -8941,11 +9218,11 @@ export default function App() {
                       <span className="text-amber-200 font-bold text-sm">{runStats.clearedStages}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Vessels Sacrificed</span>
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Allies Sacrificed</span>
                       <span className="text-red-300 font-bold text-sm">{runStats.cardsSacrificed}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Blood Dealt / Taken</span>
+                      <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Blood Harvested / Taken</span>
                       <span className="text-stone-100 font-bold text-sm">
                         {runStats.scaleDamageDealt} <span className="text-stone-500 font-normal">/</span> {runStats.scaleDamageTaken}
                       </span>
@@ -9085,14 +9362,19 @@ export default function App() {
               )}
               <button
                 onClick={() => handleRestartRun()}
-                className="bg-[#1e1510] hover:bg-[#2c1e16] active:bg-[#140e0b] border border-[#5c3926] hover:border-[#c99b56] rounded-[2px] shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.08)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] text-[#efe0be] hover:text-white px-8 py-2.5 select-none cursor-pointer"
+                className={`rounded-[2px] active:translate-y-[1px] transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] px-8 py-2.5 select-none cursor-pointer ${
+                  isVictory
+                    ? 'bg-gradient-to-b from-[#3b2814] to-[#20150a] hover:from-[#4d341a] hover:to-[#2a1b0d] border border-[#e5c16b]/90 text-[#fff3ce] hover:text-white shadow-[0_4px_18px_rgba(212,175,55,0.28)]'
+                    : 'bg-[#1e1510] hover:bg-[#2c1e16] active:bg-[#140e0b] border border-[#5c3926] hover:border-[#c99b56] shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.08)] text-[#efe0be] hover:text-white'
+                }`}
               >
-                Begin Anew
+                {isVictory ? 'New Ritual' : 'Begin Anew'}
               </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           GENERIC PAUSE / SETTINGS MENU MODAL
@@ -9299,7 +9581,7 @@ export default function App() {
           return (
             <div
               key={c.id || `draft-p-${c.name}-${idx}`}
-              className="relative w-[44px] h-[62px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
+              className="relative w-[38px] h-[54px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -9313,10 +9595,10 @@ export default function App() {
                     : "opacity-75 saturate-[0.82] cursor-default"
                 } ${
                   isSelected
-                    ? "scale-[0.43] sm:scale-[0.69] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30"
+                    ? "scale-[0.38] sm:scale-[0.69] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30"
                     : canTradePelt
-                      ? "scale-[0.38] sm:scale-[0.62] lg:scale-[1.06] hover:scale-[0.41] sm:hover:scale-[0.66] lg:hover:scale-[1.11] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
-                      : "scale-[0.38] sm:scale-[0.62] lg:scale-[1.06]"
+                      ? "scale-[0.33] sm:scale-[0.62] lg:scale-[1.06] hover:scale-[0.36] sm:hover:scale-[0.66] lg:hover:scale-[1.11] hover:-translate-y-1 [filter:drop-shadow(0_0_2px_rgba(229,193,107,0.75))_drop-shadow(0_0_8px_rgba(212,175,55,0.32))]"
+                      : "scale-[0.33] sm:scale-[0.62] lg:scale-[1.06]"
                 }`}
               >
                 {isSelected && (
@@ -9335,9 +9617,9 @@ export default function App() {
             return (
               <div
                 key={`draft-slot-empty-${idx}`}
-                className="relative w-[44px] h-[62px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[38px] h-[54px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
-                <div className="w-[40px] h-[58px] sm:w-[66px] sm:h-[94px] lg:w-[114px] lg:h-[162px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
+                <div className="w-[35px] h-[50px] sm:w-[66px] sm:h-[94px] lg:w-[114px] lg:h-[162px] rounded-[3px] border border-dashed border-[#4e3b2b]/55 bg-[#080605]/55 shadow-[inset_0_2px_12px_rgba(0,0,0,0.85)] flex flex-col items-center justify-center gap-1">
                   <span className="text-[9px] font-['Cinzel',_serif] uppercase tracking-[0.25em] text-[#6e5642]/70">
                     Claimed
                   </span>
@@ -9353,10 +9635,10 @@ export default function App() {
             return (
               <div
                 key={`draft-back-${idx}`}
-                className="relative w-[44px] h-[62px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
+                className="relative w-[38px] h-[54px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center select-none pointer-events-none"
               >
                 <div
-                  className={`w-[40px] h-[58px] sm:w-[66px] sm:h-[94px] lg:w-[114px] lg:h-[162px] rounded-[3px] transition-all duration-200 ${
+                  className={`w-[35px] h-[50px] sm:w-[66px] sm:h-[94px] lg:w-[114px] lg:h-[162px] rounded-[3px] transition-all duration-200 ${
                     draftFlippingDown ? 'animate-flip-down' : 'opacity-65 filter brightness-75'
                   }`}
                 >
@@ -9375,7 +9657,7 @@ export default function App() {
           return (
             <div
               key={c.id || `draft-t-${c.name}-${idx}`}
-              className="relative w-[44px] h-[62px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
+              className="relative w-[38px] h-[54px] sm:w-[72px] sm:h-[100px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
             >
               <div
                 onClick={() => {
@@ -9386,8 +9668,8 @@ export default function App() {
                   draftFlippingUp ? 'animate-flip-up' : ''
                 } ${
                   isSelected
-                    ? "scale-[0.43] sm:scale-[0.69] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
-                    : "scale-[0.38] sm:scale-[0.62] lg:scale-[1.06] hover:scale-[0.41] sm:hover:scale-[0.66] lg:hover:scale-[1.11] hover:-translate-y-1"
+                    ? "scale-[0.38] sm:scale-[0.69] lg:scale-[1.13] -translate-y-1 lg:-translate-y-2 z-30 [filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#dc2626)_drop-shadow(0_0_14px_rgba(185,28,28,0.65))] brightness-105"
+                    : "scale-[0.33] sm:scale-[0.62] lg:scale-[1.06] hover:scale-[0.36] sm:hover:scale-[0.66] lg:hover:scale-[1.11] hover:-translate-y-1"
                 }`}
               >
                 {isSelected && (
@@ -9428,7 +9710,7 @@ export default function App() {
             </div>
 
             {/* Dual Smoked-Wood & Iron Tabletop Trays (Snug Fit) */}
-            <div className="relative z-10 grid grid-cols-[auto_auto] justify-center items-stretch gap-1.5 sm:gap-3 lg:gap-5 my-auto max-w-full">
+            <div className="relative z-10 flex flex-row flex-nowrap justify-center items-stretch gap-1.5 sm:gap-3 lg:gap-5 my-auto max-w-full" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap' }}>
               {/* Left Tray: Player's Starter Deck */}
               <div className="relative flex flex-col items-center px-1.5 sm:px-3 lg:px-5 pt-1.5 sm:pt-2 lg:pt-3 pb-2 sm:pb-2.5 lg:pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#3d2d20]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
                 <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#7c5d3b]/65" />
@@ -9577,6 +9859,8 @@ export default function App() {
             style={getScreenBgStyle('merchant_event.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.34)_0%,rgba(5,3,2,0.92)_100%)] pointer-events-none" />
+
+            {renderActWeather('absolute inset-0 z-[5]', 'event_items')}
 
             {cacheConsolationCard ? (
               /* Consolation Card Showcase Plaque */
@@ -9799,6 +10083,7 @@ export default function App() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,8,5,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
+            {renderActWeather('absolute inset-0 z-[5]', 'event_campfire')}
             <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-center gap-5">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
@@ -10085,6 +10370,7 @@ export default function App() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.3)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
+            {renderActWeather('absolute inset-0 z-[5]', 'event_altar')}
             <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
@@ -10433,6 +10719,7 @@ export default function App() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(22,12,8,0.42)_0%,rgba(6,4,3,0.92)_100%)] pointer-events-none" />
 
+            {renderActWeather('absolute inset-0 z-[5]', 'event_anvil')}
             <div className="relative z-10 w-full max-w-6xl h-full min-h-0 flex flex-col">
               {/* Header */}
               <div className="shrink-0 flex flex-col items-center text-center pb-3">
@@ -10637,6 +10924,7 @@ export default function App() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,10,9,0.45)_0%,rgba(5,3,3,0.92)_100%)] pointer-events-none" />
 
+            {renderActWeather('absolute inset-0 z-[5]', 'event_flock')}
             <div className="relative z-10 max-w-5xl w-full flex flex-col items-center justify-center text-center my-auto py-1">
               <div className="flex items-center gap-3.5 mb-0.5">
                 <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
@@ -10698,11 +10986,40 @@ export default function App() {
               ) : (
                 <>
                   {/* Fenced Pen Arena with 13 Wandering Sheep (or 1 Lone Grey Sheep) */}
-                  <div className="relative w-full max-w-4xl h-[270px] sm:h-[300px] mt-4 mb-4 rounded-[4px] bg-[radial-gradient(ellipse_at_center,#665b4a_0%,#4b4134_62%,#2f281f_100%)] border-2 border-[#785c40]/90 shadow-[inset_0_0_36px_rgba(0,0,0,0.48),0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden">
-                    {/* Wooden Fence Rail Perimeter */}
-                    <div className="pointer-events-none absolute inset-2 border border-dashed border-[#967552]/65 rounded-[2px]" />
-                    <div className="pointer-events-none absolute top-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#3f2c1c] via-[#8c6945]/85 to-[#3f2c1c]" />
-                    <div className="pointer-events-none absolute bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-[#3f2c1c] via-[#8c6945]/85 to-[#3f2c1c]" />
+                  <div className="relative w-full max-w-4xl h-[270px] sm:h-[300px] mt-4 mb-4 rounded-[4px] bg-[radial-gradient(ellipse_at_center,#635746_0%,#473d30_62%,#2a231b_100%)] border-[3px] border-[#5c422c] shadow-[inset_0_0_46px_rgba(0,0,0,0.62),0_22px_54px_rgba(0,0,0,0.94)] overflow-hidden">
+                    {/* Ornate Timber & Wrought-Iron Fence Perimeter */}
+                    <div className="pointer-events-none absolute inset-0 z-20">
+                      {/* Top & Bottom Double Timber Rails */}
+                      <div className="absolute top-2 inset-x-0 h-[5px] bg-gradient-to-b from-[#8d6844] via-[#5e4128] to-[#2e1e12] shadow-[0_3px_6px_rgba(0,0,0,0.75)]" />
+                      <div className="absolute top-[13px] inset-x-0 h-[3px] bg-gradient-to-b from-[#735336] to-[#291b10] opacity-85" />
+                      <div className="absolute bottom-2 inset-x-0 h-[5px] bg-gradient-to-b from-[#8d6844] via-[#5e4128] to-[#2e1e12] shadow-[0_-2px_6px_rgba(0,0,0,0.75)]" />
+                      <div className="absolute bottom-[13px] inset-x-0 h-[3px] bg-gradient-to-b from-[#735336] to-[#291b10] opacity-85" />
+                      {/* Left & Right Side Rails */}
+                      <div className="absolute left-2 inset-y-0 w-[5px] bg-gradient-to-r from-[#8d6844] via-[#5e4128] to-[#2e1e12] shadow-[2px_0_6px_rgba(0,0,0,0.7)]" />
+                      <div className="absolute right-2 inset-y-0 w-[5px] bg-gradient-to-l from-[#8d6844] via-[#5e4128] to-[#2e1e12] shadow-[-2px_0_6px_rgba(0,0,0,0.7)]" />
+                      {/* Top & Bottom Fence Posts with Brass Rivets */}
+                      {[12, 27, 42, 58, 73, 88].map((pct) => (
+                        <React.Fragment key={`post-${pct}`}>
+                          <div
+                            className="absolute top-0.5 w-3 h-5 -translate-x-1/2 rounded-[1px] bg-gradient-to-b from-[#a07a52] via-[#614329] to-[#28190e] border border-[#24160c] shadow-[0_3px_5px_rgba(0,0,0,0.85)] flex items-center justify-center"
+                            style={{ left: `${pct}%` }}
+                          >
+                            <span className="w-1 h-1 rounded-full bg-[#d4af37]/80" />
+                          </div>
+                          <div
+                            className="absolute bottom-0.5 w-3 h-5 -translate-x-1/2 rounded-[1px] bg-gradient-to-b from-[#a07a52] via-[#614329] to-[#28190e] border border-[#24160c] shadow-[0_-2px_5px_rgba(0,0,0,0.85)] flex items-center justify-center"
+                            style={{ left: `${pct}%` }}
+                          >
+                            <span className="w-1 h-1 rounded-full bg-[#d4af37]/80" />
+                          </div>
+                        </React.Fragment>
+                      ))}
+                      {/* Reinforced Corner Post Caps */}
+                      <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-[2px] bg-gradient-to-br from-[#b0895e] via-[#65472c] to-[#26180d] border border-[#d4af37]/45 shadow-md flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/85" /></div>
+                      <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-[2px] bg-gradient-to-bl from-[#b0895e] via-[#65472c] to-[#26180d] border border-[#d4af37]/45 shadow-md flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/85" /></div>
+                      <div className="absolute bottom-0.5 left-0.5 w-4 h-4 rounded-[2px] bg-gradient-to-tr from-[#b0895e] via-[#65472c] to-[#26180d] border border-[#d4af37]/45 shadow-md flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/85" /></div>
+                      <div className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-[2px] bg-gradient-to-tl from-[#b0895e] via-[#65472c] to-[#26180d] border border-[#d4af37]/45 shadow-md flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/85" /></div>
+                    </div>
 
                     {flockSheepList.map(sheep => {
                       const isPicked = flockSelectedSheepId === sheep.id;
@@ -10774,14 +11091,29 @@ export default function App() {
                   </div>
 
                   {/* Revealed Offering Plaque */}
-                  <div className="w-full max-w-3xl min-h-[124px] p-4 sm:p-5 rounded-[3px] bg-[#0e0907]/90 border border-[#4a3222]/85 shadow-[0_18px_40px_rgba(0,0,0,0.9)] flex flex-col items-center justify-center">
+                  <div className="relative w-full max-w-3xl min-h-[124px] p-4 sm:p-5 rounded-[3px] bg-gradient-to-b from-[#150e0a]/92 via-[#0f0907]/94 to-[#090605]/96 border border-[#6e4c31]/85 shadow-[0_18px_42px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,224,178,0.08)] flex flex-col items-center justify-center">
+                    <span className="pointer-events-none absolute top-1.5 left-1.5 w-3 h-3 border-t border-l border-[#c79d5a]/70" />
+                    <span className="pointer-events-none absolute top-1.5 right-1.5 w-3 h-3 border-t border-r border-[#c79d5a]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-3 h-3 border-b border-l border-[#c79d5a]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-3 h-3 border-b border-r border-[#c79d5a]/70" />
                     {!revealedOption ? (
-                      <div className="font-['Cinzel',_serif] text-sm uppercase tracking-[0.22em] text-[#c7b08e]">
-                        {isGreyMode
-                          ? 'The Lone Grey Sheep'
-                          : flockRepicksUsed === 0
-                            ? 'Choose a Sheep'
-                            : 'Final Choice'}
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="flex items-center gap-3.5">
+                          <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/75 to-[#d4af37]/90" />
+                          <span className="font-['Cinzel',_serif] font-bold text-lg sm:text-xl uppercase tracking-[0.26em] text-[#f2ddb7] drop-shadow-[0_2px_10px_rgba(212,175,55,0.28)]">
+                            {isGreyMode
+                              ? 'The Lone Grey Sheep'
+                              : flockRepicksUsed === 0
+                                ? 'Choose a Sheep'
+                                : 'Final Choice'}
+                          </span>
+                          <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/75 to-[#d4af37]/90" />
+                        </div>
+                        <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-[#a88c68]/85">
+                          {isGreyMode
+                            ? 'A lone offering awaits in the pen'
+                            : 'Select a beast from the pasture to reveal its omen'}
+                        </span>
                       </div>
                     ) : (
                       <div className="w-full flex flex-col items-center gap-3.5 animate-menu-fade-in">
@@ -11135,7 +11467,7 @@ export default function App() {
               </div>
 
               {/* Candlelit Merchant Counter Stage */}
-              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-between rounded-[4px] bg-gradient-to-b from-[#160f0a]/84 via-[#120c08]/92 to-[#090604]/96 border border-[#4a3322]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,224,178,0.08)] px-6 py-5 overflow-hidden">
+              <div className="relative w-full max-w-3xl my-auto flex flex-col items-center justify-center gap-6 rounded-[4px] bg-gradient-to-b from-[#160f0a]/60 via-[#120c08]/70 to-[#090604]/78 backdrop-blur-[2px] border border-[#4a3322]/85 shadow-[0_24px_60px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,224,178,0.08)] px-8 py-7 overflow-hidden">
                 <span className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-[#9a7342]/75" />
                 <span className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-[#9a7342]/75" />
                 <span className="pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-[#9a7342]/75" />
@@ -11254,6 +11586,7 @@ export default function App() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,12,11,0.34)_0%,rgba(4,3,3,0.92)_100%)] pointer-events-none" />
 
+            {renderActWeather('absolute inset-0 z-[5]', 'event_bone_lord')}
             <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
@@ -11492,6 +11825,7 @@ export default function App() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
+            {renderActWeather('absolute inset-0 z-[5]', 'event_mycologist')}
             <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
@@ -11876,6 +12210,7 @@ export default function App() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,26,21,0.38)_0%,rgba(4,8,7,0.92)_100%)] pointer-events-none" />
 
+            {renderActWeather('absolute inset-0 z-[5]', 'event_goobert')}
             <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
@@ -12838,8 +13173,8 @@ export default function App() {
                               })}
                             </div>
 
-                            {/* Compact Inspector Caption */}
-                            <div className="w-full max-w-md min-h-[38px] px-3 flex flex-col items-center justify-center text-center">
+                            {/* Compact Inspector Caption (fixed height prevents box/rack resizing) */}
+                            <div className="w-full max-w-md h-[64px] shrink-0 px-3 flex flex-col items-center justify-center text-center overflow-hidden">
                               {inspectedChoice && (
                                 inspectedChoice.type === 'body' ? (
                                   <>
@@ -13058,6 +13393,7 @@ export default function App() {
         >
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,12,9,0.28)_0%,rgba(4,3,2,0.92)_100%)] pointer-events-none" />
 
+          {renderActWeather('absolute inset-0 z-[5]', 'event_card_choice')}
           <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
             {/* Top Header */}
             <div className="flex flex-col items-center text-center shrink-0">
@@ -13074,7 +13410,7 @@ export default function App() {
             </div>
 
             {/* Moonlit Briar Stage with Three Distinct Creature Pedestals */}
-            <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-between rounded-[4px] bg-gradient-to-b from-[#11120e]/82 via-[#0f0c09]/90 to-[#070504]/96 border border-[#443121]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,228,185,0.08)] px-6 py-5 overflow-hidden">
+            <div className="relative w-full max-w-3xl my-auto flex flex-col items-center justify-center gap-6 rounded-[4px] bg-gradient-to-b from-[#11120e]/58 via-[#0f0c09]/68 to-[#070504]/76 backdrop-blur-[2px] border border-[#443121]/85 shadow-[0_24px_60px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,228,185,0.08)] px-8 py-7 overflow-hidden">
               <span className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-[#9a7342]/75" />
               <span className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-[#9a7342]/75" />
               <span className="pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-[#9a7342]/75" />
@@ -13582,17 +13918,35 @@ export default function App() {
                             };
                           })
                         );
-                        setBossState(prev => ({ ...prev, phase: 2, activeDialogue: '......' }));
+                        setBossState(prev => ({ ...prev, phase: 2, activeDialogue: null, bgHex: '#230618', bgTransitionDuration: 4 }));
                         addLog("=== THE BONE LORD: PHASE 2 INITIALIZED ===");
                       } else if (bossPhase === 2) {
-                        // Clear board and queue; Blood Moon descends only after dialogue is dismissed
                         setEnemyBoard([null, null, null, null]);
                         setEnemyQueue([null, null, null, null]);
                         setBossState(prev => ({
                           ...prev,
                           phase: 3,
-                          activeDialogue: '....the Bone Lord’s gaze feels like it could rip the soul from your body….',
+                          activeDialogue: null,
+                          bgHex: '#300202',
+                          bgTransitionDuration: 5,
                         }));
+                        setTimeout(() => {
+                          const bloodMoonCard = {
+                            ...cloneCard(ALL_CARD_LOOKUP['BLOOD MOON'], 0),
+                            id: `blood-moon-${Date.now()}`,
+                          };
+                          setEnemyBoard([bloodMoonCard, null, null, null]);
+                          setIsBoardRumbling(true);
+                          setIsBloodMoonDropping(true);
+                          triggerSfx('hit');
+                          if (typeof ChiptuneAudio !== 'undefined' && (ChiptuneAudio as any).playFinalBossPhase3) {
+                            (ChiptuneAudio as any).playFinalBossPhase3(0.6);
+                          }
+                          setTimeout(() => {
+                            setIsBoardRumbling(false);
+                            setIsBloodMoonDropping(false);
+                          }, 2400);
+                        }, 1800);
                         addLog("=== THE BONE LORD: PHASE 3 INITIALIZED ===");
                       }
                     }
@@ -13926,11 +14280,11 @@ export default function App() {
           ref={duelFieldRef}
           style={{
             backgroundColor: bossState.bgHex !== '#0b0f19' && bossState.bgHex !== '#18181b' ? bossState.bgHex : '#100c0a',
-            backgroundImage: `radial-gradient(ellipse at center, rgba(0,0,0,0.1) 0%, rgba(10,7,5,0.55) 90%), url('${getArenaBackground(
-              stage,
-              isBossMatch,
-              bossState.type ?? undefined
-            )}')`,
+            backgroundImage: `radial-gradient(ellipse at center, rgba(0,0,0,0.1) 0%, rgba(10,7,5,0.55) 90%), url('${
+              isBossMatch && bossState.type === 'BoneLord'
+                ? `${import.meta.env.BASE_URL || './'}assets/backgrounds/finalboss.jpg`
+                : getArenaBackground(stage, isBossMatch, bossState.type ?? undefined)
+            }')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundBlendMode: bossState.bgHex !== '#0b0f19' && bossState.bgHex !== '#18181b' ? 'soft-light' : 'normal',
@@ -13956,6 +14310,147 @@ export default function App() {
             style={{ animationDelay: '2.5s' }}
           />
 
+          {/* Battle Arena Weather Layer (z-[5]: above arena backdrop, strictly behind cards & HUD) */}
+          {(() => {
+            const weatherAct = Math.min(4, Math.max(1, actMap?.act ?? displayStage));
+            const hasMist = weatherAct === 1 || weatherAct === 2 || weatherAct === 3;
+            const rainCount = weatherAct === 3 ? 84 : weatherAct === 2 ? 36 : 0;
+            const hasLightning = weatherAct === 3;
+            const hasFire = weatherAct === 4;
+
+            return (
+              <div className="pointer-events-none absolute inset-0 z-[5] overflow-hidden select-none">
+                {hasMist && (
+                  <>
+                    <div
+                      className="absolute -inset-x-[15%] bottom-[-12%] h-[62%]"
+                      style={{
+                        background:
+                          weatherAct === 1
+                            ? 'radial-gradient(ellipse at 30% 78%, rgba(212,208,198,0.38) 0%, rgba(152,148,140,0.22) 48%, transparent 76%)'
+                            : weatherAct === 3
+                              ? 'radial-gradient(ellipse at 30% 80%, rgba(165,180,196,0.24) 0%, rgba(110,125,140,0.13) 45%, transparent 74%)'
+                              : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.22) 0%, rgba(135,132,124,0.11) 45%, transparent 74%)',
+                        filter: 'blur(26px)',
+                        animation: 'weatherMistDriftA 22s ease-in-out infinite',
+                      }}
+                    />
+                    <div
+                      className="absolute -inset-x-[15%] bottom-[-8%] h-[50%]"
+                      style={{
+                        background:
+                          weatherAct === 1
+                            ? 'radial-gradient(ellipse at 72% 84%, rgba(206,200,188,0.34) 0%, rgba(138,134,126,0.19) 50%, transparent 78%)'
+                            : weatherAct === 3
+                              ? 'radial-gradient(ellipse at 72% 85%, rgba(155,172,190,0.22) 0%, rgba(95,112,130,0.11) 48%, transparent 76%)'
+                              : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.2) 0%, rgba(120,116,108,0.1) 48%, transparent 76%)',
+                        filter: 'blur(32px)',
+                        animation: 'weatherMistDriftB 29s ease-in-out infinite',
+                      }}
+                    />
+                    {weatherAct === 1 && (
+                      <div
+                        className="absolute -inset-x-[12%] top-[14%] h-[42%]"
+                        style={{
+                          background:
+                            'radial-gradient(ellipse at 52% 50%, rgba(202,198,188,0.2) 0%, rgba(140,136,128,0.1) 52%, transparent 78%)',
+                          filter: 'blur(38px)',
+                          animation: 'weatherMistDriftB 34s ease-in-out -11s infinite',
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+                {rainCount > 0 && (
+                  <div className="absolute inset-0">
+                    {Array.from({ length: rainCount }, (_, i) => {
+                      const h1 = Math.abs(Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
+                      const h2 = Math.abs(Math.sin(i * 93.9898 + 67.345) * 24634.6345) % 1;
+                      const h3 = Math.abs(Math.sin(i * 41.2317 + 19.871) * 15731.7431) % 1;
+                      const leftPct = h1 * 118 - 2;
+                      const durNum = weatherAct === 3
+                        ? 0.42 + h3 * 0.28
+                        : 0.72 + h3 * 0.38;
+                      const duration = durNum.toFixed(2);
+                      const delay = (-(h2 * durNum)).toFixed(3);
+                      const heightPx = weatherAct === 3 ? 30 + (i % 4) * 10 : 18 + (i % 4) * 6;
+                      const opacity = weatherAct === 3 ? 0.24 + (i % 3) * 0.09 : 0.15 + (i % 3) * 0.06;
+                      return (
+                        <span
+                          key={`duel-rain-${weatherAct}-${i}`}
+                          className="absolute top-0 rounded-full"
+                          style={{
+                            left: `${leftPct}%`,
+                            width: weatherAct === 3 ? '1.4px' : '1px',
+                            height: `${heightPx}px`,
+                            opacity,
+                            background: 'linear-gradient(to bottom, transparent, rgba(208,224,242,0.88), rgba(186,208,232,0.28))',
+                            animation: `weatherRainFall ${duration}s linear ${delay}s infinite`,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+                {hasLightning && (
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        'radial-gradient(ellipse at 50% 15%, rgba(215,232,255,0.85) 0%, rgba(168,196,238,0.35) 55%, rgba(120,145,190,0.12) 100%)',
+                      mixBlendMode: 'screen',
+                      animation: 'weatherLightningFlash 6.8s linear infinite',
+                    }}
+                  />
+                )}
+                {hasFire && (
+                  <>
+                    <div
+                      className="absolute inset-x-0 bottom-0 h-[44%] origin-bottom"
+                      style={{
+                        background:
+                          'radial-gradient(ellipse at 50% 100%, rgba(234,88,12,0.34) 0%, rgba(185,28,28,0.2) 45%, transparent 78%)',
+                        mixBlendMode: 'screen',
+                        animation: 'weatherFireGlow 4.8s ease-in-out infinite',
+                      }}
+                    />
+                    <div
+                      className="absolute -inset-x-[12%] bottom-[-5%] h-[62%]"
+                      style={{
+                        background:
+                          'radial-gradient(ellipse at 40% 75%, rgba(92,82,78,0.26) 0%, rgba(45,40,38,0.14) 50%, transparent 76%)',
+                        filter: 'blur(36px)',
+                        animation: 'weatherSmokeDrift 20s ease-in-out infinite',
+                      }}
+                    />
+                    {Array.from({ length: 24 }, (_, i) => {
+                      const leftPct = (i * 33.7 + 4) % 96;
+                      const sizePx = 2 + (i % 3) * 1.4;
+                      const duration = (4.2 + ((i * 13) % 10) * 0.42).toFixed(2);
+                      const delay = -(((i * 0.67) % 6.5).toFixed(2));
+                      const drift = ((i % 2 === 0 ? 1 : -1) * (18 + (i % 5) * 14));
+                      return (
+                        <span
+                          key={`duel-ember-${i}`}
+                          className="absolute -bottom-3 rounded-full"
+                          style={{
+                            left: `${leftPct}%`,
+                            width: `${sizePx}px`,
+                            height: `${sizePx}px`,
+                            backgroundColor: i % 3 === 0 ? '#fde68a' : i % 2 === 0 ? '#fb923c' : '#ef4444',
+                            boxShadow: '0 0 8px rgba(251,146,60,0.85), 0 0 14px rgba(239,68,68,0.55)',
+                            ['--ember-drift' as any]: `${drift}px`,
+                            animation: `weatherEmberRise ${duration}s ease-out ${delay}s infinite`,
+                          }}
+                        />
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Sparse Slow-Rising Ambient Fire Embers */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
             {[
@@ -13979,34 +14474,176 @@ export default function App() {
             ))}
           </div>
 
-          {/* Animated Abyssal Backdrop for The Bone Lord */}
+          {/* Animated Abyssal Backdrop for The Bone Lord (Phase 1 / 2 / 3 Escalation) */}
           {isBossMatch && bossState.type === 'BoneLord' && (
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 transition-all duration-1000">
               {/* Outer Counter-Rotating Miasma */}
               <div
-                className="absolute -inset-[100%] bg-[radial-gradient(ellipse_at_center,rgba(185,28,28,0.18)_0%,rgba(69,10,10,0.28)_35%,transparent_65%)] animate-spin opacity-75"
-                style={{ animationDuration: '65s', animationDirection: 'reverse' }}
+                className="absolute -inset-[100%] animate-spin transition-opacity duration-1000"
+                style={{
+                  animationDuration: bossPhase === 3 ? '34s' : bossPhase === 2 ? '48s' : '65s',
+                  animationDirection: 'reverse',
+                  opacity: bossPhase === 3 ? 0.92 : 0.78,
+                  background:
+                    bossPhase === 2
+                      ? 'radial-gradient(ellipse at center, rgba(126,34,206,0.22) 0%, rgba(49,10,49,0.34) 36%, transparent 66%)'
+                      : 'radial-gradient(ellipse at center, rgba(185,28,28,0.24) 0%, rgba(69,10,10,0.34) 36%, transparent 66%)',
+                }}
               />
               {/* Core Spinning Vortex */}
               <div
-                className="absolute -inset-[60%] bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.24)_0%,rgba(127,29,29,0.18)_40%,transparent_70%)] animate-spin opacity-90"
-                style={{ animationDuration: '32s' }}
+                className="absolute -inset-[60%] animate-spin opacity-90"
+                style={{
+                  animationDuration: bossPhase === 3 ? '20s' : '32s',
+                  background:
+                    bossPhase === 2
+                      ? 'radial-gradient(circle at center, rgba(185,28,28,0.22) 0%, rgba(88,28,135,0.22) 42%, transparent 72%)'
+                      : 'radial-gradient(circle at center, rgba(239,68,68,0.28) 0%, rgba(127,29,29,0.22) 42%, transparent 72%)',
+                }}
               />
-
-              {/* Vignette Pulse */}
-              <div
-                className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,0,0,0.85)_95%)] animate-pulse"
-                style={{ animationDuration: '6s' }}
-              />
-              {/* Phase 3: Blood Moon Surge */}
-              {bossPhase === 3 && (
+              {/* Phase 2: Shadow Inversion Rim */}
+              {bossPhase === 2 && (
                 <div
-                  className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(220,38,38,0.32)_0%,transparent_75%)] animate-pulse"
-                  style={{ animationDuration: '2.5s' }}
+                  className="absolute inset-0 animate-pulse"
+                  style={{
+                    animationDuration: '4s',
+                    background:
+                      'radial-gradient(ellipse at center, transparent 34%, rgba(15,5,24,0.72) 78%, rgba(5,2,10,0.94) 100%)',
+                  }}
                 />
               )}
+              {/* Phase 3: Blood Moon Eclipse Halo */}
+              {bossPhase === 3 && (
+                <>
+                  <div
+                    className="absolute left-1/2 top-[22%] -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full border border-red-500/35 shadow-[0_0_120px_rgba(220,38,38,0.55),inset_0_0_80px_rgba(185,28,28,0.45)] animate-pulse"
+                    style={{ animationDuration: '2.8s' }}
+                  />
+                  <div
+                    className="absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(220,38,38,0.38)_0%,rgba(127,29,29,0.18)_42%,transparent_76%)] animate-pulse"
+                    style={{ animationDuration: '2.4s' }}
+                  />
+                </>
+              )}
+              {/* Bottom Ossuary Underglow */}
+              <div
+                className="absolute inset-x-0 bottom-0 h-48"
+                style={{
+                  background:
+                    bossPhase === 3
+                      ? 'linear-gradient(to top, rgba(153,27,27,0.42), rgba(69,10,10,0.14) 55%, transparent)'
+                      : 'linear-gradient(to top, rgba(95,12,12,0.32), transparent 70%)',
+                }}
+              />
+              {/* Vignette Pulse */}
+              <div
+                className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_28%,rgba(0,0,0,0.88)_95%)] animate-pulse"
+                style={{ animationDuration: '6s' }}
+              />
             </div>
           )}
+
+          {/* Pre-Fight Boss Ritual Intro Banner */}
+          {bossIntroBanner && (
+            <div
+              onClick={() => {
+                if (bossIntroTimerRef.current) {
+                  window.clearTimeout(bossIntroTimerRef.current);
+                  bossIntroTimerRef.current = null;
+                }
+                setBossIntroBanner(null);
+              }}
+              className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/55 backdrop-blur-[2px] cursor-pointer select-none animate-menu-fade-in"
+            >
+              <div
+                className={`w-full max-w-3xl relative py-7 sm:py-9 px-6 sm:px-10 text-center border-y shadow-[0_0_80px_rgba(0,0,0,0.95)] ${
+                  bossIntroBanner.accent === 'crimson'
+                    ? 'border-red-600/85 bg-[linear-gradient(90deg,transparent_0%,rgba(16,4,5,0.96)_14%,rgba(38,6,8,0.98)_50%,rgba(16,4,5,0.96)_86%,transparent_100%)] shadow-[0_0_90px_rgba(185,28,28,0.55)]'
+                    : bossIntroBanner.accent === 'violet'
+                      ? 'border-purple-500/80 bg-[linear-gradient(90deg,transparent_0%,rgba(14,8,20,0.96)_14%,rgba(32,12,48,0.98)_50%,rgba(14,8,20,0.96)_86%,transparent_100%)] shadow-[0_0_80px_rgba(126,34,206,0.45)]'
+                      : bossIntroBanner.accent === 'emerald'
+                        ? 'border-emerald-500/80 bg-[linear-gradient(90deg,transparent_0%,rgba(5,18,12,0.96)_14%,rgba(9,38,24,0.98)_50%,rgba(5,18,12,0.96)_86%,transparent_100%)] shadow-[0_0_80px_rgba(16,185,129,0.4)]'
+                        : 'border-amber-600/80 bg-[linear-gradient(90deg,transparent_0%,rgba(18,11,6,0.96)_14%,rgba(38,22,10,0.98)_50%,rgba(18,11,6,0.96)_86%,transparent_100%)] shadow-[0_0_80px_rgba(217,119,6,0.42)]'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-3.5 mb-3">
+                  <span className="h-px w-14 sm:w-24 bg-gradient-to-r from-transparent via-[#c49a5c]/80 to-[#f4d78b]" />
+                  <span
+                    className={`font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.34em] ${
+                      bossIntroBanner.accent === 'crimson'
+                        ? 'text-red-400'
+                        : bossIntroBanner.accent === 'violet'
+                          ? 'text-purple-300'
+                          : bossIntroBanner.accent === 'emerald'
+                            ? 'text-emerald-300'
+                            : 'text-amber-300'
+                    }`}
+                  >
+                    {bossIntroBanner.eyebrow}
+                  </span>
+                  <span className="h-px w-14 sm:w-24 bg-gradient-to-l from-transparent via-[#c49a5c]/80 to-[#f4d78b]" />
+                </div>
+
+                <div className="flex items-center justify-center my-1">
+                  <img
+                    src={bossIntroBanner.img}
+                    alt={bossIntroBanner.type}
+                    draggable={false}
+                    className={`w-auto object-contain mx-auto ${
+                      bossIntroBanner.type === 'BoneLord'
+                        ? 'max-h-24 sm:max-h-32 drop-shadow-[0_0_24px_rgba(220,38,38,0.75)]'
+                        : 'max-h-20 sm:max-h-28 drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]'
+                    }`}
+                  />
+                </div>
+
+                <p className="mt-3 font-['Cinzel',_serif] italic text-xs sm:text-sm tracking-[0.1em] text-[#e6d1b0]/90">
+                  {bossIntroBanner.subtitle}
+                </p>
+                <div className="mt-3 text-[9px] font-mono uppercase tracking-[0.28em] text-[#9b8265]/75">
+                  Click anywhere to face the altar
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cinematic Boss Phase-Shift Banner (Phase II / Phase III) */}
+          {isPhaseTransition && isBossMatch && (() => {
+            const isBL = bossState.type === 'BoneLord';
+            const phaseRoman = bossPhase === 3 ? 'III' : 'II';
+            const phaseTitle = isBL
+              ? (bossPhase === 3 ? 'THE BLOOD MOON DESCENDS' : 'SHADOW INVERSION')
+              : bossState.type === 'The Weaver'
+                ? 'THE LOOM RE-THREADS'
+                : bossState.type === 'Zealot'
+                  ? 'THE ZEALOT ASCENDS'
+                  : 'THE PRESS AWAKENS';
+            const phaseSub = isBL
+              ? (bossPhase === 3
+                  ? 'The ossuary sky splits open — endure the Eclipse.'
+                  : 'Power and flesh invert beneath the Bone Lord’s gaze.')
+              : 'The scales reset. Brace for the second movement.';
+
+            return (
+              <div className="fixed inset-0 z-[58] pointer-events-none flex items-center justify-center px-4 select-none">
+                <div className="w-full max-w-2xl relative py-6 px-8 text-center border-y border-red-700/80 bg-[linear-gradient(90deg,transparent_0%,rgba(14,5,6,0.95)_16%,rgba(28,7,9,0.96)_50%,rgba(14,5,6,0.95)_84%,transparent_100%)] shadow-[0_0_60px_rgba(153,27,27,0.55)] animate-menu-fade-in">
+                  <div className="flex items-center justify-center gap-3 mb-1.5">
+                    <span className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent to-red-500/80" />
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.34em] text-red-400">
+                      Phase {phaseRoman}
+                    </span>
+                    <span className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent to-red-500/80" />
+                  </div>
+                  <div className="font-['Cinzel',_serif] font-black text-2xl sm:text-4xl uppercase tracking-[0.2em] text-[#f7e5c4] drop-shadow-[0_2px_18px_rgba(220,38,38,0.75)]">
+                    {phaseTitle}
+                  </div>
+                  <p className="mt-1.5 font-['Cinzel',_serif] italic text-xs sm:text-sm tracking-[0.08em] text-[#d6b79c]/90">
+                    {phaseSub}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
           {/* Dialogue Popup Overlay (Modal backdrop shields table from input during speech) */}
           {bossState.activeDialogue && (
         <div
@@ -14023,9 +14660,21 @@ export default function App() {
                 : 'w-[92%] max-w-md'
             }`}
           >
-              <div className="p-4 sm:p-5 rounded border border-[#8c6747]/80 bg-[#120c08]/95 shadow-[0_8px_25px_rgba(0,0,0,0.95)] flex flex-col items-center text-center font-mono w-full">
-                <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-2">
-                  {isTutorialDuel ? `+-- THEMS THE RULES (${dialogueTotalSteps - dialogueQueue.length}/${dialogueTotalSteps}) --+` : '+-- OCCULT WHISPERS --+'}
+              <div className={`p-4 sm:p-5 rounded-[3px] border flex flex-col items-center text-center font-mono w-full ${
+                bossState.type === 'BoneLord' && !isTutorialDuel
+                  ? 'border-red-800/90 bg-[radial-gradient(ellipse_at_top,#21080a_0%,#0d0506_75%)] shadow-[0_14px_40px_rgba(0,0,0,0.96),0_0_26px_rgba(185,28,28,0.35)]'
+                  : 'border-[#8c6747]/80 bg-[#120c08]/95 shadow-[0_8px_25px_rgba(0,0,0,0.95)]'
+              }`}>
+                <div className={`text-[10px] tracking-[0.26em] uppercase mb-2 font-bold ${
+                  bossState.type === 'BoneLord' && !isTutorialDuel
+                    ? 'text-red-400/95'
+                    : 'text-amber-700/80'
+                }`}>
+                  {isTutorialDuel
+                    ? `+-- THEMS THE RULES (${dialogueTotalSteps - dialogueQueue.length}/${dialogueTotalSteps}) --+`
+                    : bossState.type === 'BoneLord'
+                      ? '✦ THE BONE LORD ✦'
+                      : '+-- OCCULT WHISPERS --+'}
                 </div>
                 <p className="text-sm sm:text-base italic font-mono text-amber-100 mb-3 leading-snug">
                   "{bossState.activeDialogue}"
@@ -14101,27 +14750,42 @@ export default function App() {
           </div>
         )}
 
-          {/* Ritual Completed Screen Overlay */}
+          {/* Post-Bone-Lord Triumph Overlay */}
           {bossState.isRitualComplete && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 font-mono select-none">
-              <div className="border border-amber-950/60 p-8 max-w-md w-full text-center bg-[#0c0805]">
-                <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-2">+-- SANCTUARY SEAL --+</div>
-                <h2 className="text-xl font-mono font-bold text-amber-400 mb-2 tracking-wider uppercase">Ritual Completed</h2>
-                <p className="text-xs font-mono text-stone-400 mb-8 leading-relaxed">
-                  The cycle never truly ends. Will you delve deeper into the catacombs or seal the archives?
+            <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/88 backdrop-blur-sm p-4 font-mono select-none animate-menu-fade-in">
+              <div className="relative max-w-lg w-full text-center rounded-[3px] border border-[#c89d4c]/85 bg-[radial-gradient(ellipse_at_top,#26160b_0%,#110a07_58%,#090605_100%)] p-7 sm:p-9 shadow-[0_28px_70px_rgba(0,0,0,0.98),0_0_60px_rgba(212,175,55,0.22)] overflow-hidden">
+                <span className="pointer-events-none absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-[#e5c16b]/85" />
+                <span className="pointer-events-none absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-[#e5c16b]/85" />
+                <span className="pointer-events-none absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-[#e5c16b]/85" />
+                <span className="pointer-events-none absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-[#e5c16b]/85" />
+
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <span className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent to-[#d4af37]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.32em] text-[#e5c16b]">
+                    Sanctuary Seal Broken
+                  </span>
+                  <span className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent to-[#d4af37]/85" />
+                </div>
+
+                <h2 className="font-['Cinzel',_serif] text-2xl sm:text-3xl font-black uppercase tracking-[0.2em] text-[#fae7b8] drop-shadow-[0_2px_18px_rgba(234,179,8,0.45)] mb-2">
+                  The Bone Lord Lies Bound
+                </h2>
+                <p className="font-['Cinzel',_serif] italic text-xs sm:text-sm text-[#d4bea0]/90 mb-7 leading-relaxed">
+                  The scales stand triumphant. Will you seal the archives in victory, or descend once more into a heavier cycle?
                 </p>
+
                 <div className="flex flex-col gap-3">
                   <button
-                    onClick={handleContinueRitual}
-                    className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-amber-300 hover:text-amber-100 px-6 py-2.5 cursor-pointer select-none"
+                    onClick={handleEndRitual}
+                    className="bg-gradient-to-b from-[#3b2814] to-[#20150a] hover:from-[#4d341a] hover:to-[#2a1b0d] active:translate-y-[1px] border border-[#e5c16b]/90 rounded-[2px] shadow-[0_4px_18px_rgba(212,175,55,0.28),inset_0_1px_0_rgba(255,244,200,0.22)] transition-all duration-100 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] text-[#fff2cc] hover:text-white px-6 py-3 cursor-pointer select-none"
                   >
-                    CONTINUE THE RITUAL
+                    Seal the Archives · Claim Victory
                   </button>
                   <button
-                    onClick={handleEndRitual}
-                    className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-stone-400 hover:text-stone-200 px-6 py-2.5 cursor-pointer select-none"
+                    onClick={handleContinueRitual}
+                    className="bg-[#18120e] hover:bg-[#241a14] active:translate-y-[1px] border border-[#5a422c]/85 hover:border-[#c99b56] rounded-[2px] shadow-[0_2px_0_#0a0807] transition-all duration-100 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] text-[#cbb28d] hover:text-[#f6e8cc] px-6 py-2.5 cursor-pointer select-none"
                   >
-                    SEAL THE ARCHIVES
+                    Continue the Ritual · Endless Descent
                   </button>
                 </div>
               </div>
@@ -14144,7 +14808,11 @@ export default function App() {
                 <div className="flex flex-col items-center justify-center text-center gap-1.5 w-full relative -translate-y-5 sm:-translate-y-6 -translate-x-6 sm:-translate-x-8">
                   {/* Stage Text on Individual Lines */}
                   <div className="flex flex-col items-center justify-center select-none text-center">
-                    <h2 className="font-['Cinzel',_serif] font-black text-base sm:text-lg tracking-[0.25em] uppercase text-[#d6ba94] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
+                    <h2 className={`font-['Cinzel',_serif] font-black text-base sm:text-lg tracking-[0.25em] uppercase drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)] ${
+                      isBossMatch && bossState.type === 'BoneLord'
+                        ? 'text-red-200 drop-shadow-[0_0_12px_rgba(220,38,38,0.65)]'
+                        : 'text-[#d6ba94]'
+                    }`}>
                       {isBossMatch
                         ? (bossState.type === 'Zealot'
                             ? "The Zealot"
@@ -14155,11 +14823,39 @@ export default function App() {
                                 : "The Weaver")
                         : currentStageName}
                     </h2>
-                    <div className="mt-1 inline-flex items-center justify-center px-3 py-1.5 rounded-[2px] bg-[#100e10]/88 border border-[#4a413b]/75 shadow-[inset_0_1px_6px_rgba(0,0,0,0.75)]">
-                      <span className="font-['Cinzel',_serif] font-semibold text-[10px] leading-none tracking-[0.22em] pl-[0.22em] uppercase text-[#bfa78b]">
-                        {isBossMatch ? `Stage ${stage} • Phase ${bossPhase}` : `Stage ${stage} • Depth ${level}`}
+                    <div className={`mt-1 inline-flex items-center justify-center px-3 py-1.5 rounded-[2px] border shadow-[inset_0_1px_6px_rgba(0,0,0,0.75)] ${
+                      isBossMatch && bossState.type === 'BoneLord'
+                        ? 'bg-[#1a0708]/92 border-red-800/85'
+                        : 'bg-[#100e10]/88 border-[#4a413b]/75'
+                    }`}>
+                      <span className={`font-['Cinzel',_serif] font-semibold text-[10px] leading-none tracking-[0.22em] pl-[0.22em] uppercase ${
+                        isBossMatch && bossState.type === 'BoneLord'
+                          ? 'text-red-200/95'
+                          : 'text-[#bfa78b]'
+                      }`}>
+                        {isBossMatch
+                          ? (bossState.type === 'BoneLord'
+                              ? (bossPhase === 1 ? 'Phase I • Ossuary' : bossPhase === 2 ? 'Phase II • Shadow' : 'Phase III • Eclipse')
+                              : `Stage ${stage} • Phase ${bossPhase}`)
+                          : `Stage ${stage} • Depth ${level}`}
                       </span>
                     </div>
+                    {isBossMatch && bossState.type === 'BoneLord' && (
+                      <div className="mt-1.5 flex items-center justify-center gap-2" title={`Bone Lord Phase ${bossPhase} of 3`}>
+                        {[1, 2, 3].map(p => (
+                          <span
+                            key={p}
+                            className={`w-2 h-2 rotate-45 border transition-all duration-300 ${
+                              p < bossPhase
+                                ? 'bg-red-900/70 border-red-700/70 opacity-60'
+                                : p === bossPhase
+                                  ? 'bg-red-500 border-amber-200 shadow-[0_0_8px_rgba(239,68,68,0.95)] scale-110'
+                                  : 'bg-[#160b0b] border-[#5a302c]/70'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center justify-center gap-2 w-28 mt-2">
                       <span className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#6e6052]/70" />
                       <span className="w-1 h-1 rotate-45 bg-[#8f7960]/80" />
@@ -14186,16 +14882,10 @@ export default function App() {
                       const isFoe = theme === 'foe';
 
                       const dollFilterClass = isWeaver
-                        ? 'brightness-[0.88] contrast-[1.08] drop-shadow-[0_8px_16px_rgba(88,28,135,0.7)]'
+                        ? '-scale-x-100 brightness-[0.58] contrast-[1.18] saturate-[0.78] drop-shadow-[0_8px_16px_rgba(88,28,135,0.75)]'
                         : isFoe
-                          ? 'brightness-[0.86] contrast-[1.1] drop-shadow-[0_8px_16px_rgba(153,27,27,0.7)]'
+                          ? '-scale-x-100 brightness-[0.55] contrast-[1.2] saturate-[0.72] drop-shadow-[0_8px_16px_rgba(153,27,27,0.75)]'
                           : 'drop-shadow-[0_10px_16px_rgba(0,0,0,0.95)]';
-
-                      const headInkFilter = isWeaver
-                        ? '[filter:brightness(0.2)_sepia(1)_hue-rotate(245deg)_saturate(3.8)_contrast(1.7)]'
-                        : isFoe
-                          ? '[filter:brightness(0.22)_sepia(1)_hue-rotate(315deg)_saturate(4.5)_contrast(1.7)]'
-                          : '[filter:brightness(0.16)_contrast(1.85)_saturate(0.55)]';
 
                       const badgeClass = isWeaver
                         ? 'border-purple-700/75 bg-[#120b18]/92 text-purple-200'
@@ -14227,35 +14917,6 @@ export default function App() {
                               draggable={false}
                               className={`w-full h-full object-contain pointer-events-none ${dollFilterClass}`}
                             />
-
-                            {/* Dark-Inked Tribal Brand Wrapped Across Doll Forehead */}
-                            <div
-                              className={`absolute top-[17.5%] left-[46.5%] -translate-x-1/2 -translate-y-1/2 -rotate-[10deg] flex items-center justify-center pointer-events-none mix-blend-multiply opacity-[0.9] ${isDual ? 'w-[34px] h-[34px]' : 'w-[38px] h-[38px]'}`}
-                              style={{ transform: 'perspective(90px) rotateY(-10deg) rotateX(6deg)' }}
-                            >
-                              <div className={`relative z-10 ${isDual ? '[&>*]:scale-[1.45]' : '[&>*]:scale-[1.62]'} ${headInkFilter}`}>
-                                {TRIBE_EMBROIDERY[tribeName as Tribe] || <span className="text-[10px]">✦</span>}
-                              </div>
-                            </div>
-
-                            {/* Crest PNG Directly on Doll Chest */}
-                            <div
-                              className={`absolute top-[42%] left-[55.5%] -translate-x-1/2 -rotate-[14deg] flex items-center justify-center pointer-events-none ${isDual ? 'w-[30px] h-[30px]' : 'w-[34px] h-[34px]'}`}
-                            >
-                              {sigilName ? (
-                                <img
-                                  src={getSigilArtUrl(sigilName)}
-                                  alt={sigilName}
-                                  className={`object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.95)] ${isDual ? 'w-[26px] h-[26px]' : 'w-[29px] h-[29px]'}`}
-                                  style={{ imageRendering: 'pixelated' }}
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLElement).style.display = 'none';
-                                  }}
-                                />
-                              ) : (
-                                <span className="text-[9px] font-mono text-[#ab8a68]">—</span>
-                              )}
-                            </div>
                           </div>
 
                           {/* Compact Nameplate Under Doll */}
@@ -15096,29 +15757,41 @@ export default function App() {
     }`}
     title={`Runnel Balance: ${scale === 0 ? '0 (Balanced)' : scale > 0 ? `+${scale}` : `${scale}`}`}
   >
+    {/* Escalated Cycle Seal (+7 / +13) */}
+    {getRequiredScaleWinDamage() > 5 && (
+      <div
+        className="absolute -top-3 left-1/2 -translate-x-1/2 z-30 px-1.5 py-[1px] rounded-[2px] bg-[#1a0708] border border-[#d4af37]/85 shadow-[0_0_10px_rgba(212,175,55,0.45),0_2px_6px_rgba(0,0,0,0.95)] pointer-events-none"
+        title={`Escalated Ritual: +${getRequiredScaleWinDamage()} required to tip the scales`}
+      >
+        <span className="font-mono text-[9px] font-bold tracking-wider text-[#f4d78b] leading-none block">
+          +{getRequiredScaleWinDamage()}
+        </span>
+      </div>
+    )}
+
     {/* Top Endpoint: Rusted Iron Drain Grate (+5 Opponent Defeat / Overkill Basin) */}
     <div
       className={`w-7 h-2.5 rounded-[1px] flex items-center justify-evenly px-0.5 shadow-inner transition-all duration-500 relative overflow-hidden ${
-        isOverkill || scale >= 5
+        isOverkill || scale >= getRequiredScaleWinDamage()
           ? 'bg-red-950 border border-red-500 shadow-[0_0_20px_rgba(239,68,68,1)]'
           : 'bg-[#1c140e] border border-[#3d2a1c]'
       }`}
-      title="Opponent Defeat (+5)"
+      title={`Opponent Defeat (+${getRequiredScaleWinDamage()})`}
     >
-      {(isOverkill || scale >= 5) && (
+      {(isOverkill || scale >= getRequiredScaleWinDamage()) && (
         <div className="absolute inset-0 bg-gradient-to-t from-red-600 via-red-800 to-red-950 opacity-95 animate-pulse shadow-[inset_0_0_6px_rgba(254,202,202,0.9)]" />
       )}
-      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= 5 ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
-      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= 5 ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
-      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= 5 ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
-      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= 5 ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
+      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= getRequiredScaleWinDamage() ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
+      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= getRequiredScaleWinDamage() ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
+      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= getRequiredScaleWinDamage() ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
+      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= getRequiredScaleWinDamage() ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
     </div>
 
     {/* Central Conduit Chamber: Slate Notches + Diegetic Glass Ampoule Column */}
     <div className="relative flex-1 w-full flex items-center justify-center my-1">
       {/* 11 Chiseled Tally Notches (-5 to +5) in the Slate Slab Behind the Glass */}
       <div className="absolute inset-y-0 w-full flex flex-col justify-between items-center pointer-events-none py-0.5 z-0">
-        {[5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5].map((val) => {
+        {Array.from({ length: getRequiredScaleWinDamage() + 6 }, (_, i) => getRequiredScaleWinDamage() - i).map((val) => {
           const isMidpoint = val === 0;
           const isCurrent = scale === val;
 
@@ -15142,7 +15815,7 @@ export default function App() {
       </div>
 
       {/* Overkill Ambient Flood Channel (Fills Upper Headspace When Damaged Beyond +5) */}
-      {(isOverkill || scale >= 5) && (
+      {(isOverkill || scale >= getRequiredScaleWinDamage()) && (
         <div className="absolute top-0 inset-x-2 h-14 bg-gradient-to-b from-red-600/30 via-red-950/20 to-transparent pointer-events-none animate-pulse z-0" />
       )}
 
@@ -15188,9 +15861,10 @@ export default function App() {
 
             {/* Organic Viscous Blood Column */}
       {(() => {
-        const fillPercent = isOverkill || scale >= 5
+        const winTarget = getRequiredScaleWinDamage();
+        const fillPercent = isOverkill || scale >= winTarget
           ? 100
-          : Math.min(100, Math.max(0, ((scale + 5) / 10) * 100));
+          : Math.min(100, Math.max(0, ((scale + 5) / (winTarget + 5)) * 100));
 
         return (
           <div
@@ -15202,7 +15876,7 @@ export default function App() {
             style={{
               height: `${fillPercent}%`,
               background: 'linear-gradient(to top, #0f0102 0%, #290206 20%, #4d050a 45%, #7a0c14 70%, #991320 90%, #b91c1c 100%)',
-              boxShadow: isOverkill || scale >= 5
+              boxShadow: isOverkill || scale >= getRequiredScaleWinDamage()
                 ? '0 0 24px rgba(220, 38, 38, 0.95), inset 0 0 8px rgba(254, 202, 202, 0.5)'
                 : '0 0 12px rgba(153, 19, 32, 0.8), inset 0 0 4px rgba(254, 202, 202, 0.3)',
             }}
@@ -15251,7 +15925,7 @@ export default function App() {
               )}
 
               {/* Overkill Arterial Surge */}
-              {(isOverkill || scale >= 5) && (
+              {(isOverkill || scale >= getRequiredScaleWinDamage()) && (
                 <div className="absolute top-0 inset-x-0 h-5 bg-gradient-to-b from-red-400/80 via-red-600/40 to-transparent animate-ping opacity-90 pointer-events-none" />
               )}
             </div>

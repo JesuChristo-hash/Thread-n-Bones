@@ -680,7 +680,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
       {(() => {
         const weatherAct = Math.min(4, Math.max(1, mapData.act));
         const hasMist = weatherAct === 1 || weatherAct === 2 || weatherAct === 3;
-        const rainCount = weatherAct === 3 ? 58 : weatherAct === 2 ? 28 : 0;
+        const rainCount = weatherAct === 3 ? 84 : weatherAct === 2 ? 36 : 0;
         const hasLightning = weatherAct === 3;
         const hasFire = weatherAct === 4;
 
@@ -689,50 +689,69 @@ const MapScreen: React.FC<MapScreenProps> = ({
             {hasMist && (
               <>
                 <div
-                  className="absolute -inset-x-[15%] bottom-[-12%] h-[58%]"
+                  className="absolute -inset-x-[15%] bottom-[-12%] h-[62%]"
                   style={{
                     background:
-                      weatherAct === 3
-                        ? 'radial-gradient(ellipse at 30% 80%, rgba(165,180,196,0.22) 0%, rgba(110,125,140,0.12) 45%, transparent 74%)'
-                        : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.2) 0%, rgba(135,132,124,0.1) 45%, transparent 74%)',
-                    filter: 'blur(28px)',
+                      weatherAct === 1
+                        ? 'radial-gradient(ellipse at 30% 78%, rgba(212,208,198,0.38) 0%, rgba(152,148,140,0.22) 48%, transparent 76%)'
+                        : weatherAct === 3
+                          ? 'radial-gradient(ellipse at 30% 80%, rgba(165,180,196,0.24) 0%, rgba(110,125,140,0.13) 45%, transparent 74%)'
+                          : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.22) 0%, rgba(135,132,124,0.11) 45%, transparent 74%)',
+                    filter: 'blur(26px)',
                     animation: 'weatherMistDriftA 22s ease-in-out infinite',
                   }}
                 />
                 <div
-                  className="absolute -inset-x-[15%] bottom-[-8%] h-[46%]"
+                  className="absolute -inset-x-[15%] bottom-[-8%] h-[50%]"
                   style={{
                     background:
-                      weatherAct === 3
-                        ? 'radial-gradient(ellipse at 72% 85%, rgba(155,172,190,0.2) 0%, rgba(95,112,130,0.1) 48%, transparent 76%)'
-                        : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.18) 0%, rgba(120,116,108,0.09) 48%, transparent 76%)',
-                    filter: 'blur(34px)',
+                      weatherAct === 1
+                        ? 'radial-gradient(ellipse at 72% 84%, rgba(206,200,188,0.34) 0%, rgba(138,134,126,0.19) 50%, transparent 78%)'
+                        : weatherAct === 3
+                          ? 'radial-gradient(ellipse at 72% 85%, rgba(155,172,190,0.22) 0%, rgba(95,112,130,0.11) 48%, transparent 76%)'
+                          : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.2) 0%, rgba(120,116,108,0.1) 48%, transparent 76%)',
+                    filter: 'blur(32px)',
                     animation: 'weatherMistDriftB 29s ease-in-out infinite',
                   }}
                 />
+                {weatherAct === 1 && (
+                  <div
+                    className="absolute -inset-x-[12%] top-[14%] h-[42%]"
+                    style={{
+                      background:
+                        'radial-gradient(ellipse at 52% 50%, rgba(202,198,188,0.2) 0%, rgba(140,136,128,0.1) 52%, transparent 78%)',
+                      filter: 'blur(38px)',
+                      animation: 'weatherMistDriftB 34s ease-in-out -11s infinite',
+                    }}
+                  />
+                )}
               </>
             )}
 
             {rainCount > 0 && (
               <div className="absolute inset-0">
                 {Array.from({ length: rainCount }, (_, i) => {
-                  const leftPct = ((i * 37.3 + (i % 5) * 3.1) % 112) - 4;
-                  const duration = weatherAct === 3
-                    ? (0.48 + ((i * 19) % 10) * 0.032).toFixed(2)
-                    : (0.78 + ((i * 17) % 10) * 0.045).toFixed(2);
-                  const delay = -(((i * 0.23) % 1.8).toFixed(2));
-                  const heightPx = weatherAct === 3 ? 28 + (i % 4) * 9 : 18 + (i % 4) * 6;
-                  const opacity = weatherAct === 3 ? 0.22 + (i % 3) * 0.08 : 0.14 + (i % 3) * 0.06;
+                  const h1 = Math.abs(Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
+                  const h2 = Math.abs(Math.sin(i * 93.9898 + 67.345) * 24634.6345) % 1;
+                  const h3 = Math.abs(Math.sin(i * 41.2317 + 19.871) * 15731.7431) % 1;
+                  const leftPct = h1 * 118 - 2;
+                  const durNum = weatherAct === 3
+                    ? 0.42 + h3 * 0.28
+                    : 0.72 + h3 * 0.38;
+                  const duration = durNum.toFixed(2);
+                  const delay = (-(h2 * durNum)).toFixed(3);
+                  const heightPx = weatherAct === 3 ? 30 + (i % 4) * 10 : 18 + (i % 4) * 6;
+                  const opacity = weatherAct === 3 ? 0.24 + (i % 3) * 0.09 : 0.15 + (i % 3) * 0.06;
                   return (
                     <span
                       key={`map-rain-${weatherAct}-${i}`}
                       className="absolute top-0 rounded-full"
                       style={{
                         left: `${leftPct}%`,
-                        width: weatherAct === 3 ? '1.35px' : '1px',
+                        width: weatherAct === 3 ? '1.4px' : '1px',
                         height: `${heightPx}px`,
                         opacity,
-                        background: 'linear-gradient(to bottom, transparent, rgba(208,224,242,0.85), rgba(186,208,232,0.25))',
+                        background: 'linear-gradient(to bottom, transparent, rgba(208,224,242,0.88), rgba(186,208,232,0.28))',
                         animation: `weatherRainFall ${duration}s linear ${delay}s infinite`,
                       }}
                     />
@@ -748,7 +767,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   background:
                     'radial-gradient(ellipse at 50% 15%, rgba(215,232,255,0.85) 0%, rgba(168,196,238,0.35) 55%, rgba(120,145,190,0.12) 100%)',
                   mixBlendMode: 'screen',
-                  animation: 'weatherLightningFlash 11.5s linear infinite',
+                  animation: 'weatherLightningFlash 6.8s linear infinite',
                 }}
               />
             )}
@@ -816,7 +835,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
       </div>
 
       {/* Main Split: Aged Parchment Scroll + Cartographer's Ledger */}
-      <div className="relative z-10 flex flex-col sm:flex-row items-stretch justify-center gap-3 lg:gap-6 w-full max-w-[1120px] flex-1 min-h-0 my-1.5 sm:my-2.5 overflow-hidden">
+      <div className="relative z-10 flex flex-col sm:flex-row items-stretch justify-center gap-3 lg:gap-6 w-full max-w-[1120px] flex-1 min-h-0 my-1.5 sm:my-2.5 overflow-visible">
         {/* CENTERPIECE: Unrolled Aged Parchment Map */}
         <div className="relative flex flex-col w-full sm:max-w-[560px] flex-1 min-h-0">
           {/* Top Wrought-Iron & Slate Scroll Rod */}
@@ -1190,7 +1209,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
         </div>
 
         {/* RIGHT FLANK: Cartographer's Omen Inspector & Expedition Ledger */}
-        <div className="w-full sm:w-[240px] md:w-[280px] lg:w-[330px] max-h-[38%] sm:max-h-none flex flex-row sm:flex-col justify-between gap-2.5 lg:gap-4 shrink-0 min-h-0 overflow-y-auto sm:overflow-y-auto">
+        <div className="w-full sm:w-[240px] md:w-[280px] lg:w-[330px] max-h-[38%] sm:max-h-none flex flex-row sm:flex-col justify-between gap-2.5 lg:gap-4 shrink-0 min-h-0 overflow-y-auto sm:overflow-visible">
           {/* Omen / Node Inspector — Hanging Ritual Cloth Banner */}
           <div className="relative flex-1 flex flex-col min-h-0">
             {/* Top Timber & Brass Banner Rod */}
