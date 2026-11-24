@@ -35,6 +35,31 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<'COMPENDIUM' | 'LEDGER'>(initialTab);
+  const [tileUrl, setTileUrl] = useState<string | null>(null);
+  const [woodTileUrl, setWoodTileUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const base = import.meta.env.BASE_URL || './';
+    const mirror = (file: string, set: (u: string) => void) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const w = img.naturalWidth, h = img.naturalHeight;
+          const c = document.createElement('canvas');
+          c.width = w * 2; c.height = h * 2;
+          const g = c.getContext('2d');
+          if (!g) return;
+          for (const qx of [0, 1]) for (const qy of [0, 1]) {
+            g.setTransform(qx ? -1 : 1, 0, 0, qy ? -1 : 1, qx ? w * 2 : 0, qy ? h * 2 : 0);
+            g.drawImage(img, 0, 0);
+          }
+          set(c.toDataURL('image/jpeg', 0.9));
+        } catch { /* fall back to plain repeat */ }
+      };
+      img.src = base + 'assets/text/' + file;
+    };
+    mirror('cloth.jpg', setTileUrl);
+    mirror('wood.jpg', setWoodTileUrl);
+  }, []);
   const [subTab, setSubTab] = useState<'CARDS' | 'SIGILS'>('CARDS');
   const [tribeFilter, setTribeFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -99,9 +124,27 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
   const discoveredSigilCount = allSigils.filter((s) => seenSigilSet.has(s)).length;
 
   const baseUrl = import.meta.env.BASE_URL || './';
-  const panelStyle: React.CSSProperties = activeTab === 'LEDGER'
-    ? { backgroundImage: `linear-gradient(180deg, rgba(10,9,12,0.55), rgba(6,5,8,0.7)), url("${baseUrl}assets/text/slate.jpg")`, backgroundSize: 'cover, cover' }
-    : { backgroundImage: `linear-gradient(180deg, rgba(40,8,10,0.35), rgba(14,3,4,0.6)), url("${baseUrl}assets/text/cloth.jpg")`, backgroundSize: 'cover, cover' };
+  const isLedger = activeTab === 'LEDGER';
+  const knob = 'radial-gradient(circle at 50% 50%, #f1d58f 0 2.5px, #a87b3c 3px, #3a2612 5.5px, transparent 7px)';
+  const surface = isLedger
+    ? `url("${baseUrl}assets/text/slate.jpg")`
+    : `url("${tileUrl ?? baseUrl + 'assets/text/cloth.jpg'}")`;
+  const tint = isLedger
+    ? 'linear-gradient(180deg, rgba(10,9,12,0.55), rgba(6,5,8,0.7))'
+    : 'linear-gradient(180deg, rgba(122,18,26,0.72), rgba(58,8,12,0.84))';
+  const panelStyle: import('react').CSSProperties = {
+    position: 'relative',
+    borderStyle: 'solid',
+    borderColor: 'transparent',
+    borderWidth: '18px 12px 12px 12px',
+    boxShadow: '0 0 0 1px #8f6a2c, 0 24px 60px rgba(0,0,0,0.9)',
+    backgroundImage: [knob, knob, tint, surface, 'linear-gradient(180deg, rgba(255,215,165,0.16), rgba(0,0,0,0.45))', `url("${woodTileUrl ?? baseUrl + 'assets/text/wood.jpg'}")`].join(', '),
+    backgroundSize: ['28px 18px', '28px 18px', 'auto', isLedger ? 'cover' : tileUrl ? 'auto 360px' : 'auto 180px', 'auto', woodTileUrl ? 'auto 280px' : 'auto 140px'].join(', '),
+    backgroundPosition: 'left top, right top, 0 0, 0 0, 0 0, center',
+    backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', isLedger ? 'no-repeat' : 'repeat', 'no-repeat', 'repeat'].join(', '),
+    backgroundOrigin: 'border-box, border-box, padding-box, padding-box, border-box, border-box',
+    backgroundClip: 'border-box, border-box, padding-box, padding-box, border-box, border-box',
+  };
 
   return (
     <div
@@ -113,6 +156,9 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
         style={panelStyle}
         className="w-full max-w-4xl h-[672px] max-h-[94%] flex flex-col rounded-[2px] bg-[#0d0b0f] border border-[#4a413b]/85 shadow-[0_24px_60px_rgba(0,0,0,0.96),inset_0_1px_0_rgba(255,255,255,0.06)] overflow-hidden"
       >
+        {/* ArchiveStitch */}
+        <div className="pointer-events-none absolute inset-0 z-30 border border-[#c9a24e]/80" />
+        <div className="pointer-events-none absolute inset-[5px] z-30 border border-dashed border-[#e5c16b]/35" />
         {/* Top Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#342c27] bg-[#131015]/55">
           <div className="flex items-center gap-2 sm:gap-4">

@@ -137,10 +137,17 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
   );
 };
 
+const JAR_TIERS: Record<1 | 2 | 3, { w: number; h: number; cap: number; ticks: number; stop: number; neck: number; base: number; hoseShift: number }> = {
+  1: { w: 52, h: 80, cap: 12.5, ticks: 4, stop: 20, neck: 16, base: 36, hoseShift: 0 },
+  2: { w: 52, h: 116, cap: 50, ticks: 6, stop: 20, neck: 16, base: 36, hoseShift: 0 },
+  3: { w: 76, h: 116, cap: 100, ticks: 8, stop: 28, neck: 22, base: 52, hoseShift: 12 },
+};
+
 /* --- STANDALONE DIEGETIC BLOOD BANK VIAL + RUNNEL SIPHON HOSE --- */
-export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: boolean }> = ({
+export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: boolean; tier?: 1 | 2 | 3 }> = ({
   displayBloodOz,
   isOverkill = false,
+  tier = 1,
 }) => {
   const prevRef = useRef(displayBloodOz);
   const [delta, setDelta] = useState<number | null>(null);
@@ -156,7 +163,10 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
   }, [displayBloodOz]);
 
   const isSurging = isOverkill || delta !== null;
-  const fillPct = displayBloodOz > 0 ? Math.min(100, Math.max(18, displayBloodOz * 8)) : 0;
+  const dims = JAR_TIERS[tier] ?? JAR_TIERS[1];
+  const fillPct = displayBloodOz > 0
+    ? (tier === 1 ? Math.min(100, Math.max(18, displayBloodOz * 8)) : Math.min(100, (displayBloodOz / dims.cap) * 100))
+    : 0;
 
   return (
     <div
@@ -167,6 +177,7 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
       <svg
         viewBox="0 0 82 40"
         className="pointer-events-none absolute -left-[46px] sm:-left-[48px] -top-[14px] w-[82px] h-[40px] overflow-visible z-20"
+        style={{ marginLeft: dims.hoseShift }}
         aria-hidden="true"
       >
         <defs>
@@ -252,14 +263,15 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
 
       {/* Vial Brass Stopper & Narrow Neck */}
       <div className="relative z-10 flex flex-col items-center">
-        <div className="w-5 h-2 rounded-t-[2px] bg-gradient-to-b from-[#9c7342] via-[#5e4122] to-[#2e1e10] border border-[#b88c52]/70 shadow-sm" />
-        <div className="w-4 h-2 bg-[#0d0607] border-x border-[#8c705a]/75 relative overflow-hidden">
+        <div style={{ width: dims.stop }} className="w-5 h-2 rounded-t-[2px] bg-gradient-to-b from-[#9c7342] via-[#5e4122] to-[#2e1e10] border border-[#b88c52]/70 shadow-sm" />
+        <div style={{ width: dims.neck }} className="w-4 h-2 bg-[#0d0607] border-x border-[#8c705a]/75 relative overflow-hidden">
           <div className="absolute inset-y-0 left-[2px] w-[1px] bg-white/30" />
         </div>
       </div>
 
       {/* Main Glass Vial Body */}
       <div
+        style={{ width: dims.w, height: dims.h }}
         className={`relative -mt-[1px] w-[52px] h-[80px] rounded-t-[10px] rounded-b-[18px] bg-[#0a0405]/95 border-[1.5px] overflow-hidden flex flex-col justify-end transition-all duration-300 shadow-[inset_0_3px_12px_rgba(0,0,0,0.96),0_6px_14px_rgba(0,0,0,0.9)] ${
           isSurging
             ? 'border-red-400/95 shadow-[0_0_18px_rgba(239,68,68,0.8),inset_0_0_12px_rgba(220,38,38,0.5)] scale-[1.05]'
@@ -281,10 +293,9 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
 
         {/* Etched Graduation Ticks */}
         <div className="pointer-events-none absolute inset-y-2.5 right-1 flex flex-col justify-between items-end opacity-45 z-10">
-          <span className="w-2 h-[1px] bg-[#d4b89c]" />
-          <span className="w-1.5 h-[1px] bg-[#d4b89c]" />
-          <span className="w-2 h-[1px] bg-[#d4b89c]" />
-          <span className="w-1.5 h-[1px] bg-[#d4b89c]" />
+            {Array.from({ length: dims.ticks }).map((_, i) => (
+              <span key={i} className={`h-[1px] bg-[#d4b89c] ${i % 2 === 0 ? 'w-2' : 'w-1.5'}`} />
+            ))}
         </div>
 
         {/* Curved Glass Specular Reflections */}
@@ -307,7 +318,7 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
       </div>
 
       {/* Brass Cradle Base */}
-      <div className="relative z-10 -mt-1 w-9 h-2 rounded-b-[4px] bg-gradient-to-b from-[#4f3720] to-[#1e130b] border border-[#7c5a38]/75 shadow-[0_3px_6px_rgba(0,0,0,0.9)]" />
+      <div style={{ width: dims.base }} className="relative z-10 -mt-1 w-9 h-2 rounded-b-[4px] bg-gradient-to-b from-[#4f3720] to-[#1e130b] border border-[#7c5a38]/75 shadow-[0_3px_6px_rgba(0,0,0,0.9)]" />
 
       {delta !== null && (
         <span className="pointer-events-none absolute -top-2 -right-2 z-30 text-[10px] font-mono font-black text-red-200 drop-shadow-[0_1px_4px_rgba(0,0,0,1)] animate-telemetry-pop whitespace-nowrap">

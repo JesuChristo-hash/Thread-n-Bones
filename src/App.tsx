@@ -557,6 +557,20 @@ export default function App() {
   }, []);
   const [isBloodMoonDropping, setIsBloodMoonDropping] = useState<boolean>(false);
   const [isOverkill, setIsOverkill] = useState<boolean>(false);
+  // Non-boss victory: CONTINUE prompt on the board replaces the "Enemy Felled" modal
+  const [battleWonAction, setBattleWonAction] = useState<(() => void) | null>(null);
+  useEffect(() => {
+    if (!battleWonAction) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (!e.repeat) battleWonAction();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [battleWonAction]);
   const [sacrificedUnkillableCardIds, setSacrificedUnkillableCardIds] = useState<string[]>([]);
 
   // Morsel stats passed to next played creature
@@ -878,6 +892,13 @@ export default function App() {
   const [zeroPowerShakingCard, setZeroPowerShakingCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
   const [isEnemyRetracting, setIsEnemyRetracting] = useState<boolean>(false);
   const [totalOverkillDamage, setTotalOverkillDamage] = useState<number>(0);
+  // Overkill jar: pending tier ratchets up at 20 / 50, displayed tier swaps only at battle start
+  const [jarTier, setJarTier] = useState<1 | 2 | 3>(1);
+  const pendingJarTierRef = useRef<1 | 2 | 3>(1);
+  useEffect(() => {
+    const target: 1 | 2 | 3 = totalOverkillDamage >= 50 ? 3 : totalOverkillDamage >= 20 ? 2 : 1;
+    if (target > pendingJarTierRef.current) pendingJarTierRef.current = target;
+  }, [totalOverkillDamage]);
   const [highestOverkill, setHighestOverkill] = useState<number>(0);
 
   // Persist newly encountered cards & sigils to Compendium
@@ -925,6 +946,7 @@ export default function App() {
     items: (ItemId | null)[];
     totalOverkillDamage: number;
     highestOverkill?: number;
+    jarTier?: number;
     stage: number;
     level: number;
     duelsCompleted: number;
@@ -987,6 +1009,7 @@ export default function App() {
           items,
           totalOverkillDamage,
           highestOverkill,
+          jarTier: pendingJarTierRef.current,
           stage,
           level,
           duelsCompleted,
@@ -1503,6 +1526,8 @@ export default function App() {
     setScale(0);
     setBlood(0);
     setTotalOverkillDamage(0);
+    pendingJarTierRef.current = 1;
+    setJarTier(1);
     setHighestOverkill(0);
     setIsOverkill(false);
     setShowOverkill(false);
@@ -4932,7 +4957,7 @@ export default function App() {
       }
     }
 
-    setModalAlert({
+    const felledAlert = {
       title: "Enemy Felled",
       message: winMessage,
       isWin: true,
@@ -4953,7 +4978,15 @@ export default function App() {
           returnToMap();
         }
       }
-    });
+    };
+    if (!isBossMatch) {
+      setBattleWonAction(() => () => {
+        setBattleWonAction(null);
+        felledAlert.onAction();
+      });
+    } else {
+      setModalAlert(felledAlert);
+    }
   };
 
   const handleLossMatch = () => {
@@ -5008,6 +5041,9 @@ export default function App() {
       setItems(data.items);
       setTotalOverkillDamage(data.totalOverkillDamage ?? 0);
       setHighestOverkill(data.highestOverkill ?? 0);
+      const restoredJarTier = Math.min(3, Math.max(1, Math.round(data.jarTier ?? 1))) as 1 | 2 | 3;
+      pendingJarTierRef.current = restoredJarTier;
+      setJarTier(restoredJarTier);
       setStage(restoredStage);
       setLevel(data.level ?? 1);
       setDuelsCompleted(restoredDuels);
@@ -5105,6 +5141,9 @@ export default function App() {
     duelRngRef.current = duelRng;
 
     setScale(-permanentScaleDebuff);
+    setBattleWonAction(null);
+    // Jar upgrades apply between battles only, never mid-fight
+    setJarTier(pendingJarTierRef.current);
 
     // Duel-specific item state resets
     setCrucifixUsedThisDuel(false);
@@ -8792,7 +8831,12 @@ export default function App() {
                                     <div className="pointer-events-none absolute inset-[4px] rounded-[1px] border border-[#7f1d1d]/65 shadow-[0_0_6px_rgba(127,29,29,0.22)]" />
                                     {(!card || isDropping) && (
                                       <svg
-                                        className="w-7 h-7 sm:w-8 sm:h-8 text-[#c4a47c]/80 drop-shadow-[0_3px_5px_rgba(0,0,0,0.95)] pointer-events-none select-none"
+                                        className={`w-7 h-7 sm:w-8 sm:h-8 pointer-events-none select-none transition-colors duration-500 ${
+                                          battleWonAction
+                                            ? 'text-red-500 animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]'
+                                            : 'text-[#c4a47c]/80 drop-shadow-[0_3px_5px_rgba(0,0,0,0.95)]'
+                                        }`}
+                                        style={{ transform: battleWonAction ? 'scaleY(-1)' : 'scaleY(1)', transition: 'transform 0.6s ease-in-out, color 0.5s' }}
                                         viewBox="0 0 24 28"
                                         fill="none"
                                       >
@@ -8828,7 +8872,7 @@ export default function App() {
                            </div>
 
                            {/* Row 2: Opponent Active Board Slots */}
-                           <div className="flex justify-center items-center gap-2 sm:gap-4 mt-1 mb-0 w-full overflow-visible">
+                           <div className="relative flex justify-center items-center gap-2 sm:gap-4 mt-1 mb-0 w-full overflow-visible">
                              {enemyBoard.map((rawCard, idx) => {
                                  const card = hideBossCards ? null : rawCard;
                                  const isAttackingThisLane = activeAttacker?.isPlayer === false && activeAttacker?.lane === idx;
@@ -8966,6 +9010,15 @@ export default function App() {
                                  </div>
                                );
                              })}
+                             {battleWonAction && (
+                               <button
+                                 onClick={battleWonAction}
+                                 className="absolute inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-fit z-[60] px-10 py-3 font-['Cinzel',_serif] font-black text-3xl sm:text-4xl uppercase tracking-[0.3em] text-red-500 hover:text-red-300 bg-black/55 border-y border-red-700/70 animate-pulse cursor-pointer select-none"
+                                 style={{ textShadow: '0 0 22px rgba(239,68,68,0.95), 0 0 6px rgba(0,0,0,1)' }}
+                               >
+                                 CONTINUE
+                               </button>
+                             )}
                            </div>
                          </>
                        );
@@ -9047,7 +9100,7 @@ export default function App() {
                           <span className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#7a2420]/55 to-[#9c7a4c]/60" />
                         </div>
 
-                        <div className="flex justify-center items-center gap-2 sm:gap-4 w-full overflow-visible">
+                        <div className="flex justify-center items-center gap-2 sm:gap-4 w-full overflow-visible relative">
                           {playerBoard.map((card, idx) => {
                             const canSacrificeThis = Boolean(needsSacrifice && isCardSacrificable(card) && sacrificingLane === null);
                             const canPlaceHere = Boolean(readyToPlace && !card && sacrificingLane === null);
@@ -9471,7 +9524,7 @@ export default function App() {
       const displayBloodOz = (totalOverkillDamage || 0) + (isOverkill ? 0 : liveBattleOverkill);
       return (
         <div className="flex flex-col items-center mt-7">
-          <BloodBankVessel displayBloodOz={displayBloodOz} isOverkill={isOverkill} />
+          <BloodBankVessel displayBloodOz={displayBloodOz} isOverkill={isOverkill} tier={jarTier} />
         </div>
       );
     })()}
@@ -9483,7 +9536,7 @@ export default function App() {
     <div className="w-[74px] sm:w-[80px]">
       <BoneOssuaryPlaque bones={bones} boneShaking={boneShaking} />
     </div>
-    <div className="flex items-center justify-center gap-4 w-full relative font-mono">
+    <div className="flex items-center justify-center gap-4 w-full relative font-mono translate-y-3 sm:translate-y-4">
                   {/* Squirrel Deck */}
                   <div className="group flex flex-col items-center gap-1.5">
                     <div className="relative">
