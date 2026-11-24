@@ -9916,7 +9916,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/85 z-[110] flex items-center justify-center p-4 backdrop-blur-sm font-mono select-none">
           <div className="border border-amber-950/60 p-6 bg-[#0c0805] max-w-sm w-full text-center">
             <div className="text-4xl mb-3 filter sepia-[0.8]">{SIGIL_MAPPING[sigilDetailModal.name] || '⭐'}</div>
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- SIGIL INSPECTION --+</div>
+            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">Crest Description</div>
             <h3 className="text-base font-mono font-bold text-amber-200 uppercase tracking-widest mb-2">{sigilDetailModal.name}</h3>
             <p className="text-xs text-stone-300/80 leading-relaxed mb-6 font-mono border-t border-amber-950/40 pt-3">{sigilDetailModal.desc}</p>
             <button
@@ -10123,7 +10123,7 @@ export default function App() {
           Ritual Requires Landscape
         </p>
         <p className="font-mono text-[10px] tracking-widest uppercase text-stone-500">
-          Rotate your device to enter the board
+          Rotate your device to begin your ritual
         </p>
       </div>
 
