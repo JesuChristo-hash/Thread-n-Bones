@@ -19,7 +19,6 @@ interface MapScreenProps {
   runSeed?: string;
   activeVows?: VowId[];
   onSelectNode: (node: MapNode) => void;
-  onOpenPauseMenu?: () => void;
 }
 
 const renderInkGlyph = (type: MapNodeType, isBoss?: boolean) => {
@@ -301,7 +300,6 @@ const MapScreen: React.FC<MapScreenProps> = ({
   runSeed,
   activeVows = [],
   onSelectNode,
-  onOpenPauseMenu,
 }) => {
   const [copiedSeed, setCopiedSeed] = useState(false);
   const displaySeed = runSeed || mapData.seed || '';
@@ -824,20 +822,6 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
       {/* Top Header: Sanctuary (Top-Left) + Engraved Stone Act Title Banner */}
       <div className="relative z-10 w-full flex items-center justify-center shrink-0 pt-0.5">
-        {onOpenPauseMenu && (
-          <div className="absolute left-0 top-0 flex items-center">
-            <button
-              type="button"
-              onClick={onOpenPauseMenu}
-              className="relative bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/80 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer px-3 py-1.5"
-              title="Sanctuary & Settings"
-            >
-              <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
-              <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
-              SANCTUARY
-            </button>
-          </div>
-        )}
         <div className="flex items-center gap-3.5">
           <div className="h-px w-16 sm:w-24 bg-gradient-to-r from-transparent via-[#7a2420]/60 to-[#9c8870]/85" />
           <span className="text-[10px] font-mono font-bold uppercase tracking-[0.34em] text-[#bfa78b]">
