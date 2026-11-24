@@ -14,10 +14,11 @@ npm run build
 # 3. Ship static assets to gh-pages
 echo "[*] Deploying dist to gh-pages..."
 cd dist
+rm -rf .git
 git init -q
 git checkout -B gh-pages -q
 git add -A
-git commit -m "deploy: update" -q
+git commit -m "deploy: Beta 5 update" -q
 git push -f https://github.com/JesuChristo-hash/Sacrificial-Scales.git gh-pages
 cd ..
 
