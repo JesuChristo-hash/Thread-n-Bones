@@ -615,12 +615,42 @@ export const BOSS_EXCLUSIVE_CARDS: CardDef[] = [
 BOSS_EXCLUSIVE_CARDS.forEach(c => {
   ALL_CARD_LOOKUP[c.name] = c;
 });
-// Pre-warm memory cache for background plates and card art
-const PRELOAD_BACKGROUND_FILES = [
+// Pre-warm & pin decoded bitmaps in memory so textures, map plates, and card art never pop in
+const PRELOADED_IMAGE_CACHE = new Map<string, HTMLImageElement>();
+
+const PRELOAD_PRIORITY_TEXT_FILES = [
+  'pentagram.png',
+  'wood.jpg',
+  'slate.jpg',
+  'cloth.jpg',
+  'fullmapbg.jpg',
+  'mapbg.jpg',
+  'symbols.png',
+  'plinth.png',
+  'effigy.png',
+  'patches.jpg',
+];
+
+const PRELOAD_PRIORITY_BG_FILES = [
   'splash.jpg',
   'deck-selection.jpg',
-  'gameover.jpg',
   'draft.jpg',
+  'battlebg1.jpg',
+];
+
+const PRELOAD_SECONDARY_TEXT_FILES = [
+  'blood01.png',
+  'blood02.png',
+  'blood03.png',
+  'blood04.png',
+  'bloodbath.png',
+];
+
+const PRELOAD_BACKGROUND_FILES = [
+  'battlebg2.jpg',
+  'battlebg3.jpg',
+  'battlebg4.jpg',
+  'gameover.jpg',
   'crossroads-select.jpg',
   'campfireevent.jpg',
   'altarevent.jpg',
@@ -631,23 +661,48 @@ const PRELOAD_BACKGROUND_FILES = [
   'trialevent.jpg',
   'choiceevent.jpg',
   'merchant_event.jpg',
+  'zealotboss.jpg',
+  'begottenboss.jpg',
+  'weaverboss.jpg',
+  'finalboss.jpg',
 ];
 
 const preloadAssetUrl = (url: string): Promise<void> => {
+  if (PRELOADED_IMAGE_CACHE.has(url)) return Promise.resolve();
   return new Promise(resolve => {
     const img = new Image();
     img.decoding = 'async';
-    img.src = url;
-    img.onload = () => resolve();
+    PRELOADED_IMAGE_CACHE.set(url, img);
+    const finish = () => {
+      if (typeof img.decode === 'function') {
+        img.decode().catch(() => {}).finally(resolve);
+      } else {
+        resolve();
+      }
+    };
+    img.onload = finish;
     img.onerror = () => resolve();
+    img.src = url;
   });
 };
 
+const preloadBatch = async (urls: string[], batchSize: number) => {
+  for (let i = 0; i < urls.length; i += batchSize) {
+    await Promise.all(urls.slice(i, i + batchSize).map(url => preloadAssetUrl(url)));
+  }
+};
+
 export const preloadCoreAssets = async () => {
-  // 1. Prioritize splash background first so title screen renders immediately
+  // 1. Prioritize splash + core UI/stone/map/deck textures so early screens never pop in
   await preloadAssetUrl(`${BASE}/assets/backgrounds/splash.jpg`);
 
-  // 2. Preload lightweight card sprites (skip 9MB blood_moon.gif until final boss)
+  const priorityUrls = [
+    ...PRELOAD_PRIORITY_TEXT_FILES.map(f => `${BASE}/assets/text/${f}`),
+    ...PRELOAD_PRIORITY_BG_FILES.filter(f => f !== 'splash.jpg').map(f => `${BASE}/assets/backgrounds/${f}`),
+  ];
+  await preloadBatch(priorityUrls, 6);
+
+  // 2. Preload & decode card sprites (skip 9MB blood_moon.gif until final boss)
   const cardUrls = Array.from(
     new Set(
       Object.values(ALL_CARD_LOOKUP)
@@ -656,16 +711,14 @@ export const preloadCoreAssets = async () => {
         .filter((url): url is string => Boolean(url))
     )
   );
+  await preloadBatch(cardUrls, 8);
 
-  for (let i = 0; i < cardUrls.length; i += 8) {
-    await Promise.all(cardUrls.slice(i, i + 8).map(url => preloadAssetUrl(url)));
-  }
-
-  // 3. Trickle heavy event/screen backgrounds one by one so main thread & GPU stay smooth
-  for (const f of PRELOAD_BACKGROUND_FILES) {
-    if (f === 'splash.png') continue;
-    await preloadAssetUrl(`${BASE}/assets/backgrounds/${f}`);
-  }
+  // 3. Preload remaining battle/event plates & blood overlays in parallel batches
+  const secondaryUrls = [
+    ...PRELOAD_SECONDARY_TEXT_FILES.map(f => `${BASE}/assets/text/${f}`),
+    ...PRELOAD_BACKGROUND_FILES.map(f => `${BASE}/assets/backgrounds/${f}`),
+  ];
+  await preloadBatch(secondaryUrls, 4);
 };
 export type EvolutionTarget = string | { target: string; chance: number }[];
 
