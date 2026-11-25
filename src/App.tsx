@@ -1320,28 +1320,33 @@ export default function App() {
     let cancelled = false;
 
     const initPreloader = () => {
-      const minBootMs = 1500;
+      const minBootMs = 900;
       const start = performance.now();
 
-      const urls = new Set<string>([
+      // Stage 1: Critical boot assets (splash + immediate menus) — unlocks Begin Duel fast
+      const criticalUrls = Array.from(new Set<string>([
+        `${BASE}/assets/text/pentagram.png`,
         `${BASE}/assets/backgrounds/splash.jpg`,
         `${BASE}/assets/backgrounds/deck-selection.jpg`,
-        `${BASE}/assets/backgrounds/draft.jpg`,
-        `${BASE}/assets/backgrounds/battlebg1.jpg`,
         `${BASE}/assets/text/cloth.jpg`,
         `${BASE}/assets/text/wood.jpg`,
         `${BASE}/assets/text/slate.jpg`,
+        `${BASE}/assets/cardbases/card_base.png`,
+        `${BASE}/assets/cardbases/cardbacks.png`,
+      ])).filter(Boolean);
+
+      // Stage 2: Background warmup (battle/map/cards/sigils) — streams quietly after boot
+      const backgroundUrls = Array.from(new Set<string>([
+        `${BASE}/assets/backgrounds/draft.jpg`,
+        `${BASE}/assets/backgrounds/battlebg1.jpg`,
         `${BASE}/assets/text/fullmapbg.jpg`,
+        `${BASE}/assets/text/plinth.png`,
+        `${BASE}/assets/text/symbols.png`,
         `${BASE}/assets/text/blood01.png`,
         `${BASE}/assets/text/blood02.png`,
         `${BASE}/assets/text/blood03.png`,
         `${BASE}/assets/text/blood04.png`,
         `${BASE}/assets/text/bloodbath.png`,
-        `${BASE}/assets/text/symbols.png`,
-        `${BASE}/assets/text/plinth.png`,
-        `${BASE}/assets/text/pentagram.png`,
-        `${BASE}/assets/cardbases/card_base.png`,
-        `${BASE}/assets/cardbases/cardbacks.png`,
         `${BASE}/assets/cardbases/bestowed-card-base.png`,
         `${BASE}/assets/cardbases/combined-card-base.png`,
         `${BASE}/assets/cardbases/duplicate-card-base.png`,
@@ -1349,44 +1354,52 @@ export default function App() {
           .filter((c) => c.name !== 'BLOOD MOON')
           .map((c) => getCardArtUrl(c)),
         ...Object.keys(SIGIL_MAPPING).map((s) => getSigilArtUrl(s)),
-      ]);
+      ])).filter(Boolean);
 
       let loadedCount = 0;
-      const queue = Array.from(urls).filter(Boolean);
-      const totalUrls = queue.length || 1;
-      const CONCURRENCY = 8;
+      const totalCritical = criticalUrls.length || 1;
+      const criticalQueue = [...criticalUrls];
+      const bgQueue = [...backgroundUrls];
 
-      const loadOne = (src: string) =>
+      const loadOne = (src: string, highPriority = false) =>
         new Promise<void>((res, rej) => {
           const img = new Image();
           img.decoding = 'async';
+          if (highPriority) (img as any).fetchPriority = 'high';
           img.onload = () => res();
           img.onerror = () => rej();
           img.src = src;
         });
 
-      const worker = async () => {
-        while (queue.length > 0 && !cancelled) {
-          const src = queue.shift()!;
-          try {
-            await loadOne(src);
-          } catch {
+      const runQueue = async (queue: string[], concurrency: number, isCritical: boolean) => {
+        const worker = async () => {
+          while (queue.length > 0 && !cancelled) {
+            const src = queue.shift()!;
             try {
-              await loadOne(src);
+              await loadOne(src, isCritical);
             } catch {
-              // Ignore genuinely missing assets so boot never stalls
+              try {
+                await loadOne(src, false);
+              } catch {
+                // Ignore genuinely missing assets so boot never stalls
+              }
+            } finally {
+              if (isCritical) loadedCount++;
             }
-          } finally {
-            loadedCount++;
           }
-        }
+        };
+        await Promise.all(Array.from({ length: Math.min(concurrency, queue.length) }, () => worker()));
       };
 
-      Array.from({ length: Math.min(CONCURRENCY, totalUrls) }, () => worker());
+      runQueue(criticalQueue, 4, true).then(() => {
+        if (!cancelled) {
+          runQueue(bgQueue, 4, false);
+        }
+      });
 
       interval = setInterval(() => {
         const elapsedRatio = Math.min(1, (performance.now() - start) / minBootMs);
-        const assetRatio = loadedCount / totalUrls;
+        const assetRatio = loadedCount / totalCritical;
         const combined = Math.min(elapsedRatio, assetRatio);
 
         setRitualReadyProgress(Math.floor(combined * 100));
@@ -1397,7 +1410,7 @@ export default function App() {
       }, 60);
     };
 
-    initPreloader();
+        initPreloader();
 
     return () => {
       cancelled = true;
