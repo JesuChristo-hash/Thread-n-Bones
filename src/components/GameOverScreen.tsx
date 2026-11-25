@@ -14,6 +14,10 @@ export interface GameOverScreenProps {
   renderCard: any;
   runSeed: any;
   runStats: any;
+  seedsUnlocked?: boolean;
+  highestScore?: number;
+  highestRank?: string;
+  highestRankColor?: string;
   setCopiedEndSeed: any;
 }
 
@@ -29,6 +33,10 @@ export default function GameOverScreen({
   renderCard,
   runSeed,
   runStats,
+  seedsUnlocked,
+  highestScore,
+  highestRank,
+  highestRankColor,
   setCopiedEndSeed,
 }: GameOverScreenProps) {
   const isVictory = Boolean(bossState.ritualEndedVoluntarily);
@@ -227,17 +235,21 @@ export default function GameOverScreen({
                     <span className="text-stone-400 uppercase tracking-[0.14em] text-[10.5px]">Horrors Felled</span>
                     <span className="text-red-300 font-bold text-sm">{runStats.bossesDefeated}</span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-400 uppercase tracking-[0.14em] text-[10.5px]">High Score</span>
+                    <span className="text-[#f2e2ca] font-bold text-sm">{highestScore || 0}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {(runSeed || activeVows.length > 0) && (
+            {((seedsUnlocked && runSeed) || activeVows.length > 0) && (
               <div className="relative shrink-0 px-4 py-2.5 rounded-[2px] bg-[#100708]/92 border border-[#3a1719] flex flex-col gap-2 text-[10px] font-mono text-left overflow-hidden">
                 <div
                   className="pointer-events-none absolute inset-0 opacity-20 mix-blend-multiply bg-cover bg-center"
                   style={{ backgroundImage: slateBg }}
                 />
-                {runSeed && (
+                {seedsUnlocked && runSeed && (
                   <div className="relative z-10 flex items-center justify-between gap-2">
                     <span className="uppercase tracking-[0.22em] text-stone-400">Seed</span>
                     <button
@@ -372,7 +384,7 @@ export default function GameOverScreen({
 
         {/* Diegetic Action Controls */}
         <div className="shrink-0 flex flex-wrap items-center justify-center gap-6">
-          {runSeed && (
+          {runSeed && seedsUnlocked && (
             <button
               onClick={() => handleRestartRun(runSeed)}
               className="px-4 py-1.5 font-mono font-bold text-xs uppercase tracking-[0.26em] text-stone-300 hover:text-red-300 transition-all duration-150 select-none cursor-pointer"

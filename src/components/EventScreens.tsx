@@ -577,6 +577,32 @@ export default function EventScreens({ ctx }: { ctx: {
         const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 3));
         const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
 
+        const cacheBase = import.meta.env.BASE_URL || './';
+        const cacheKnob = 'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
+        const cacheFrameStyle: React.CSSProperties = {
+          position: 'relative',
+          borderStyle: 'solid',
+          borderColor: 'transparent',
+          borderWidth: '16px 12px 12px 12px',
+          boxShadow: '0 0 0 1px #190e08, 0 0 0 2px #52361c, 0 26px 64px rgba(0,0,0,0.96), inset 0 1px 0 rgba(224,184,120,0.2)',
+          backgroundColor: '#24160e',
+          backgroundImage: [
+            cacheKnob,
+            cacheKnob,
+            cacheKnob,
+            cacheKnob,
+            'radial-gradient(ellipse at 50% 0%, #5e0d10 0%, #3a0709 54%, #180304 100%)',
+            
+            'linear-gradient(to bottom, rgba(56,37,23,0.62), rgba(28,17,11,0.76), rgba(14,8,5,0.9))',
+            `url("${cacheBase}assets/text/wood.jpg")`,
+          ].join(', '),
+          backgroundSize: ['24px 16px', '24px 16px', '24px 12px', '24px 12px', 'auto', 'auto', '140px 140px'].join(', '),
+          backgroundPosition: 'left top, right top, left bottom, right bottom, 0 0, 0 0, center',
+          backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'repeat'].join(', '),
+          backgroundOrigin: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+          backgroundClip: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+        };
+
         return (
           <div
             className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden select-none font-mono animate-fade-up"
@@ -637,16 +663,31 @@ export default function EventScreens({ ctx }: { ctx: {
                   </h1>
                 </div>
 
-                {/* Main Timber Display Cabinet */}
+                {/* Main Carved Timber & Crimson Cloth Display Cabinet */}
                 <div
-                  className="relative w-full flex flex-col justify-between rounded-[4px] border-2 border-[#4d3522]/90 shadow-[0_24px_60px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,224,178,0.08)] px-5 sm:px-7 py-5 overflow-hidden"
-                  style={{
-                    backgroundColor: '#110b07',
-                    backgroundImage: `linear-gradient(to bottom, rgba(22,14,9,0.76), rgba(15,10,6,0.82), rgba(8,5,3,0.9)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
-                    backgroundSize: 'cover, 200px 200px',
-                    backgroundRepeat: 'no-repeat, repeat',
-                  }}
+                  style={cacheFrameStyle}
+                  className="relative w-full flex flex-col justify-between rounded-[2px] bg-[#180304] px-5 sm:px-7 py-5 overflow-hidden"
                 >
+
+              <div
+                className="pointer-events-none absolute inset-0 z-0 opacity-70 mix-blend-multiply"
+                style={{
+                  backgroundImage: `url("${cacheBase}assets/text/cloth.jpg")`,
+                  backgroundSize: '170px 170px',
+                  backgroundRepeat: 'repeat',
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0 z-30"
+                style={{
+                  boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.92), inset 0 0 0 1px #140705, 0 0 0 1px rgba(184,138,68,0.24)',
+                }}
+              />
+              <div className="pointer-events-none absolute inset-[6px] z-30 border border-dashed border-[#b98d46]/28" />
+              <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-30 border-t border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-30 border-t border-r border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-30 border-b border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-30 border-b border-r border-[#b8904a]/55" />
                   {/* Top Timber Cornice with Flanking Hanging Lanterns */}
                   <div className="relative z-20 flex items-center justify-between border-b border-[#3f2b1c] pb-2.5 shrink-0">
                     <div className="flex items-center gap-2.5">
@@ -1646,6 +1687,32 @@ export default function EventScreens({ ctx }: { ctx: {
         const isGreyMode = flockSheepList.length === 1 && flockSheepList[0]?.isGrey;
         const canRepick = !isGreyMode && flockRepicksUsed === 0 && Boolean(selectedSheep);
 
+        const flockBase = import.meta.env.BASE_URL || './';
+        const flockKnob = 'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
+        const flockFrameStyle: React.CSSProperties = {
+          position: 'relative',
+          borderStyle: 'solid',
+          borderColor: 'transparent',
+          borderWidth: '16px 12px 12px 12px',
+          boxShadow: '0 0 0 1px #190e08, 0 0 0 2px #52361c, 0 26px 64px rgba(0,0,0,0.96), inset 0 1px 0 rgba(224,184,120,0.2)',
+          backgroundColor: '#24160e',
+          backgroundImage: [
+            flockKnob,
+            flockKnob,
+            flockKnob,
+            flockKnob,
+            'radial-gradient(ellipse at 50% 0%, #5e0d10 0%, #3a0709 54%, #180304 100%)',
+            
+            'linear-gradient(to bottom, rgba(56,37,23,0.62), rgba(28,17,11,0.76), rgba(14,8,5,0.9))',
+            `url("${flockBase}assets/text/wood.jpg")`,
+          ].join(', '),
+          backgroundSize: ['24px 16px', '24px 16px', '24px 12px', '24px 12px', 'auto', 'auto', '140px 140px'].join(', '),
+          backgroundPosition: 'left top, right top, left bottom, right bottom, 0 0, 0 0, center',
+          backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'repeat'].join(', '),
+          backgroundOrigin: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+          backgroundClip: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+        };
+
         return (
           <div
             className="absolute inset-0 bg-[#080706] z-50 flex flex-col items-center justify-start px-4 py-4 sm:p-6 overflow-y-auto animate-fade-up font-mono select-none"
@@ -1675,7 +1742,30 @@ export default function EventScreens({ ctx }: { ctx: {
 
               {flockPendingRemovals > 0 ? (
                 /* Deck Culling Phase for Remove-2-Cards Option */
-                <div className="w-full max-w-4xl mt-5 p-5 rounded-[3px] bg-[#0d0806]/88 border border-[#4a2b1d]/85 shadow-[0_20px_50px_rgba(0,0,0,0.92)]">
+                <div
+                  style={flockFrameStyle}
+                  className="relative w-full max-w-4xl mt-5 p-5 rounded-[2px] bg-[#180304] overflow-hidden"
+                >
+
+              <div
+                className="pointer-events-none absolute inset-0 z-0 opacity-70 mix-blend-multiply"
+                style={{
+                  backgroundImage: `url("${flockBase}assets/text/cloth.jpg")`,
+                  backgroundSize: '170px 170px',
+                  backgroundRepeat: 'repeat',
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0 z-30"
+                style={{
+                  boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.92), inset 0 0 0 1px #140705, 0 0 0 1px rgba(184,138,68,0.24)',
+                }}
+              />
+              <div className="pointer-events-none absolute inset-[6px] z-30 border border-dashed border-[#b98d46]/28" />
+              <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-30 border-t border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-30 border-t border-r border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-30 border-b border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-30 border-b border-r border-[#b8904a]/55" />
                   <div className="flex flex-wrap gap-3 justify-center mb-5">
                     {masterDeck.map(c => {
                       const cid = c.id || '';
@@ -1820,11 +1910,30 @@ export default function EventScreens({ ctx }: { ctx: {
                   </div>
 
                   {/* Revealed Offering Plaque */}
-                  <div className="relative w-full max-w-3xl min-h-[124px] p-4 sm:p-5 rounded-[3px] bg-gradient-to-b from-[#150e0a]/92 via-[#0f0907]/94 to-[#090605]/96 border border-[#6e4c31]/85 shadow-[0_18px_42px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,224,178,0.08)] flex flex-col items-center justify-center">
-                    <span className="pointer-events-none absolute top-1.5 left-1.5 w-3 h-3 border-t border-l border-[#c79d5a]/70" />
-                    <span className="pointer-events-none absolute top-1.5 right-1.5 w-3 h-3 border-t border-r border-[#c79d5a]/70" />
-                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-3 h-3 border-b border-l border-[#c79d5a]/70" />
-                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-3 h-3 border-b border-r border-[#c79d5a]/70" />
+                  <div
+                    style={flockFrameStyle}
+                    className="relative w-full max-w-3xl min-h-[124px] p-4 sm:p-5 rounded-[2px] bg-[#180304] flex flex-col items-center justify-center overflow-hidden"
+                  >
+
+              <div
+                className="pointer-events-none absolute inset-0 z-0 opacity-70 mix-blend-multiply"
+                style={{
+                  backgroundImage: `url("${flockBase}assets/text/cloth.jpg")`,
+                  backgroundSize: '170px 170px',
+                  backgroundRepeat: 'repeat',
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0 z-30"
+                style={{
+                  boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.92), inset 0 0 0 1px #140705, 0 0 0 1px rgba(184,138,68,0.24)',
+                }}
+              />
+              <div className="pointer-events-none absolute inset-[6px] z-30 border border-dashed border-[#b98d46]/28" />
+              <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-30 border-t border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-30 border-t border-r border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-30 border-b border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-30 border-b border-r border-[#b8904a]/55" />
                     {!revealedOption ? (
                       <div className="flex flex-col items-center gap-1.5">
                         <div className="flex items-center gap-3.5">
@@ -3303,6 +3412,32 @@ export default function EventScreens({ ctx }: { ctx: {
         const isPassedScreen = isPassedVerdict && caveShowRewards;
         const isFailedScreen = caveVerdictReady && !cavePassed;
 
+        const trialBase = import.meta.env.BASE_URL || './';
+        const trialKnob = 'radial-gradient(circle at 46% 42%, #8e8794 0 1.8px, #504b54 2.4px, #232026 4.4px, #0b090d 5.4px, transparent 6.5px)';
+        const trialFrameStyle: React.CSSProperties = {
+          position: 'relative',
+          borderStyle: 'solid',
+          borderColor: 'transparent',
+          borderWidth: '16px 12px 12px 12px',
+          boxShadow: '0 0 0 1px #141112, 0 0 0 2px #3b2a1d, 0 26px 64px rgba(0,0,0,0.96), inset 0 1px 0 rgba(190,180,196,0.14)',
+          backgroundColor: '#24160e',
+          backgroundImage: [
+            trialKnob,
+            trialKnob,
+            trialKnob,
+            trialKnob,
+            'radial-gradient(ellipse at 50% 0%, rgba(28,25,33,0.72) 0%, rgba(12,10,15,0.88) 65%, rgba(6,5,8,0.95) 100%)',
+            `url("${trialBase}assets/text/slate.jpg")`,
+            'linear-gradient(to bottom, rgba(56,37,23,0.62), rgba(28,17,11,0.76), rgba(14,8,5,0.9))',
+            `url("${trialBase}assets/text/wood.jpg")`,
+          ].join(', '),
+          backgroundSize: ['24px 16px', '24px 16px', '24px 12px', '24px 12px', 'auto', 'cover', 'auto', '140px 140px'].join(', '),
+          backgroundPosition: 'left top, right top, left bottom, right bottom, 0 0, 0 0, 0 0, center',
+          backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'repeat'].join(', '),
+          backgroundOrigin: 'border-box, border-box, border-box, border-box, padding-box, padding-box, border-box, border-box',
+          backgroundClip: 'border-box, border-box, border-box, border-box, padding-box, padding-box, border-box, border-box',
+        };
+
         return (
           <div
             className="absolute inset-0 bg-[#090605] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
@@ -3336,8 +3471,24 @@ export default function EventScreens({ ctx }: { ctx: {
                 </h1>
               </div>
 
-              {/* MAIN CATHEDRAL TRIPTYCH STAGE */}
-              <div className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-between px-5 sm:px-8 py-4">
+              {/* MAIN CATHEDRAL TRIPTYCH STAGE (Carved Timber & Slate Reliquary) */}
+              <div
+                style={trialFrameStyle}
+                className="relative w-full flex-1 min-h-0 flex flex-col items-center justify-between px-5 sm:px-8 py-4 rounded-[2px] bg-[#0d0b0f] overflow-hidden"
+              >
+
+              
+              <div
+                className="pointer-events-none absolute inset-0 z-30"
+                style={{
+                  boxShadow: 'inset 0 4px 16px rgba(0,0,0,0.94), inset 0 0 0 1px #0a090c, 0 0 0 1px rgba(138,129,145,0.2)',
+                }}
+              />
+              <div className="pointer-events-none absolute inset-[6px] z-30 border border-dashed border-[#7c7384]/25" />
+              <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-30 border-t border-l border-[#8e8596]/45" />
+              <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-30 border-t border-r border-[#8e8596]/45" />
+              <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-30 border-b border-l border-[#8e8596]/45" />
+              <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-30 border-b border-r border-[#8e8596]/45" />
 
                 {/* Subtle Gothic Rose Window Tracery Behind Stage */}
                 <svg
@@ -4470,12 +4621,62 @@ export default function EventScreens({ ctx }: { ctx: {
       {/* =========================================================================
           HOARDER SEARCH SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_HOARDER_SEARCH' && (
+      {screen === 'EVENT_HOARDER_SEARCH' && (() => {
+
+        const hoardBase = import.meta.env.BASE_URL || './';
+        const hoardKnob = 'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
+        const hoardFrameStyle: React.CSSProperties = {
+          position: 'relative',
+          borderStyle: 'solid',
+          borderColor: 'transparent',
+          borderWidth: '16px 12px 12px 12px',
+          boxShadow: '0 0 0 1px #190e08, 0 0 0 2px #52361c, 0 26px 64px rgba(0,0,0,0.96), inset 0 1px 0 rgba(224,184,120,0.2)',
+          backgroundColor: '#24160e',
+          backgroundImage: [
+            hoardKnob,
+            hoardKnob,
+            hoardKnob,
+            hoardKnob,
+            'radial-gradient(ellipse at 50% 0%, #5e0d10 0%, #3a0709 54%, #180304 100%)',
+            
+            'linear-gradient(to bottom, rgba(56,37,23,0.62), rgba(28,17,11,0.76), rgba(14,8,5,0.9))',
+            `url("${hoardBase}assets/text/wood.jpg")`,
+          ].join(', '),
+          backgroundSize: ['24px 16px', '24px 16px', '24px 12px', '24px 12px', 'auto', 'auto', '140px 140px'].join(', '),
+          backgroundPosition: 'left top, right top, left bottom, right bottom, 0 0, 0 0, center',
+          backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'repeat'].join(', '),
+          backgroundOrigin: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+          backgroundClip: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+        };
+        return (
         <div className={`absolute inset-0 bg-[#080504]/82 backdrop-blur-md z-[110] flex flex-col items-center justify-center px-5 py-5 overflow-hidden font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(26,15,9,0.38)_0%,rgba(4,3,2,0.92)_100%)] pointer-events-none" />
 
-          <div className="relative z-10 w-full max-w-5xl max-h-full min-h-0 flex flex-col items-center rounded-[3px] bg-[#0d0806]/92 border border-[#442d1d]/90 px-6 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.96)]">
-            <div className="shrink-0 flex flex-col items-center text-center pb-3">
+          <div
+            style={hoardFrameStyle}
+            className="relative z-10 w-full max-w-5xl max-h-full min-h-0 flex flex-col items-center rounded-[2px] bg-[#180304] px-6 py-5 overflow-hidden"
+          >
+
+              <div
+                className="pointer-events-none absolute inset-0 z-0 opacity-70 mix-blend-multiply"
+                style={{
+                  backgroundImage: `url("${hoardBase}assets/text/cloth.jpg")`,
+                  backgroundSize: '170px 170px',
+                  backgroundRepeat: 'repeat',
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0 z-30"
+                style={{
+                  boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.92), inset 0 0 0 1px #140705, 0 0 0 1px rgba(184,138,68,0.24)',
+                }}
+              />
+              <div className="pointer-events-none absolute inset-[6px] z-30 border border-dashed border-[#b98d46]/28" />
+              <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-30 border-t border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-30 border-t border-r border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-30 border-b border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-30 border-b border-r border-[#b8904a]/55" />
+            <div className="relative z-10 shrink-0 flex flex-col items-center text-center pb-3">
               <div className="flex items-center gap-3.5 mb-0.5">
                 <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
@@ -4491,7 +4692,7 @@ export default function EventScreens({ ctx }: { ctx: {
               </p>
             </div>
 
-            <div className="w-full flex-1 min-h-0 overflow-y-auto rounded-[3px] bg-[#090604]/80 border border-[#342216]/85 p-4 my-2">
+            <div className="relative z-10 w-full flex-1 min-h-0 overflow-y-auto rounded-[2px] bg-[#110405]/75 border border-[#4a231c]/80 shadow-[inset_0_4px_14px_rgba(0,0,0,0.88)] p-4 my-2">
               {deck.length > 0 ? (
                 <div className="flex flex-wrap gap-3.5 justify-center content-start">
                   {deck.map((c, idx) => {
@@ -4521,7 +4722,7 @@ export default function EventScreens({ ctx }: { ctx: {
               )}
             </div>
 
-            <div className="shrink-0 pt-3 flex items-center justify-center gap-4">
+            <div className="relative z-10 shrink-0 pt-3 flex items-center justify-center gap-4">
               <button
                 onClick={() => {
                   if (hoarderSelectedIdx === null) return;
@@ -4544,20 +4745,70 @@ export default function EventScreens({ ctx }: { ctx: {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           VIEW DECK SCREEN MODAL (WIDESCREEN NON-SCROLLING TWO-COLUMN SPLIT)
          ========================================================================= */}
       {(showViewDeck || screen === 'VIEW_DECK') && (() => {
         const activeDetailCard = selectedDeckCardDetail || masterDeck[0] || null;
+
+        const deckBase = import.meta.env.BASE_URL || './';
+        const deckKnob = 'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
+        const deckFrameStyle: React.CSSProperties = {
+          position: 'relative',
+          borderStyle: 'solid',
+          borderColor: 'transparent',
+          borderWidth: '16px 12px 12px 12px',
+          boxShadow: '0 0 0 1px #190e08, 0 0 0 2px #52361c, 0 26px 64px rgba(0,0,0,0.96), inset 0 1px 0 rgba(224,184,120,0.2)',
+          backgroundColor: '#24160e',
+          backgroundImage: [
+            deckKnob,
+            deckKnob,
+            deckKnob,
+            deckKnob,
+            'radial-gradient(ellipse at 50% 0%, #5e0d10 0%, #3a0709 54%, #180304 100%)',
+            
+            'linear-gradient(to bottom, rgba(56,37,23,0.62), rgba(28,17,11,0.76), rgba(14,8,5,0.9))',
+            `url("${deckBase}assets/text/wood.jpg")`,
+          ].join(', '),
+          backgroundSize: ['24px 16px', '24px 16px', '24px 12px', '24px 12px', 'auto', 'auto', '140px 140px'].join(', '),
+          backgroundPosition: 'left top, right top, left bottom, right bottom, 0 0, 0 0, center',
+          backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'repeat'].join(', '),
+          backgroundOrigin: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+          backgroundClip: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+        };
         return (
           <div className={`absolute inset-0 bg-[#080504]/86 backdrop-blur-md z-[110] flex flex-col items-center justify-center px-5 py-4 sm:px-7 sm:py-5 overflow-hidden font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(24,14,9,0.36)_0%,rgba(4,3,2,0.92)_100%)] pointer-events-none" />
 
-            <div className="relative z-10 w-full max-w-6xl h-full min-h-0 flex flex-col">
+            <div
+              style={deckFrameStyle}
+              className="relative z-10 w-full max-w-6xl h-full min-h-0 flex flex-col rounded-[2px] bg-[#180304] px-5 sm:px-7 py-4 sm:py-5 overflow-hidden"
+            >
+
+              <div
+                className="pointer-events-none absolute inset-0 z-0 opacity-70 mix-blend-multiply"
+                style={{
+                  backgroundImage: `url("${deckBase}assets/text/cloth.jpg")`,
+                  backgroundSize: '170px 170px',
+                  backgroundRepeat: 'repeat',
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0 z-30"
+                style={{
+                  boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.92), inset 0 0 0 1px #140705, 0 0 0 1px rgba(184,138,68,0.24)',
+                }}
+              />
+              <div className="pointer-events-none absolute inset-[6px] z-30 border border-dashed border-[#b98d46]/28" />
+              <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-30 border-t border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-30 border-t border-r border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-30 border-b border-l border-[#b8904a]/55" />
+              <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-30 border-b border-r border-[#b8904a]/55" />
               {/* Engraved Header with Return Action */}
-              <div className="shrink-0 relative flex items-center justify-between border-b border-[#3e291b]/85 pb-3 mb-4">
+              <div className="relative z-10 shrink-0 flex items-center justify-between border-b border-[#59261d]/80 pb-3 mb-4">
                 <div className="flex flex-col text-left">
                   <span className="text-[9.5px] font-mono font-bold uppercase tracking-[0.28em] text-[#b9935a]">
                     Grimoire • {masterDeck.length} Vessels
@@ -4579,9 +4830,9 @@ export default function EventScreens({ ctx }: { ctx: {
               </div>
 
               {/* Two-Column Split: Scrollable Deck Grid Left, Enlarged Specimen & Crests Right */}
-              <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              <div className="relative z-10 flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                 {/* Left Column: Scrollable Deck Tray */}
-                <div className="lg:col-span-7 min-h-0 flex flex-col rounded-[3px] bg-[#0d0806]/84 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] overflow-hidden">
+                <div className="lg:col-span-7 min-h-0 flex flex-col rounded-[2px] bg-[#110405]/75 border border-[#4a231c]/80 shadow-[inset_0_4px_14px_rgba(0,0,0,0.88)] overflow-hidden">
                   <div className="flex-1 min-h-0 overflow-y-auto p-4">
                     <div className="flex flex-wrap gap-3 justify-center content-start">
                       {masterDeck.map((c, idx) => {
@@ -4608,7 +4859,7 @@ export default function EventScreens({ ctx }: { ctx: {
                 </div>
 
                 {/* Right Column: Enlarged Specimen & Crest Inscriptions */}
-                <div className="lg:col-span-5 min-h-0 flex flex-col justify-between rounded-[3px] bg-[#0d0907]/88 border border-[#442f21]/85 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.92)] overflow-hidden">
+                <div className="lg:col-span-5 min-h-0 flex flex-col justify-between rounded-[2px] bg-[#110405]/80 border border-[#4a231c]/85 p-5 shadow-[inset_0_4px_14px_rgba(0,0,0,0.88)] overflow-hidden">
                   {activeDetailCard ? (
                     <>
                       {/* Specimen Pedestal */}

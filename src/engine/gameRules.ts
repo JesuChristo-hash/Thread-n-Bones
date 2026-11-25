@@ -99,7 +99,7 @@ export const isLeftFacingCard = (name?: string): boolean => {
   return LEFT_FACING_CARD_NAMES.has(norm) || LEFT_FACING_CARD_NAMES.has(norm.replace(/\s+/g, ''));
 };
 
-export const calculateGrade = (stats: RunStats): { letter: string; color: string } => {
+export const calculateGrade = (stats: RunStats): { letter: string; color: string; score: number } => {
   let score = Math.round(
     stats.clearedStages * 1.2 +
     stats.bossesDefeated * 16 +
@@ -160,7 +160,7 @@ export const calculateGrade = (stats: RunStats): { letter: string; color: string
     suffix = '+';
   }
 
-  return { letter: `${baseGrade}${suffix}`, color };
+  return { letter: `${baseGrade}${suffix}`, color, score: rawScore };
 };
 
 export const isStarterDraftEligible = (card: CardDef) => {

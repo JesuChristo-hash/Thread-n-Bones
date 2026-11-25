@@ -16,6 +16,10 @@ export interface PersistentArchive {
   totalBossesDefeated: number;
   totalStagesCleared: number;
   highestOverkill: number;
+  highestScore: number;
+  highestRank: string;
+  highestRankColor: string;
+  highestScoreSeed: string;
 }
 
 const DEFAULT_ARCHIVE: PersistentArchive = {
@@ -32,6 +36,10 @@ const DEFAULT_ARCHIVE: PersistentArchive = {
   totalBossesDefeated: 0,
   totalStagesCleared: 0,
   highestOverkill: 0,
+  highestScore: 0,
+  highestRank: '—',
+  highestRankColor: 'text-stone-400',
+  highestScoreSeed: '',
 };
 
 export function loadArchive(): PersistentArchive {
@@ -130,12 +138,21 @@ export function recordRunCompletion(
   stats: RunStats,
   highestOverkillInRun: number,
   won: boolean,
-  lineageId?: string | null
+  lineageId?: string | null,
+  runScore?: number,
+  runRank?: string,
+  runRankColor?: string,
+  runSeed?: string | null
 ): PersistentArchive {
   const lineageSet = new Set(prev.clearedLineages);
   if (won && lineageId) {
     lineageSet.add(lineageId);
   }
+  const scoreVal = typeof runScore === 'number' ? runScore : 0;
+  const isNewBest =
+    (runRank && prev.highestRank === '—') ||
+    scoreVal > (prev.highestScore || 0);
+
   const next: PersistentArchive = {
     ...prev,
     clearedLineages: Array.from(lineageSet),
@@ -148,6 +165,10 @@ export function recordRunCompletion(
     totalBossesDefeated: prev.totalBossesDefeated + (stats.bossesDefeated || 0),
     totalStagesCleared: prev.totalStagesCleared + (stats.clearedStages || 0),
     highestOverkill: Math.max(prev.highestOverkill, highestOverkillInRun || 0),
+    highestScore: isNewBest ? scoreVal : (prev.highestScore || 0),
+    highestRank: isNewBest && runRank ? runRank : (prev.highestRank || '—'),
+    highestRankColor: isNewBest && runRankColor ? runRankColor : (prev.highestRankColor || 'text-stone-400'),
+    highestScoreSeed: isNewBest ? (runSeed || '') : (prev.highestScoreSeed || ''),
   };
   saveArchive(next);
   return next;

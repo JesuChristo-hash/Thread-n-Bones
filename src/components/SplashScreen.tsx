@@ -522,48 +522,108 @@ export default function SplashScreen({
   {/* =========================================================================
       CONTINUE RUN MODAL
      ========================================================================= */}
-  {showContinueModal && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-mono select-none animate-menu-fade-in">
-      <div className="w-full max-w-md bg-[#0c0805] border border-amber-950/80 p-6 sm:p-7 shadow-[0_0_40px_rgba(0,0,0,0.95)] text-center relative">
-        <div className="text-[10px] text-amber-700 uppercase tracking-widest mb-1">
-          Occult Seal Detected
-        </div>
-        <h3 className="font-['Cinzel',_serif] text-xl font-bold text-amber-100 uppercase tracking-widest mb-2">
-          Resume Expedition?
-        </h3>
-        <p className="text-xs text-stone-400 mb-6 font-mono leading-relaxed">
-          A previous run is tethered to this machine. Resume your descent into the dark, or burn the thread and begin anew?
-        </p>
+  {showContinueModal && (() => {
+    const baseUrl = import.meta.env.BASE_URL || './';
+    const knob = 'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
+    const panelStyle: React.CSSProperties = {
+      position: 'relative',
+      borderStyle: 'solid',
+      borderColor: 'transparent',
+      borderWidth: '16px 12px 12px 12px',
+      boxShadow: '0 0 0 1px #190e08, 0 0 0 2px #52361c, 0 26px 64px rgba(0,0,0,0.96), inset 0 1px 0 rgba(224,184,120,0.2)',
+      backgroundColor: '#24160e',
+      backgroundImage: [
+        knob,
+        knob,
+        knob,
+        knob,
+        'radial-gradient(ellipse at 50% 0%, #5e0d10 0%, #3a0709 54%, #180304 100%)',
+        'linear-gradient(to bottom, rgba(56,37,23,0.62), rgba(28,17,11,0.76), rgba(14,8,5,0.9))',
+        `url("${baseUrl}assets/text/wood.jpg")`,
+      ].join(', '),
+      backgroundSize: ['24px 16px', '24px 16px', '24px 12px', '24px 12px', 'auto', 'auto', '140px 140px'].join(', '),
+      backgroundPosition: 'left top, right top, left bottom, right bottom, 0 0, 0 0, center',
+      backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'repeat'].join(', '),
+      backgroundOrigin: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+      backgroundClip: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
+    };
 
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={handleContinueRun}
-            className="w-full py-2.5 px-4 bg-[#1e130c] hover:bg-[#2e1d13] border border-amber-600/80 hover:border-amber-400 text-amber-200 hover:text-white rounded-sm font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest transition-all cursor-pointer shadow-md"
-          >
-            Resume Expedition
-          </button>
-
-          <button
-            onClick={() => {
-              clearRunSave();
-              setShowContinueModal(false);
-              setScreen('DECK_SELECT');
+    return (
+      <div
+        onClick={() => setShowContinueModal(false)}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-mono select-none animate-menu-fade-in"
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={panelStyle}
+          className="w-full max-w-md rounded-[2px] bg-[#180304] text-center relative overflow-hidden"
+        >
+          {/* Crimson Cloth Weave */}
+          <div
+            className="pointer-events-none absolute inset-0 z-0 opacity-70 mix-blend-multiply"
+            style={{
+              backgroundImage: `url("${baseUrl}assets/text/cloth.jpg")`,
+              backgroundSize: '170px 170px',
+              backgroundRepeat: 'repeat',
             }}
-            className="w-full py-2 px-4 bg-[#140d09] hover:bg-[#20120b] border border-red-950/70 hover:border-red-800 text-red-400/90 hover:text-red-200 rounded-sm font-mono text-xs uppercase tracking-wider transition-all cursor-pointer"
-          >
-            Sever Thread (New Game)
-          </button>
+          />
+          {/* Recessed Well Shadow, Stitched Seam & Tarnished-Brass Corner Brackets */}
+          <div
+            className="pointer-events-none absolute inset-0 z-20"
+            style={{
+              boxShadow:
+                'inset 0 4px 14px rgba(0,0,0,0.92), inset 0 0 0 1px #140705, 0 0 0 1px rgba(184,138,68,0.24)',
+            }}
+          />
+          <div className="pointer-events-none absolute inset-[6px] z-20 border border-dashed border-[#b98d46]/28" />
+          <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-20 border-t border-l border-[#b8904a]/55" />
+          <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-20 border-t border-r border-[#b8904a]/55" />
+          <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-20 border-b border-l border-[#b8904a]/55" />
+          <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-20 border-b border-r border-[#b8904a]/55" />
 
-          <button
-            onClick={() => setShowContinueModal(false)}
-            className="mt-1 text-[11px] text-stone-500 hover:text-stone-300 uppercase tracking-wider cursor-pointer font-mono"
-          >
-            Back to Title
-          </button>
+          <div className="relative z-10 p-6 sm:p-7">
+            <div className="text-[9px] font-['Cinzel',_serif] text-[#c7a97b]/85 uppercase tracking-[0.28em] mb-1">
+              Occult Seal Detected
+            </div>
+            <h3 className="font-['Cinzel',_serif] text-xl font-bold text-[#f2e4cc] uppercase tracking-[0.2em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
+              Resume Expedition?
+            </h3>
+            <div className="mx-auto my-3 h-px w-28 bg-gradient-to-r from-transparent via-[#a8813e]/55 to-transparent" />
+            <p className="text-xs text-[#d6c6b0]/90 mb-6 font-mono leading-relaxed">
+              A previous run is tethered to this machine. Resume your descent into the dark, or burn the thread and begin anew?
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={handleContinueRun}
+                className="w-full py-2.5 px-4 bg-[#240b0d] hover:bg-[#331013] active:bg-[#170708] border border-[#8f6a2c]/85 hover:border-[#c99e52] rounded-[2px] shadow-[0_2px_0_#090304,inset_0_1px_0_rgba(241,213,143,0.12)] active:translate-y-[1px] active:shadow-none font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.18em] text-[#f2e1c2] hover:text-white transition-all duration-75 cursor-pointer"
+              >
+                Resume Expedition
+              </button>
+
+              <button
+                onClick={() => {
+                  clearRunSave();
+                  setShowContinueModal(false);
+                  setScreen('DECK_SELECT');
+                }}
+                className="w-full py-2 px-4 bg-[#170708] hover:bg-[#260b0d] active:bg-[#100405] border border-[#591a16] hover:border-red-700/85 rounded-[2px] shadow-[0_2px_0_#090304,inset_0_1px_0_rgba(255,255,255,0.05)] active:translate-y-[1px] active:shadow-none font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.15em] text-red-400/90 hover:text-red-300 transition-all duration-75 cursor-pointer"
+              >
+                Sever Thread (New Game)
+              </button>
+
+              <button
+                onClick={() => setShowContinueModal(false)}
+                className="mt-1.5 text-[10px] font-['Cinzel',_serif] font-bold text-[#b89f7d]/75 hover:text-[#efe0be] uppercase tracking-[0.22em] transition-colors cursor-pointer"
+              >
+                Back to Title
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-      )}
+    );
+  })()}
     </>
   );
 }
