@@ -8516,7 +8516,7 @@ export default function App() {
                       const sigilDesc = sigilName ? (SIGIL_DESCRIPTIONS as Record<string, string>)[sigilName] : '';
 
                       return (
-                        <div key={uid} className={`group relative flex flex-col items-center select-none cursor-help ${isWeaver || isFoe ? '-translate-y-1.5' : ''}`}>
+                        <div key={uid} className={`group relative z-10 hover:z-[80] flex flex-col items-center select-none cursor-help ${isWeaver || isFoe ? '-translate-y-1.5' : ''}`}>
                           {/* Physical Burlap Doll Container */}
                           <div className={`relative flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.05] ${isDual ? 'w-[74px] h-[102px]' : 'w-[80px] h-[110px]'}`}>
                             <img
