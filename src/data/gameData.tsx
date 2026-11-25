@@ -1,7 +1,7 @@
 import React, { type JSX } from 'react';
 
 // --- Types & Data Definitions ---
-export type Tribe = 'No Class' | 'Reptile' | 'Avian' | 'Canine' | 'Hooved' | 'Insect' | 'ALL Classes';
+export type Tribe = 'No Class' | 'Reptile' | 'Avian' | 'Canine' | 'Hooved' | 'Insect' | 'Vermin' | 'ALL Classes';
 export type CardInstance = any;
 export const TRIBE_ICONS: Record<Tribe, string> = {
   'Canine': '🐺',
@@ -9,6 +9,7 @@ export const TRIBE_ICONS: Record<Tribe, string> = {
   'Avian': '🦅',
   'Reptile': '🦎',
   'Hooved': '🦌',
+  'Vermin': '🐀',
   'ALL Classes': '✨',
   'No Class': ''
 };
@@ -397,6 +398,16 @@ export const TRIBE_EMBROIDERY: Record<string, JSX.Element> = {
       <path d="M4 3l4 4-2 3 3-1 2 3h2l2-3 3 1-2-3 4-4-5 1-2-3-2 3-5-1zm6 10l-1 5 3 3 3-3-1-5h-4z" />
     </svg>
   ),
+  Vermin: (
+    <svg className="w-5 h-5 mx-auto text-amber-200" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="7" cy="7.5" r="3.2" />
+      <circle cx="17" cy="7.5" r="3.2" />
+      <path d="M6.5 10.5C6.5 8.5 9 7.5 12 7.5s5.5 1 5.5 3c0 3.6-2.5 7.2-5.5 9-3-1.8-5.5-5.4-5.5-9z" />
+      <circle cx="10" cy="12" r="1" fill="#140d08" />
+      <circle cx="14" cy="12" r="1" fill="#140d08" />
+      <path d="M11 16.5h2l-1 1.6-1-1.6z" fill="#140d08" />
+    </svg>
+  ),
 };
 export const TOKEN_PELT: CardDef = { name: "Trade Pelt", class: "No Class", attack: 0, health: 1, cost: 0, emoji: "📜", isSacrifice: false, sigils: [] };
 export const TOKEN_BEE: CardDef = { name: "Bee", class: "Insect", attack: 1, health: 1, cost: 0, emoji: "🐝", isSacrifice: false, sigils: ["Airborne"] };
@@ -406,11 +417,11 @@ export const CARD_GRIZZLY: CardDef = { name: "Grizzly", class: "No Class", attac
 
 export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Amoeba", class: "No Class", attack: 1, health: 2, boneCost: 2, emoji: "🦠", sigils: ["Amorphous"] },
-  { name: "Stoat", class: "No Class", attack: 1, health: 3, cost: 1, emoji: "🦦", sigils: [] },
+  { name: "Stoat", class: "Vermin", attack: 1, health: 3, cost: 1, emoji: "🦦", sigils: [] },
   { name: "Bullfrog", class: "Reptile", attack: 1, health: 2, cost: 1, emoji: "🐸", sigils: ["Mighty Leap"] },
   { name: "Skink", class: "Reptile", attack: 1, health: 2, cost: 1, emoji: "🦎", sigils: ["Loose Tail"] },
   { name: "Sparrow", class: "Avian", attack: 1, health: 2, cost: 1, emoji: "🐦", sigils: ["Airborne"] },
-  { name: "Warren", class: "No Class", attack: 0, health: 2, cost: 1, emoji: "🕳️", sigils: ["Rabbit Hole"] },
+  { name: "Warren", class: "Vermin", attack: 0, health: 2, cost: 1, emoji: "🕳️", sigils: ["Rabbit Hole"] },
   { name: "Mantis", class: "Insect", attack: 1, health: 1, cost: 1, emoji: "🦗", sigils: ["Bifurcated Strike"] },
   { name: "Mantiseater", class: "Insect", attack: 1, health: 1, cost: 1, emoji: "👁️", sigils: ["Trifurcated Strike"] },
   { name: "Black Goat", class: "Hooved", attack: 0, health: 1, cost: 1, emoji: "🐐", sigils: ["Worthy Sacrifice"] },
@@ -426,44 +437,44 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Pronghorn", class: "Hooved", attack: 1, health: 3, cost: 2, emoji: "🦌", sigils: ["Sprinter", "Bifurcated Strike"] },
   { name: "River Snapper", class: "Reptile", attack: 1, health: 6, cost: 2, emoji: "🐢", sigils: ["Scapegoat"] },
   { name: "Bloodhound", class: "Canine", attack: 2, health: 3, cost: 2, emoji: "🐕", sigils: ["Guardian"] },
-  { name: "Field Mice", class: "No Class", attack: 2, health: 2, cost: 2, emoji: "🐁", sigils: ["Fecundity"] },
+  { name: "Field Mice", class: "Vermin", attack: 2, health: 2, cost: 2, emoji: "🐁", sigils: ["Fecundity"] },
   { name: "Adder", class: "Reptile", attack: 1, health: 1, cost: 2, emoji: "🐍", sigils: ["Touch of Death"] },
   { name: "Ant Queen", class: "Insect", attack: 0, health: 3, cost: 2, emoji: "👑", tags: ["Ant"], sigils: ["Ant Spawner"] },
   { name: "Grizzly", class: "No Class", attack: 4, health: 6, cost: 3, emoji: "🐻", sigils: [] },
   { name: "Moose Buck", class: "Hooved", attack: 3, health: 7, cost: 3, emoji: "🦌", sigils: ["Hefty"] },
   { name: "Dire Wolf", class: "Canine", attack: 2, health: 5, cost: 3, emoji: "🐺", sigils: ["Double Strike"] },
   { name: "Great White", class: "No Class", attack: 4, health: 2, cost: 3, emoji: "🦈", sigils: ["Waterborne"] },
-  { name: "Opossum", class: "No Class", attack: 1, health: 1, boneCost: 2, emoji: "🐀", sigils: [] },
+  { name: "Opossum", class: "Vermin", attack: 1, health: 1, boneCost: 2, emoji: "🐀", sigils: [] },
   { name: "Coyote", class: "Canine", attack: 2, health: 1, boneCost: 4, emoji: "🐺", sigils: ["Pack-Animal"] },
   { name: "Cockroach", class: "Insect", attack: 1, health: 1, boneCost: 4, emoji: "💀", sigils: ["Unkillable"] },
   { name: "Rattler", class: "Reptile", attack: 3, health: 2, boneCost: 5, emoji: "🐍", sigils: [] },
   { name: "Alpha", class: "Canine", attack: 1, health: 2, boneCost: 4, emoji: "🐺", sigils: ["Leader"] },
   { name: "House Fly", class: "Insect", attack: 1, health: 2, boneCost: 4, emoji: "🐛", sigils: ["Corpse Eater"] },
-  { name: "Wolverine", class: "No Class", attack: 1, health: 3, boneCost: 4, emoji: "🦡", sigils: ["Bloodlust"] },
+  { name: "Wolverine", class: "Vermin", attack: 1, health: 3, boneCost: 4, emoji: "🦡", sigils: ["Bloodlust"] },
   { name: "Demon Elk", class: "Hooved", attack: 1, health: 2, boneCost: 4, emoji: "🦌", sigils: ["Sprinter", "Touch of Death"] },
   { name: "Geck", class: "Reptile", attack: 1, health: 1, cost: 0, emoji: "🦎", sigils: [] },
   { name: "Magpie", class: "Avian", attack: 1, health: 1, cost: 2, emoji: "🦉", sigils: ["Airborne", "Hoarder"] },
-  { name: "Mole", class: "No Class", attack: 0, health: 4, cost: 1, emoji: "🐹", sigils: ["Burrower"] },
-  { name: "Porcupine", class: "No Class", attack: 1, health: 2, cost: 1, emoji: "🦔", sigils: ["Sharp Quills"] },
+  { name: "Mole", class: "Vermin", attack: 0, health: 4, cost: 1, emoji: "🐹", sigils: ["Burrower"] },
+  { name: "Porcupine", class: "Vermin", attack: 1, health: 2, cost: 1, emoji: "🦔", sigils: ["Sharp Quills"] },
   { name: "Cat", class: "No Class", attack: 0, health: 1, cost: 1, emoji: "🐈", sigils: ["Many Lives"] },
   { name: "Mealworm", class: "Insect", attack: 0, health: 2, boneCost: 2, emoji: "🦋", sigils: ["Morsel"] },
-  { name: "Rat King", class: "No Class", attack: 2, health: 1, cost: 2, emoji: "🐀", sigils: ["Bone King"] },
-  { name: "Raccoon", class: "No Class", attack: 1, health: 1, boneCost: 3, emoji: "🦝", sigils: ["Forager"] },
-  { name: "Beaver", class: "No Class", attack: 1, health: 3, cost: 2, emoji: "🚪", sigils: ["Dam Builder"] },
+  { name: "Rat King", class: "Vermin", attack: 2, health: 1, cost: 2, emoji: "🐀", sigils: ["Bone King"] },
+  { name: "Raccoon", class: "Vermin", attack: 1, health: 1, boneCost: 3, emoji: "🦝", sigils: ["Forager"] },
+  { name: "Beaver", class: "Vermin", attack: 1, health: 3, cost: 2, emoji: "🚪", sigils: ["Dam Builder"] },
   { name: "Elk Fawn", class: "Hooved", attack: 1, health: 1, cost: 1, emoji: "🦌", sigils: ["Sprinter", "Fledgling"], evolvesInto: "Elk" },
   { name: "Flying Ant", class: "Insect", attack: 0, health: 1, cost: 1, emoji: "🐜", tags: ["Ant"], sigils: ["Airborne"] },
   { name: "Brood", class: "Insect", attack: 0, health: 2, cost: 1, emoji: "🍯", sigils: ["Bees Within"] },
   { name: "Tadpole", class: "Reptile", attack: 0, health: 1, cost: 0, emoji: "🐟", sigils: ["Waterborne", "Fledgling"], evolvesInto: "Bullfrog" },
   { name: "Ouroboros", class: "Reptile", attack: 1, health: 1, cost: 2, emoji: "🐉", sigils: ["Unkillable"] },
-  { name: "Bat", class: "No Class", attack: 2, health: 1, boneCost: 3, emoji: "🦇", sigils: ["Airborne"] },
+  { name: "Bat", class: "Vermin", attack: 2, health: 1, boneCost: 3, emoji: "🦇", sigils: ["Airborne"] },
   { name: "Amalgam", class: "ALL Classes", attack: 3, health: 3, cost: 2, emoji: "🧬", sigils: [] },
   { name: "Lammergeier", class: "Avian", attack: 0, health: 4, cost: 3, emoji: "🦅", sigils: ["Airborne"] },
   { name: "River Otter", class: "No Class", attack: 1, health: 1, cost: 1, emoji: "🦦", sigils: ["Waterborne", "Forager"] },
   { name: "Turkey Vulture", class: "Avian", attack: 3, health: 3, boneCost: 5, emoji: "🦃", sigils: ["Airborne"] },
   { name: "Wolf Cub", class: "Canine", attack: 1, health: 1, cost: 1, emoji: "🐾", sigils: ["Fledgling"], evolvesInto: "Wolf" },
-  { name: "Skunk", class: "No Class", attack: 0, health: 3, cost: 1, emoji: "🦨", sigils: ["Stinky"] },
+  { name: "Skunk", class: "Vermin", attack: 0, health: 3, cost: 1, emoji: "🦨", sigils: ["Stinky"] },
   // --- NEW CARDS ---
-  { name: "Capybara", class: "No Class", attack: 0, health: 4, cost: 1, emoji: "🦫", sigils: ["Scapegoat"] },
+  { name: "Capybara", class: "Vermin", attack: 0, health: 4, cost: 1, emoji: "🦫", sigils: ["Scapegoat"] },
   { name: "Stallion", class: "Hooved", attack: 2, health: 3, cost: 2, emoji: "🐎", sigils: ["Sprinter"] },
   { name: "Caiman", class: "Reptile", attack: 2, health: 1, cost: 2, emoji: "🐢", sigils: ["Leech"] },
   { name: "Killer Whale", class: "No Class", attack: 3, health: 1, cost: 2, emoji: "🐋", sigils: ["Waterborne", "Rampager"] },
@@ -477,7 +488,7 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Red Behemoth", class: "Canine", attack: 3, health: 9, cost: 3, emoji: "🐕", sigils: ["Bone Digger", "Hefty"] },
   { name: "Red Colossus", class: "Canine", attack: 4, health: 13, cost: 4, emoji: "🐕", sigils: ["Leech", "Hefty"] },
   { name: "Jackal", class: "Canine", attack: 1, health: 3, boneCost: 4, emoji: "🐺", sigils: ["Pack-Animal", "Corpse Eater"] },
-  { name: "Armadillo", class: "No Class", attack: 0, health: 3, boneCost: 3, emoji: "🛡️", sigils: ["Armored", "Sharp Quills"] },
+  { name: "Armadillo", class: "Vermin", attack: 0, health: 3, boneCost: 3, emoji: "🛡️", sigils: ["Armored", "Sharp Quills"] },
   { name: "Cicada", class: "Insect", attack: 2, health: 1, boneCost: 3, emoji: "🦗", sigils: ["Airborne", "Brittle"] },
   { name: "Silkworm", class: "Insect", attack: 0, health: 1, cost: 0, emoji: "🐛", sigils: ["Fledgling"], evolvesInto: "Silken Moth" },
   { name: "Silken Moth", class: "Insect", attack: 2, health: 1, cost: 0, emoji: "🐛", sigils: ["Airborne"] },

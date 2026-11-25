@@ -3278,6 +3278,7 @@ export default function App() {
   const executeCombatPhase = async (forceSkipPlayerStrikes: boolean = false) => {
     const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
     let currentScale = scale;
+    let turnBloodDealt = 0;
     let currPBoard = [...playerBoard];
     let currEBoard = [...enemyBoard];
     let currEQueue = [...enemyQueue];
@@ -3581,6 +3582,7 @@ export default function App() {
                   await animateDirectDamageRumble(excess, currentScale + excess >= 5);
                   let trampleVented = 0;
                   for (let pt = 0; pt < excess; pt++) {
+                    turnBloodDealt += 1;
                     if (turnNumber === 1 && currentScale >= 4) {
                       trampleVented += 1;
                       setIsAmpouleCracked(true);
@@ -3651,6 +3653,7 @@ export default function App() {
           // Step gauge 1 point at a time with tick sound
           let ventedThisStrike = 0;
           for (let pt = 0; pt < pAtk; pt++) {
+            turnBloodDealt += 1;
             // Arterial Shunt: On Turn 1, hydraulic pressure cannot force the column past +4.
             // Excess volume diverts directly through the petcock into the banked ounce reservoir.
             if (turnNumber === 1 && currentScale >= 4) {
@@ -3739,10 +3742,10 @@ export default function App() {
 
            // 2. Weaver Phase 2: Flip to the opposite tribe and carve a lethal totem
             const p1Tribe: Tribe = woodcarverClasses[0] || 'Insect';
-            const candidateTribes: Tribe[] = ['Canine', 'Avian', 'Insect', 'Hooved', 'Reptile'];
+            const candidateTribes: Tribe[] = ['Canine', 'Avian', 'Insect', 'Hooved', 'Reptile', 'Vermin'];
             const p2Tribe: Tribe = woodcarverClasses[1] && woodcarverClasses[1] !== p1Tribe
               ? woodcarverClasses[1]
-              : (candidateTribes.filter(t => t !== p1Tribe)[Math.floor(Math.random() * 4)]);
+              : (candidateTribes.filter(t => t !== p1Tribe)[Math.floor(Math.random() * (candidateTribes.length - 1))]);
 
             const lethalSigilPool = ['Touch of Death', 'Double Strike', 'Bifurcated Strike', 'Sharp Quills', 'Mighty Leap'];
             const chosenLethalSigil = lethalSigilPool[Math.floor(Math.random() * lethalSigilPool.length)];
@@ -4000,6 +4003,9 @@ export default function App() {
     const flockBonusThisDuel = flockStartingScaleBonusRef.current ? 2 : 0;
     setScale(-permanentScaleDebuff - flockDebtThisDuel + flockBonusThisDuel);
     setFlockSquirrelLockDraws(flockNoSquirrelTurnsRef.current ? 2 : 0);
+          if (turnBloodDealt > 0) {
+            setHighestOverkill(prev => Math.max(prev, turnBloodDealt));
+          }
           setTurnNumber(prev => prev + 1);
           setPhase('DRAW');
           addLog(`=== BOSS PHASE ${nextPhase}: A new turn begins! Draw from your Deck or Squirrels. ===`);
@@ -4011,6 +4017,9 @@ export default function App() {
 
     setActiveAttacker(null);
     setActiveDefendingLane(null);
+    if (turnBloodDealt > 0) {
+      setHighestOverkill(prev => Math.max(prev, turnBloodDealt));
+    }
 
     // End of player attack turn: Bone Digger generation and Brittle destruction
     let bonesDug = 0;
@@ -4056,7 +4065,6 @@ export default function App() {
       }));
 
       if (overkillTotal > 0) {
-        setHighestOverkill(prev => Math.max(prev, overkillTotal));
         setIsOverkill(true);
         setIsEnemyRetracting(true);
         const tickCount = Math.min(overkillTotal, 10);
@@ -4862,7 +4870,13 @@ export default function App() {
       }
     }
 
-    const pool = ENEMY_MAIN_DECK_POOL;
+    let pool = ENEMY_MAIN_DECK_POOL;
+    if (bossTotem && Math.random() < 0.75) {
+      const tribalPool = ENEMY_MAIN_DECK_POOL.filter(
+        c => c.class === bossTotem.class || c.class === "ALL Classes"
+      );
+      if (tribalPool.length > 0) pool = tribalPool;
+    }
     const card = cloneCard(pool[Math.floor(Math.random() * pool.length)], 0);
     if (bossTotem && (card.class === bossTotem.class || card.class === "ALL Classes")) {
       if (!card.sigils.includes(bossTotem.sigil)) {
@@ -5315,7 +5329,7 @@ export default function App() {
 
       // 35% chance for a standard encounter to field a random totem once The Weaver has been defeated
       if (progressOverride?.forceEnemyTotem || activeVowsRef.current.includes('all_elite_row2') || (hasDefeatedWeaver && duelRng() < 0.35)) {
-        const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved"];
+        const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved", "Vermin"];
         const randomTotemSigils: string[] = [
           'Airborne',
           'Burrower',
@@ -5479,7 +5493,7 @@ export default function App() {
         triggerBossIntroBanner('BoneLord');
         addLog('=== BOSS BATTLE: The Bone Lord rises! ===');
       } else if (bossType === 'The Weaver') {
-        const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved"];
+        const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved", "Vermin"];
         const shuffledTribes = seededShuffle(tribes, duelRng);
         const bossTribe = shuffledTribes[0];
         setWoodcarverClasses([bossTribe, shuffledTribes[1]]);
@@ -5525,7 +5539,7 @@ export default function App() {
       }
 
       if (activeVowsRef.current.includes('all_elite_row2') && bossType !== 'The Weaver') {
-        const vowTribes: Tribe[] = ['Canine', 'Avian', 'Reptile', 'Insect', 'Hooved'];
+        const vowTribes: Tribe[] = ['Canine', 'Avian', 'Reptile', 'Insect', 'Hooved', 'Vermin'];
         const vowSigils = ['Airborne', 'Burrower', 'Fledgling', 'Hefty', 'Sharp Quills', 'Mighty Leap', 'Sprinter', 'Stinky'];
         const vTribe = vowTribes[Math.floor(duelRng() * vowTribes.length)];
         const vSigil = vowSigils[Math.floor(duelRng() * vowSigils.length)];
@@ -5741,7 +5755,19 @@ export default function App() {
         if (validCandidates.length > 0) {
           // Prefer active combatants over 0-atk walls when budget permits
           const activeCombatants = validCandidates.filter(c => (c.attack || 0) > 0);
-          const poolToDraw = (zeroAtkCount === 0 && activeCombatants.length > 0) ? activeCombatants : validCandidates;
+          let poolToDraw = (zeroAtkCount === 0 && activeCombatants.length > 0) ? activeCombatants : validCandidates;
+
+          // If this encounter wields a poppet/totem, strongly favor cards that actually benefit from its tribe
+          if (activeEncounterTotem && duelRng() < 0.8) {
+            const tribalPool = poolToDraw.filter(
+              c => c.class === activeEncounterTotem.class || c.class === 'ALL Classes'
+            );
+            const fallbackTribal = validCandidates.filter(
+              c => c.class === activeEncounterTotem.class || c.class === 'ALL Classes'
+            );
+            if (tribalPool.length > 0) poolToDraw = tribalPool;
+            else if (fallbackTribal.length > 0) poolToDraw = fallbackTribal;
+          }
 
           const chosen = transformAmorphous(cloneCard(poolToDraw[Math.floor(duelRng() * poolToDraw.length)], 0));
           if (
@@ -5917,16 +5943,17 @@ export default function App() {
 
     if (lineageId === 'vanilla') starters = ["Stoat", "Bullfrog", "Wolf"];
     else if (lineageId === 'witchcraft') starters = ["Black Goat", "Moose Buck", "Mole"];
-    else if (lineageId === 'eldritch') starters = ["Mantis", "Tadpole", "Raven"];
+    else if (lineageId === 'eldritch') starters = ["Cat", "Tadpole", "Raven"];
     else if (lineageId === 'skeleton') starters = ["Warren", "Red Stray", "Dire Wolf Pup"];
     else if (lineageId === 'infestation') starters = ["Silkworm", "Ant Queen", "Flying Ant"];
-    else if (lineageId === 'paleozoic') starters = ["Hyphae", "Mud Turtle", "Great White"];
+    else if (lineageId === 'paleozoic') starters = ["Hyphae", "Iguana", "Mud Turtle"];
+    else if (lineageId === 'ossuary') starters = ["Rat King", "Cockroach", "Arachnid"];
     else if (lineageId === 'randomizer') {
       starters = ["Geck", "Trade Pelt", "Trade Pelt"];
       isRandomizer = true;
     }
 
-    const ALL_LINEAGE_IDS = ['randomizer', 'witchcraft', 'infestation', 'skeleton', 'eldritch', 'paleozoic'];
+    const ALL_LINEAGE_IDS = ['witchcraft', 'infestation', 'skeleton', 'eldritch', 'paleozoic', 'ossuary', 'randomizer'];
     const seedsUnlocked = ALL_LINEAGE_IDS.every(id => (archive.clearedLineages || []).includes(id));
     const resolvedSeed = (seedsUnlocked && normalizeSeed(runSeedInput)) || generateRandomSeed();
     setRunSeed(resolvedSeed);
@@ -6701,7 +6728,7 @@ export default function App() {
     setIsEventBusy(false);
     setCarvingPickedTribe(null);
     setCarvingSummonedCard(null);
-    const allTribes: Tribe[] = ["Reptile", "Insect", "Avian", "Canine", "Hooved"];
+    const allTribes: Tribe[] = ["Reptile", "Insect", "Avian", "Canine", "Hooved", "Vermin"];
     const shuffled = [...allTribes].sort(() => Math.random() - 0.5);
     setCarvingTribes(shuffled.slice(0, 3));
     setScreen('EVENT_TOTEM_CARVING');
@@ -7235,7 +7262,7 @@ export default function App() {
     setAssemblyHeadIdx(null);
     setAssemblyBodyIdx(null);
 
-    const tribes: Tribe[] = ["Reptile", "Insect", "Avian", "Canine", "Hooved"];
+    const tribes: Tribe[] = ["Reptile", "Insect", "Avian", "Canine", "Hooved", "Vermin"];
     const BANNED_TOTEM_SIGILS = new Set([
       'Amorphous',
       'Omnistrike',
@@ -7606,7 +7633,7 @@ export default function App() {
             renderCard={renderCard}
             runSeed={runSeed}
             runStats={runStats}
-            seedsUnlocked={['randomizer', 'witchcraft', 'infestation', 'skeleton', 'eldritch', 'paleozoic'].every((id: string) => (archive.clearedLineages || []).includes(id))}
+            seedsUnlocked={['witchcraft', 'infestation', 'skeleton', 'eldritch', 'paleozoic', 'ossuary', 'randomizer'].every((id: string) => (archive.clearedLineages || []).includes(id))}
             highestScore={archive.highestScore}
             highestRank={archive.highestRank}
             highestRankColor={archive.highestRankColor}

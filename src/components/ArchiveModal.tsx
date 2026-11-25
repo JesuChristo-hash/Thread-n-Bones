@@ -506,10 +506,10 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
 
               <div className={`${plaqueCls} px-3 py-2 text-center`}>
                 <div className="text-[9px] text-[#9b9086] uppercase tracking-[0.16em] mb-0.5">
-                  Highest Overkill
+                  Peak Blood / Turn
                 </div>
                 <div className="text-xl font-bold text-red-400">
-                  {archive.highestOverkill}
+                  {archive.highestOverkill} <span className="text-xs font-normal text-red-300/80">oz</span>
                 </div>
               </div>
 

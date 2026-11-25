@@ -31,16 +31,99 @@ export default function DeckSelectScreen({
   triggerSfx,
 }: DeckSelectScreenProps) {
   const [showVowsModal, setShowVowsModal] = React.useState(false);
+  const [selectedIdx, setSelectedIdx] = React.useState(0);
+  const [slideDir, setSlideDir] = React.useState<'next' | 'prev' | null>(null);
+
+  const navigateLineage = React.useCallback(
+    (nextIdx: number, dir?: 'next' | 'prev') => {
+      setSelectedIdx((prev) => {
+        if (nextIdx === prev) return prev;
+        setSlideDir(dir ?? (nextIdx > prev ? 'next' : 'prev'));
+        return nextIdx;
+      });
+    },
+    []
+  );
 
   const BASE = import.meta.env.BASE_URL || './';
   const woodBg = `url("${BASE}assets/text/wood.jpg")`;
   const slateBg = `url("${BASE}assets/text/slate.jpg")`;
   const clothBg = `url("${BASE}assets/text/cloth.jpg")`;
 
-  const ALL_LINEAGE_IDS = ['randomizer', 'witchcraft', 'infestation', 'skeleton', 'eldritch', 'paleozoic'];
+  const lineages = [
+    {
+      id: 'witchcraft',
+      name: 'Taiga',
+      desc: 'Reliable',
+      unlockTier: 'default' as const,
+      cards: ['Mole', 'Moose Buck', 'Black Goat'],
+    },
+    {
+      id: 'infestation',
+      name: 'Colony',
+      desc: 'Wretched',
+      unlockTier: 'act1' as const,
+      cards: ['Silkworm', 'Flying Ant', 'Ant Queen'],
+    },
+    {
+      id: 'skeleton',
+      name: 'Scavengers',
+      desc: 'Ravenous',
+      unlockTier: 'act1' as const,
+      cards: ['Warren', 'Red Stray', 'Dire Wolf Pup'],
+    },
+    {
+      id: 'eldritch',
+      name: 'Eldritch',
+      desc: 'Ordained',
+      unlockTier: 'act1' as const,
+      cards: ['Tadpole', 'Cat', 'Raven'],
+    },
+    {
+      id: 'paleozoic',
+      name: 'Paleozoic',
+      desc: 'Deceitful',
+      unlockTier: 'act1' as const,
+      cards: ['Hyphae', 'Iguana', 'Mud Turtle'],
+    },
+    {
+      id: 'ossuary',
+      name: 'Ossuary',
+      desc: 'Skeletal',
+      unlockTier: 'act1' as const,
+      cards: ['Rat King', 'Cockroach', 'Arachnid'],
+    },
+    {
+      id: 'randomizer',
+      name: 'Unformed',
+      desc: 'Masochistic',
+      unlockTier: 'final' as const,
+      cards: ['Trade Pelt', 'Trade Pelt', 'Geck'],
+    },
+  ];
+
+  const ALL_LINEAGE_IDS = lineages.map((l) => l.id);
   const clearedCount = ALL_LINEAGE_IDS.filter((id) => (archive.clearedLineages || []).includes(id)).length;
   const seedsUnlocked = clearedCount >= ALL_LINEAGE_IDS.length;
-  const vowsUnlocked = (archive.runsWon || 0) > 0 || (archive.defeatedBosses || []).includes('BoneLord');
+  const act1BossDefeated =
+    (archive.totalBossesDefeated || 0) > 0 ||
+    (archive.defeatedBosses || []).length > 0 ||
+    (archive.runsWon || 0) > 0;
+  const finalBossDefeated =
+    (archive.runsWon || 0) > 0 || (archive.defeatedBosses || []).includes('BoneLord');
+  const vowsUnlocked = finalBossDefeated;
+
+  const isLineageUnlocked = (tier: 'default' | 'act1' | 'final') => {
+    if (tier === 'default') return true;
+    if (tier === 'act1') return act1BossDefeated;
+    return finalBossDefeated;
+  };
+
+  const getLockHint = (tier: 'default' | 'act1' | 'final') => {
+    if (tier === 'act1') return 'Defeat an Act I Boss to unseal this lineage.';
+    if (tier === 'final') return 'Defeat the Bone Lord to unseal this lineage.';
+    return '';
+  };
 
   const totalScoreBonus = RITUAL_VOWS.reduce(
     (sum: number, v: any) => (activeVows.includes(v.id) ? sum + (v.scoreBonus || 0) : sum),
@@ -59,16 +142,30 @@ export default function DeckSelectScreen({
             : { label: 'DAMNED', cls: 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.65)]' };
 
   React.useEffect(() => {
-    if (!showVowsModal) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        setShowVowsModal(false);
+      if (showVowsModal) {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          setShowVowsModal(false);
+        }
+        return;
+      }
+      if (document.activeElement?.tagName === 'INPUT') return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        triggerSfx('draw');
+        setSlideDir('prev');
+        setSelectedIdx((prev) => (prev - 1 + lineages.length) % lineages.length);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        triggerSfx('draw');
+        setSlideDir('next');
+        setSelectedIdx((prev) => (prev + 1) % lineages.length);
       }
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [showVowsModal]);
+  }, [showVowsModal, lineages.length, triggerSfx]);
 
   const knob =
     'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
@@ -186,26 +283,55 @@ export default function DeckSelectScreen({
     }
   };
 
-  const lineages = [
-    { id: 'randomizer', name: 'Unformed', desc: 'Masochistic', cards: ['Trade Pelt', 'Trade Pelt', 'Geck'] },
-    { id: 'witchcraft', name: 'Taiga', desc: 'Reliable', cards: ['Mole', 'Moose Buck', 'Black Goat'] },
-    { id: 'infestation', name: 'Colony', desc: 'Wretched', cards: ['Silkworm', 'Flying Ant', 'Ant Queen'] },
-    { id: 'skeleton', name: 'Scavengers', desc: 'Ravenous', cards: ['Warren', 'Red Stray', 'Dire Wolf Pup'] },
-    { id: 'eldritch', name: 'Eldritch', desc: 'Ordained', cards: ['Tadpole', 'Mantis', 'Raven'] },
-    { id: 'paleozoic', name: 'Paleozoic', desc: 'Deceitful', cards: ['Hyphae', 'Mud Turtle', 'Great White'] },
-  ];
+  const activeLineage = lineages[selectedIdx] || lineages[0];
+  const activeUnlocked = isLineageUnlocked(activeLineage.unlockTier);
+  const activeCleared = (archive.clearedLineages || []).includes(activeLineage.id);
 
   return (
     <div
-      className="absolute inset-0 z-50 flex flex-col items-center justify-between px-4 sm:px-8 py-3.5 overflow-hidden animate-fade-up font-mono select-none bg-[#090304]"
+      className="absolute inset-0 z-50 flex flex-col items-center justify-between px-4 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none bg-[#090304]"
       style={getScreenBgStyle('deck-selection.jpg')}
     >
-      {/* Deep Crimson & Vignette Atmosphere */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,4,5,0.10)_0%,rgba(6,2,3,0.66)_100%)] pointer-events-none z-0" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(127,29,29,0.22)_0%,transparent_58%)] pointer-events-none z-0" />
+      <style>{`
+        @keyframes deckSlideInFromRight {
+          0% { opacity: 0; transform: translateX(46px) scale(0.97); }
+          100% { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes deckSlideInFromLeft {
+          0% { opacity: 0; transform: translateX(-46px) scale(0.97); }
+          100% { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        .animate-deck-next {
+          animation: deckSlideInFromRight 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .animate-deck-prev {
+          animation: deckSlideInFromLeft 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes deckCardFlourish {
+          0% {
+            opacity: 0;
+            transform: translateY(34px) scale(0.84) rotate(var(--flourish-tilt, 0deg));
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(-6px) scale(1.03) rotate(0deg);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1) rotate(0deg);
+          }
+        }
+        .animate-card-flourish {
+          animation: deckCardFlourish 440ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+      `}</style>
+
+      {/* Measured Vignette — preserves deck-selection.jpg atmosphere around the central altar */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,3,4,0.06)_0%,rgba(6,2,3,0.48)_100%)] pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(127,29,29,0.16)_0%,transparent_54%)] pointer-events-none z-0" />
 
       {/* Engraved Ritual Header */}
-      <div className="relative z-10 flex flex-col items-center text-center shrink-0 w-full max-w-[1220px]">
+      <div className="relative z-10 flex flex-col items-center text-center shrink-0 w-full max-w-[1160px]">
         <div className="flex items-center gap-4">
           <div className="h-px w-14 sm:w-28 bg-gradient-to-r from-transparent via-[#7f1d1d]/80 to-[#dc2626]/70" />
           <h1
@@ -219,11 +345,11 @@ export default function DeckSelectScreen({
 
         {/* Carved Slate Seed & Ritual Vows Trigger Bar */}
         <div
-          className="relative mt-2 flex flex-wrap items-center justify-center gap-3 px-4 py-1.5 rounded-[2px] border border-[#3a1617] shadow-[0_12px_28px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden"
-          style={{ backgroundColor: '#120708' }}
+          className="relative mt-2 flex flex-wrap items-center justify-center gap-3 px-4 py-1.5 rounded-[2px] border border-[#3a1617] shadow-[0_12px_28px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden"
+          style={{ backgroundColor: 'rgba(18, 7, 8, 0.88)' }}
         >
           <div
-            className="pointer-events-none absolute inset-0 opacity-25 mix-blend-multiply bg-cover bg-center"
+            className="pointer-events-none absolute inset-0 opacity-20 mix-blend-multiply bg-cover bg-center"
             style={{ backgroundImage: slateBg }}
           />
           <div className="relative z-10 flex flex-wrap items-center justify-center gap-3">
@@ -263,10 +389,10 @@ export default function DeckSelectScreen({
               </div>
             ) : (
               <span
-                title="Seal the Bone Lord with all 6 Lineages to unlock custom Run Seeds."
-                className="text-[9px] font-mono uppercase tracking-[0.18em] text-stone-500"
+                title={`Seal the Bone Lord with all ${ALL_LINEAGE_IDS.length} Lineages to unlock custom Run Seeds.`}
+                className="text-[9px] font-mono uppercase tracking-[0.18em] text-stone-400"
               >
-                Seeds Locked ({clearedCount}/6)
+                Seeds Locked ({clearedCount}/{ALL_LINEAGE_IDS.length})
               </span>
             )}
 
@@ -316,7 +442,7 @@ export default function DeckSelectScreen({
             ) : (
               <span
                 title="Defeat the Bone Lord once to unbind optional Ritual Vows."
-                className="text-[9px] font-mono uppercase tracking-[0.18em] text-stone-500"
+                className="text-[9px] font-mono uppercase tracking-[0.18em] text-stone-400"
               >
                 Vows Sealed
               </span>
@@ -325,96 +451,245 @@ export default function DeckSelectScreen({
         </div>
       </div>
 
-      {/* 3x2 Dark-Timber Framed Altar Plaques */}
-      <div className="relative z-10 flex-1 min-h-0 grid grid-cols-3 grid-rows-2 gap-x-5 gap-y-3.5 w-full max-w-[1220px] my-2.5">
-        {lineages.map((d) => {
-          const isCleared = (archive.clearedLineages || []).includes(d.id);
-          return (
-            <div
-              key={d.id}
-              onClick={() => handleSelectLineage(d.id)}
-              className="relative min-h-0 p-[4px] rounded-[2px] group cursor-pointer select-none shadow-[0_16px_34px_rgba(0,0,0,0.92)] transition-all duration-300"
-              style={{
-                backgroundImage: woodBg,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            >
-              {/* Darken wood frame so it reads as aged timber */}
-              <div className="pointer-events-none absolute inset-0 rounded-[2px] bg-[#0b0605]/55 border border-[#2a1514] group-hover:border-red-700/80 transition-colors duration-300" />
+      {/* Central Featured Altar Showcase (with Flanking Gallery Arrows) */}
+      <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center gap-3 sm:gap-5 w-full max-w-[820px] my-2">
+        <button
+          type="button"
+          aria-label="Previous lineage"
+          onClick={() => {
+            triggerSfx('draw');
+            setSlideDir('prev');
+            setSelectedIdx((prev) => (prev - 1 + lineages.length) % lineages.length);
+          }}
+          className="shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-[2px] bg-[#140708]/85 hover:bg-[#240b0d]/95 border border-[#4a1c1d] hover:border-red-500/80 text-[#dfd0bc] hover:text-white flex items-center justify-center text-lg font-bold shadow-[0_8px_20px_rgba(0,0,0,0.85)] cursor-pointer transition-all"
+        >
+          ‹
+        </button>
 
-              {/* Inner Slate & Crimson Cloth Well */}
+        <div
+          onClick={() => activeUnlocked && handleSelectLineage(activeLineage.id)}
+          className={`relative w-full max-w-[630px] h-full max-h-[395px] p-[5px] rounded-[2px] group select-none shadow-[0_22px_54px_rgba(0,0,0,0.92)] transition-all duration-300 ${
+            activeUnlocked ? 'cursor-pointer' : 'cursor-default'
+          }`}
+          style={{
+            backgroundImage: woodBg,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <div
+            className={`pointer-events-none absolute inset-0 rounded-[2px] bg-[#0b0605]/50 border transition-colors duration-300 ${
+              activeUnlocked
+                ? 'border-[#331817] group-hover:border-red-700/85'
+                : 'border-[#291a19]'
+            }`}
+          />
+
+          {/* Inner Crimson Cloth Well — lighter transparency so background breathes */}
+          <div
+            className={`relative w-full h-full flex flex-col items-center justify-between px-4 pt-3 pb-3.5 rounded-[1px] overflow-hidden border backdrop-blur-[1.5px] transition-colors duration-300 ${
+              activeUnlocked
+                ? 'border-[#381416] group-hover:border-red-800/80'
+                : 'border-[#2a1717]'
+            }`}
+            style={{
+              background:
+                'radial-gradient(ellipse at 50% 40%, rgba(34,7,9,0.54) 0%, rgba(16,4,5,0.64) 60%, rgba(9,3,4,0.74) 100%)',
+            }}
+          >
+            <div
+              className="pointer-events-none absolute inset-0 opacity-20 mix-blend-multiply bg-cover bg-center"
+              style={{ backgroundImage: clothBg }}
+            />
+
+            {/* Recessed Corner Hairlines */}
+            <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#6e2428]/75 group-hover:border-red-500/90 transition-colors" />
+            <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#6e2428]/75 group-hover:border-red-500/90 transition-colors" />
+            <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#6e2428]/75 group-hover:border-red-500/90 transition-colors" />
+            <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#6e2428]/75 group-hover:border-red-500/90 transition-colors" />
+
+            {/* Full-bleed feathered Crimson Hover Halo (never clips against box edges) */}
+            {activeUnlocked && (
               <div
-                className="relative w-full h-full min-h-0 flex flex-col items-center justify-between px-3 pt-2 pb-2.5 rounded-[1px] overflow-hidden border border-[#2c1213] group-hover:border-red-800/75 backdrop-blur-[1px] transition-colors duration-300"
+                className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                 style={{
                   background:
-                    'radial-gradient(ellipse at 50% 35%, rgba(36,7,9,0.68) 0%, rgba(18,4,5,0.74) 58%, rgba(10,3,4,0.82) 100%)',
+                    'radial-gradient(ellipse 62% 54% at 50% 44%, rgba(185,28,28,0.30) 0%, rgba(127,29,29,0.11) 48%, transparent 78%)',
                 }}
+              />
+            )}
+
+            {/* Index & Sealed Status */}
+            <div className="relative z-20 w-full flex items-center justify-between text-[9.5px] font-mono uppercase tracking-[0.2em]">
+              <span className="text-stone-400/80">
+                Lineage {selectedIdx + 1} / {lineages.length}
+              </span>
+              {activeCleared ? (
+                <span
+                  title="Lineage Sealed"
+                  className="font-bold text-red-400/95 drop-shadow-[0_0_6px_rgba(239,68,68,0.75)]"
+                >
+                  ✦ SEALED
+                </span>
+              ) : !activeUnlocked ? (
+                <span className="font-bold text-amber-500/85">LOCKED</span>
+              ) : (
+                <span className="text-stone-500">UNSEALED</span>
+              )}
+            </div>
+
+            {/* Sliding Stage: 3-Card Handheld Spread + Title */}
+            <div
+              key={activeLineage.id}
+              className={`relative z-10 flex-1 min-h-0 w-full flex flex-col items-center justify-between ${
+                slideDir === 'next'
+                  ? 'animate-deck-next'
+                  : slideDir === 'prev'
+                    ? 'animate-deck-prev'
+                    : ''
+              }`}
+            >
+              {/* 3-Card Handheld Spread */}
+              <div
+                className={`relative z-10 flex-1 min-h-0 flex items-center justify-center w-full transition-all duration-300 ${
+                  activeUnlocked ? '' : 'grayscale opacity-35 brightness-75'
+                }`}
               >
-                <div
-                  className="pointer-events-none absolute inset-0 opacity-35 mix-blend-multiply bg-cover bg-center"
-                  style={{ backgroundImage: clothBg }}
-                />
-
-                {/* Recessed Corner Hairlines */}
-                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#5c1f22]/75 group-hover:border-red-500/90 transition-colors" />
-                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#5c1f22]/75 group-hover:border-red-500/90 transition-colors" />
-                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#5c1f22]/75 group-hover:border-red-500/90 transition-colors" />
-                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#5c1f22]/75 group-hover:border-red-500/90 transition-colors" />
-
-                {/* Crimson Hover Halo Behind Cards */}
-                <div className="pointer-events-none absolute top-3 inset-x-8 h-32 rounded-full bg-[radial-gradient(circle,rgba(185,28,28,0.28)_0%,transparent_72%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                {/* Cleared Seal Mark */}
-                {isCleared && (
-                  <span
-                    title="Lineage Sealed"
-                    className="pointer-events-none absolute top-2 right-2.5 z-30 text-[9px] font-mono font-bold uppercase tracking-[0.18em] text-red-400/90 drop-shadow-[0_0_6px_rgba(239,68,68,0.75)]"
-                  >
-                    ✦ SEALED
-                  </span>
-                )}
-
-                {/* 3-Card Handheld Spread */}
-                <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center w-full">
-                  {d.cards.map((cName, cIdx) => {
-                    const fanTransforms = [
-                      'rotate-[-4deg] -translate-x-[104px] group-hover:-translate-x-[112px] group-hover:rotate-[-6deg] z-0',
-                      'rotate-[0deg] -translate-y-1.5 group-hover:-translate-y-2.5 z-10',
-                      'rotate-[4deg] translate-x-[104px] group-hover:translate-x-[112px] group-hover:rotate-[6deg] z-20',
-                    ];
-                    return (
+                {activeLineage.cards.map((cName, cIdx) => {
+                  const fanTransforms = [
+                    'rotate-[-5deg] -translate-x-[156px] group-hover:-translate-x-[166px] group-hover:rotate-[-6.5deg] z-0',
+                    'rotate-[0deg] -translate-y-1.5 group-hover:-translate-y-2.5 z-10',
+                    'rotate-[5deg] translate-x-[156px] group-hover:translate-x-[166px] group-hover:rotate-[6.5deg] z-20',
+                  ];
+                  const flourishTilts = ['-10deg', '0deg', '10deg'];
+                  return (
+                    <div
+                      key={`${activeLineage.id}-${cName}-${cIdx}`}
+                      className={`absolute transform scale-[1.34] origin-center transition-all duration-300 ease-out ${
+                        activeUnlocked ? 'group-hover:scale-[1.38]' : ''
+                      } drop-shadow-[0_18px_26px_rgba(0,0,0,0.94)] ${fanTransforms[cIdx] || ''}`}
+                    >
                       <div
-                        key={`${cName}-${cIdx}`}
-                        className={`absolute transform scale-[0.86] origin-center transition-all duration-300 ease-out group-hover:scale-[0.9] drop-shadow-[0_12px_18px_rgba(0,0,0,0.92)] ${
-                          fanTransforms[cIdx] || ''
-                        }`}
+                        className="animate-card-flourish"
+                        style={
+                          {
+                            animationDelay: `${cIdx * 70}ms`,
+                            '--flourish-tilt': flourishTilts[cIdx] || '0deg',
+                          } as React.CSSProperties
+                        }
                       >
                         {renderCard(ALL_CARD_LOOKUP[cName] || MAIN_DECK_POOL[0], { showCost: true })}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
 
-                {/* Engraved Crimson Divider */}
-                <div className="relative z-10 shrink-0 w-4/5 h-px bg-gradient-to-r from-transparent via-[#6b1417]/80 to-transparent group-hover:via-red-500/85 transition-colors my-1" />
-
-                {/* Lineage Title & Diegetic Prompt */}
-                <div className="relative z-10 shrink-0 flex flex-col items-center text-center w-full">
-                  <div className="flex items-baseline gap-2.5">
-                    <h2 className="text-sm font-['Cinzel',_serif] font-bold text-[#efe5d5] uppercase tracking-[0.22em] group-hover:text-white transition-colors drop-shadow-[0_1px_5px_rgba(0,0,0,0.95)]">
-                      {d.name}
-                    </h2>
-                    <span className="text-[9px] font-mono text-red-400/75 group-hover:text-red-300 tracking-[0.2em] uppercase transition-colors">
-                      {d.desc}
-                    </span>
+                {!activeUnlocked && (
+                  <div className="relative z-30 px-4 py-2 rounded-[2px] bg-[#0d0506]/92 border border-[#5c2324] shadow-[0_10px_28px_rgba(0,0,0,0.92)] text-center">
+                    <div className="font-['Cinzel',_serif] text-xs font-bold uppercase tracking-[0.24em] text-[#e5cfa8]">
+                      Lineage Sealed
+                    </div>
+                    <div className="mt-1 text-[10px] font-mono text-stone-400">
+                      {getLockHint(activeLineage.unlockTier)}
+                    </div>
                   </div>
-                  <div className="mt-1 text-[10px] font-mono font-bold uppercase tracking-[0.26em] text-stone-400 group-hover:text-red-400 transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.75)]">
+                )}
+              </div>
+
+              {/* Engraved Crimson Divider */}
+              <div className="relative z-10 shrink-0 w-4/5 h-px bg-gradient-to-r from-transparent via-[#6b1417]/80 to-transparent group-hover:via-red-500/85 transition-colors my-1.5" />
+
+              {/* Lineage Title & Diegetic Prompt */}
+              <div className="relative z-10 shrink-0 flex flex-col items-center text-center w-full">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="text-lg sm:text-xl font-['Cinzel',_serif] font-bold text-[#efe5d5] uppercase tracking-[0.24em] group-hover:text-white transition-colors drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                    {activeLineage.name}
+                  </h2>
+                  <span className="text-[10px] font-mono text-red-400/80 group-hover:text-red-300 tracking-[0.22em] uppercase transition-colors">
+                    {activeLineage.desc}
+                  </span>
+                </div>
+                {activeUnlocked ? (
+                  <div className="mt-1.5 text-[11px] font-mono font-bold uppercase tracking-[0.28em] text-stone-300 group-hover:text-red-400 transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.75)]">
                     [ BEGIN ]
                   </div>
-                </div>
+                ) : (
+                  <div className="mt-1.5 text-[10px] font-mono uppercase tracking-[0.22em] text-stone-500">
+                    [ SEALED ]
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          aria-label="Next lineage"
+          onClick={() => {
+            triggerSfx('draw');
+            setSlideDir('next');
+            setSelectedIdx((prev) => (prev + 1) % lineages.length);
+          }}
+          className="shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-[2px] bg-[#140708]/85 hover:bg-[#240b0d]/95 border border-[#4a1c1d] hover:border-red-500/80 text-[#dfd0bc] hover:text-white flex items-center justify-center text-lg font-bold shadow-[0_8px_20px_rgba(0,0,0,0.85)] cursor-pointer transition-all"
+        >
+          ›
+        </button>
+      </div>
+
+      {/* 7-Lineage Bottom Gallery Strip */}
+      <div className="relative z-10 shrink-0 grid grid-cols-7 gap-2 w-full max-w-[1060px] pb-1">
+        {lineages.map((d, idx) => {
+          const unlocked = isLineageUnlocked(d.unlockTier);
+          const cleared = (archive.clearedLineages || []).includes(d.id);
+          const isSelected = idx === selectedIdx;
+          return (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => {
+                if (idx === selectedIdx) return;
+                triggerSfx('draw');
+                navigateLineage(idx);
+              }}
+              className={`relative flex flex-col items-center justify-center px-2 py-2 rounded-[2px] border transition-all duration-200 cursor-pointer ${
+                isSelected
+                  ? 'bg-[#26090b]/92 border-red-500/90 shadow-[0_0_18px_rgba(185,28,28,0.35),inset_0_1px_0_rgba(255,220,180,0.1)] -translate-y-0.5'
+                  : unlocked
+                    ? 'bg-[#120607]/78 hover:bg-[#1d090b]/88 border-[#3d191b]/85 hover:border-[#8f3236]'
+                    : 'bg-[#0c0506]/72 hover:bg-[#150809]/82 border-[#291516]/80 opacity-70'
+              }`}
+            >
+              <div className="flex items-center gap-1">
+                {!unlocked && (
+                  <span className="text-[9px] text-amber-500/80" title={getLockHint(d.unlockTier)}>
+                    ⊘
+                  </span>
+                )}
+                <span
+                  className={`font-['Cinzel',_serif] text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.14em] truncate ${
+                    isSelected
+                      ? 'text-[#fff1d6]'
+                      : unlocked
+                        ? 'text-[#dfd1bc]'
+                        : 'text-stone-500'
+                  }`}
+                >
+                  {d.name}
+                </span>
+              </div>
+              <span
+                className={`mt-0.5 text-[8px] font-mono uppercase tracking-[0.18em] ${
+                  cleared
+                    ? 'text-red-400/90'
+                    : unlocked
+                      ? 'text-stone-400'
+                      : 'text-stone-600'
+                }`}
+              >
+                {cleared ? '✦ Sealed' : unlocked ? d.desc : 'Locked'}
+              </span>
+            </button>
           );
         })}
       </div>
@@ -488,7 +763,7 @@ export default function DeckSelectScreen({
                 </div>
               </div>
 
-              {/* 2x2 Grid of Carved Vow Tablets */}
+              {/* 2x5 Grid of Carved Vow Tablets */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-5">
                 {RITUAL_VOWS.map((vow: any) => {
                   const isActive = activeVows.includes(vow.id);
