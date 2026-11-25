@@ -52,6 +52,7 @@ export default function SplashScreen({
   const [pentagramReady, setPentagramReady] = React.useState(false);
   React.useEffect(() => {
     const img = new Image();
+    (img as any).fetchPriority = 'high';
     const done = () => setPentagramReady(true);
     img.onload = () => { (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(done); };
     img.onerror = done;
@@ -193,9 +194,25 @@ export default function SplashScreen({
               className="w-[420px] h-[420px] sm:w-[500px] sm:h-[500px] md:w-[560px] md:h-[560px] splash-pentagram-spin"
               style={{ willChange: 'transform' }}
             >
-              <img src={`${import.meta.env.BASE_URL}assets/text/pentagram.png`} alt="" draggable={false} className="w-full h-full object-contain select-none pointer-events-none" style={{ mixBlendMode: 'screen', opacity: 0.28 }} />
+              <img src={`${import.meta.env.BASE_URL}assets/text/pentagram.png`} alt="" draggable={false} fetchPriority="high" className="w-full h-full object-contain select-none pointer-events-none" style={{ mixBlendMode: 'screen', opacity: 0.28 }} />
             </div>
           </div>
+
+          {!pentagramReady && (
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none select-none px-4">
+              <div className="flex flex-col items-center gap-2.5 bg-[#0b090a]/75 border border-[#3a2a1e]/80 px-6 py-3.5 rounded-[2px] shadow-[0_12px_32px_rgba(0,0,0,0.9)]">
+                <div className="font-mono text-[11px] uppercase tracking-[0.28em] text-[#d6c2a5]/90 animate-pulse">
+                  Kindling Altar... {typeof ritualReadyProgress === 'number' ? `${ritualReadyProgress}%` : ''}
+                </div>
+                <div className="w-48 h-1 bg-[#1b1412] border border-[#3a2a1e]/70 overflow-hidden rounded-full">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#7f1d1d] via-[#dc2626] to-[#f4d78b] transition-all duration-300"
+                    style={{ width: `${Math.max(8, Number(ritualReadyProgress) || 0)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="relative z-20 flex flex-col items-center justify-center text-center max-w-4xl w-full mx-auto my-auto">
   
