@@ -191,104 +191,41 @@ interface ParchmentDecor {
 
 const renderCartographyProp = (d: ParchmentDecor) => {
   const transform = `translate(${d.x} ${d.y}) rotate(${d.rot}) scale(${d.scale})`;
-  const ink = '#231f24';
-  switch (d.kind) {
-    case 'obelisk':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M0 -15 L4.5 -9 L6 14 L-6 14 L-4.5 -9 Z" fill="rgba(35,31,36,0.16)" />
-          <path d="M0 -8 L0 9 M-2.8 -2 L2.8 -2" strokeWidth="0.95" />
-          <path d="M-9 14 L9 14 M-7 17 L7 17" strokeWidth="1" />
-        </g>
-      );
-    case 'reliquary':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M0 -15 L7 -5 L7 12 L-7 12 L-7 -5 Z" fill="rgba(35,31,36,0.12)" />
-          <path d="M0 -10 L4 -3 L4 9 L-4 9 L-4 -3 Z" strokeWidth="0.85" />
-          <path d="M0 -18 L0 -15 M-2 -16.5 L2 -16.5 M-9 12 L9 12" />
-          <circle cx="0" cy="2" r="1.5" fill={ink} />
-        </g>
-      );
-    case 'sigilring':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.05" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="0" cy="0" r="11" />
-          <circle cx="0" cy="0" r="7.5" strokeDasharray="2.5 2.5" strokeWidth="0.85" />
-          <path d="M0 -10 L8.5 5.5 L-8.5 5.5 Z" fill="rgba(35,31,36,0.1)" />
-          <circle cx="0" cy="0.5" r="1.5" fill={ink} />
-        </g>
-      );
-    case 'ribcage':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.25" strokeLinecap="round">
-          <path d="M0 -12 L0 12" />
-          <path d="M-9 -8 Q0 -11 9 -8 M-10 -3 Q0 -6 10 -3 M-9 2 Q0 -1 9 2 M-7 7 Q0 4 7 7" />
-        </g>
-      );
-    case 'skull':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M-7 1 C-8 -8 8 -8 7 1 C7 5 4 6 4 9 L-4 9 C-4 6 -7 5 -7 1 Z" fill="rgba(35,31,36,0.12)" />
-          <circle cx="-2.6" cy="0.5" r="1.4" fill={ink} />
-          <circle cx="2.6" cy="0.5" r="1.4" fill={ink} />
-          <path d="M0 3.2 L-0.8 4.8 L0.8 4.8 Z M-2 9 L-2 6.8 M0 9 L0 6.8 M2 9 L2 6.8" />
-        </g>
-      );
-    case 'cairn':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="rgba(35,31,36,0.14)" strokeWidth="1.15">
-          <ellipse cx="0" cy="8" rx="9" ry="3.5" />
-          <ellipse cx="-0.5" cy="3" rx="6.5" ry="2.8" />
-          <ellipse cx="0.5" cy="-1.5" rx="4.2" ry="2.1" />
-          <ellipse cx="0" cy="-5" rx="2.3" ry="1.4" />
-        </g>
-      );
-    case 'arch':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.2" strokeLinecap="round">
-          <path d="M-9 13 L-9 -1 Q-9 -10 0 -14 Q9 -10 9 -1 L9 13" />
-          <path d="M-6 13 L-6 0 Q-6 -7 0 -10 Q6 -7 6 0 L6 13" strokeWidth="0.8" />
-          <path d="M-12 13 L12 13" />
-        </g>
-      );
-    case 'cobweb':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="0.85">
-          <path d="M0 0 L16 0 M0 0 L14 8 M0 0 L8 14 M0 0 L0 16" />
-          <path d="M5 0 Q4.5 4.5 0 5 M10 0 Q9 9 0 10 M15 0 Q13.5 13.5 0 15" />
-        </g>
-      );
-    case 'candle':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.1" strokeLinecap="round">
-          <rect x="-3" y="-2" width="6" height="14" rx="1" fill="rgba(35,31,36,0.12)" />
-          <path d="M0 -4 Q2.8 -8 0 -12 Q-2.8 -8 0 -4 Z" fill="rgba(140,42,20,0.22)" />
-          <path d="M-7 12 L7 12" />
-        </g>
-      );
-    case 'spiral':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15" strokeLinecap="round">
-          <path d="M0 0 C2 0 2 3 0 3 C-4 3 -4 -4 0 -4 C6 -4 6 6 0 6 C-8 6 -8 -8 0 -8 C10 -8 10 10 0 10 C-12 10 -12 -12 0 -12" />
-        </g>
-      );
-    case 'fissure':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.2" strokeLinecap="round">
-          <path d="M-14 -4 L-6 -1 L-2 -6 L5 1 L13 -2 M-2 -6 L1 -12 M5 1 L7 8" />
-        </g>
-      );
-    case 'eclipse':
-      return (
-        <g key={d.id} transform={transform} opacity={d.opacity} stroke={ink} fill="none" strokeWidth="1.15">
-          <circle cx="0" cy="0" r="8" fill="rgba(35,31,36,0.2)" />
-          <circle cx="3" cy="-1.5" r="7" fill="#afa89d" stroke="none" />
-          <circle cx="0" cy="0" r="8" />
-          <path d="M0 -12 L0 -10 M0 10 L0 12 M-12 0 L-10 0 M10 0 L12 0" strokeWidth="0.9" />
-        </g>
-      );
+  let hash = 0;
+  for (let i = 0; i < d.id.length; i++) {
+    hash = (hash * 31 + d.id.charCodeAt(i)) | 0;
   }
+  const idx = Math.abs(hash) % 30;
+  const col = idx % 5;
+  const row = Math.floor(idx / 5);
+  const symbolOpacity = Math.min(0.75, Math.max(0.28, d.opacity * 1.35));
+
+  return (
+    <g
+      key={d.id}
+      transform={transform}
+      opacity={symbolOpacity}
+      style={{ mixBlendMode: 'screen' }}
+    >
+      <svg
+        x={-14}
+        y={-14}
+        width={28}
+        height={28}
+        viewBox={`${col * 20} ${row * 20} 20 20`}
+        overflow="hidden"
+      >
+        <image
+          href={`${import.meta.env.BASE_URL || './'}assets/text/symbols.png`}
+          x={0}
+          y={0}
+          width={100}
+          height={120}
+          preserveAspectRatio="none"
+        />
+      </svg>
+    </g>
+  );
 };
 
 const MapScreen: React.FC<MapScreenProps> = ({
@@ -734,7 +671,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                     className="w-full"
                     style={{
                       height: '520px',
-                      backgroundImage: `url(${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg)`,
+                      backgroundImage: `url(${import.meta.env.BASE_URL || './'}assets/text/fullmapbg.jpg)`,
                       backgroundSize: '100% 100%',
                       backgroundRepeat: 'no-repeat',
                       transform: tileIdx % 2 === 1 ? 'scaleY(-1)' : undefined,
@@ -833,14 +770,46 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   </g>
                 ))}
 
-                {/* Topographic Elevation Contours */}
-                {cartography.contours.map(ct => (
-                  <g key={ct.id} transform={`translate(${ct.cx} ${ct.cy}) rotate(${ct.rot})`} fill="none" stroke="#120e0b" strokeOpacity="0.38">
-                    <ellipse cx="0" cy="0" rx={ct.rx} ry={ct.ry} strokeWidth="1.15" strokeDasharray="5 4" />
-                    <ellipse cx="0" cy="0" rx={ct.rx * 0.66} ry={ct.ry * 0.66} strokeWidth="0.95" />
-                    <ellipse cx="0" cy="0" rx={ct.rx * 0.34} ry={ct.ry * 0.34} strokeWidth="0.8" strokeDasharray="3 3" />
-                  </g>
-                ))}
+                {/* Occult Sigils (replace topographic contour rings) */}
+                <defs>
+                  <filter id="sigilAlpha" colorInterpolationFilters="sRGB">
+                    <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  1.4 1.4 1.4 0 0" />
+                  </filter>
+                </defs>
+                {cartography.contours.map(ct => {
+                  let h = 0;
+                  for (let i = 0; i < ct.id.length; i++) h = (h * 31 + ct.id.charCodeAt(i)) | 0;
+                  const idx = Math.abs(h) % 30;
+                  const col = idx % 5;
+                  const row = Math.floor(idx / 5);
+                  const size = Math.min(64, Math.max(30, Math.max(ct.rx, ct.ry) * 0.75));
+                  return (
+                    <g
+                      key={ct.id}
+                      transform={`translate(${ct.cx} ${ct.cy}) rotate(${ct.rot})`}
+                      opacity={0.2}
+                    >
+                      <svg
+                        x={-size / 2}
+                        y={-size / 2}
+                        width={size}
+                        height={size}
+                        viewBox={`${col * 20} ${row * 20} 20 20`}
+                        overflow="hidden"
+                      >
+                        <image
+                          href={`${import.meta.env.BASE_URL || './'}assets/text/symbols.png`}
+                          x={0}
+                          y={0}
+                          width={100}
+                          height={120}
+                          preserveAspectRatio="none"
+                          filter="url(#sigilAlpha)"
+                        />
+                      </svg>
+                    </g>
+                  );
+                })}
 
                 {/* Left-Margin Mile-Marker Ticks */}
                 {Array.from({ length: mapData.rows }, (_, r) => {
@@ -901,7 +870,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                           <path
                             d={pathD}
                             fill="none"
-                            stroke={isTraced ? 'rgba(212, 165, 62, 0.48)' : 'rgba(165, 36, 26, 0.32)'}
+                            stroke={isTraced ? 'rgba(224, 178, 78, 0.58)' : 'rgba(212, 56, 42, 0.42)'}
                             strokeWidth={isTraced ? '4.8' : '3.6'}
                             vectorEffect="non-scaling-stroke"
                             strokeLinecap="round"
@@ -912,18 +881,18 @@ const MapScreen: React.FC<MapScreenProps> = ({
                           fill="none"
                           stroke={
                             isTraced
-                              ? '#8f160d'
+                              ? '#d93829'
                               : isWalked
-                                ? '#3b0b08'
+                                ? '#9e2a20'
                                 : isEdgeLockedOut
-                                  ? 'rgba(14, 11, 10, 0.36)'
+                                  ? 'rgba(185, 168, 146, 0.24)'
                                   : isActiveChoice
                                     ? hasActiveTrace
-                                      ? 'rgba(122, 20, 14, 0.5)'
-                                      : '#78140d'
+                                      ? 'rgba(214, 62, 48, 0.65)'
+                                      : '#c92c20'
                                     : hasActiveTrace
-                                      ? 'rgba(14, 11, 10, 0.48)'
-                                      : 'rgba(14, 11, 10, 0.86)'
+                                      ? 'rgba(204, 188, 164, 0.34)'
+                                      : 'rgba(218, 200, 174, 0.68)'
                           }
                           strokeWidth={
                             isTraced

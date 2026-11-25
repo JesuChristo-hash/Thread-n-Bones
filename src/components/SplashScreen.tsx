@@ -49,13 +49,22 @@ export default function SplashScreen({
   unlockedDiscordUrl
 }: SplashScreenProps) {
   const [introPhase, setIntroPhase] = React.useState<'pentagram' | 'title' | 'menu'>('pentagram');
+  const [pentagramReady, setPentagramReady] = React.useState(false);
+  React.useEffect(() => {
+    const img = new Image();
+    const done = () => setPentagramReady(true);
+    img.onload = () => { (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(done); };
+    img.onerror = done;
+    img.src = `${import.meta.env.BASE_URL}assets/text/pentagram.png`;
+  }, []);
 
   React.useEffect(() => {
+    if (!pentagramReady) return;
     const t = window.setTimeout(() => {
       setIntroPhase(prev => (prev === 'pentagram' ? 'title' : prev));
-    }, 800);
+    }, 1000);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [pentagramReady]);
 
   React.useEffect(() => {
     if (!showContinueModal) return;
@@ -76,7 +85,9 @@ export default function SplashScreen({
   return (
     <>
         <style>{`
-          @keyframes splashPentagramGlowIn {
+          @keyframes splashPentagramSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .splash-pentagram-spin { animation: splashPentagramSpin 120s linear infinite; will-change: transform; }
+        @keyframes splashPentagramGlowIn {
             0% { opacity: 0; transform: scale(0.9); filter: drop-shadow(0 0 0px rgba(220,38,38,0)); }
             65% { opacity: 1; transform: scale(1.02); filter: drop-shadow(0 0 26px rgba(220,38,38,0.65)); }
             100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 14px rgba(185,28,28,0.4)); }
@@ -176,28 +187,13 @@ export default function SplashScreen({
           {/* Centered Glowing Stylized SVG Pentagram with Esoteric Runes */}
           <div
             className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
-            style={{ animation: 'splashPentagramGlowIn 0.95s ease-out forwards' }}
+            style={pentagramReady ? { animation: 'splashPentagramGlowIn 0.95s ease-out forwards' } : { opacity: 0 }}
           >
             <div
-              className="w-[420px] h-[420px] sm:w-[500px] sm:h-[500px] md:w-[560px] md:h-[560px] animate-pentagram-rotate"
+              className="w-[420px] h-[420px] sm:w-[500px] sm:h-[500px] md:w-[560px] md:h-[560px] splash-pentagram-spin"
               style={{ willChange: 'transform' }}
             >
-              <svg viewBox="0 0 200 200" className="w-full h-full text-red-900/55">
-              {/* Main Outer Runes Border Ring */}
-              <circle cx="100" cy="100" r="94" fill="none" stroke="currentColor" strokeWidth="1.2" />
-              <circle cx="100" cy="100" r="90" fill="none" stroke="currentColor" strokeWidth="0.8" strokeDasharray="3, 4" />
-              
-              {/* Inner Pentagram Star Lines */}
-              <circle cx="100" cy="100" r="76" fill="none" stroke="currentColor" strokeWidth="1.0" />
-              <path 
-                d="M 100 24 L 144.7 161.4 L 27.6 76.4 L 172.4 76.4 L 55.3 161.4 Z" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="1.2" 
-                strokeLinejoin="round" 
-              />
-              <circle cx="100" cy="100" r="32" fill="none" stroke="currentColor" strokeWidth="0.6" strokeDasharray="4, 6" />
-            </svg>
+              <img src={`${import.meta.env.BASE_URL}assets/text/pentagram.png`} alt="" draggable={false} className="w-full h-full object-contain select-none pointer-events-none" style={{ mixBlendMode: 'screen', opacity: 0.28 }} />
             </div>
           </div>
 
@@ -209,12 +205,12 @@ export default function SplashScreen({
       introPhase === 'pentagram'
         ? 'opacity-0 pointer-events-none'
         : introPhase === 'title'
-          ? 'translate-y-8 sm:translate-y-10'
+          ? 'translate-y-0'
           : '-translate-y-2 sm:-translate-y-4'
     }`}
     style={
       introPhase !== 'pentagram'
-        ? { animation: 'splashAltarTitleIn 0.85s ease-out forwards' }
+        ? { animation: 'splashAltarTitleIn 0.85s ease-out forwards', background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.35) 45%, transparent 72%)' }
         : undefined
     }
   >
@@ -226,7 +222,7 @@ export default function SplashScreen({
       lineHeight: '0.92',
       fontVariantLigatures: 'none',
       WebkitTextSizeAdjust: '100%',
-      textShadow: '0 0 0.12em rgba(239, 68, 68, 0.4)'
+      textShadow: '0 0 0.12em rgba(239, 68, 68, 0.4), 0 0 0.45em rgba(0, 0, 0, 0.95)'
     }}
     className="text-red-500 font-bold animate-occult-pulse text-[clamp(4.2px,1.15vw,11px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-3 overflow-visible"
   >
@@ -249,7 +245,7 @@ export default function SplashScreen({
       lineHeight: '0.92',
       fontVariantLigatures: 'none',
       WebkitTextSizeAdjust: '100%',
-      textShadow: '0 0 0.12em rgba(239, 68, 68, 0.4)'
+      textShadow: '0 0 0.12em rgba(239, 68, 68, 0.4), 0 0 0.45em rgba(0, 0, 0, 0.95)'
     }}
     className="text-red-500 font-bold animate-occult-pulse text-[clamp(4.2px,1.15vw,11px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-1 overflow-visible my-0.5"
   >
@@ -269,7 +265,7 @@ export default function SplashScreen({
       lineHeight: '0.92',
       fontVariantLigatures: 'none',
       WebkitTextSizeAdjust: '100%',
-      textShadow: '0 0 0.12em rgba(220, 38, 38, 0.4)'
+      textShadow: '0 0 0.12em rgba(220, 38, 38, 0.4), 0 0 0.45em rgba(0, 0, 0, 0.95)'
     }}
     className="text-red-600 font-bold animate-occult-pulse text-[clamp(4.2px,1.15vw,11px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-3 overflow-visible"
   >
@@ -398,7 +394,7 @@ export default function SplashScreen({
 {introPhase === 'menu' && (
             <div
               className="flex flex-col items-center justify-center w-full"
-              style={{ animation: 'splashMenuRise 0.55s ease-out forwards' }}
+              style={{ animation: 'splashMenuRise 0.55s ease-out forwards', background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.3) 45%, transparent 72%)' }}
             >
             {/* Ritual Action Button */}
             <button
@@ -433,7 +429,7 @@ export default function SplashScreen({
                   lineHeight: '0.92',
                   fontVariantLigatures: 'none',
                   WebkitTextSizeAdjust: '100%',
-                  textShadow: '0 0 0.12em rgba(239, 68, 68, 0.4)'
+                  textShadow: '0 0 0.12em rgba(239, 68, 68, 0.4), 0 0 0.45em rgba(0, 0, 0, 0.95)'
                 }} 
                 className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[clamp(5.5px,0.9vw,8.5px)] whitespace-pre select-none p-2 overflow-visible"
               >
@@ -455,23 +451,49 @@ export default function SplashScreen({
         </button>
 
         {isRitualReady && (
-          <div className="mt-4 sm:mt-5 flex items-center justify-center gap-5 sm:gap-7 font-mono">
+          <div className="mt-4 sm:mt-5 flex items-center justify-center gap-6 sm:gap-9">
             <button
               type="button"
               onClick={() => setArchiveModalTab('COMPENDIUM')}
-              style={{ textShadow: '0 0 10px rgba(239, 68, 68, 0.55)' }}
-              className="bg-transparent border-0 px-2 py-1 text-[11px] sm:text-xs font-bold uppercase tracking-[0.32em] text-red-500/85 hover:text-red-300 hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer animate-occult-pulse"
+              className="group relative px-1 py-1 bg-transparent border-0 focus:outline-none transition-transform duration-150 active:scale-95"
             >
-              [ COMPENDIUM ]
+              <span
+                className="block font-['Cinzel',_serif] text-[12px] sm:text-[14px] font-bold uppercase tracking-[0.4em] text-red-500/70 transition-all duration-300 group-hover:text-red-300"
+                style={{ textShadow: '0 0 0.4em rgba(0,0,0,0.95), 0 0 12px rgba(185,28,28,0.45)' }}
+              >
+                Compendium
+              </span>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 -bottom-0.5 h-px w-0 -translate-x-1/2 bg-red-400/80 transition-all duration-300 group-hover:w-full"
+                style={{ boxShadow: '0 0 8px rgba(239,68,68,0.8)' }}
+              />
             </button>
-            <span className="text-red-800/70 text-[10px] select-none pointer-events-none">◆</span>
+            <span
+              aria-hidden="true"
+              className="animate-occult-pulse select-none pointer-events-none block w-[7px] h-[12px] sm:w-[8px] sm:h-[14px]"
+              style={{
+                background: 'radial-gradient(ellipse at 50% 70%, #ffd9a0 0%, #ef4444 40%, rgba(127,29,29,0.0) 75%)',
+                borderRadius: '50% 50% 50% 50% / 65% 65% 35% 35%',
+                filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.9))',
+              }}
+            />
             <button
               type="button"
               onClick={() => setArchiveModalTab('LEDGER')}
-              style={{ textShadow: '0 0 10px rgba(239, 68, 68, 0.55)' }}
-              className="bg-transparent border-0 px-2 py-1 text-[11px] sm:text-xs font-bold uppercase tracking-[0.32em] text-red-500/85 hover:text-red-300 hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer animate-occult-pulse"
+              className="group relative px-1 py-1 bg-transparent border-0 focus:outline-none transition-transform duration-150 active:scale-95"
             >
-              [ LEDGER ]
+              <span
+                className="block font-['Cinzel',_serif] text-[12px] sm:text-[14px] font-bold uppercase tracking-[0.4em] text-red-500/70 transition-all duration-300 group-hover:text-red-300"
+                style={{ textShadow: '0 0 0.4em rgba(0,0,0,0.95), 0 0 12px rgba(185,28,28,0.45)' }}
+              >
+                Ledger
+              </span>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 -bottom-0.5 h-px w-0 -translate-x-1/2 bg-red-400/80 transition-all duration-300 group-hover:w-full"
+                style={{ boxShadow: '0 0 8px rgba(239,68,68,0.8)' }}
+              />
             </button>
           </div>
         )}
