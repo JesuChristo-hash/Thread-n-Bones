@@ -8517,14 +8517,122 @@ export default function App() {
 
                       return (
                         <div key={uid} className={`group relative z-10 hover:z-[80] flex flex-col items-center select-none cursor-help ${isWeaver || isFoe ? '-translate-y-1.5' : ''}`}>
-                          {/* Physical Burlap Doll Container */}
-                          <div className={`relative flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.05] ${isDual ? 'w-[74px] h-[102px]' : 'w-[80px] h-[110px]'}`}>
-                            <img
-                              src={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
-                              alt={tooltipTitle}
-                              draggable={false}
-                              className={`w-full h-full object-contain pointer-events-none ${isWeaver || isFoe ? '-scale-x-100' : ''} ${dollFilterClass}`}
-                            />
+                          {/* Physical Stitched Burlap Doll Container */}
+                          <div className={`relative flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.05] ${isDual ? 'h-[102px]' : 'h-[110px]'} aspect-[235/347]`}>
+                            <div className={`relative w-full h-full pointer-events-none ${isWeaver || isFoe ? '-scale-x-100' : ''} ${dollFilterClass}`}>
+                              <img
+                                src={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
+                                alt={tooltipTitle}
+                                draggable={false}
+                                className="w-full h-full object-contain"
+                              />
+
+                              <svg
+                                viewBox="0 0 235 347"
+                                className="absolute inset-0 w-full h-full pointer-events-none"
+                                style={{
+                                  WebkitMaskImage: `url(${import.meta.env.BASE_URL || './'}assets/text/effigy.png)`,
+                                  maskImage: `url(${import.meta.env.BASE_URL || './'}assets/text/effigy.png)`,
+                                  WebkitMaskSize: '100% 100%',
+                                  maskSize: '100% 100%',
+                                }}
+                              >
+                                <defs>
+                                  <filter id={`${uid}-effigyBlur`} x="-30%" y="-30%" width="160%" height="160%">
+                                    <feGaussianBlur stdDeviation="2.4" />
+                                  </filter>
+                                  <radialGradient id={`${uid}-effigyCollar`} cx="50%" cy="50%" r="50%">
+                                    <stop offset="70%" stopColor="#1a0f07" stopOpacity="0" />
+                                    <stop offset="92%" stopColor="#5a3b1c" stopOpacity="0.32" />
+                                    <stop offset="100%" stopColor="#3a2410" stopOpacity="0.42" />
+                                  </radialGradient>
+                                  <clipPath id={`${uid}-effigyCrestClip2`}>
+                                    <circle cx="135" cy="189" r="30" />
+                                  </clipPath>
+                                  <radialGradient id={`${uid}-effigyBulge`} cx="36%" cy="30%" r="78%">
+                                    <stop offset="0%" stopColor="#fff" stopOpacity="0.3" />
+                                    <stop offset="45%" stopColor="#fff" stopOpacity="0" />
+                                    <stop offset="100%" stopColor="#000" stopOpacity="0.6" />
+                                  </radialGradient>
+                                </defs>
+
+                                <image
+                                  href={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
+                                  x="0"
+                                  y="0"
+                                  width="235"
+                                  height="347"
+                                  preserveAspectRatio="none"
+                                />
+
+                                {sigilName && (
+                                  <>
+                                    <g transform="translate(5 2) rotate(-14 130 187)">
+                                      <g transform="translate(130 187) scale(0.9 1) translate(-130 -187)">
+                                        <circle cx="130" cy="189" r="37" fill="#000" opacity="0.4" filter={`url(#${uid}-effigyBlur)`} />
+                                        <circle cx="130" cy="187" r="37" fill={`url(#${uid}-effigyCollar)`} />
+                                        <image
+                                          href={getSigilArtUrl(sigilName)}
+                                          x="101"
+                                          y="158"
+                                          width="58"
+                                          height="58"
+                                          preserveAspectRatio="xMidYMid meet"
+                                          style={{ imageRendering: 'pixelated' }}
+                                        />
+                                        <circle cx="130" cy="187" r="37" fill={`url(#${uid}-effigyBulge)`} />
+                                        <g strokeLinecap="round">
+                                          {Array.from({ length: 22 }, (_, i) => {
+                                            const ang = (i / 22) * Math.PI * 2;
+                                            const c = Math.cos(ang);
+                                            const sn = Math.sin(ang);
+                                            return (
+                                              <g key={`${uid}-crest-st-${i}`}>
+                                                <line x1={130 + 27.5 * c + 0.6} y1={187 + 27.5 * sn + 0.8} x2={130 + 37 * c + 0.6} y2={187 + 37 * sn + 0.8} stroke="#000" strokeOpacity="0.28" strokeWidth="1.4" />
+                                                <line x1={130 + 27.5 * c} y1={187 + 27.5 * sn} x2={130 + 37 * c} y2={187 + 37 * sn} stroke="#d8b46c" strokeOpacity="0.9" strokeWidth="1.05" />
+                                              </g>
+                                            );
+                                          })}
+                                        </g>
+                                      </g>
+                                    </g>
+                                    <image
+                                      href={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
+                                      x="0"
+                                      y="0"
+                                      width="235"
+                                      height="347"
+                                      preserveAspectRatio="none"
+                                      clipPath={`url(#${uid}-effigyCrestClip2)`}
+                                      opacity="0.5"
+                                      style={{ mixBlendMode: 'multiply' }}
+                                    />
+                                  </>
+                                )}
+                              </svg>
+
+                              {tribeName && (
+                                <div
+                                  className="absolute pointer-events-none flex items-center justify-center"
+                                  style={{
+                                    left: '43%',
+                                    top: '18%',
+                                    transform: 'translate(-50%, -50%)',
+                                    WebkitMaskImage: 'repeating-linear-gradient(32deg, #000 0 1.4px, rgba(0,0,0,0.55) 1.4px 2.6px), radial-gradient(ellipse at 46% 44%, #000 56%, rgba(0,0,0,0.3) 100%)',
+                                    maskImage: 'repeating-linear-gradient(32deg, #000 0 1.4px, rgba(0,0,0,0.55) 1.4px 2.6px), radial-gradient(ellipse at 46% 44%, #000 56%, rgba(0,0,0,0.3) 100%)',
+                                    WebkitMaskComposite: 'source-in',
+                                    maskComposite: 'intersect',
+                                  }}
+                                >
+                                  <div
+                                    className="[&>*]:scale-[1.2]"
+                                    style={{ filter: 'brightness(0.14) sepia(1) saturate(2.4) drop-shadow(-0.5px -0.5px 0.5px rgba(30,16,4,0.85)) drop-shadow(0.5px 0.5px 0.4px rgba(255,236,190,0.4))' }}
+                                  >
+                                    {TRIBE_EMBROIDERY[tribeName as Tribe] || <span className="text-xs">✦</span>}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {/* Compact Nameplate Under Doll */}
