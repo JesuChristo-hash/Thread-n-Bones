@@ -152,10 +152,10 @@ export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefi
       {hasFire && (
         <>
           <div
-            className="absolute inset-x-0 bottom-0 h-[56%] origin-bottom"
+            className="absolute inset-0 origin-bottom"
             style={{
               background:
-                'radial-gradient(ellipse at 50% 100%, rgba(249,115,22,0.58) 0%, rgba(220,38,38,0.36) 44%, rgba(153,27,27,0.14) 68%, transparent 86%)',
+                'radial-gradient(ellipse 95% 58% at 50% 100%, rgba(249,115,22,0.56) 0%, rgba(220,38,38,0.34) 38%, rgba(153,27,27,0.12) 64%, transparent 88%)',
               mixBlendMode: 'screen',
               animation: 'weatherFireGlow 4.8s ease-in-out infinite',
             }}

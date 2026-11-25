@@ -3662,7 +3662,7 @@ export default function EventScreens({ ctx }: { ctx: {
                 ? totemRewardChoices[selectedTotemRewardIdx].value
                 : activeTotem.body);
 
-        const renderHeadCutoutSvg = (tribe: string, highlighted: boolean) => {
+        const renderHeadCutoutSvg = (tribe: string, highlighted: boolean, asGroup = false) => {
           const strokeCol = highlighted ? '#f4d78b' : '#9a734a';
           const fillTop = highlighted ? '#2b1d12' : '#1f150d';
           const fillBot = highlighted ? '#160e09' : '#100a06';
@@ -3694,7 +3694,7 @@ export default function EventScreens({ ctx }: { ctx: {
           }
           const patId = `effigyPatchTex-${tribe}-${highlighted ? 'hi' : 'lo'}`;
           return (
-            <svg viewBox="0 0 180 184" className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-[0_12px_22px_rgba(0,0,0,0.92)]">
+            <svg viewBox="0 0 180 184" width={asGroup ? 180 : undefined} height={asGroup ? 184 : undefined} className={asGroup ? undefined : "absolute inset-0 w-full h-full pointer-events-none drop-shadow-[0_12px_22px_rgba(0,0,0,0.92)]"}>
               <defs>
                 <pattern id={patId} patternUnits="userSpaceOnUse" width="180" height="184">
                   <image
@@ -3712,7 +3712,8 @@ export default function EventScreens({ ctx }: { ctx: {
               <path d={outerPath} fill={`url(#${patId})`} />
               <path d={outerPath} fill={`url(#${gradId})`} stroke={strokeCol} strokeWidth={highlighted ? '2.4' : '1.7'} strokeLinejoin="round" />
               <path d={stitchPath} fill="none" stroke={highlighted ? '#f4d78b' : '#b48d59'} strokeWidth="1.2" strokeDasharray="4 3.5" opacity={highlighted ? '0.95' : '0.6'} />
-            </svg>
+            {asGroup && <path d={outerPath} fill="url(#effigyWrap)" />}
+              </svg>
           );
         };
 
@@ -3764,7 +3765,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       animation: effigyStitchingAnim ? 'effigyStitchPulse 0.9s ease-in-out' : undefined,
                     }}
                   >
-                    <div className="relative w-[148px] h-[208px] sm:w-[186px] sm:h-[260px] lg:w-[225px] lg:h-[315px] flex items-center justify-center select-none">
+                    <div className="relative h-[208px] sm:h-[260px] lg:h-[315px] aspect-[235/347] flex items-center justify-center select-none">
                       <img
                         src={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
                         alt="Stitched Effigy"
@@ -3772,39 +3773,142 @@ export default function EventScreens({ ctx }: { ctx: {
                         className="w-full h-full object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.95)]"
                       />
 
-                      {/* Head Tribal Brand Inked & Wrapped Across Doll Forehead */}
-                      <div className="absolute top-[17.5%] left-[46.5%] -translate-x-1/2 -translate-y-1/2 -rotate-[10deg] w-[96px] h-[96px] flex items-center justify-center pointer-events-none">
-                        {previewHead ? (
-                          <div
-                            className="relative w-full h-full flex items-center justify-center mix-blend-multiply opacity-[0.88]"
-                            style={{ transform: 'perspective(140px) rotateY(-10deg) rotateX(6deg)' }}
-                          >
-                            <div className="relative z-10 [&>*]:scale-[2.6] sm:[&>*]:scale-[3.25] lg:[&>*]:scale-[3.95] [filter:brightness(0.16)_contrast(1.85)_saturate(0.55)_drop-shadow(0_1px_1px_rgba(40,20,8,0.55))]">
-                              {TRIBE_EMBROIDERY[previewHead as Tribe] || <span className="text-lg">✦</span>}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="w-14 h-14 rounded-full border border-dashed border-[#4a321d]/75 bg-[#120b07]/45 flex items-center justify-center">
-                            <span className="text-[8px] font-mono uppercase tracking-[0.18em] text-[#e5cfa8]/70">Patch</span>
-                          </div>
-                        )}
-                      </div>
+                      {/* Sewn-on patches: one SVG in doll space, masked to the doll's own silhouette */}
+                      <svg
+                        viewBox="0 0 235 347"
+                        className="absolute inset-0 w-full h-full pointer-events-none"
+                        style={{
+                          WebkitMaskImage: `url(${import.meta.env.BASE_URL || './'}assets/text/effigy.png)`,
+                          maskImage: `url(${import.meta.env.BASE_URL || './'}assets/text/effigy.png)`,
+                          WebkitMaskSize: '100% 100%',
+                          maskSize: '100% 100%',
+                        }}
+                      >
+                        <defs>
+                          <filter id="effigyFray" x="-10%" y="-10%" width="120%" height="120%">
+                            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="n" />
+                            <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G" />
+                          </filter>
+                          <filter id="effigyBlur" x="-30%" y="-30%" width="160%" height="160%">
+                            <feGaussianBlur stdDeviation="2.4" />
+                          </filter>
+                          <radialGradient id="effigyWrap" cx="50%" cy="46%" r="62%">
+                            <stop offset="52%" stopColor="#000" stopOpacity="0" />
+                            <stop offset="100%" stopColor="#000" stopOpacity="0.6" />
+                          </radialGradient>
+                          <radialGradient id="effigyCollar" cx="50%" cy="50%" r="50%">
+                            <stop offset="70%" stopColor="#1a0f07" stopOpacity="0" />
+                            <stop offset="92%" stopColor="#5a3b1c" stopOpacity="0.32" />
+                            <stop offset="100%" stopColor="#3a2410" stopOpacity="0.42" />
+                          </radialGradient>
+                          <clipPath id="effigyCrestClip">
+                            <circle cx="129" cy="198" r="35" />
+                          </clipPath>
+                        </defs>
 
-                      {/* Torso Crest PNG Directly on Doll Chest */}
-                      <div className="absolute top-[42%] left-[55.5%] -translate-x-1/2 -rotate-[14deg] w-[86px] h-[86px] flex items-center justify-center pointer-events-none">
-                        {previewBody ? (
-                          <img
-                            src={getSigilArtUrl(previewBody)}
-                            alt={previewBody}
-                            className="w-[46px] h-[46px] sm:w-[58px] sm:h-[58px] lg:w-[70px] lg:h-[70px] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.92)]"
-                            style={{ imageRendering: 'pixelated' }}
-                          />
-                        ) : (
-                          <div className="w-16 h-16 rounded-full border border-dashed border-[#4a321d]/75 bg-[#120b07]/45 flex items-center justify-center">
-                            <span className="text-[8px] font-mono uppercase tracking-[0.18em] text-[#e5cfa8]/70">Crest</span>
-                          </div>
+                        {/* base copy of the doll so multiply has something to blend against */}
+                        <image
+                          href={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
+                          x="0"
+                          y="0"
+                          width="235"
+                          height="347"
+                          preserveAspectRatio="none"
+                        />
+
+                        {!previewHead && (
+                          <g>
+                            <circle cx="101" cy="62" r="22" fill="#120b07" fillOpacity="0.4" stroke="#4a321d" strokeOpacity="0.8" strokeDasharray="3 3" />
+                            <text x="101" y="64" textAnchor="middle" fontSize="6" fontFamily="monospace" fill="#e5cfa8" fillOpacity="0.7" letterSpacing="1">PATCH</text>
+                          </g>
                         )}
-                      </div>
+
+                        {/* Torso crest */}
+                        <defs>
+                          <clipPath id="effigyCrestClip2">
+                            <circle cx="135" cy="189" r="30" />
+                          </clipPath>
+                          <radialGradient id="effigyBulge" cx="36%" cy="30%" r="78%">
+                            <stop offset="0%" stopColor="#fff" stopOpacity="0.3" />
+                            <stop offset="45%" stopColor="#fff" stopOpacity="0" />
+                            <stop offset="100%" stopColor="#000" stopOpacity="0.6" />
+                          </radialGradient>
+                        </defs>
+                        {previewBody ? (
+                          <>
+                            <g transform="translate(5 2) rotate(-14 130 187)">
+                              <g transform="translate(130 187) scale(0.9 1) translate(-130 -187)">
+                                <circle cx="130" cy="189" r="37" fill="#000" opacity="0.4" filter="url(#effigyBlur)" />
+                                <circle cx="130" cy="187" r="37" fill="url(#effigyCollar)" />
+                                <image
+                                  href={getSigilArtUrl(previewBody)}
+                                  x="101"
+                                  y="158"
+                                  width="58"
+                                  height="58"
+                                  preserveAspectRatio="xMidYMid meet"
+                                  style={{ imageRendering: 'pixelated' }}
+                                />
+                                <circle cx="130" cy="187" r="37" fill="url(#effigyBulge)" />
+                                <g strokeLinecap="round">
+                                  {Array.from({ length: 22 }, (_, i) => {
+                                    const ang = (i / 22) * Math.PI * 2;
+                                    const c = Math.cos(ang);
+                                    const sn = Math.sin(ang);
+                                    return (
+                                      <g key={'crest-st-' + i}>
+                                        <line x1={130 + 27.5 * c + 0.6} y1={187 + 27.5 * sn + 0.8} x2={130 + 37 * c + 0.6} y2={187 + 37 * sn + 0.8} stroke="#000" strokeOpacity="0.28" strokeWidth="1.4" />
+                                        <line x1={130 + 27.5 * c} y1={187 + 27.5 * sn} x2={130 + 37 * c} y2={187 + 37 * sn} stroke="#d8b46c" strokeOpacity="0.9" strokeWidth="1.05" />
+                                      </g>
+                                    );
+                                  })}
+                                </g>
+                              </g>
+                            </g>
+                            <image
+                              href={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
+                              x="0"
+                              y="0"
+                              width="235"
+                              height="347"
+                              preserveAspectRatio="none"
+                              clipPath="url(#effigyCrestClip2)"
+                              opacity="0.5"
+                              style={{ mixBlendMode: 'multiply' }}
+                            />
+                          </>
+                        ) : (
+                          <g>
+                            <circle cx="130" cy="187" r="28" fill="#120b07" fillOpacity="0.4" stroke="#4a321d" strokeOpacity="0.8" strokeDasharray="3 3" />
+                            <text x="130" y="189" textAnchor="middle" fontSize="5" fontFamily="monospace" fill="#e5cfa8" fillOpacity="0.7" letterSpacing="1">CREST</text>
+                          </g>
+                        )}
+                      </svg>
+
+                      {/* Tribe icon: embroidered into the skull, inset and curved */}
+                      {previewHead && (
+                        <div
+                          className="absolute pointer-events-none flex items-center justify-center"
+                          style={{
+                            left: '45%',
+                            top: '17%',
+                            width: '40%',
+                            aspectRatio: '1 / 1',
+                            transform: 'translate(-50%, -50%) perspective(30px) rotateZ(-9deg) rotateX(6deg)',
+                            WebkitMaskImage: 'repeating-linear-gradient(32deg, #000 0 1.4px, rgba(0,0,0,0.55) 1.4px 2.6px), radial-gradient(ellipse at 46% 44%, #000 56%, rgba(0,0,0,0.3) 100%)',
+                            maskImage: 'repeating-linear-gradient(32deg, #000 0 1.4px, rgba(0,0,0,0.55) 1.4px 2.6px), radial-gradient(ellipse at 46% 44%, #000 56%, rgba(0,0,0,0.3) 100%)',
+                            WebkitMaskComposite: 'source-in',
+                            maskComposite: 'intersect',
+                          }}
+                        >
+                          <div
+                            className="[&>*]:scale-[2.4] sm:[&>*]:scale-[3.1] lg:[&>*]:scale-[4]"
+                            style={{ filter: 'brightness(0.14) sepia(1) saturate(2.4) drop-shadow(-1px -1px 0.7px rgba(30,16,4,0.85)) drop-shadow(1px 1px 0.5px rgba(255,236,190,0.4))' }}
+                          >
+                            {TRIBE_EMBROIDERY[previewHead as Tribe] || <span className="text-lg">✦</span>}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                   </div>

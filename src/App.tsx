@@ -516,6 +516,16 @@ export default function App() {
     accent: 'crimson' | 'violet' | 'amber' | 'emerald';
   } | null>(null);
   const bossIntroTimerRef = useRef<number | null>(null);
+  const phaseTransitionResolveRef = useRef<(() => void) | null>(null);
+
+  const dismissPhaseTransition = useCallback(() => {
+    setIsPhaseTransition(false);
+    if (phaseTransitionResolveRef.current) {
+      const resolve = phaseTransitionResolveRef.current;
+      phaseTransitionResolveRef.current = null;
+      resolve();
+    }
+  }, []);
 
   const triggerBossIntroBanner = useCallback((bType: 'BoneLord' | 'The Weaver' | 'Zealot' | 'The Begotten') => {
     if (bossIntroTimerRef.current) {
@@ -551,15 +561,32 @@ export default function App() {
     };
     const m = metaMap[bType];
     setBossIntroBanner({ type: bType, ...m });
-    bossIntroTimerRef.current = window.setTimeout(() => {
-      setBossIntroBanner(null);
-      bossIntroTimerRef.current = null;
-    }, bType === 'BoneLord' ? 3400 : 2800);
   }, []);
   const [isBloodMoonDropping, setIsBloodMoonDropping] = useState<boolean>(false);
   const [isOverkill, setIsOverkill] = useState<boolean>(false);
   // Non-boss victory: CONTINUE prompt on the board replaces the "Enemy Felled" modal
   const [battleWonAction, setBattleWonAction] = useState<(() => void) | null>(null);
+  const [battleWonIsBoss, setBattleWonIsBoss] = useState<boolean>(false);
+  const [zealotParalyzedBanner, setZealotParalyzedBanner] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!bossIntroBanner && !isPhaseTransition && !zealotParalyzedBanner) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.code === 'Space' || e.key === ' ') && !e.repeat) {
+        e.preventDefault();
+        if (bossIntroBanner) {
+          setBossIntroBanner(null);
+        } else if (zealotParalyzedBanner) {
+          setZealotParalyzedBanner(false);
+          handleEndTurn(true);
+        } else if (isPhaseTransition) {
+          dismissPhaseTransition();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [bossIntroBanner, isPhaseTransition, zealotParalyzedBanner, dismissPhaseTransition]);
   useEffect(() => {
     if (!battleWonAction) return;
     const onKey = (e: KeyboardEvent) => {
@@ -1704,7 +1731,7 @@ export default function App() {
         }
       }
 
-      if (oppBoard[laneIndex]?.sigils.includes('Stinky')) {
+      if (oppBoard[laneIndex]?.sigils.includes('Stinky') || oppBoard.some(c => c?.isMassive && c.sigils.includes('Stinky'))) {
         stinkyPenalty = 1;
       }
     }
@@ -1766,10 +1793,7 @@ export default function App() {
     }
     setHand(prev => [...prev, card]);
     if (bossState.type === 'Zealot' && bossState.phase === 2 && bossState.skipNextPlayerTurn) {
-      setBossState(prev => ({
-        ...prev,
-        activeDialogue: "Your prayers fall on deaf ears, heretic! Encased in stone and paralyzed by grace—watch as my serpent claims your strongest!",
-      }));
+      setZealotParalyzedBanner(true);
     }
 
     // --- ITEM EFFECT: Flaming Skeleton Spread at End of Opponent Turn ---
@@ -3277,7 +3301,7 @@ export default function App() {
       // Omnistrike: strikes each opposing occupied space from left to right; if none, strikes directly once
       let targets: number[] = [];
       if (pCard.sigils.includes('Omnistrike')) {
-        const occupiedLanes = [0, 1, 2, 3].filter(l => currEBoard[l] !== null);
+        const occupiedLanes = [0, 1, 2, 3].filter(l => currEBoard[l] !== null && !currEBoard[l]!.sigils.includes('Waterborne'));
         targets = occupiedLanes.length > 0 ? occupiedLanes : [lane];
       } else {
         targets = buildStrikeTargets(lane, pCard.sigils);
@@ -3651,9 +3675,10 @@ export default function App() {
           setIsPhaseTransition(true);
           triggerSfx('victory');
 
-          // Pause between phases with phase transition display
-          await sleep(2500);
-          setIsPhaseTransition(false);
+          // Pause between phases until the player clicks or presses Space
+          await new Promise<void>((resolve) => {
+            phaseTransitionResolveRef.current = resolve;
+          });
 
           if (pendingBossGrizzlyWall) {
             setPendingBossGrizzlyWall(false);
@@ -3727,7 +3752,7 @@ export default function App() {
             setBossState(prev => ({
               ...prev,
               phase: 2,
-              activeDialogue: "The spinning wheel on her Loom is a whirlwind, as she quickly turns to face you. Her eyes bloodshot and fixated on the cards.",
+              activeDialogue: null,
             }));
 
             addLog("=== THE WEAVER: PHASE 2 INITIALIZED ===");
@@ -3827,7 +3852,9 @@ export default function App() {
             setBossState(prev => ({
               ...prev,
               phase: 2,
-              activeDialogue: "M-my Press! I won't be bested by the likes of you!",
+              activeDialogue: null,
+              bgHex: '#2AA331',
+              bgTransitionDuration: 6,
             }));
             addLog("=== THE BEGOTTEN: PHASE 2 - ROTARY PRESS INITIALIZED ===");
             addLog(`The Press slams down: Mirror Print in lane ${targetCol + 1} and Stamped Amalgams flank the board!`);
@@ -4133,7 +4160,7 @@ export default function App() {
       // Omnistrike: strikes each opposing occupied space from left to right; if none, strikes directly once
       let targets: number[] = [];
       if (eCard.sigils.includes('Omnistrike')) {
-        const occupiedLanes = [0, 1, 2, 3].filter(l => currPBoard[l] !== null);
+        const occupiedLanes = [0, 1, 2, 3].filter(l => currPBoard[l] !== null && !currPBoard[l]!.sigils.includes('Waterborne'));
         targets = occupiedLanes.length > 0 ? occupiedLanes : [lane];
       } else {
         targets = buildStrikeTargets(lane, eCard.sigils);
@@ -4476,7 +4503,7 @@ export default function App() {
 
               const targets = pCard.sigils.includes('Omnistrike')
                 ? (() => {
-                    const occ = [0, 1, 2, 3].filter(l => currEBoard[l] !== null);
+                    const occ = [0, 1, 2, 3].filter(l => currEBoard[l] !== null && !currEBoard[l]!.sigils.includes('Waterborne'));
                     return occ.length > 0 ? occ : [pLane];
                   })()
                 : buildStrikeTargets(pLane, pCard.sigils);
@@ -5013,20 +5040,20 @@ export default function App() {
         }
       }
     };
-    if (!isBossMatch) {
-      setEnemyBoard(prev => prev.map(c => (c ? { ...c, isDying: true } : null)));
-      setEnemyQueue(prev => prev.map(c => (c ? { ...c, isDying: true } : null)));
-      setTimeout(() => {
-        setEnemyBoard([null, null, null, null]);
-        setEnemyQueue([null, null, null, null]);
-        setBattleWonAction(() => () => {
-          setBattleWonAction(null);
-          felledAlert.onAction();
-        });
-      }, 450);
-    } else {
-      setModalAlert(felledAlert);
-    }
+    setEnemyBoard(prev => prev.map(c => (c ? { ...c, isDying: true } : null)));
+    setEnemyQueue(prev => prev.map(c => (c ? { ...c, isDying: true } : null)));
+    setTimeout(() => {
+      setEnemyBoard([null, null, null, null]);
+      setEnemyQueue([null, null, null, null]);
+      setBattleWonIsBoss(isBossMatch);
+      setBattleWonAction(() => () => {
+        setBattleWonAction(null);
+    setBattleWonIsBoss(false);
+    setZealotParalyzedBanner(false);
+        setBattleWonIsBoss(false);
+        felledAlert.onAction();
+      });
+    }, 450);
   };
 
   const handleLossMatch = () => {
@@ -5323,8 +5350,7 @@ export default function App() {
           ChiptuneAudio.playBattle?.(1.4);
         }
       }
-      setIsPhaseTransition(true);
-      setTimeout(() => setIsPhaseTransition(false), 2500);
+
 
       if (bossType === 'Zealot') {
         const playerStoneCol = Math.floor(Math.random() * 4);
@@ -8141,7 +8167,7 @@ export default function App() {
                   {bossIntroBanner.subtitle}
                 </p>
                 <div className="mt-3 text-[9px] font-mono uppercase tracking-[0.28em] text-[#9b8265]/75">
-                  Click anywhere to face the altar
+                  Click or press Space to face the altar
                 </div>
               </div>
             </div>
@@ -8162,10 +8188,15 @@ export default function App() {
               ? (bossPhase === 3
                   ? 'The ossuary sky splits open — endure the Eclipse.'
                   : 'Power and flesh invert beneath the Bone Lord’s gaze.')
-              : 'The gauge resets. Brace for the second movement.';
+              : bossState.type === 'Zealot'
+                ? 'Stone walls encase your field. Your next turn is seized.'
+                : 'The gauge resets. Brace for the second movement.';
 
             return (
-              <div className="fixed inset-0 z-[58] pointer-events-none flex items-center justify-center px-4 select-none">
+              <div
+                onClick={dismissPhaseTransition}
+                className="fixed inset-0 z-[58] pointer-events-auto cursor-pointer bg-black/45 flex items-center justify-center px-4 select-none"
+              >
                 <div className="w-full max-w-2xl relative py-6 px-8 text-center border-y border-red-700/80 bg-[linear-gradient(90deg,transparent_0%,rgba(14,5,6,0.95)_16%,rgba(28,7,9,0.96)_50%,rgba(14,5,6,0.95)_84%,transparent_100%)] shadow-[0_0_60px_rgba(153,27,27,0.55)] animate-menu-fade-in">
                   <div className="flex items-center justify-center gap-3 mb-1.5">
                     <span className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent to-red-500/80" />
@@ -8180,10 +8211,39 @@ export default function App() {
                   <p className="mt-1.5 font-['Cinzel',_serif] italic text-xs sm:text-sm tracking-[0.08em] text-[#d6b79c]/90">
                     {phaseSub}
                   </p>
+                  <div className="mt-3 text-[9px] font-mono uppercase tracking-[0.28em] text-[#9b8265]/80">
+                    Click or press Space to continue
+                  </div>
                 </div>
               </div>
             );
           })()}
+          {/* Zealot Phase 2 Diegetic Turn-Skip Banner */}
+          {zealotParalyzedBanner && (
+            <div
+              onClick={() => {
+                setZealotParalyzedBanner(false);
+                handleEndTurn(true);
+              }}
+              className="fixed inset-0 z-[59] pointer-events-auto cursor-pointer bg-black/45 flex items-center justify-center px-4 select-none"
+            >
+              <div className="w-full max-w-xl relative py-5 px-8 text-center border-y border-red-700/85 bg-[linear-gradient(90deg,transparent_0%,rgba(14,5,6,0.94)_16%,rgba(32,6,8,0.96)_50%,rgba(14,5,6,0.94)_84%,transparent_100%)] shadow-[0_0_50px_rgba(185,28,28,0.55)] animate-menu-fade-in">
+                <div className="font-mono text-[10px] font-bold uppercase tracking-[0.34em] text-red-400 mb-1">
+                  ✦ The Zealot&rsquo;s Grace ✦
+                </div>
+                <div className="font-['Cinzel',_serif] font-black text-xl sm:text-3xl uppercase tracking-[0.22em] text-[#f5e6cc] drop-shadow-[0_2px_16px_rgba(220,38,38,0.8)]">
+                  Turn Seized
+                </div>
+                <p className="mt-1 font-['Cinzel',_serif] italic text-xs sm:text-sm tracking-[0.08em] text-stone-300/90">
+                  Paralyzed in stone — the serpent strikes unopposed.
+                </p>
+                <div className="mt-3 text-[9px] font-mono uppercase tracking-[0.28em] text-[#9b8265]/80">
+                  Click or press Space to continue
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Dialogue Popup Overlay (Modal backdrop shields table from input during speech) */}
           {bossState.activeDialogue && (
         <div
@@ -8902,7 +8962,9 @@ export default function App() {
                                       <svg
                                         className={`w-7 h-7 sm:w-8 sm:h-8 pointer-events-none select-none transition-colors duration-500 ${
                                           battleWonAction
-                                            ? 'text-red-500 animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]'
+                                            ? battleWonIsBoss
+                                              ? 'text-[#f3cf7a] animate-pulse drop-shadow-[0_0_12px_rgba(234,179,8,0.95)]'
+                                              : 'text-red-500 animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]'
                                             : 'text-[#c4a47c]/80 drop-shadow-[0_3px_5px_rgba(0,0,0,0.95)]'
                                         }`}
                                         style={{ transform: battleWonAction ? 'scaleY(-1)' : 'scaleY(1)', transition: 'transform 0.6s ease-in-out, color 0.5s' }}
@@ -9080,13 +9142,30 @@ export default function App() {
                                );
                              })}
                              {battleWonAction && (
-                               <button
-                                 onClick={battleWonAction}
-                                 className="absolute inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-fit z-[60] px-10 py-3 font-['Cinzel',_serif] font-black text-3xl sm:text-4xl uppercase tracking-[0.3em] text-red-500 hover:text-red-300 bg-black/55 border-y border-red-700/70 animate-pulse cursor-pointer select-none"
-                                 style={{ textShadow: '0 0 22px rgba(239,68,68,0.95), 0 0 6px rgba(0,0,0,1)' }}
-                               >
-                                 CONTINUE
-                               </button>
+                               battleWonIsBoss ? (
+                                 <button
+                                   onClick={battleWonAction}
+                                   className="absolute inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-full max-w-xl z-[60] py-4 px-8 flex flex-col items-center justify-center gap-1 border-y border-[#d4af37]/85 bg-[linear-gradient(90deg,transparent_0%,rgba(16,4,5,0.92)_18%,rgba(44,8,10,0.95)_50%,rgba(16,4,5,0.92)_82%,transparent_100%)] shadow-[0_0_55px_rgba(185,28,28,0.65)] hover:border-[#fde68a] cursor-pointer select-none group transition-all"
+                                 >
+                                   <span className="font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.38em] text-[#f3cf7a] drop-shadow-[0_0_10px_rgba(234,179,8,0.75)]">
+                                     ✦ {bossState.type === 'Zealot' ? 'The Zealot' : bossState.type} Felled ✦
+                                   </span>
+                                   <span
+                                     className="font-['Cinzel',_serif] font-black text-3xl sm:text-4xl uppercase tracking-[0.32em] text-red-400 group-hover:text-[#fff3ce] animate-pulse transition-colors"
+                                     style={{ textShadow: '0 0 26px rgba(239,68,68,0.95), 0 0 10px rgba(212,175,55,0.55), 0 2px 6px rgba(0,0,0,1)' }}
+                                   >
+                                     CLAIM SPOILS
+                                   </span>
+                                 </button>
+                               ) : (
+                                 <button
+                                   onClick={battleWonAction}
+                                   className="absolute inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-fit z-[60] px-10 py-3 font-['Cinzel',_serif] font-black text-3xl sm:text-4xl uppercase tracking-[0.3em] text-red-500 hover:text-red-300 bg-black/55 border-y border-red-700/70 animate-pulse cursor-pointer select-none"
+                                   style={{ textShadow: '0 0 22px rgba(239,68,68,0.95), 0 0 6px rgba(0,0,0,1)' }}
+                                 >
+                                   CONTINUE
+                                 </button>
+                               )
                              )}
                            </div>
                          </>
@@ -9605,9 +9684,7 @@ export default function App() {
       onUseItem={handleUseItem}
     />
     {(() => {
-      const winThreshold = typeof getRequiredScaleWinDamage === 'function' ? getRequiredScaleWinDamage() : 5;
-      const liveBattleOverkill = Math.max(0, scale - winThreshold);
-      const displayBloodOz = (totalOverkillDamage || 0) + (isOverkill ? 0 : liveBattleOverkill);
+      const displayBloodOz = totalOverkillDamage || 0;
       return (
         <div className="flex flex-col items-center mt-7">
           <BloodBankVessel displayBloodOz={displayBloodOz} isOverkill={isOverkill} tier={jarTier} />
