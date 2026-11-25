@@ -8846,7 +8846,7 @@ export default function App() {
                         </button>
 
                       <pre
-                        style={{ fontFamily: '"Courier New", Courier, monospace', letterSpacing: '0px' }}
+                        style={{ fontFamily: '"ArtMono", "DejaVu Sans Mono", monospace', letterSpacing: '0px' }}
                         className={`text-[5px] leading-[4.5px] whitespace-pre select-none pointer-events-none origin-top mt-1.5 transition-all duration-200 text-center ${
                           isTalismanPricked
                             ? 'scale-[0.38] text-red-400 font-bold drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]'

@@ -217,7 +217,7 @@ export default function SplashScreen({
   {/* THREAD */}
   <pre 
     style={{ 
-      fontFamily: '"Noto Sans Mono", "Courier New", Courier, monospace', 
+      fontFamily: '"ArtMono", "DejaVu Sans Mono", monospace', 
       letterSpacing: '0px', 
       lineHeight: '0.92',
       fontVariantLigatures: 'none',
@@ -240,7 +240,7 @@ export default function SplashScreen({
   {/* & (Centered) */}
   <pre 
     style={{ 
-      fontFamily: '"Noto Sans Mono", "Courier New", Courier, monospace', 
+      fontFamily: '"ArtMono", "DejaVu Sans Mono", monospace', 
       letterSpacing: '0px', 
       lineHeight: '0.92',
       fontVariantLigatures: 'none',
@@ -260,7 +260,7 @@ export default function SplashScreen({
   {/* BONES (Centered) */}
   <pre 
     style={{ 
-      fontFamily: '"Noto Sans Mono", "Courier New", Courier, monospace', 
+      fontFamily: '"ArtMono", "DejaVu Sans Mono", monospace', 
       letterSpacing: '0px', 
       lineHeight: '0.92',
       fontVariantLigatures: 'none',
@@ -424,7 +424,7 @@ export default function SplashScreen({
             >
               <pre 
                 style={{ 
-                  fontFamily: '"Noto Sans Mono", "Courier New", Courier, monospace', 
+                  fontFamily: '"ArtMono", "DejaVu Sans Mono", monospace', 
                   letterSpacing: '0px', 
                   lineHeight: '0.92',
                   fontVariantLigatures: 'none',
