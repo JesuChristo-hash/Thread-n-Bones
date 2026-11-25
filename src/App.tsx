@@ -1309,6 +1309,7 @@ export default function App() {
         `${BASE}/assets/text/blood04.png`,
         `${BASE}/assets/text/bloodbath.png`,
         `${BASE}/assets/text/symbols.png`,
+        `${BASE}/assets/text/plinth.png`,
         `${BASE}/assets/text/pentagram.png`,
         `${BASE}/assets/cardbases/card_base.png`,
         `${BASE}/assets/cardbases/cardbacks.png`,
@@ -8609,6 +8610,18 @@ export default function App() {
                               : 'border-[#0a090b] group-hover:border-[#b91c1c]/90 group-hover:shadow-[0_0_6px_rgba(185,28,28,0.4)]'
                           }`} />
 
+                          {/* Pentagram PNG: black at rest, lit on hover/prick */}
+                          <img
+                            src={`${import.meta.env.BASE_URL || './'}assets/text/plinth.png`}
+                            alt=""
+                            draggable={false}
+                            className={`absolute inset-[7%] w-[86%] h-[86%] object-contain pointer-events-none select-none transition-all duration-200 ${
+                              isTalismanPricked
+                                ? 'brightness-110 saturate-150 drop-shadow-[0_0_4px_rgba(255,120,120,1)] drop-shadow-[0_0_14px_rgba(239,68,68,1)] drop-shadow-[0_0_32px_rgba(220,38,38,0.95)]'
+                                : 'brightness-[0.12] opacity-90 group-hover:brightness-110 group-hover:saturate-150 group-hover:opacity-100 group-hover:drop-shadow-[0_0_4px_rgba(255,120,120,1)] group-hover:drop-shadow-[0_0_14px_rgba(239,68,68,1)] group-hover:drop-shadow-[0_0_32px_rgba(220,38,38,0.95)]'
+                            }`}
+                          />
+
                           {/* Inner Core SVG */}
                           <svg viewBox="0 0 100 100" className="w-[96px] h-[96px] sm:w-[116px] sm:h-[116px] overflow-visible pointer-events-none transition-transform duration-150">
                             <defs>
@@ -8646,21 +8659,6 @@ export default function App() {
                                 S̴̵̷A̸̷C̴̵̷R̴̵̷I̸̷F̴̵̷I̸̷C̴̵̷I̸̷U̴̵̷M̸̷ • M̴̵̷O̸̷R̴̵̷T̸̷I̸̷S̴̵̷ • S̴̵̷A̸̷N̴̵̷G̸̷U̴̵̷I̸̷S̴̵̷ • ᚛ᛟ̴̵̷ᛋ̴̵̷ᚱ̴̵̷ᛏ̴̵̷ᚦ̴̵̷᚜ • V̴̵̷O̸̷I̴̵̷D̸̷ • S̴̵̷A̸̷C̴̵̷R̴̵̷I̸̷F̴̵̷I̸̷C̴̵̷I̸̷U̴̵̷M̸̷ • M̴̵̷O̸̷R̴̵̷T̸̷I̸̷S̴̵̷ • S̴̵̷A̸̷N̴̵̷G̸̷U̴̵̷I̸̷S̴̵̷ • ᚛ᛟ̴̵̷ᛋ̴̵̷ᚱ̴̵̷ᛏ̴̵̷ᚦ̴̵̷᚜ • V̴̵̷O̸̷I̴̵̷D̸̷ •
                               </textPath>
                             </text>
-
-                            {/* Pentagram Star */}
-                            <path
-                              d="M 50 12 L 72.3 80.7 L 13.9 38.3 L 86.1 38.3 L 27.7 80.7 Z"
-                              fill={isTalismanPricked ? "#991b1b" : "transparent"}
-                              stroke={isTalismanPricked ? "#ef4444" : phase === 'PLAY' ? "#0a090b" : "#050506"}
-                              className={`transition-all duration-200 group-hover:stroke-[#ef4444] ${
-                                isTalismanPricked
-                                  ? 'drop-shadow-[0_0_12px_rgba(239,68,68,0.95)]'
-                                  : 'group-hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.85)]'
-                              }`}
-                              strokeWidth={isTalismanPricked ? "4.5" : "3.5"}
-                              strokeLinejoin="round"
-                              strokeLinecap="round"
-                            />
 
                             {/* Centermost Pupil & Living Eyeball (Tracks Mouse) */}
                             <TalismanEye isTalismanPricked={isTalismanPricked} />
