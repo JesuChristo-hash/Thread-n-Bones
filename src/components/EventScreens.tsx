@@ -74,6 +74,7 @@ export default function EventScreens({ ctx }: { ctx: {
     caveTrials,
     caveVerdictReady,
     choiceCards,
+    choiceIsRare,
     choiceDealGen,
     choiceRerollsLeft,
     choiceSelectedIdx,
@@ -327,111 +328,174 @@ export default function EventScreens({ ctx }: { ctx: {
           );
         };
 
+        const BASE = import.meta.env.BASE_URL || './';
+        const woodBg = `url("${BASE}assets/text/wood.jpg")`;
+        const slateBg = `url("${BASE}assets/text/slate.jpg")`;
+        const clothBg = `url("${BASE}assets/text/cloth.jpg")`;
+
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between gap-1.5 sm:gap-2 lg:gap-4 px-1.5 sm:px-4 lg:px-6 py-2 sm:py-2.5 lg:py-4 overflow-hidden font-mono select-none"
+            className="absolute inset-0 bg-[#080304] z-50 flex flex-col items-center justify-between gap-1.5 sm:gap-2 lg:gap-4 px-1.5 sm:px-4 lg:px-6 py-2 sm:py-2.5 lg:py-4 overflow-hidden font-mono select-none"
             style={getScreenBgStyle('draft.jpg')}
           >
-            {/* Atmospheric Dark Vignette */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(8,10,14,0.18)_0%,rgba(6,5,7,0.84)_100%)] pointer-events-none z-0" />
+            {/* Atmospheric Dark Vignette (keeps draft.jpg visible) */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,6,7,0.12)_0%,rgba(5,2,3,0.72)_100%)] pointer-events-none z-0" />
 
-            {/* Header & Ritual Status */}
+            {/* Engraved Header & Carved Slate Status */}
             <div className="relative z-10 flex flex-col items-center text-center shrink-0">
-              <h1 className="text-sm sm:text-xl lg:text-2xl font-['Cinzel',_serif] text-[#e5c57c] tracking-[0.12em] sm:tracking-[0.18em] italic drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-                · Fortasse propositum facultates tuas superat ·
-              </h1>
-              <div className="mt-1.5 flex items-center gap-3 px-4 py-1 rounded-[2px] bg-[#0b0807]/80 border border-[#3a2a1e]/80 backdrop-blur-[2px]">
-                <span className="font-['Cinzel',_serif] text-xs tracking-[0.14em] text-[#e5cfa8]">
+              <div className="flex items-center gap-3.5">
+                <div className="hidden sm:block h-px w-12 lg:w-20 bg-gradient-to-r from-transparent via-[#7f1d1d]/80 to-red-500/75" />
+                <h1
+                  className="text-sm sm:text-xl lg:text-2xl font-['Cinzel',_serif] font-bold text-[#ede3d2] tracking-[0.12em] sm:tracking-[0.18em] italic"
+                  style={{ textShadow: '0 2px 12px rgba(0,0,0,0.98), 0 0 18px rgba(153,27,27,0.45)' }}
+                >
+                  · Fortasse propositum facultates tuas superat ·
+                </h1>
+                <div className="hidden sm:block h-px w-12 lg:w-20 bg-gradient-to-l from-transparent via-[#7f1d1d]/80 to-red-500/75" />
+              </div>
+
+              <div className="relative mt-1.5 flex items-center gap-3 px-4 py-1 rounded-[2px] bg-[#100607]/88 border border-[#3d1719] shadow-[0_10px_24px_rgba(0,0,0,0.88)] overflow-hidden">
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-25 mix-blend-multiply bg-cover bg-center"
+                  style={{ backgroundImage: slateBg }}
+                />
+                <span className="relative z-10 font-['Cinzel',_serif] text-xs tracking-[0.16em] text-[#e8dcc8] uppercase">
                   {statusPrompt}
                 </span>
-                <span className="h-3 w-px bg-[#4a3728]/80" />
-                <span className={`text-[10px] font-mono font-bold uppercase tracking-[0.2em] ${
-                  draftTradesLeft > 0 ? 'text-[#e5c16b]' : 'text-emerald-400/85'
-                }`}>
+                <span className="relative z-10 h-3 w-px bg-[#4a1c1e]" />
+                <span
+                  className={`relative z-10 text-[10px] font-mono font-bold uppercase tracking-[0.22em] ${
+                    draftTradesLeft > 0 ? 'text-red-400' : 'text-emerald-400/90'
+                  }`}
+                  style={draftTradesLeft > 0 ? { textShadow: '0 0 8px rgba(239,68,68,0.6)' } : undefined}
+                >
                   {draftTradesLeft > 0 ? `${draftTradesLeft} ${draftTradesLeft === 1 ? 'Pelt' : 'Pelts'}` : 'Settled'}
                 </span>
               </div>
             </div>
 
-            {/* Dual Smoked-Wood & Iron Tabletop Trays (Snug Fit) */}
-            <div className="relative z-10 flex flex-row flex-nowrap justify-center items-stretch gap-1.5 sm:gap-3 lg:gap-5 my-auto max-w-full" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap' }}>
-              {/* Left Tray: Player's Starter Deck */}
-              <div className="relative flex flex-col items-center px-1.5 sm:px-3 lg:px-5 pt-1.5 sm:pt-2 lg:pt-3 pb-2 sm:pb-2.5 lg:pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#3d2d20]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px]">
-                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#7c5d3b]/65" />
-                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#7c5d3b]/65" />
-                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#7c5d3b]/65" />
-                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#7c5d3b]/65" />
+            {/* Dual Dark-Timber Framed Tabletop Trays */}
+            <div
+              className="relative z-10 flex flex-row flex-nowrap justify-center items-stretch gap-2 sm:gap-4 lg:gap-6 my-auto max-w-full"
+              style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap' }}
+            >
+              {/* Left Tray: Your Satchel (Slate Well) */}
+              <div
+                className="relative p-[4px] rounded-[2px] shadow-[0_18px_38px_rgba(0,0,0,0.92)]"
+                style={{ backgroundImage: woodBg, backgroundSize: 'cover', backgroundPosition: 'center' }}
+              >
+                <div className="pointer-events-none absolute inset-0 rounded-[2px] bg-[#0a0505]/55 border border-[#2d1516]" />
+                <div
+                  className="relative h-full flex flex-col items-center px-2 sm:px-3.5 lg:px-5 pt-2 sm:pt-2.5 lg:pt-3 pb-2.5 sm:pb-3 lg:pb-4 rounded-[1px] border border-[#2f1819] backdrop-blur-[1px] overflow-hidden"
+                  style={{
+                    background: 'radial-gradient(ellipse at 50% 35%, rgba(20,16,18,0.74) 0%, rgba(11,8,10,0.84) 100%)',
+                  }}
+                >
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-30 mix-blend-multiply bg-cover bg-center"
+                    style={{ backgroundImage: slateBg }}
+                  />
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#5c2023]/75" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#5c2023]/75" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#5c2023]/75" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#5c2023]/75" />
 
-                <div className="shrink-0 w-full flex items-center justify-between pb-1 sm:pb-1.5 lg:pb-2 mb-1.5 sm:mb-2 lg:mb-3 border-b border-[#3a2a1e]/75">
-                  <h2 className="text-[9px] sm:text-[10px] lg:text-xs font-['Cinzel',_serif] font-bold text-[#e5c78a] uppercase tracking-[0.14em] lg:tracking-[0.26em]">
-                    Your Satchel
-                  </h2>
-                  <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#a98d68]/75">
-                    {draftPlayerDeck.filter(c => c.name === "Trade Pelt").length} Pelts
-                  </span>
-                </div>
-
-                <div className="flex flex-col items-center justify-center gap-1 sm:gap-2 lg:gap-3 my-auto">
-                  <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
-                    {draftPlayerDeck.slice(0, 3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx))}
+                  <div className="relative z-10 shrink-0 w-full flex items-center justify-between pb-1 sm:pb-1.5 lg:pb-2 mb-1.5 sm:mb-2 lg:mb-3 border-b border-[#3a1a1c]/80">
+                    <h2 className="text-[9px] sm:text-[10px] lg:text-xs font-['Cinzel',_serif] font-bold text-[#ede3d2] uppercase tracking-[0.14em] lg:tracking-[0.26em]">
+                      Your Satchel
+                    </h2>
+                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-stone-400">
+                      {draftPlayerDeck.filter(c => c.name === "Trade Pelt").length} Pelts
+                    </span>
                   </div>
-                  <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
-                    {draftPlayerDeck.slice(3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx + 3))}
+
+                  <div className="relative z-10 flex flex-col items-center justify-center gap-1 sm:gap-2 lg:gap-3 my-auto">
+                    <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
+                      {draftPlayerDeck.slice(0, 3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx))}
+                    </div>
+                    <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
+                      {draftPlayerDeck.slice(3).map((c, sliceIdx) => renderPlayerDraftSlot(c, sliceIdx + 3))}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Tray: Trader's Table */}
-              <div className="relative flex flex-col items-center px-1.5 sm:px-3 lg:px-5 pt-1.5 sm:pt-2 lg:pt-3 pb-2 sm:pb-2.5 lg:pb-4 rounded-[3px] bg-[#0c0908]/78 border border-[#422823]/85 shadow-[0_16px_38px_rgba(0,0,0,0.84),inset_0_1px_0_rgba(255,205,190,0.05)] backdrop-blur-[2px]">
-                <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#8a4c42]/65" />
-                <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#8a4c42]/65" />
-                <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#8a4c42]/65" />
-                <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#8a4c42]/65" />
+              {/* Right Tray: The Trader's Table (Crimson Cloth Well) */}
+              <div
+                className="relative p-[4px] rounded-[2px] shadow-[0_18px_38px_rgba(0,0,0,0.92)]"
+                style={{ backgroundImage: woodBg, backgroundSize: 'cover', backgroundPosition: 'center' }}
+              >
+                <div className="pointer-events-none absolute inset-0 rounded-[2px] bg-[#0a0505]/55 border border-[#3a1517]" />
+                <div
+                  className="relative h-full flex flex-col items-center px-2 sm:px-3.5 lg:px-5 pt-2 sm:pt-2.5 lg:pt-3 pb-2.5 sm:pb-3 lg:pb-4 rounded-[1px] border border-[#3d1618] backdrop-blur-[1px] overflow-hidden"
+                  style={{
+                    background: 'radial-gradient(ellipse at 50% 35%, rgba(56,9,12,0.72) 0%, rgba(24,5,7,0.82) 58%, rgba(11,3,4,0.88) 100%)',
+                  }}
+                >
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-40 mix-blend-multiply bg-cover bg-center"
+                    style={{ backgroundImage: clothBg }}
+                  />
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-red-700/75" />
+                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-red-700/75" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-red-700/75" />
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-red-700/75" />
 
-                <div className="shrink-0 w-full flex items-center justify-between pb-1 sm:pb-1.5 lg:pb-2 mb-1.5 sm:mb-2 lg:mb-3 border-b border-[#3f2622]/75">
-                  <h2 className="text-[9px] sm:text-[10px] lg:text-xs font-['Cinzel',_serif] font-bold text-[#e2a498] uppercase tracking-[0.14em] lg:tracking-[0.26em]">
-                    The Trader&rsquo;s Table
-                  </h2>
-                  <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#b47c72]/80">
-                    {draftRevealedIndices.length} Revealed
-                  </span>
-                </div>
-
-                <div className="flex flex-col items-center justify-center gap-1 sm:gap-2 lg:gap-3 my-auto">
-                  <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
-                    {draftTradePool.slice(0, 4).map((c, idx) => renderMerchantDraftSlot(c, idx))}
+                  <div className="relative z-10 shrink-0 w-full flex items-center justify-between pb-1 sm:pb-1.5 lg:pb-2 mb-1.5 sm:mb-2 lg:mb-3 border-b border-[#521a1d]/80">
+                    <h2 className="text-[9px] sm:text-[10px] lg:text-xs font-['Cinzel',_serif] font-bold text-[#f0ded6] uppercase tracking-[0.14em] lg:tracking-[0.26em]">
+                      The Trader&rsquo;s Table
+                    </h2>
+                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-red-300/80">
+                      {draftRevealedIndices.length} Revealed
+                    </span>
                   </div>
-                  <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
-                    {draftTradePool.slice(4, 8).map((c, sliceIdx) => renderMerchantDraftSlot(c, sliceIdx + 4))}
+
+                  <div className="relative z-10 flex flex-col items-center justify-center gap-1 sm:gap-2 lg:gap-3 my-auto">
+                    <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
+                      {draftTradePool.slice(0, 4).map((c, idx) => renderMerchantDraftSlot(c, idx))}
+                    </div>
+                    <div className="flex justify-center items-center gap-1 sm:gap-2 lg:gap-3">
+                      {draftTradePool.slice(4, 8).map((c, sliceIdx) => renderMerchantDraftSlot(c, sliceIdx + 4))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Grounded Tactile Action Bar */}
-            <div className="relative z-10 flex items-center gap-2.5 sm:gap-4 px-3 sm:px-5 py-1.5 lg:py-2 rounded-[3px] bg-[#0c0807]/88 border border-[#3a2a1e]/80 shadow-[0_10px_28px_rgba(0,0,0,0.88)] backdrop-blur-[2px] shrink-0">
+            {/* Diegetic Action Bar */}
+            <div className="relative z-10 flex items-center gap-5 sm:gap-7 shrink-0 pb-1">
               <button
                 onClick={executeDraftTrade}
                 disabled={!canConfirmTrade}
-                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-[10px] sm:text-xs uppercase tracking-[0.16em] sm:tracking-[0.22em] px-3.5 sm:px-6 py-2 select-none ${
+                className={`px-5 sm:px-7 py-2 rounded-[1px] border-y transition-all duration-150 font-['Cinzel',_serif] font-black text-xs sm:text-sm uppercase tracking-[0.24em] select-none ${
                   canConfirmTrade
-                    ? 'bg-[#2c1512] hover:bg-[#3c1b17] active:translate-y-[1px] border-[#c46c56] text-[#ffe8d6] shadow-[0_2px_0_#0b0504,0_0_18px_rgba(196,108,86,0.28),inset_0_1px_0_rgba(255,220,200,0.18)] cursor-pointer'
-                    : 'bg-[#15100d]/90 border-[#2f241c] text-[#7a6957] opacity-55 cursor-not-allowed'
+                    ? 'border-red-700/90 text-red-400 hover:text-red-200 bg-black/55 cursor-pointer'
+                    : 'border-[#2c191a] text-stone-600 bg-black/30 opacity-45 cursor-not-allowed'
                 }`}
+                style={
+                  canConfirmTrade
+                    ? { textShadow: '0 0 18px rgba(239,68,68,0.8), 0 2px 5px rgba(0,0,0,1)' }
+                    : undefined
+                }
               >
                 Strike Bargain
               </button>
 
-              <div className="h-5 w-px bg-[#3a2a1e]/80" />
+              <span className="text-[#5c1f22] text-xs select-none">◆</span>
 
               <button
                 onClick={finalizeDraft}
                 disabled={!canVentureOnward}
-                className={`rounded-[2px] border transition-all duration-150 font-['Cinzel',_serif] font-bold text-[10px] sm:text-xs uppercase tracking-[0.16em] sm:tracking-[0.22em] px-3.5 sm:px-6 py-2 select-none ${
+                className={`px-5 sm:px-7 py-2 rounded-[1px] border-y transition-all duration-150 font-['Cinzel',_serif] font-black text-xs sm:text-sm uppercase tracking-[0.24em] select-none ${
                   canVentureOnward
-                    ? 'bg-[#271d12] hover:bg-[#362717] active:translate-y-[1px] border-[#d4af37]/90 text-[#fff2cf] shadow-[0_2px_0_#0b0704,0_0_20px_rgba(212,175,55,0.3),inset_0_1px_0_rgba(255,240,190,0.22)] cursor-pointer'
-                    : 'bg-[#15100d]/90 border-[#2f241c] text-[#7a6957] opacity-55 cursor-not-allowed'
+                    ? 'border-[#d4af37]/85 text-[#f6dc93] hover:text-white bg-black/55 cursor-pointer'
+                    : 'border-[#2c191a] text-stone-600 bg-black/30 opacity-45 cursor-not-allowed'
                 }`}
+                style={
+                  canVentureOnward
+                    ? { textShadow: '0 0 18px rgba(234,179,8,0.6), 0 2px 5px rgba(0,0,0,1)' }
+                    : undefined
+                }
               >
                 Venture Onward
               </button>
@@ -4072,114 +4136,232 @@ export default function EventScreens({ ctx }: { ctx: {
       {/* =========================================================================
           CARD CHOICE EVENT SCREEN
          ========================================================================= */}
-      {screen === 'EVENT_CARD_CHOICE' && (
-        <div
-          className="absolute inset-0 bg-[#080706] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
-          style={getScreenBgStyle('choiceevent.jpg')}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,12,9,0.28)_0%,rgba(4,3,2,0.92)_100%)] pointer-events-none" />
+      {screen === 'EVENT_CARD_CHOICE' && (() => {
+        const BASE = import.meta.env.BASE_URL || './';
+        const woodBg = `url("${BASE}assets/text/wood.jpg")`;
+        const clothBg = `url("${BASE}assets/text/cloth.jpg")`;
+        const slateBg = `url("${BASE}assets/text/slate.jpg")`;
+        const numerals = ['I', 'II', 'III'];
 
-          {renderActWeather('absolute inset-0 z-[5]', 'event_card_choice')}
-          <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
-            {/* Top Header */}
-            <div className="flex flex-col items-center text-center shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                  Thicket Clearing
-                </span>
-                <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+        return (
+          <div
+            className="absolute inset-0 bg-[#080405] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            style={getScreenBgStyle('choiceevent.jpg')}
+          >
+            {/* Atmospheric Vignette — shifts to deep crimson reliquary glow on Boss Rare rewards */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: choiceIsRare
+                  ? 'radial-gradient(ellipse at 50% 42%, rgba(92,10,14,0.34) 0%, rgba(16,4,5,0.74) 55%, rgba(5,2,3,0.95) 100%)'
+                  : 'radial-gradient(ellipse at center, rgba(16,8,7,0.22) 0%, rgba(5,3,3,0.88) 100%)',
+              }}
+            />
+
+            {renderActWeather('absolute inset-0 z-[5]', 'event_card_choice')}
+
+            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-3">
+              {/* Engraved Header */}
+              <div className="flex flex-col items-center text-center shrink-0">
+                <div className="flex items-center gap-3.5">
+                  <div
+                    className={`h-px w-12 sm:w-20 bg-gradient-to-r from-transparent ${
+                      choiceIsRare ? 'via-red-700/90 to-[#e5c16b]/90' : 'via-[#7f1d1d]/80 to-red-500/80'
+                    }`}
+                  />
+                  <span
+                    className={`text-[10px] font-mono font-bold uppercase tracking-[0.34em] ${
+                      choiceIsRare ? 'text-[#f2d282]' : 'text-red-400/90'
+                    }`}
+                    style={choiceIsRare ? { textShadow: '0 0 12px rgba(234,179,8,0.55)' } : undefined}
+                  >
+                    {choiceIsRare ? '✦ Boss Trophy · Reliquary ✦' : 'Thicket Clearing'}
+                  </span>
+                  <div
+                    className={`h-px w-12 sm:w-20 bg-gradient-to-l from-transparent ${
+                      choiceIsRare ? 'via-red-700/90 to-[#e5c16b]/90' : 'via-[#7f1d1d]/80 to-red-500/80'
+                    }`}
+                  />
+                </div>
+                <h1
+                  className={`mt-0.5 text-2xl sm:text-3xl font-['Cinzel',_serif] font-black uppercase tracking-[0.24em] leading-tight ${
+                    choiceIsRare
+                      ? 'text-transparent bg-clip-text bg-gradient-to-b from-[#fff5cf] via-[#e6be62] to-[#9e6f22]'
+                      : 'text-[#ede3d2]'
+                  }`}
+                  style={{
+                    textShadow: choiceIsRare
+                      ? '0 4px 20px rgba(185,28,28,0.55)'
+                      : '0 2px 14px rgba(0,0,0,0.98), 0 0 16px rgba(153,27,27,0.45)',
+                  }}
+                >
+                  {choiceIsRare ? 'Spoils of the Slain' : 'Wild Beasts'}
+                </h1>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-                Wild Beasts
-              </h1>
-            </div>
 
-            {/* Moonlit Briar Stage with Three Distinct Creature Pedestals */}
-            <div className="relative w-full max-w-3xl my-auto flex flex-col items-center justify-center gap-6 px-8 pt-14 pb-8">
-
-
-
-              {/* Three Emergent Beasts */}
-              <div
-                key={choiceDealGen}
-                className="relative z-20 w-full max-w-3xl flex-1 flex items-center justify-center gap-6 sm:gap-12"
-              >
-                {choiceCards.map((c, idx) => {
-                  const isSelected = choiceSelectedIdx === idx;
-                  const tiltClass = idx === 0 ? '-rotate-2' : idx === 2 ? 'rotate-2' : 'rotate-0';
-                  return (
-                    <div
-                      key={c.id || `choice-${choiceDealGen}-${idx}`}
-                      onClick={() => {
-                        triggerSfx('draw');
-                        setChoiceSelectedIdx(idx);
-                      }}
-                      style={{
-                        animation: `choiceCardDeal 0.36s cubic-bezier(0.22, 1, 0.36, 1) ${idx * 0.08}s both`,
-                      }}
-                      className={`relative flex flex-col items-center cursor-pointer transition-all duration-300 ${
-                        isSelected
-                          ? '-translate-y-4 scale-[1.16] rotate-0 z-30'
-                          : `${tiltClass} scale-[1.06] hover:-translate-y-2.5 hover:scale-[1.12] hover:rotate-0 z-10 hover:z-20`
-                      }`}
-                    >
-                      {isSelected && (
-                        <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 z-40 px-2.5 py-0.5 rounded-[2px] bg-[#1f160b]/95 border border-[#e5c16b]/90 text-[8.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#fde68a] whitespace-nowrap shadow-[0_0_14px_rgba(234,179,8,0.4)]">
-                          Chosen
-                        </span>
-                      )}
+              {/* Triptych Specimen / Reliquary Altar */}
+              <div className="relative w-full max-w-4xl my-auto flex flex-col items-center justify-center gap-5 px-2 sm:px-6">
+                <div
+                  key={choiceDealGen}
+                  className="relative z-20 w-full grid grid-cols-3 gap-4 sm:gap-7 items-stretch"
+                >
+                  {choiceCards.map((c, idx) => {
+                    const isSelected = choiceSelectedIdx === idx;
+                    return (
                       <div
-                        className={`transition-[filter] duration-300 ${
+                        key={c.id || `choice-${choiceDealGen}-${idx}`}
+                        onClick={() => {
+                          triggerSfx('draw');
+                          setChoiceSelectedIdx(idx);
+                        }}
+                        style={{
+                          animation: `choiceCardDeal 0.36s cubic-bezier(0.22, 1, 0.36, 1) ${idx * 0.08}s both`,
+                          backgroundImage: woodBg,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        }}
+                        className={`relative p-[4px] rounded-[2px] cursor-pointer transition-all duration-300 group select-none ${
                           isSelected
-                            ? 'drop-shadow-[0_0_20px_rgba(212,175,55,0.55)] drop-shadow-[0_18px_22px_rgba(0,0,0,0.95)]'
-                            : 'drop-shadow-[0_14px_18px_rgba(0,0,0,0.9)]'
+                            ? choiceIsRare
+                              ? '-translate-y-3 scale-[1.04] shadow-[0_22px_42px_rgba(0,0,0,0.96),0_0_28px_rgba(212,175,55,0.38)] z-30'
+                              : '-translate-y-3 scale-[1.04] shadow-[0_22px_42px_rgba(0,0,0,0.96),0_0_26px_rgba(220,38,38,0.42)] z-30'
+                            : 'hover:-translate-y-1.5 shadow-[0_14px_30px_rgba(0,0,0,0.9)] z-10 hover:z-20'
                         }`}
                       >
-                        {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                        {/* Timber frame darkening & active border */}
+                        <div
+                          className={`pointer-events-none absolute inset-0 rounded-[2px] bg-[#0a0505]/55 border transition-colors duration-300 ${
+                            isSelected
+                              ? choiceIsRare
+                                ? 'border-[#e5c16b]/95'
+                                : 'border-red-500/90'
+                              : 'border-[#2c1415] group-hover:border-red-800/80'
+                          }`}
+                        />
 
-              {/* Stark Cinzel Line */}
-              <div className="relative z-20 pt-2 shrink-0">
-                <p className="font-['Cinzel',_serif] text-sm sm:text-base italic tracking-[0.1em] text-[#e5cfa8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-                  Three emerge from the brush.
+                        {/* Inner Recessed Alcove */}
+                        <div
+                          className="relative flex flex-col items-center justify-between pt-4 pb-3 px-3 rounded-[1px] overflow-hidden border border-[#2d1214]"
+                          style={{
+                            background: choiceIsRare
+                              ? 'radial-gradient(ellipse at 50% 40%, rgba(74,10,14,0.82) 0%, rgba(28,5,7,0.88) 60%, rgba(10,3,4,0.94) 100%)'
+                              : 'radial-gradient(ellipse at 50% 40%, rgba(24,14,14,0.72) 0%, rgba(13,7,8,0.82) 60%, rgba(8,4,5,0.9) 100%)',
+                          }}
+                        >
+                          <div
+                            className="pointer-events-none absolute inset-0 opacity-35 mix-blend-multiply bg-cover bg-center"
+                            style={{ backgroundImage: choiceIsRare ? clothBg : slateBg }}
+                          />
+
+                          {/* Corner Hairlines */}
+                          <span className={`pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l transition-colors ${isSelected ? (choiceIsRare ? 'border-[#e5c16b]' : 'border-red-500') : 'border-[#5c1f22]/70'}`} />
+                          <span className={`pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r transition-colors ${isSelected ? (choiceIsRare ? 'border-[#e5c16b]' : 'border-red-500') : 'border-[#5c1f22]/70'}`} />
+                          <span className={`pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l transition-colors ${isSelected ? (choiceIsRare ? 'border-[#e5c16b]' : 'border-red-500') : 'border-[#5c1f22]/70'}`} />
+                          <span className={`pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r transition-colors ${isSelected ? (choiceIsRare ? 'border-[#e5c16b]' : 'border-red-500') : 'border-[#5c1f22]/70'}`} />
+
+                          {/* Top Alcove Numeral / Rare Crest */}
+                          <div className="relative z-10 w-full flex items-center justify-between px-1 mb-2">
+                            <span className="text-[9px] font-['Cinzel',_serif] font-bold tracking-[0.26em] text-stone-500">
+                              {numerals[idx] || idx + 1}
+                            </span>
+                            <span
+                              className={`text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] transition-opacity ${
+                                isSelected
+                                  ? choiceIsRare
+                                    ? 'text-[#fde68a] opacity-100'
+                                    : 'text-red-400 opacity-100'
+                                  : choiceIsRare
+                                    ? 'text-[#d4af37]/70 opacity-85'
+                                    : 'text-stone-500 opacity-0 group-hover:opacity-75'
+                              }`}
+                            >
+                              {isSelected ? (choiceIsRare ? '✦ CLAIMED ✦' : '◆ CHOSEN ◆') : choiceIsRare ? '✦ RARE' : 'SELECT'}
+                            </span>
+                          </div>
+
+                          {/* Spotlight Behind Card */}
+                          <div
+                            className={`pointer-events-none absolute top-10 inset-x-4 h-36 rounded-full transition-opacity duration-300 ${
+                              isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-70'
+                            }`}
+                            style={{
+                              background: choiceIsRare
+                                ? 'radial-gradient(circle, rgba(212,175,55,0.28) 0%, rgba(185,28,28,0.18) 45%, transparent 72%)'
+                                : 'radial-gradient(circle, rgba(185,28,28,0.32) 0%, transparent 70%)',
+                            }}
+                          />
+
+                          {/* Card Display */}
+                          <div
+                            className={`relative z-10 py-2 transition-all duration-300 ${
+                              isSelected
+                                ? 'scale-[1.08] drop-shadow-[0_18px_22px_rgba(0,0,0,0.96)]'
+                                : 'scale-[1.02] group-hover:scale-[1.05] drop-shadow-[0_12px_18px_rgba(0,0,0,0.9)]'
+                            }`}
+                          >
+                            {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
+                          </div>
+
+                          {/* Bottom Class / Cost Caption */}
+                          <div className="relative z-10 mt-2 pt-2 w-4/5 border-t border-[#3e1719]/80 text-center">
+                            <span className="text-[9px] font-mono uppercase tracking-[0.22em] text-stone-400">
+                              {c.class === 'No Class' ? 'Unbound' : c.class}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Stark Cinzel Flavor Line */}
+                <p className="relative z-20 font-['Cinzel',_serif] text-sm sm:text-base italic tracking-[0.12em] text-[#e5cfa8]/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                  {choiceIsRare
+                    ? 'Three rare horrors answer the blood.'
+                    : 'Three emerge from the brush.'}
                 </p>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-4 shrink-0">
-              <button
-                onClick={() => {
-                  let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
-                  if (choiceSelectedIdx !== null) {
-                    updatedDeck = [...updatedDeck, cloneCard(choiceCards[choiceSelectedIdx])];
-                    setMasterDeck(updatedDeck);
-                    masterDeckRef.current = updatedDeck;
-                  }
-                  returnToMap(updatedDeck);
-                }}
-                disabled={choiceSelectedIdx === null}
-                className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
-              >
-                Take Creature
-              </button>
-              {choiceRerollsLeft > 0 && (
+              {/* Diegetic Action Controls */}
+              <div className="flex flex-wrap items-center justify-center gap-6 shrink-0 pb-1">
                 <button
-                  onClick={rerollCardChoice}
-                  className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/92 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer shadow-[0_6px_16px_rgba(0,0,0,0.82)] transition-all select-none"
+                  onClick={() => {
+                    let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
+                    if (choiceSelectedIdx !== null) {
+                      updatedDeck = [...updatedDeck, cloneCard(choiceCards[choiceSelectedIdx])];
+                      setMasterDeck(updatedDeck);
+                      masterDeckRef.current = updatedDeck;
+                    }
+                    returnToMap(updatedDeck);
+                  }}
+                  disabled={choiceSelectedIdx === null}
+                  className={`px-7 py-2 rounded-[1px] border-y font-['Cinzel',_serif] font-black text-xs sm:text-sm uppercase tracking-[0.28em] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all select-none ${
+                    choiceIsRare
+                      ? 'border-[#d4af37]/85 text-[#f6dc93] hover:text-white bg-black/55'
+                      : 'border-red-700/85 text-red-400 hover:text-red-200 bg-black/55'
+                  }`}
+                  style={{
+                    textShadow: choiceIsRare
+                      ? '0 0 18px rgba(234,179,8,0.6), 0 2px 5px rgba(0,0,0,1)'
+                      : '0 0 18px rgba(239,68,68,0.8), 0 2px 5px rgba(0,0,0,1)',
+                  }}
                 >
-                  Reroll ({choiceRerollsLeft})
+                  {choiceIsRare ? 'Claim Rare Vessel' : 'Take Creature'}
                 </button>
-              )}
+                {choiceRerollsLeft > 0 && (
+                  <button
+                    onClick={rerollCardChoice}
+                    className="px-4 py-1.5 font-mono font-bold text-xs uppercase tracking-[0.26em] text-stone-400 hover:text-red-300 transition-colors cursor-pointer select-none"
+                    style={{ textShadow: '0 2px 6px rgba(0,0,0,0.95)' }}
+                  >
+                    [ REROLL · {choiceRerollsLeft} ]
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           HOARDER SEARCH SCREEN

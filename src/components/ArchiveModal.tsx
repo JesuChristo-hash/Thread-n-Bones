@@ -100,13 +100,17 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
 
   const baseUrl = import.meta.env.BASE_URL || './';
   const isLedger = activeTab === 'LEDGER';
-  const knob = 'radial-gradient(circle at 50% 50%, #f1d58f 0 2.5px, #a87b3c 3px, #3a2612 5.5px, transparent 7px)';
+  const knob = isLedger
+    ? 'radial-gradient(circle at 50% 50%, #524d54 0 2.5px, #2b272d 3px, #121014 5.5px, transparent 7px)'
+    : 'radial-gradient(circle at 50% 50%, #f1d58f 0 2.5px, #a87b3c 3px, #3a2612 5.5px, transparent 7px)';
   const panelStyle: import('react').CSSProperties = {
     position: 'relative',
     borderStyle: 'solid',
     borderColor: 'transparent',
     borderWidth: '18px 12px 12px 12px',
-    boxShadow: '0 0 0 1px #8f6a2c, 0 24px 60px rgba(0,0,0,0.9)',
+    boxShadow: isLedger
+      ? '0 0 0 1px #2e2930, 0 24px 60px rgba(0,0,0,0.94)'
+      : '0 0 0 1px #8f6a2c, 0 24px 60px rgba(0,0,0,0.9)',
     backgroundColor: '#3a271a',
     backgroundImage: [
       knob,
@@ -146,8 +150,16 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
           />
         )}
         {/* ArchiveStitch */}
-        <div className="pointer-events-none absolute inset-0 z-30 border border-[#c9a24e]/80" />
-        <div className="pointer-events-none absolute inset-[5px] z-30 border border-dashed border-[#e5c16b]/35" />
+        <div
+          className={`pointer-events-none absolute inset-0 z-30 border ${
+            isLedger ? 'border-[#322d34]/90' : 'border-[#c9a24e]/80'
+          }`}
+        />
+        <div
+          className={`pointer-events-none absolute inset-[5px] z-30 border border-dashed ${
+            isLedger ? 'border-[#4a434d]/40' : 'border-[#e5c16b]/35'
+          }`}
+        />
         {/* Top Header */}
         <div className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#342c27] bg-[#131015]/55">
           <div className="flex items-center gap-2 sm:gap-4">

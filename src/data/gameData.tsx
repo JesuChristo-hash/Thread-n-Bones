@@ -726,6 +726,29 @@ export const EVENT_EXCLUDED_CARD_NAMES = new Set([
 ]);
 export const EVENT_CARD_POOL: CardDef[] = MAIN_DECK_POOL.filter(c => !EVENT_EXCLUDED_CARD_NAMES.has(c.name));
 
+export const RARE_CARD_NAMES = new Set<string>([
+  "Mantiseater",
+  "Ouroboros",
+  "Geck",
+  "Amalgam",
+  "Hodag",
+  "The Daus",
+  "Kraken",
+  "Elephant",
+  "Maritimus",
+  "Demon Elk",
+  "Lammergeier",
+  "Tsuchinoko",
+  "Caiman",
+  "Red Behemoth",
+  "Magpie",
+  "Goose",
+  "Hyena",
+  "Amoeba",
+]);
+
+export const RARE_CARD_POOL: CardDef[] = MAIN_DECK_POOL.filter(c => RARE_CARD_NAMES.has(c.name));
+
 export interface BossDialogueSet {
   greetings: string[];
   dismissals: string[];

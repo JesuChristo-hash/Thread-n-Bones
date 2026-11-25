@@ -497,8 +497,8 @@ function CardViewInner({
               style={{
                 imageRendering: 'pixelated',
                 filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.5))',
-                scale: isCardNamed(card.name, 'Caiman') && ((card as any).caimanPermHpGained || 0) >= 2
-                  ? String(1 + Math.min(Math.floor(((card as any).caimanPermHpGained || 0) / 2), 6) * 0.1)
+                scale: isCardNamed(card.name, 'Caiman') && ((card as any).caimanPermHpGained || 0) >= 1
+                  ? String(1 + Math.min((card as any).caimanPermHpGained || 0, 6) * 0.1)
                   : undefined,
               }}
               draggable={false}
@@ -603,6 +603,8 @@ function CardViewInner({
           </div>
 
           {/* --- BOTTOM STAT SOCKETS (Centered inside stone wells at 87%) --- */}
+          {!isCardNamed(card.name, 'Trade Pelt') && (
+            <>
           {/* Attack (Left Medallion) */}
           <div className="absolute bottom-[3.5%] left-[4.5%] w-[23%] h-[16%] flex items-center justify-center pointer-events-none z-20">
             <span
@@ -644,6 +646,8 @@ function CardViewInner({
               {card.health}
             </span>
           </div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -675,6 +679,7 @@ function cardsVisuallyEqual(a: CardDef | null, b: CardDef | null): boolean {
     (a as any).hasEvolved === (b as any).hasEvolved &&
     (a as any).isTransformed === (b as any).isTransformed &&
     (a as any).caimanBonusHp === (b as any).caimanBonusHp &&
+    (a as any).caimanPermHpGained === (b as any).caimanPermHpGained &&
     (a as any).permanentHealthBonus === (b as any).permanentHealthBonus &&
     (a as any).artOverride === (b as any).artOverride &&
     (a as any).facing === (b as any).facing &&

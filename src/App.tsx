@@ -102,6 +102,7 @@ import {
   ENEMY_MAIN_DECK_POOL,
   EVENT_EXCLUDED_CARD_NAMES,
   EVENT_CARD_POOL,
+  RARE_CARD_POOL,
   BossDialogueSet,
   BOSS_DIALOGUES,
   generateCardId,
@@ -833,6 +834,7 @@ export default function App() {
 
   // Card Choice Event
   const [choiceCards, setChoiceCards] = useState<CardDef[]>([]);
+  const [choiceIsRare, setChoiceIsRare] = useState<boolean>(false);
   const [choiceSelectedIdx, setChoiceSelectedIdx] = useState<number | null>(null);
   const [choiceRerollsLeft, setChoiceRerollsLeft] = useState<number>(1);
 
@@ -2966,6 +2968,7 @@ export default function App() {
 
   // --- Movement Resolution with Lateral Translation Animations ---
   const ACT4_FIRE_EVENT_BGS: Record<string, string> = {
+    'altarevent.jpg': 'fire_altarevent.jpg',
     'bonelordevent.jpg': 'fire_bonelordevent.jpg',
     'campfireevent.jpg': 'fire_campfireevent.jpg',
     'choiceevent.jpg': 'fire_choiceevent.jpg',
@@ -5001,7 +5004,7 @@ export default function App() {
             actMapRef.current = updated;
             return updated;
           });
-          initCardChoice();
+          initCardChoice(true);
         } else {
           if (wasForcedDevBoss) {
             addLog("[DEV] Sandbox boss cleared — Act map & Ledger preserved.");
@@ -5011,10 +5014,16 @@ export default function App() {
       }
     };
     if (!isBossMatch) {
-      setBattleWonAction(() => () => {
-        setBattleWonAction(null);
-        felledAlert.onAction();
-      });
+      setEnemyBoard(prev => prev.map(c => (c ? { ...c, isDying: true } : null)));
+      setEnemyQueue(prev => prev.map(c => (c ? { ...c, isDying: true } : null)));
+      setTimeout(() => {
+        setEnemyBoard([null, null, null, null]);
+        setEnemyQueue([null, null, null, null]);
+        setBattleWonAction(() => () => {
+          setBattleWonAction(null);
+          felledAlert.onAction();
+        });
+      }, 450);
     } else {
       setModalAlert(felledAlert);
     }
@@ -7103,16 +7112,18 @@ export default function App() {
   };
 
   // --- Card Choice Event ---
-  const initCardChoice = () => {
+  const initCardChoice = (isRare: boolean = false) => {
+    const pool = isRare && RARE_CARD_POOL.length >= 3 ? RARE_CARD_POOL : EVENT_CARD_POOL;
     const picks: CardDef[] = [];
     const used = new Set<string>();
     while (picks.length < 3) {
-      const c = cloneCard(EVENT_CARD_POOL[Math.floor(Math.random() * EVENT_CARD_POOL.length)]);
+      const c = cloneCard(pool[Math.floor(Math.random() * pool.length)]);
       if (!used.has(c.name)) {
         used.add(c.name);
         picks.push(c);
       }
     }
+    setChoiceIsRare(isRare);
     setChoiceCards(picks);
     setChoiceSelectedIdx(null);
     setChoiceRerollsLeft(1);
@@ -7123,10 +7134,11 @@ export default function App() {
   const rerollCardChoice = () => {
     if (choiceRerollsLeft <= 0) return;
     setChoiceRerollsLeft(prev => prev - 1);
+    const pool = choiceIsRare && RARE_CARD_POOL.length >= 3 ? RARE_CARD_POOL : EVENT_CARD_POOL;
     const picks: CardDef[] = [];
     const used = new Set<string>();
     while (picks.length < 3) {
-      const c = cloneCard(EVENT_CARD_POOL[Math.floor(Math.random() * EVENT_CARD_POOL.length)]);
+      const c = cloneCard(pool[Math.floor(Math.random() * pool.length)]);
       if (!used.has(c.name)) {
         used.add(c.name);
         picks.push(c);
@@ -8623,7 +8635,7 @@ export default function App() {
                           />
 
                           {/* Inner Core SVG */}
-                          <svg viewBox="0 0 100 100" className="w-[96px] h-[96px] sm:w-[116px] sm:h-[116px] overflow-visible pointer-events-none transition-transform duration-150">
+                          <svg viewBox="0 0 100 100" className="relative z-10 w-[96px] h-[96px] sm:w-[116px] sm:h-[116px] overflow-visible pointer-events-none transition-transform duration-150">
                             <defs>
                               <path
                                 id="talismanInnerZalgoPath"
