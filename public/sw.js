@@ -1,4 +1,4 @@
-const CACHE_NAME = 'thread-bones-assets-v3';
+const CACHE_NAME = 'thread-bones-assets-v4';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => {
@@ -23,8 +23,6 @@ self.addEventListener('fetch', (e) => {
           await new Promise((r) => setTimeout(r, 300 + Math.random() * 400));
           fresh = await fetch(e.request);
         }
-        if (fresh.ok) cache.put(e.request, fresh.clone());
-        return fresh;ch(e.request);
         if (fresh.ok) cache.put(e.request, fresh.clone());
         return fresh;
       }).catch(() => new Response('', { status: 408 }))
