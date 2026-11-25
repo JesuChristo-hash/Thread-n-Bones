@@ -2953,6 +2953,24 @@ export default function App() {
   }, []);
 
   // --- Movement Resolution with Lateral Translation Animations ---
+  const ACT4_FIRE_EVENT_BGS: Record<string, string> = {
+    'bonelordevent.jpg': 'fire_bonelordevent.jpg',
+    'campfireevent.jpg': 'fire_campfireevent.jpg',
+    'choiceevent.jpg': 'fire_choiceevent.jpg',
+    'costeventbg.jpg': 'fire_costeventbg.jpg',
+    'crossroads-select.jpg': 'fire_crossroads-select.jpg',
+    'merchant_event.jpg': 'fire_merchant_event.jpg',
+    'trialevent.jpg': 'fire_trialevent.jpg',
+    'tribeeventbg.jpg': 'fire_tribeevent.jpg',
+    'weaverevent.jpg': 'fire_weaverevent.jpg',
+    'zealotboss.jpg': 'fire_zealotboss.jpg',
+  };
+  const getEventScreenBgStyle = (filename: string): React.CSSProperties => {
+    const currentAct = actMap?.act ?? displayStage;
+    const resolved = currentAct === 4 && ACT4_FIRE_EVENT_BGS[filename] ? ACT4_FIRE_EVENT_BGS[filename] : filename;
+    return getScreenBgStyle(resolved);
+  };
+
   const renderActWeather = (posClass: string, keyPrefix: string) => (
     <ActWeather act={actMap?.act ?? displayStage} posClass={posClass} keyPrefix={keyPrefix} />
   );
@@ -3376,9 +3394,10 @@ export default function App() {
                 (pCard as any).caimanLeechRemainder = nextRem;
                 if (permGain > 0) {
                   (pCard as any).caimanPermHpGained = ((pCard as any).caimanPermHpGained || 0) + permGain;
+                  const targetMasterId = (pCard as any).masterId || pCard.id;
                   setMasterDeck(prev =>
                     prev.map(c =>
-                      c.id === pCard.id
+                      c.id === targetMasterId
                         ? {
                             ...c,
                             health: (c.health || 0) + permGain,
@@ -3391,7 +3410,7 @@ export default function App() {
                   addLog(`${pCard.name} permanently grew (+${permGain} Max HP)!`);
                 } else {
                   setMasterDeck(prev =>
-                    prev.map(c => (c.id === pCard.id ? ({ ...c, caimanLeechRemainder: nextRem } as any) : c))
+                    prev.map(c => (c.id === ((pCard as any).masterId || pCard.id) ? ({ ...c, caimanLeechRemainder: nextRem } as any) : c))
                   );
                 }
               }
@@ -7671,7 +7690,7 @@ export default function App() {
           <EventScreens
             ctx={{
               BASE,
-              getScreenBgStyle,
+              getScreenBgStyle: getEventScreenBgStyle,
               TRIBE_EMBROIDERY,
               cloneCard,
               applyPlayerTotem,
@@ -7918,7 +7937,7 @@ export default function App() {
             backgroundImage: `radial-gradient(ellipse at center, rgba(0,0,0,0.1) 0%, rgba(10,7,5,0.55) 90%), url('${
               isBossMatch && bossState.type === 'BoneLord'
                 ? `${import.meta.env.BASE_URL || './'}assets/backgrounds/finalboss.jpg`
-                : getArenaBackground(stage, isBossMatch, bossState.type ?? undefined)
+                : getArenaBackground(actMap?.act ?? displayStage, isBossMatch, bossState.type ?? undefined)
             }')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',

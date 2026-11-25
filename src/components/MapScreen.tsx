@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActWeather } from './ActWeather';
 import { ChiptuneAudio } from '../audio/ChiptuneAudio';
 import { RITUAL_VOW_MAP, createSeededRng, type VowId } from '../utils/seededRng';
 import {
@@ -677,151 +678,10 @@ const MapScreen: React.FC<MapScreenProps> = ({
       </div>
 
       {/* Act 1-4 Atmospheric Weather Behind Map, Survey & Ledger (z-[4] < z-10) */}
-      {(() => {
-        const weatherAct = Math.min(4, Math.max(1, mapData.act));
-        const hasMist = weatherAct === 1 || weatherAct === 2 || weatherAct === 3;
-        const rainCount = weatherAct === 3 ? 84 : weatherAct === 2 ? 36 : 0;
-        const hasLightning = weatherAct === 3;
-        const hasFire = weatherAct === 4;
-
-        return (
-          <div className="pointer-events-none absolute inset-0 z-[4] overflow-hidden select-none">
-            {hasMist && (
-              <>
-                <div
-                  className="absolute -inset-x-[15%] bottom-[-12%] h-[62%]"
-                  style={{
-                    background:
-                      weatherAct === 1
-                        ? 'radial-gradient(ellipse at 30% 78%, rgba(212,208,198,0.38) 0%, rgba(152,148,140,0.22) 48%, transparent 76%)'
-                        : weatherAct === 3
-                          ? 'radial-gradient(ellipse at 30% 80%, rgba(165,180,196,0.24) 0%, rgba(110,125,140,0.13) 45%, transparent 74%)'
-                          : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.22) 0%, rgba(135,132,124,0.11) 45%, transparent 74%)',
-                    filter: 'blur(26px)',
-                    animation: 'weatherMistDriftA 22s ease-in-out infinite',
-                  }}
-                />
-                <div
-                  className="absolute -inset-x-[15%] bottom-[-8%] h-[50%]"
-                  style={{
-                    background:
-                      weatherAct === 1
-                        ? 'radial-gradient(ellipse at 72% 84%, rgba(206,200,188,0.34) 0%, rgba(138,134,126,0.19) 50%, transparent 78%)'
-                        : weatherAct === 3
-                          ? 'radial-gradient(ellipse at 72% 85%, rgba(155,172,190,0.22) 0%, rgba(95,112,130,0.11) 48%, transparent 76%)'
-                          : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.2) 0%, rgba(120,116,108,0.1) 48%, transparent 76%)',
-                    filter: 'blur(32px)',
-                    animation: 'weatherMistDriftB 29s ease-in-out infinite',
-                  }}
-                />
-                {weatherAct === 1 && (
-                  <div
-                    className="absolute -inset-x-[12%] top-[14%] h-[42%]"
-                    style={{
-                      background:
-                        'radial-gradient(ellipse at 52% 50%, rgba(202,198,188,0.2) 0%, rgba(140,136,128,0.1) 52%, transparent 78%)',
-                      filter: 'blur(38px)',
-                      animation: 'weatherMistDriftB 34s ease-in-out -11s infinite',
-                    }}
-                  />
-                )}
-              </>
-            )}
-
-            {rainCount > 0 && (
-              <div className="absolute inset-0">
-                {Array.from({ length: rainCount }, (_, i) => {
-                  const h1 = Math.abs(Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
-                  const h2 = Math.abs(Math.sin(i * 93.9898 + 67.345) * 24634.6345) % 1;
-                  const h3 = Math.abs(Math.sin(i * 41.2317 + 19.871) * 15731.7431) % 1;
-                  const leftPct = h1 * 118 - 2;
-                  const durNum = weatherAct === 3
-                    ? 0.42 + h3 * 0.28
-                    : 0.72 + h3 * 0.38;
-                  const duration = durNum.toFixed(2);
-                  const delay = (-(h2 * durNum)).toFixed(3);
-                  const heightPx = weatherAct === 3 ? 30 + (i % 4) * 10 : 18 + (i % 4) * 6;
-                  const opacity = weatherAct === 3 ? 0.24 + (i % 3) * 0.09 : 0.15 + (i % 3) * 0.06;
-                  return (
-                    <span
-                      key={`map-rain-${weatherAct}-${i}`}
-                      className="absolute top-0 rounded-full"
-                      style={{
-                        left: `${leftPct}%`,
-                        width: weatherAct === 3 ? '1.4px' : '1px',
-                        height: `${heightPx}px`,
-                        opacity,
-                        background: 'linear-gradient(to bottom, transparent, rgba(208,224,242,0.88), rgba(186,208,232,0.28))',
-                        animation: `weatherRainFall ${duration}s linear ${delay}s infinite`,
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            )}
-
-            {hasLightning && (
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    'radial-gradient(ellipse at 50% 15%, rgba(215,232,255,0.85) 0%, rgba(168,196,238,0.35) 55%, rgba(120,145,190,0.12) 100%)',
-                  mixBlendMode: 'screen',
-                  animation: 'weatherLightningFlash 6.8s linear infinite',
-                }}
-              />
-            )}
-
-            {hasFire && (
-              <>
-                <div
-                  className="absolute inset-x-0 bottom-0 h-[44%] origin-bottom"
-                  style={{
-                    background:
-                      'radial-gradient(ellipse at 50% 100%, rgba(234,88,12,0.34) 0%, rgba(185,28,28,0.2) 45%, transparent 78%)',
-                    mixBlendMode: 'screen',
-                    animation: 'weatherFireGlow 4.8s ease-in-out infinite',
-                  }}
-                />
-                <div
-                  className="absolute -inset-x-[12%] bottom-[-5%] h-[62%]"
-                  style={{
-                    background:
-                      'radial-gradient(ellipse at 40% 75%, rgba(92,82,78,0.26) 0%, rgba(45,40,38,0.14) 50%, transparent 76%)',
-                    filter: 'blur(36px)',
-                    animation: 'weatherSmokeDrift 20s ease-in-out infinite',
-                  }}
-                />
-                {Array.from({ length: 30 }, (_, i) => {
-                  const leftPct = (i * 33.7 + 4) % 96;
-                  const sizePx = 2 + (i % 3) * 1.4;
-                  const duration = (4.2 + ((i * 13) % 10) * 0.42).toFixed(2);
-                  const delay = -(((i * 0.67) % 6.5).toFixed(2));
-                  const drift = ((i % 2 === 0 ? 1 : -1) * (18 + (i % 5) * 14));
-                  return (
-                    <span
-                      key={`map-ember-${i}`}
-                      className="absolute -bottom-3 rounded-full"
-                      style={{
-                        left: `${leftPct}%`,
-                        width: `${sizePx}px`,
-                        height: `${sizePx}px`,
-                        backgroundColor: i % 3 === 0 ? '#fde68a' : i % 2 === 0 ? '#fb923c' : '#ef4444',
-                        boxShadow: '0 0 8px rgba(251,146,60,0.85), 0 0 14px rgba(239,68,68,0.55)',
-                        ['--ember-drift' as any]: `${drift}px`,
-                        animation: `weatherEmberRise ${duration}s ease-out ${delay}s infinite`,
-                      }}
-                    />
-                  );
-                })}
-              </>
-            )}
-          </div>
-        );
-      })()}
+      <ActWeather act={mapData.act} posClass="absolute inset-0 z-[4]" keyPrefix="map" />
 
       {/* Top Header: Sanctuary (Top-Left) + Engraved Stone Act Title Banner */}
-      <div className="relative z-10 w-full flex items-center justify-center shrink-0 pt-0.5">
+      <div className="relative z-10 w-full flex flex-col items-center justify-center text-center shrink-0 pt-0.5">
         <div className="flex items-center gap-3.5">
           <div className="h-px w-16 sm:w-24 bg-gradient-to-r from-transparent via-[#7a2420]/60 to-[#9c8870]/85" />
           <span className="text-[10px] font-mono font-bold uppercase tracking-[0.34em] text-[#bfa78b]">

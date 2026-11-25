@@ -66,42 +66,61 @@ export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefi
     <div className={`pointer-events-none ${posClass} overflow-hidden select-none`}>
       {hasMist && (
         <>
-          <div
-            className="absolute -inset-x-[15%] bottom-[-12%] h-[62%]"
-            style={{
-              background:
-                weatherAct === 1
-                  ? 'radial-gradient(ellipse at 30% 78%, rgba(212,208,198,0.17) 0%, rgba(152,148,140,0.09) 48%, transparent 76%)'
-                  : weatherAct === 3
-                    ? 'radial-gradient(ellipse at 30% 80%, rgba(12,16,24,0.68) 0%, rgba(8,10,16,0.44) 50%, transparent 74%)'
-                    : 'radial-gradient(ellipse at 30% 80%, rgba(196,192,182,0.36) 0%, rgba(135,132,124,0.2) 48%, transparent 74%)',
-              filter: 'blur(26px)',
-              animation: 'weatherMistDriftA 22s ease-in-out infinite',
-            }}
-          />
-          <div
-            className="absolute -inset-x-[15%] bottom-[-8%] h-[50%]"
-            style={{
-              background:
-                weatherAct === 1
-                  ? 'radial-gradient(ellipse at 72% 84%, rgba(206,200,188,0.15) 0%, rgba(138,134,126,0.08) 50%, transparent 78%)'
-                  : weatherAct === 3
-                    ? 'radial-gradient(ellipse at 72% 85%, rgba(10,14,22,0.62) 0%, rgba(6,8,14,0.38) 52%, transparent 76%)'
-                    : 'radial-gradient(ellipse at 72% 85%, rgba(188,182,170,0.32) 0%, rgba(120,116,108,0.17) 50%, transparent 76%)',
-              filter: 'blur(32px)',
-              animation: 'weatherMistDriftB 29s ease-in-out infinite',
-            }}
-          />
-          {weatherAct === 1 && (
-            <div
-              className="absolute -inset-x-[12%] top-[14%] h-[42%]"
-              style={{
-                background:
-                  'radial-gradient(ellipse at 52% 50%, rgba(202,198,188,0.09) 0%, rgba(140,136,128,0.04) 52%, transparent 78%)',
-                filter: 'blur(38px)',
-                animation: 'weatherMistDriftB 34s ease-in-out -11s infinite',
-              }}
-            />
+          {weatherAct === 1 ? (
+            <>
+              <div
+                className="absolute -inset-x-[15%] bottom-[-12%] h-[62%]"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 30% 78%, rgba(212,208,198,0.17) 0%, rgba(152,148,140,0.09) 48%, transparent 76%)',
+                  filter: 'blur(26px)',
+                  animation: 'weatherMistDriftA 22s ease-in-out infinite',
+                }}
+              />
+              <div
+                className="absolute -inset-x-[15%] bottom-[-8%] h-[50%]"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 72% 84%, rgba(206,200,188,0.15) 0%, rgba(138,134,126,0.08) 50%, transparent 78%)',
+                  filter: 'blur(32px)',
+                  animation: 'weatherMistDriftB 29s ease-in-out infinite',
+                }}
+              />
+              <div
+                className="absolute -inset-x-[12%] top-[14%] h-[42%]"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 52% 50%, rgba(202,198,188,0.09) 0%, rgba(140,136,128,0.04) 52%, transparent 78%)',
+                  filter: 'blur(38px)',
+                  animation: 'weatherMistDriftB 34s ease-in-out -11s infinite',
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <div
+                className="absolute -inset-x-[15%] top-[-12%] h-[54%]"
+                style={{
+                  background:
+                    weatherAct === 3
+                      ? 'radial-gradient(ellipse at 30% 18%, rgba(12,16,24,0.68) 0%, rgba(8,10,16,0.44) 50%, transparent 74%)'
+                      : 'radial-gradient(ellipse at 30% 18%, rgba(32,38,48,0.46) 0%, rgba(18,22,30,0.26) 48%, transparent 74%)',
+                  filter: 'blur(26px)',
+                  animation: 'weatherMistDriftA 22s ease-in-out infinite',
+                }}
+              />
+              <div
+                className="absolute -inset-x-[15%] top-[-8%] h-[44%]"
+                style={{
+                  background:
+                    weatherAct === 3
+                      ? 'radial-gradient(ellipse at 72% 15%, rgba(10,14,22,0.62) 0%, rgba(6,8,14,0.38) 52%, transparent 76%)'
+                      : 'radial-gradient(ellipse at 72% 15%, rgba(28,34,44,0.4) 0%, rgba(15,18,26,0.22) 50%, transparent 76%)',
+                  filter: 'blur(32px)',
+                  animation: 'weatherMistDriftB 29s ease-in-out infinite',
+                }}
+              />
+            </>
           )}
         </>
       )}

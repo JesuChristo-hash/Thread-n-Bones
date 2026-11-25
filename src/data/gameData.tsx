@@ -205,8 +205,8 @@ export const getArenaBackground = (stage: number, isBoss: boolean, bossName?: st
     return getBackgroundUrl('finalboss');
   }
 
-  // Standard duel stages cycle battlebg1 through battlebg4
-  const bgIndex = ((stage - 1) % 4) + 1;
+  // Lock battlebg1 through battlebg4 directly to Act 1 through Act 4
+  const bgIndex = Math.min(4, Math.max(1, stage));
   return getBackgroundUrl(`battle${bgIndex}`);
 };
 
@@ -758,6 +758,7 @@ export function cloneCard(def: CardDef, ouroborosBuffs = 0): CardDef {
     return { name: "Void", class: "No Class", attack: 0, health: 1, emoji: "❓", sigils: [] };
   }
   const c: CardDef = JSON.parse(JSON.stringify(def));
+  if (def.id) (c as any).masterId = (def as any).masterId || def.id;
   c.id = generateCardId(c.name.toLowerCase().replace(/\s+/g, '-'));
   if (c.name === "Ouroboros" && ouroborosBuffs > 0) {
     // Base stats are already permanently incremented in masterDeck; do not stack on clone

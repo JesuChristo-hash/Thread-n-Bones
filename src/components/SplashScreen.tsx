@@ -48,6 +48,15 @@ export default function SplashScreen({
   showDiscordPrompt,
   unlockedDiscordUrl
 }: SplashScreenProps) {
+  const [introPhase, setIntroPhase] = React.useState<'pentagram' | 'title' | 'menu'>('pentagram');
+
+  React.useEffect(() => {
+    const t = window.setTimeout(() => {
+      setIntroPhase(prev => (prev === 'pentagram' ? 'title' : prev));
+    }, 800);
+    return () => window.clearTimeout(t);
+  }, []);
+
   React.useEffect(() => {
     if (!showContinueModal) return;
     const handleModalKey = (e: KeyboardEvent) => {
@@ -66,8 +75,41 @@ export default function SplashScreen({
 
   return (
     <>
+        <style>{`
+          @keyframes splashPentagramGlowIn {
+            0% { opacity: 0; transform: scale(0.9); filter: drop-shadow(0 0 0px rgba(220,38,38,0)); }
+            65% { opacity: 1; transform: scale(1.02); filter: drop-shadow(0 0 26px rgba(220,38,38,0.65)); }
+            100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 14px rgba(185,28,28,0.4)); }
+          }
+          @keyframes splashAltarTitleIn {
+            0% {
+              opacity: 0;
+              transform: translateY(18px) scale(1.04);
+              filter: brightness(2.6) contrast(1.4) blur(6px) drop-shadow(0 0 28px rgba(239,68,68,0.95));
+            }
+            45% {
+              opacity: 1;
+              transform: translateY(-2px) scale(0.995);
+              filter: brightness(1.65) contrast(1.2) blur(1px) drop-shadow(0 0 22px rgba(239,68,68,0.8));
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+              filter: brightness(1) contrast(1) blur(0px) drop-shadow(0 0 10px rgba(239,68,68,0.35));
+            }
+          }
+          @keyframes splashMenuRise {
+            0% { opacity: 0; transform: translateY(18px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
         <div 
-          className="absolute inset-0 z-50 flex flex-col items-center justify-center p-4 overflow-hidden select-none animate-fade-up"
+          onClick={() => {
+            if (introPhase === 'title' && !showDiscordPrompt && !showContinueModal) {
+              setIntroPhase('menu');
+            }
+          }}
+          className={`absolute inset-0 z-50 flex flex-col items-center justify-center p-4 overflow-hidden select-none ${introPhase === 'title' ? 'cursor-pointer' : ''}`}
           style={getScreenBgStyle('splash.jpg')}
         >
           {/* Blood-Red Tabletop Vignette & Subtle CRT Scanlines */}
@@ -132,7 +174,10 @@ export default function SplashScreen({
           </div>
 
           {/* Centered Glowing Stylized SVG Pentagram with Esoteric Runes */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+            style={{ animation: 'splashPentagramGlowIn 0.95s ease-out forwards' }}
+          >
             <div
               className="w-[420px] h-[420px] sm:w-[500px] sm:h-[500px] md:w-[560px] md:h-[560px] animate-pentagram-rotate"
               style={{ willChange: 'transform' }}
@@ -159,7 +204,20 @@ export default function SplashScreen({
           <div className="relative z-20 flex flex-col items-center justify-center text-center max-w-4xl w-full mx-auto my-auto">
   
   {/* Direct, Frame-less High-Fidelity ASCII Title Display */}
-  <div className="flex flex-col items-center justify-center w-full px-2 overflow-visible">
+  <div
+    className={`flex flex-col items-center justify-center w-full px-2 overflow-visible transition-transform duration-700 ease-out ${
+      introPhase === 'pentagram'
+        ? 'opacity-0 pointer-events-none'
+        : introPhase === 'title'
+          ? 'translate-y-8 sm:translate-y-10'
+          : '-translate-y-2 sm:-translate-y-4'
+    }`}
+    style={
+      introPhase !== 'pentagram'
+        ? { animation: 'splashAltarTitleIn 0.85s ease-out forwards' }
+        : undefined
+    }
+  >
   {/* THREAD */}
   <pre 
     style={{ 
@@ -231,7 +289,7 @@ export default function SplashScreen({
      href={unlockedDiscordUrl || "#"}
      target={unlockedDiscordUrl ? "_blank" : undefined}
      rel={unlockedDiscordUrl ? "noopener noreferrer" : undefined}
-     onClick={handleDiscordClick}
+     onClick={(e) => { e.stopPropagation(); handleDiscordClick(e); }}
      className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 transition-transform duration-150 hover:scale-110 active:scale-95 drop-shadow-[0_0_10px_rgba(239,68,68,0.6)] cursor-pointer"
      title={unlockedDiscordUrl ? "[SIDE HUSTLE]" : "[SEALED RITUAL]"}
    >
@@ -246,60 +304,102 @@ export default function SplashScreen({
 
    {/* Occult Passcode Challenge Modal */}
    {showDiscordPrompt && (
-     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-xs select-none">
-       <div className="relative w-80 p-6 bg-[#140e0a] border-2 border-[#523927] rounded-xs shadow-[0_0_30px_rgba(0,0,0,0.95)] text-center font-mono">
-         <h3 className="text-amber-500 text-sm font-bold tracking-widest uppercase mb-1">
-           Forbidden Communion
-         </h3>
-         <p className="text-[11px] text-stone-400 mb-4 tracking-normal">
-           Speak the cipher to break the seal.
-         </p>
+     <div
+       onClick={(e) => e.stopPropagation()}
+       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 select-none animate-menu-fade-in"
+     >
+       <div className="relative w-full max-w-[360px] p-6 sm:p-7 bg-gradient-to-b from-[#170f0e] via-[#100909] to-[#090505] border border-[#5c3c2e]/90 shadow-[0_24px_60px_rgba(0,0,0,0.96),0_0_40px_rgba(127,29,29,0.22),inset_0_1px_0_rgba(255,224,180,0.08)] text-center overflow-hidden">
+         {/* Inner Hairline Frame */}
+         <div className="pointer-events-none absolute inset-[5px] border border-[#3a221c]/70" />
 
-         <form onSubmit={handleAttemptUnlock} className="flex flex-col gap-3">
-           <input
-             type="password"
-             autoFocus
-             value={discordInput}
-             onChange={(e) => {
-               setDiscordInput(e.target.value);
-               setDiscordError(false);
-             }}
-             placeholder="PASSCODE"
-             className={`w-full px-3 py-2 bg-[#090605] border ${
-               discordError ? 'border-red-600 animate-shake' : 'border-[#3a281c] focus:border-amber-600'
-             } text-amber-200 text-center tracking-widest text-xs outline-none rounded-xs transition-colors`}
-           />
+         {/* Corner Brass/Crimson Brackets */}
+         <span className="pointer-events-none absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-[#a37d4c]/80" />
+         <span className="pointer-events-none absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-[#a37d4c]/80" />
+         <span className="pointer-events-none absolute bottom-2 left-2 w-2.5 h-2.5 border-b-2 border-l-2 border-[#a37d4c]/80" />
+         <span className="pointer-events-none absolute bottom-2 right-2 w-2.5 h-2.5 border-b-2 border-r-2 border-[#a37d4c]/80" />
 
-           {discordError && (
-             <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider">
-               The seal remains unbroken
+         {/* Subtle Crimson Candlelight Wash */}
+         <div
+           className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 w-64 h-36 rounded-full"
+           style={{
+             background: 'radial-gradient(circle, rgba(185,28,28,0.24) 0%, rgba(127,29,29,0.08) 55%, transparent 78%)',
+           }}
+         />
+
+         <div className="relative z-10">
+           <div className="flex items-center justify-center gap-2.5 mb-2">
+             <div className="h-px w-8 bg-gradient-to-r from-transparent to-[#8f3028]/80" />
+             <span className="font-mono text-[9px] uppercase tracking-[0.34em] text-red-400/80">
+               秘密のパスワード
              </span>
-           )}
-
-           <div className="flex gap-2 justify-center mt-2">
-             <button
-               type="submit"
-               className="px-4 py-1.5 bg-[#2d1b13] hover:bg-[#42281c] text-amber-300 text-xs uppercase tracking-wider border border-[#523927] active:scale-95 transition-transform"
-             >
-               Unbind
-             </button>
-             <button
-               type="button"
-               onClick={() => {
-                 setShowDiscordPrompt(false);
-                 setDiscordError(false);
-                 setDiscordInput('');
-               }}
-               className="px-4 py-1.5 bg-black/40 hover:bg-black/60 text-stone-500 hover:text-stone-300 text-xs uppercase tracking-wider border border-transparent transition-colors"
-             >
-               Flee
-             </button>
+             <div className="h-px w-8 bg-gradient-to-l from-transparent to-[#8f3028]/80" />
            </div>
-         </form>
+
+           <h3 className="font-['Cinzel',_serif] text-lg sm:text-xl font-bold tracking-[0.2em] uppercase text-[#ebe0cc] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] mb-1.5">
+             これについては誰かに聞いてみてください。
+           </h3>
+           <p className="font-mono text-[11px] text-[#a39081] mb-5 tracking-wide">
+             秘密のパスワードを入力してください
+           </p>
+
+           <form onSubmit={handleAttemptUnlock} className="flex flex-col gap-3.5">
+             <div className="relative">
+               <input
+                 type="password"
+                 autoFocus
+                 value={discordInput}
+                 onChange={(e) => {
+                   setDiscordInput(e.target.value);
+                   setDiscordError(false);
+                 }}
+                 placeholder="• • • • • •"
+                 className={`w-full px-4 py-2.5 bg-[#070404]/95 border font-mono ${
+                   discordError
+                     ? 'border-red-600/90 shadow-[0_0_16px_rgba(220,38,38,0.35),inset_0_2px_8px_rgba(0,0,0,0.9)] animate-shake'
+                     : 'border-[#3d2720] focus:border-[#b88b52] shadow-[inset_0_2px_10px_rgba(0,0,0,0.95)] focus:shadow-[0_0_16px_rgba(185,28,28,0.25),inset_0_2px_10px_rgba(0,0,0,0.95)]'
+                 } text-[#f3dfb8] placeholder:text-[#4f3a32] text-center tracking-[0.35em] text-xs outline-none transition-all`}
+               />
+             </div>
+
+             {discordError && (
+               <span
+                 style={{ textShadow: '0 0 8px rgba(239, 68, 68, 0.5)' }}
+                 className="font-mono text-[10px] text-red-500 font-bold uppercase tracking-[0.2em]"
+               >
+                 次はもっとうまくいくといいですね
+               </span>
+             )}
+
+             <div className="flex gap-3 justify-center mt-2">
+               <button
+                 type="submit"
+                 className="flex-1 py-2 px-4 bg-gradient-to-b from-[#3d1414] to-[#220909] hover:from-[#521a1a] hover:to-[#2e0c0c] border border-[#8f3028]/90 hover:border-[#d49a6a]/90 text-[#f3dfb8] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] shadow-[0_4px_14px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,200,160,0.12)] active:translate-y-[1px] transition-all cursor-pointer"
+               >
+                 ロック解除
+               </button>
+               <button
+                 type="button"
+                 onClick={() => {
+                   setShowDiscordPrompt(false);
+                   setDiscordError(false);
+                   setDiscordInput('');
+                 }}
+                 className="px-4 py-2 bg-[#110b0a]/90 hover:bg-[#1c1210] border border-[#3a2620] hover:border-[#6e4c3b] text-[#8f7b6e] hover:text-[#d6c2a5] font-mono text-[11px] uppercase tracking-[0.2em] active:translate-y-[1px] transition-all cursor-pointer"
+               >
+                 終了
+               </button>
+             </div>
+           </form>
+         </div>
        </div>
      </div>
    )}
 
+{introPhase === 'menu' && (
+            <div
+              className="flex flex-col items-center justify-center w-full"
+              style={{ animation: 'splashMenuRise 0.55s ease-out forwards' }}
+            >
             {/* Ritual Action Button */}
             <button
               disabled={!isRitualReady}
@@ -355,27 +455,28 @@ export default function SplashScreen({
         </button>
 
         {isRitualReady && (
-          <div className="mt-5 flex items-center justify-center gap-4 sm:gap-5">
+          <div className="mt-4 sm:mt-5 flex items-center justify-center gap-5 sm:gap-7 font-mono">
             <button
               type="button"
               onClick={() => setArchiveModalTab('COMPENDIUM')}
-              className="group relative px-5 py-2 bg-[#110a0a]/85 hover:bg-[#1e1010]/95 active:translate-y-[1px] border border-[#5c3c2e]/80 hover:border-[#c9a368]/85 rounded-[2px] shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,224,180,0.08)] font-['Cinzel',_serif] font-bold text-[11px] sm:text-xs uppercase tracking-[0.24em] text-[#dec7a2] hover:text-[#fdf0d5] transition-all duration-150 cursor-pointer"
+              style={{ textShadow: '0 0 10px rgba(239, 68, 68, 0.55)' }}
+              className="bg-transparent border-0 px-2 py-1 text-[11px] sm:text-xs font-bold uppercase tracking-[0.32em] text-red-500/85 hover:text-red-300 hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer animate-occult-pulse"
             >
-              <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#a37d4c]/70 group-hover:border-[#e5c16b]" />
-              <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#a37d4c]/70 group-hover:border-[#e5c16b]" />
-              Compendium
+              [ COMPENDIUM ]
             </button>
+            <span className="text-red-800/70 text-[10px] select-none pointer-events-none">◆</span>
             <button
               type="button"
               onClick={() => setArchiveModalTab('LEDGER')}
-              className="group relative px-5 py-2 bg-[#110a0a]/85 hover:bg-[#1e1010]/95 active:translate-y-[1px] border border-[#5c3c2e]/80 hover:border-[#c9a368]/85 rounded-[2px] shadow-[0_6px_18px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,224,180,0.08)] font-['Cinzel',_serif] font-bold text-[11px] sm:text-xs uppercase tracking-[0.24em] text-[#dec7a2] hover:text-[#fdf0d5] transition-all duration-150 cursor-pointer"
+              style={{ textShadow: '0 0 10px rgba(239, 68, 68, 0.55)' }}
+              className="bg-transparent border-0 px-2 py-1 text-[11px] sm:text-xs font-bold uppercase tracking-[0.32em] text-red-500/85 hover:text-red-300 hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer animate-occult-pulse"
             >
-              <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#a37d4c]/70 group-hover:border-[#e5c16b]" />
-              <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#a37d4c]/70 group-hover:border-[#e5c16b]" />
-              Ledger
+              [ LEDGER ]
             </button>
           </div>
         )}
+            </div>
+          )}
       </div>
     </div>
 
