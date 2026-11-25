@@ -574,7 +574,11 @@ export default function EventScreens({ ctx }: { ctx: {
          ========================================================================= */}
       {screen === 'EVENT_ITEMS' && (() => {
         const satchelFull = items.findIndex(s => s === null) === -1;
-        const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 3));
+        const getEffectiveItemCost = (id: any): number => {
+          const base: number = ITEM_COSTS[id] ?? 6;
+          return activeVows.includes('empty_satchel') ? Math.ceil(base * 1.5) : base;
+        };
+        const canAffordAny = itemChoices.some(id => totalOverkillDamage >= getEffectiveItemCost(id));
         const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
 
         const cacheBase = import.meta.env.BASE_URL || './';
@@ -895,9 +899,9 @@ export default function EventScreens({ ctx }: { ctx: {
                       <span className="px-3 py-1 rounded-[2px] bg-[#1a0d09]/92 border border-[#783422]/80 text-[9.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#f2b886]">
                         Blessing: {campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'}
                       </span>
-                      {campfireStage === 0 && activeVows.includes('no_safe_campfire') && !isCampfireSafe && (
+                      {activeVows.includes('no_safe_campfire') && (
                         <span className="px-2.5 py-1 rounded-[2px] border bg-[#240b09]/92 border-red-700/80 text-red-300 text-[9.5px] font-mono font-bold uppercase tracking-[0.18em]">
-                          Vow — 35% First-Dip Risk
+                          Vow — Single Baptism Only
                         </span>
                       )}
                       {campfireStage > 0 && (
@@ -1028,17 +1032,19 @@ export default function EventScreens({ ctx }: { ctx: {
 
                   {/* Action Buttons */}
                   <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
-                    <button
-                      onClick={applyCampfireWarm}
-                      disabled={campfireCardIdx === null || isEventBusy}
-                      className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#3b1610] to-[#1d0a07] hover:from-[#521e15] hover:to-[#290e0a] active:translate-y-[1px] border border-[#b85b3d]/90 hover:border-[#eb8a64] text-[#f7d6bf] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
-                    >
-                      {campfireHolding
-                        ? 'Submerging...'
-                        : campfireStage === 0
-                          ? `Baptize Creature (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`
-                          : `Bathe Again (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`}
-                    </button>
+                    {!(campfireStage > 0 && activeVows.includes('no_safe_campfire')) && (
+                      <button
+                        onClick={applyCampfireWarm}
+                        disabled={campfireCardIdx === null || isEventBusy}
+                        className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#3b1610] to-[#1d0a07] hover:from-[#521e15] hover:to-[#290e0a] active:translate-y-[1px] border border-[#b85b3d]/90 hover:border-[#eb8a64] text-[#f7d6bf] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
+                      >
+                        {campfireHolding
+                          ? 'Submerging...'
+                          : campfireStage === 0
+                            ? `Baptize Creature (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`
+                            : `Bathe Again (${campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'})`}
+                      </button>
+                    )}
                     {campfireStage > 0 && (
                       <button
                         onClick={() => returnToMap()}

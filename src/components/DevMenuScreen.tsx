@@ -38,6 +38,7 @@ export interface DevMenuScreenProps {
   previousScreen: any;
   renderCard: any;
   scale: any;
+  setActiveVows?: React.Dispatch<React.SetStateAction<any[]>>;
   setArchive: React.Dispatch<React.SetStateAction<any>>;
   setBones: React.Dispatch<React.SetStateAction<any>>;
   setBossPhase: React.Dispatch<React.SetStateAction<any>>;
@@ -103,6 +104,7 @@ export default function DevMenuScreen({
   previousScreen,
   renderCard,
   scale,
+  setActiveVows,
   setArchive,
   setBones,
   setBossPhase,
@@ -469,42 +471,91 @@ export default function DevMenuScreen({
               </button>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 p-3 mb-4 border border-red-950/60 bg-[#140908]/80 rounded-sm">
-              <div className="text-[10px] font-mono text-stone-400 uppercase tracking-wider">
-                Archive: <span className="text-amber-200/90">{archive.seenCards.length}</span> Cards ·{' '}
-                <span className="text-amber-200/90">{archive.seenSigils.length}</span> Sigils ·{' '}
-                <span className="text-amber-200/90">{archive.defeatedBosses.length}</span> Bosses ·{' '}
-                <span className="text-amber-200/90">{archive.runsStarted}</span> Runs
-              </div>
-              {!devConfirmWipeArchive ? (
-                <button
-                  onClick={() => setDevConfirmWipeArchive(true)}
-                  className="py-1.5 px-3 bg-[#1d0b0a] hover:bg-[#2d100e] border border-red-900/70 hover:border-red-500 font-mono text-[10px] font-bold uppercase tracking-widest text-red-300 hover:text-red-100 transition cursor-pointer"
-                >
-                  CLEAR COMPENDIUM & LEDGER
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      const wiped = resetArchive();
-                      setArchive(wiped);
-                      setDevConfirmWipeArchive(false);
-                      triggerSfx('sacrifice');
-                      addLog('[DEV] Compendium & Ledger wiped clean.');
-                    }}
-                    className="py-1.5 px-3 bg-red-950/90 hover:bg-red-900 border border-red-500 font-mono text-[10px] font-bold uppercase tracking-widest text-red-100 transition cursor-pointer"
-                  >
-                    CONFIRM FULL WIPE
-                  </button>
-                  <button
-                    onClick={() => setDevConfirmWipeArchive(false)}
-                    className="py-1.5 px-2.5 border border-stone-700 hover:border-stone-500 font-mono text-[10px] uppercase tracking-widest text-stone-400 hover:text-stone-200 transition cursor-pointer"
-                  >
-                    CANCEL
-                  </button>
+            <div className="flex flex-col gap-2.5 p-3 mb-4 border border-red-950/60 bg-[#140908]/80 rounded-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-[10px] font-mono text-stone-400 uppercase tracking-wider">
+                  Archive: <span className="text-amber-200/90">{archive.seenCards.length}</span> Cards ·{' '}
+                  <span className="text-amber-200/90">{archive.seenSigils.length}</span> Sigils ·{' '}
+                  <span className="text-amber-200/90">{archive.defeatedBosses.length}</span> Bosses ·{' '}
+                  <span className="text-amber-200/90">{archive.runsStarted}</span> Runs
                 </div>
-              )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {(() => {
+                    const vowsUnlocked = (archive.runsWon || 0) > 0 || (archive.defeatedBosses || []).includes('BoneLord');
+                    return (
+                      <button
+                        onClick={() => {
+                          if (vowsUnlocked) {
+                            setArchive((prev: any) => {
+                              const next = {
+                                ...prev,
+                                runsWon: 0,
+                                defeatedBosses: (prev.defeatedBosses || []).filter((b: string) => b !== 'BoneLord'),
+                              };
+                              try { localStorage.setItem('sacrificial_scales_archive_v1', JSON.stringify(next)); } catch {}
+                              return next;
+                            });
+                            setActiveVows?.([]);
+                            triggerSfx('sacrifice');
+                            addLog('[DEV] Ritual Vows re-sealed.');
+                          } else {
+                            setArchive((prev: any) => {
+                              const bosses = Array.from(new Set([...(prev.defeatedBosses || []), 'BoneLord']));
+                              const next = {
+                                ...prev,
+                                runsWon: Math.max(1, prev.runsWon || 0),
+                                defeatedBosses: bosses,
+                              };
+                              try { localStorage.setItem('sacrificial_scales_archive_v1', JSON.stringify(next)); } catch {}
+                              return next;
+                            });
+                            triggerSfx('victory');
+                            addLog('[DEV] Ritual Vows unbound.');
+                          }
+                        }}
+                        className={`py-1.5 px-3 border font-mono text-[10px] font-bold uppercase tracking-widest transition cursor-pointer ${
+                          vowsUnlocked
+                            ? 'bg-[#1a140c] hover:bg-[#261d11] border-amber-800/70 hover:border-amber-500 text-amber-300'
+                            : 'bg-[#1f0b0d] hover:bg-[#2f1013] border-red-800/80 hover:border-red-400 text-red-200'
+                        }`}
+                      >
+                        {vowsUnlocked ? 'RE-SEAL RITUAL VOWS' : 'UNLOCK RITUAL VOWS'}
+                      </button>
+                    );
+                  })()}
+
+                  {!devConfirmWipeArchive ? (
+                    <button
+                      onClick={() => setDevConfirmWipeArchive(true)}
+                      className="py-1.5 px-3 bg-[#1d0b0a] hover:bg-[#2d100e] border border-red-900/70 hover:border-red-500 font-mono text-[10px] font-bold uppercase tracking-widest text-red-300 hover:text-red-100 transition cursor-pointer"
+                    >
+                      CLEAR COMPENDIUM & LEDGER
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const wiped = resetArchive();
+                          setArchive(wiped);
+                          setActiveVows?.([]);
+                          setDevConfirmWipeArchive(false);
+                          triggerSfx('sacrifice');
+                          addLog('[DEV] Compendium, Ledger & Vows wiped clean.');
+                        }}
+                        className="py-1.5 px-3 bg-red-950/90 hover:bg-red-900 border border-red-500 font-mono text-[10px] font-bold uppercase tracking-widest text-red-100 transition cursor-pointer"
+                      >
+                        CONFIRM FULL WIPE
+                      </button>
+                      <button
+                        onClick={() => setDevConfirmWipeArchive(false)}
+                        className="py-1.5 px-2.5 border border-stone-700 hover:border-stone-500 font-mono text-[10px] uppercase tracking-widest text-stone-400 hover:text-stone-200 transition cursor-pointer"
+                      >
+                        CANCEL
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Visual Card Art Inspector with Search */}

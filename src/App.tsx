@@ -672,6 +672,15 @@ export default function App() {
   useEffect(() => { runSeedRef.current = runSeed; }, [runSeed]);
   useEffect(() => { activeVowsRef.current = activeVows; }, [activeVows]);
 
+  const applyBloodFamineIfActive = (card: CardDef): CardDef => {
+    if (!activeVowsRef.current.includes('blood_famine')) return card;
+    if (card.unsacrificable || card.isSacrifice || (card as any).isTerrain) return card;
+    return {
+      ...card,
+      health: Math.max(1, (card.health || 1) - 1),
+    };
+  };
+
   const toggleRitualVow = (vowId: VowId) => {
     setActiveVows(prev => {
       const next = prev.includes(vowId) ? prev.filter(id => id !== vowId) : [...prev, vowId];
@@ -951,7 +960,7 @@ export default function App() {
       if (!recordedGameOverRef.current) {
         recordedGameOverRef.current = true;
         const won = Boolean(bossState?.ritualEndedVoluntarily) || (runStatsRef.current?.finalBossesDefeated || 0) > 0;
-        const grade = calculateGrade(runStatsRef.current);
+        const grade = calculateGrade(runStatsRef.current, activeVowsRef.current);
         setArchive(prev =>
           recordRunCompletion(
             prev,
@@ -1115,7 +1124,8 @@ export default function App() {
   };
 
   const handleSelectItem = (selectedId: ItemId) => {
-    const cost = ITEM_COSTS[selectedId] ?? 6;
+    const baseCost = ITEM_COSTS[selectedId] ?? 6;
+    const cost = activeVowsRef.current.includes('empty_satchel') ? Math.ceil(baseCost * 1.5) : baseCost;
     const emptySlot = items.findIndex(slot => slot === null);
 
     if (emptySlot === -1) {
@@ -1142,7 +1152,7 @@ export default function App() {
 
   const handleLeaveCache = () => {
     const satchelFull = items.findIndex(s => s === null) === -1;
-    const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 6));
+    const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (activeVowsRef.current.includes('empty_satchel') ? Math.ceil((ITEM_COSTS[id] ?? 6) * 1.5) : (ITEM_COSTS[id] ?? 6)));
     const cannotBuyAnything = satchelFull || !canAffordAny;
 
     // Only grant token if player bought nothing and cannot purchase anything
@@ -1650,7 +1660,7 @@ export default function App() {
     setFlockRepicksUsed(0);
     setFlockPendingRemovals(0);
     setFlockRemovalSelectedIds([]);
-    setItems(['coin_purse', 'magical_hat', 'large_matchbook']);
+    setItems(activeVowsRef.current.includes('empty_satchel') ? [null, null, null] : ['coin_purse', 'magical_hat', 'large_matchbook']);
     setItemTargetMode(null);
     setItemTargetSourceSlot(null);
     setCrucifixUsedThisDuel(false);
@@ -3698,7 +3708,7 @@ export default function App() {
             phaseTransitionResolveRef.current = resolve;
           });
 
-          if (pendingBossGrizzlyWall) {
+          if (pendingBossGrizzlyWall || (activeVowsRef.current.includes('too_fast_too_soon') && nextPhase === 2)) {
             setPendingBossGrizzlyWall(false);
             setGrizzlyWallActiveInDuel(true);
             setConsecutiveOneTurnWins(0);
@@ -5225,7 +5235,7 @@ export default function App() {
     const duelRng = createSeededRng(`${activeSeed}:duel:${effectiveDuelsCompleted}:${stage}:${level}:${forcedBoss || 'std'}`);
     duelRngRef.current = duelRng;
 
-    setScale(-permanentScaleDebuff);
+    setScale(-permanentScaleDebuff - (activeVowsRef.current.includes('heavier_scale_debt') ? 1 : 0));
     setBattleWonAction(null);
     // Jar upgrades apply between battles only, never mid-fight
     setJarTier(pendingJarTierRef.current);
@@ -5304,7 +5314,7 @@ export default function App() {
       });
 
       // 35% chance for a standard encounter to field a random totem once The Weaver has been defeated
-      if (progressOverride?.forceEnemyTotem || (hasDefeatedWeaver && duelRng() < 0.35)) {
+      if (progressOverride?.forceEnemyTotem || activeVowsRef.current.includes('all_elite_row2') || (hasDefeatedWeaver && duelRng() < 0.35)) {
         const tribes: Tribe[] = ["Canine", "Avian", "Reptile", "Insect", "Hooved"];
         const randomTotemSigils: string[] = [
           'Airborne',
@@ -5514,6 +5524,14 @@ export default function App() {
         addLog(`=== BOSS BATTLE: The Weaver appears wielding [${bossTribe}] + [${chosenSigil}]! ===`);
       }
 
+      if (activeVowsRef.current.includes('all_elite_row2') && bossType !== 'The Weaver') {
+        const vowTribes: Tribe[] = ['Canine', 'Avian', 'Reptile', 'Insect', 'Hooved'];
+        const vowSigils = ['Airborne', 'Burrower', 'Fledgling', 'Hefty', 'Sharp Quills', 'Mighty Leap', 'Sprinter', 'Stinky'];
+        const vTribe = vowTribes[Math.floor(duelRng() * vowTribes.length)];
+        const vSigil = vowSigils[Math.floor(duelRng() * vowSigils.length)];
+        setBossTotem({ class: vTribe, sigil: vSigil });
+        addLog(`[BLOODIED VANGUARD] ${bossType} wields a cursed [${vTribe} + ${vSigil}] Effigy!`);
+      }
       setEnemyWavesLeft(2);
       triggerSfx('bell');
     } else {
@@ -5597,6 +5615,10 @@ export default function App() {
           break;
       }
 
+      if (activeVowsRef.current.includes('swarming_dark')) {
+        maxRegularCards += 1;
+        initialCount = Math.min(4, initialCount + 1);
+      }
       setEnemyMaxDuelCards(maxRegularCards);
       enemyCardsPlayedRef.current = 0;
 
@@ -6066,6 +6088,7 @@ export default function App() {
     const firstActMap = generateActMap(1, bossOrder[0], draftPlayerDeck.length, {
       seed: seedForRun,
       allEliteRow2: activeVowsRef.current.includes('all_elite_row2'),
+      forcedHand: activeVowsRef.current.includes('forced_hand'),
     });
     setActMap(firstActMap);
     preDuelMapRef.current = null;
@@ -6093,6 +6116,7 @@ export default function App() {
     const mapOpts = {
       seed: runSeedRef.current || undefined,
       allEliteRow2: activeVowsRef.current.includes('all_elite_row2'),
+      forcedHand: activeVowsRef.current.includes('forced_hand'),
     };
     if (!currMap) {
       const fallbackAct = Math.max(1, Math.min(4, stage));
@@ -6190,7 +6214,11 @@ export default function App() {
     }
 
     const noSafeCampfire = activeVowsRef.current.includes('no_safe_campfire');
-    const isPerilousFirstDip = campfireStage === 0 && noSafeCampfire && !isCampfireSafe;
+    if (noSafeCampfire && campfireStage > 0) {
+      setIsEventBusy(false);
+      return;
+    }
+    const isPerilousFirstDip = false;
     const isSecondDip = campfireStage > 0;
     const buffType = campfireBuffType;
     const safe = isCampfireSafe;
@@ -6686,7 +6714,7 @@ export default function App() {
     setCarvingSummonedCard(null);
 
     const pool = EVENT_CARD_POOL.filter(c => c.class === tribe || c.class === "ALL Classes");
-    const chosen = cloneCard(pool[Math.floor(Math.random() * pool.length)]);
+    const chosen = applyBloodFamineIfActive(cloneCard(pool[Math.floor(Math.random() * pool.length)]));
     const nextDeck = [...masterDeck, chosen];
     triggerSfx('draw');
 
@@ -6740,7 +6768,7 @@ export default function App() {
     else if (type === '3 Blood') pool = EVENT_CARD_POOL.filter(c => c.cost === 3);
     else if (type === 'Bones') pool = EVENT_CARD_POOL.filter(c => (c.boneCost || 0) > 0);
 
-    const card = cloneCard(pool[Math.floor(Math.random() * pool.length)]);
+    const card = applyBloodFamineIfActive(cloneCard(pool[Math.floor(Math.random() * pool.length)]));
     const nextDeck = [...masterDeck, card];
     triggerSfx('draw');
 
@@ -6975,7 +7003,7 @@ export default function App() {
     setGoobertStamping(true);
     triggerSfx('stamp_press');
 
-    const clone = cloneCard(original);
+    const clone = applyBloodFamineIfActive(cloneCard(original));
     clone.isGoobertClone = true;
     clone.id = `goobert-${Date.now()}`;
 
@@ -7264,6 +7292,7 @@ export default function App() {
     const mapOpts = {
       seed: runSeedRef.current || undefined,
       allEliteRow2: activeVowsRef.current.includes('all_elite_row2'),
+      forcedHand: activeVowsRef.current.includes('forced_hand'),
     };
     const currentDeckSize = masterDeckRef.current.length || masterDeck.length;
     const nextMap = generateActMap(targetAct, getBossForAct(targetAct, mapOpts.seed), currentDeckSize, mapOpts);
@@ -8028,6 +8057,7 @@ export default function App() {
             previousScreen={previousScreen}
             renderCard={renderCard}
             scale={scale}
+            setActiveVows={setActiveVows}
             setArchive={setArchive}
             setBones={setBones}
             setBossPhase={setBossPhase}

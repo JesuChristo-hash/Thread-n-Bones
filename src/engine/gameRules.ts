@@ -1,4 +1,5 @@
 import { ALL_CARD_LOOKUP, SIGIL_MAPPING, cloneCard, CardDef, RunStats } from '../data/gameData';
+import { RITUAL_VOW_MAP, VowId } from '../utils/seededRng';
 
 export const isCardNamed = (name: string | undefined, target: string): boolean =>
 (name || '').replace(/^Elder\s+/i, '').trim().toLowerCase() === target.toLowerCase();
@@ -99,38 +100,47 @@ export const isLeftFacingCard = (name?: string): boolean => {
   return LEFT_FACING_CARD_NAMES.has(norm) || LEFT_FACING_CARD_NAMES.has(norm.replace(/\s+/g, ''));
 };
 
-export const calculateGrade = (stats: RunStats): { letter: string; color: string; score: number } => {
-  let score = Math.round(
-    stats.clearedStages * 1.2 +
-    stats.bossesDefeated * 16 +
-    stats.finalBossesDefeated * 35 +
-    stats.enemyCardsDestroyed * 0.25 +
-    stats.scaleDamageDealt * 0.12 -
-    stats.scaleDamageTaken * 0.75
-  );
+export const calculateGrade = (
+  stats: RunStats,
+  activeVows: VowId[] = []
+): { letter: string; color: string; score: number; vowBonus: number } => {
+  const vowBonus = Array.isArray(activeVows)
+    ? activeVows.reduce((sum, id) => sum + (RITUAL_VOW_MAP[id]?.scoreBonus || 0), 0)
+    : 0;
 
-  // Hard rank milestones prior to felling a Final Boss
+  let score =
+    Math.round(
+      stats.clearedStages * 1.2 +
+        stats.bossesDefeated * 16 +
+        stats.finalBossesDefeated * 35 +
+        stats.enemyCardsDestroyed * 0.25 +
+        stats.scaleDamageDealt * 0.12 -
+        stats.scaleDamageTaken * 0.75
+    ) + vowBonus;
+
+  // Hard rank milestones prior to felling a Final Boss (relaxed slightly per active vow)
+  const capRelief = Array.isArray(activeVows) ? activeVows.length * 3 : 0;
   if (stats.finalBossesDefeated === 0) {
     // True God Run condition: cleared all 3 act bosses, took near-zero damage, high overkill
-    const isGodRun = 
-      stats.bossesDefeated >= 3 && 
-      stats.scaleDamageTaken <= 3 && 
-      stats.scaleDamageDealt >= 60 && 
+    const isGodRun =
+      stats.bossesDefeated >= 3 &&
+      stats.scaleDamageTaken <= 3 &&
+      stats.scaleDamageDealt >= 60 &&
       score >= 95;
 
     if (!isGodRun) {
       if (stats.bossesDefeated === 0) {
-        score = Math.min(score, 58); // Capped at C
+        score = Math.min(score, 58 + capRelief);
       } else if (stats.bossesDefeated === 1) {
-        score = Math.min(score, 74); // Capped at B
+        score = Math.min(score, 74 + capRelief);
       } else {
         // Reached or died at Bone Lord without felling him -> Hard capped at high A
-        score = Math.min(score, 89);
+        score = Math.min(score, Math.min(94, 89 + capRelief));
       }
     }
   }
 
-  const rawScore = Math.min(100, Math.max(0, score));
+  const rawScore = Math.max(0, score);
 
   let baseGrade = 'F';
   let color = 'text-red-600';
@@ -160,7 +170,7 @@ export const calculateGrade = (stats: RunStats): { letter: string; color: string
     suffix = '+';
   }
 
-  return { letter: `${baseGrade}${suffix}`, color, score: rawScore };
+  return { letter: `${baseGrade}${suffix}`, color, score: rawScore, vowBonus };
 };
 
 export const isStarterDraftEligible = (card: CardDef) => {

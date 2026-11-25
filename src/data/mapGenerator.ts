@@ -49,6 +49,7 @@ export interface ActMapData {
 export interface MapGenOptions {
   seed?: string;
   allEliteRow2?: boolean;
+  forcedHand?: boolean;
 }
 
 export interface NodeMeta {
@@ -349,6 +350,7 @@ export const generateActMap = (
   const effectiveDeckSize = Math.max(1, deckSize);
   const seed = options?.seed?.trim() || undefined;
   const allEliteRow2 = Boolean(options?.allEliteRow2);
+  const forcedHand = Boolean(options?.forcedHand);
   const rng = seed ? createSeededRng(`${seed}:act-${clampedAct}:deck-${effectiveDeckSize}`) : Math.random;
 
   const bossType = bossOverride || getBossForAct(clampedAct, seed);
@@ -522,6 +524,19 @@ export const generateActMap = (
           curr[parentIdx].nextIds.push(targetId);
         }
       }
+    }
+  }
+
+  if (forcedHand) {
+    // Forced Hand Vow: seal all branching forks into one predestined path from Trailhead to Boss
+    let cursor = rowNodeGrid[0][0];
+    for (let r = 0; r < totalRows - 1; r++) {
+      if (!cursor || cursor.nextIds.length === 0) break;
+      const chosenNextId = cursor.nextIds[Math.floor(rng() * cursor.nextIds.length)];
+      rowNodeGrid[r].forEach(n => {
+        n.nextIds = n.id === cursor.id ? [chosenNextId] : [];
+      });
+      cursor = rowNodeGrid[r + 1].find(n => n.id === chosenNextId)!;
     }
   }
 

@@ -485,16 +485,32 @@ const MapScreen: React.FC<MapScreenProps> = ({
     (currentNode?.nextIds.length === 1 ? nodeMap.get(currentNode.nextIds[0]) : null) ||
     currentNode;
 
+  const isWeatheredTablet = activeVows.includes('weathered_tablet');
+  const isNodeObscured = (n: MapNode) =>
+    isWeatheredTablet &&
+    n.type !== 'start' &&
+    n.type !== 'boss' &&
+    n.id !== mapData.currentNodeId &&
+    !visitedSet.has(n.id) &&
+    !reachableIds.has(n.id);
+
   const bossMeta = BOSS_DISPLAY_META[mapData.bossType];
   const inspectedMeta = inspectedNode
-    ? inspectedNode.type === 'boss'
+    ? isNodeObscured(inspectedNode)
       ? {
-          title: bossMeta.name,
-          tag: bossMeta.title,
-          desc: bossMeta.desc,
-          tone: 'boss' as const,
+          title: 'Weathered Carving',
+          tag: 'Unknown',
+          desc: 'Rain and lichen have eroded this rune. Step closer to read its omen.',
+          tone: 'neutral' as const,
         }
-      : MAP_NODE_META[inspectedNode.type]
+      : inspectedNode.type === 'boss'
+        ? {
+            title: bossMeta.name,
+            tag: bossMeta.title,
+            desc: bossMeta.desc,
+            tone: 'boss' as const,
+          }
+        : MAP_NODE_META[inspectedNode.type]
     : null;
 
   const isInspectedReachable = inspectedNode ? reachableIds.has(inspectedNode.id) : false;
@@ -922,14 +938,17 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 const isCurrent = node.id === mapData.currentNodeId;
                 const isReachable = reachableIds.has(node.id);
                 const isVisited = visitedSet.has(node.id) && !isCurrent;
+                const obscured = isNodeObscured(node);
                 const isBoss = node.type === 'boss';
-                const isCombat = node.type === 'combat' || node.type === 'elite_combat';
+                const isCombat = !obscured && (node.type === 'combat' || node.type === 'elite_combat');
                 const isHovered = hoveredNodeId === node.id;
                 const isLockedOut = !isCurrent && !isVisited && !futureReachableIds.has(node.id);
                 const isOnTracedPath = tracedPath.nodes.has(node.id) && !isCurrent;
-                const meta = isBoss
-                  ? { title: bossMeta.name, tag: 'Boss' }
-                  : MAP_NODE_META[node.type];
+                const meta = obscured
+                  ? { title: '???', tag: 'Unknown' }
+                  : isBoss
+                    ? { title: bossMeta.name, tag: 'Boss' }
+                    : MAP_NODE_META[node.type];
 
                 return (
                   <div
@@ -991,6 +1010,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
                           <circle cx="12" cy="6.5" r="4.5" fill="#100e12" stroke="#d6c2a5" strokeWidth="1.7" />
                           <path d="M6 24.5c.6-6.2 2.4-10.2 6-10.2s5.4 4 6 10.2H6Z" fill="#100e12" stroke="#d6c2a5" strokeWidth="1.7" />
                         </svg>
+                      ) : obscured ? (
+                        <span className="font-['Cinzel',_serif] font-black text-base text-[#a39480] select-none">?</span>
                       ) : (
                         renderInkGlyph(node.type, isBoss)
                       )}

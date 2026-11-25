@@ -142,7 +142,7 @@ export default function GameOverScreen({
                     </div>
                   </div>
                   {(() => {
-                    const grade = calculateGrade(runStats);
+                    const grade = calculateGrade(runStats, activeVows);
                     const baseLetter = grade.letter.charAt(0).toUpperCase();
                     const suffix = grade.letter.slice(1);
                     const gradePalettes: Record<string, { gradient: string; glow: string }> = {
@@ -224,7 +224,7 @@ export default function GameOverScreen({
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-stone-400 uppercase tracking-[0.14em] text-[10.5px]">
-                      Blood Harvested / Lost
+                      Blood Extracted / Lost
                     </span>
                     <span className="text-stone-100 font-bold text-sm">
                       {runStats.scaleDamageDealt}{' '}
@@ -268,18 +268,33 @@ export default function GameOverScreen({
                     </button>
                   </div>
                 )}
-                {activeVows.length > 0 && (
-                  <div className="relative z-10 flex flex-wrap items-center gap-1">
-                    {activeVows.map((vId) => (
-                      <span
-                        key={vId}
-                        className="px-1.5 py-0.5 rounded-[1px] bg-[#2e090b] border border-red-800/80 text-[8.5px] font-bold uppercase tracking-[0.12em] text-red-200"
-                      >
-                        ◆ {RITUAL_VOW_MAP[vId]?.shortTag || vId}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {activeVows.length > 0 && (() => {
+                  const totalVowPts = activeVows.reduce(
+                    (acc: number, id: string) => acc + (RITUAL_VOW_MAP[id]?.scoreBonus || 0),
+                    0
+                  );
+                  return (
+                    <div className="relative z-10 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.2em]">
+                        <span className="text-red-400/85 font-bold">Sworn Vows ({activeVows.length})</span>
+                        {totalVowPts > 0 && (
+                          <span className="text-[#e8c166] font-bold">+{totalVowPts} Ledger Pts</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {activeVows.map((vId) => (
+                          <span
+                            key={vId}
+                            title={RITUAL_VOW_MAP[vId]?.desc}
+                            className="px-1.5 py-0.5 rounded-[1px] bg-[#2e090b] border border-red-800/80 text-[8.5px] font-bold uppercase tracking-[0.12em] text-red-200"
+                          >
+                            ◆ {RITUAL_VOW_MAP[vId]?.shortTag || vId}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
