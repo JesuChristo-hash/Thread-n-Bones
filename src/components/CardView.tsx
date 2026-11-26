@@ -16,6 +16,7 @@ isSelected?: boolean;
       isAirborneAttack?: boolean;
       isDirectAttack?: boolean;
       isDamaged?: boolean;
+      damagePower?: number;
       isDestroyed?: boolean;
 	  isSacrificing?: boolean;
       isSigilJittering?: boolean;
@@ -178,7 +179,9 @@ function CardViewInner({
     } else if (options?.isDestroyed) {
       animClass = 'animate-destroy-dissolve z-40';
     } else if (options?.isDamaged) {
-      animClass = 'animate-damage-shake z-45';
+      const pwr = options.damagePower ?? 1;
+      const scaleClass = pwr >= 3 ? 'damage-shake-heavy' : pwr === 2 ? 'damage-shake-med' : 'damage-shake-light';
+      animClass = `animate-damage-shake ${scaleClass} z-45`;
     } else if (options?.isSigilJittering) {
       animClass = 'animate-sigil-jitter z-45';
     } else if (isSummoning) {

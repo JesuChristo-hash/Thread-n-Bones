@@ -972,35 +972,33 @@ const MapScreen: React.FC<MapScreenProps> = ({
                       onBlur={() => setHoveredNodeId(prev => (prev === node.id ? null : prev))}
                       onClick={() => isReachable && onSelectNode(node)}
                       aria-label={meta.title}
-                      className={`relative flex items-center justify-center rounded-full transition-all duration-200 ${
-                        isBoss ? 'w-14 h-14' : 'w-11 h-11'
+                      className={`relative flex items-center justify-center rounded-full transition-all duration-200 bg-[radial-gradient(circle,rgba(0,0,0,0.6)_0%,rgba(0,0,0,0.25)_45%,transparent_72%)] ${
+                        isBoss ? 'w-14 h-14 [&>svg]:scale-[1.45]' : 'w-11 h-11 [&>svg]:scale-[1.2]'
                       } ${
-                        isOnTracedPath && !isBoss
-                          ? 'ring-2 ring-[#cbb698]/90 shadow-[0_0_16px_rgba(199,172,134,0.55)] scale-105 '
-                          : ''
+                        isOnTracedPath && !isBoss ? 'scale-110 drop-shadow-[0_0_12px_rgba(214,184,136,0.85)] ' : ''
                       }${
                         isBoss
                           ? isReachable
-                            ? 'bg-gradient-to-b from-[#3d1113] to-[#170709] border-2 border-[#d6b888] text-[#f3e1be] shadow-[0_0_24px_rgba(165,28,24,0.85),0_6px_14px_rgba(0,0,0,0.75)] hover:scale-115 cursor-pointer animate-pulse'
-                            : 'bg-gradient-to-b from-[#251012] to-[#11080a] border-2 border-[#6e5c4c] text-[#cbb698] shadow-[0_5px_14px_rgba(0,0,0,0.7)] hover:border-[#d6b888] hover:scale-105 cursor-help'
+                            ? 'text-[#f6e3bd] drop-shadow-[0_0_14px_rgba(200,36,28,0.95)] hover:scale-110 cursor-pointer'
+                            : 'text-[#bfa686] drop-shadow-[0_0_8px_rgba(150,28,22,0.6)] hover:text-[#f6e3bd] hover:scale-105 cursor-help'
                           : isCurrent
-                            ? 'bg-[#161418] border-2 border-[#a83228] text-[#ebe3d5] shadow-[0_0_16px_rgba(145,28,22,0.55),0_4px_10px_rgba(0,0,0,0.75)] cursor-default'
+                            ? 'text-[#ebe3d5] drop-shadow-[0_0_10px_rgba(190,40,30,0.85)] cursor-default'
                             : isReachable
                               ? isCombat
-                                ? 'bg-gradient-to-b from-[#2b1214] to-[#13090b] hover:from-[#3d171a] hover:to-[#1b0c0f] border-2 border-[#b5372e] text-[#f0b4aa] shadow-[0_0_18px_rgba(166,34,24,0.55),0_4px_10px_rgba(0,0,0,0.7)] hover:scale-115 cursor-pointer'
-                                : 'bg-gradient-to-b from-[#242027] to-[#110f14] hover:from-[#322d36] hover:to-[#19161e] border-2 border-[#9e8a70] text-[#ebe1cf] shadow-[0_0_16px_rgba(143,121,96,0.45),0_4px_10px_rgba(0,0,0,0.7)] hover:scale-115 cursor-pointer'
+                                ? 'text-[#f4b9ae] drop-shadow-[0_0_10px_rgba(200,44,32,0.85)] hover:scale-110 hover:text-[#ffd2c8] cursor-pointer'
+                                : 'text-[#efe3cc] drop-shadow-[0_0_9px_rgba(214,184,136,0.7)] hover:scale-110 hover:text-white cursor-pointer'
                               : isVisited
-                                ? 'bg-[#121013]/85 border border-[#3d3530]/75 text-[#8a8078]/70 shadow-[0_3px_8px_rgba(0,0,0,0.7)] hover:brightness-110 hover:scale-105 cursor-help'
+                                ? 'text-[#6a6058]/70 hover:text-[#a39480] hover:scale-105 cursor-help'
                                 : isCombat
-                                  ? 'bg-[#170c0e] border-2 border-[#7d2c26] text-[#e8a8a0] shadow-[0_4px_12px_rgba(0,0,0,0.85)] hover:brightness-115 hover:scale-105 cursor-help'
-                                  : 'bg-[#110f13] border-2 border-[#5c5048] text-[#dfd5c5] shadow-[0_4px_12px_rgba(0,0,0,0.85)] hover:brightness-115 hover:scale-105 cursor-help'
+                                  ? 'text-[#a8574d] hover:brightness-125 hover:scale-105 cursor-help'
+                                  : 'text-[#8f8374] hover:brightness-125 hover:scale-105 cursor-help'
                       }`}
                     >
                       {/* Pulsing Outer Ring for Reachable Choices */}
                       {isReachable && !isBoss && (
                         <span
-                          className={`pointer-events-none absolute -inset-1.5 rounded-full border-2 animate-ping [animation-duration:2.2s] ${
-                            isCombat ? 'border-[#b5372e]/60' : 'border-[#9e8a70]/55'
+                          className={`pointer-events-none absolute -inset-1.5 rounded-full animate-pulse [animation-duration:2.6s] ${
+                            isCombat ? 'bg-[radial-gradient(circle,rgba(181,55,46,0.38)_0%,transparent_68%)]' : 'bg-[radial-gradient(circle,rgba(214,184,136,0.28)_0%,transparent_68%)]'
                           }`}
                         />
                       )}
@@ -1024,21 +1022,23 @@ const MapScreen: React.FC<MapScreenProps> = ({
                       )}
                     </button>
 
-                    {/* Carved-Slate Caption (Out-of-flow so hover never shifts the node) */}
+                    {/* Lit Caption (Out-of-flow so hover never shifts the node) */}
                     {(isCurrent && !isBoss) || isBoss || isReachable || isHovered ? (
-                      <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1 flex flex-col items-center gap-0.5 z-40">
+                      <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-0.5 flex flex-col items-center z-40">
                         {isCurrent && !isBoss && (
-                          <span className="px-1.5 py-0.5 rounded-[2px] bg-[#100e10]/94 border border-[#8f7960]/85 text-[7.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#ebe1cf] shadow-sm whitespace-nowrap">
+                          <span
+                            className="font-['Cinzel',_serif] text-[8px] font-bold uppercase tracking-[0.3em] text-[#e8b4aa]"
+                            style={{ textShadow: '0 0 3px #000, 0 0 8px #000, 0 0 14px rgba(0,0,0,0.9)' }}
+                          >
                             You
                           </span>
                         )}
                         {(isBoss || isReachable || isHovered) && (
                           <span
-                            className={`px-1.5 py-0.5 rounded-[2px] text-[8.5px] font-bold uppercase tracking-[0.14em] whitespace-nowrap shadow-sm ${
-                              isBoss
-                                ? 'bg-[#250b0c]/94 text-[#f3e1be] border border-[#8f7960]/80 font-[\'Cinzel\',_serif]'
-                                : 'bg-[#121014]/92 text-[#e6dac6] border border-[#524844]/80'
+                            className={`font-['Cinzel',_serif] font-bold uppercase whitespace-nowrap ${
+                              isBoss ? 'text-[11px] tracking-[0.2em] text-[#f6e3bd]' : 'text-[9.5px] tracking-[0.16em] text-[#efe3cc]'
                             }`}
+                            style={{ textShadow: '0 0 3px #000, 0 0 8px #000, 0 0 14px rgba(0,0,0,0.9)' }}
                           >
                             {meta.title}
                           </span>
@@ -1059,42 +1059,201 @@ const MapScreen: React.FC<MapScreenProps> = ({
         </div>
 
         {/* RIGHT FLANK: Cartographer's Omen Inspector & Expedition Ledger */}
-        <div className="w-full sm:w-[240px] md:w-[280px] lg:w-[330px] max-h-[38%] sm:max-h-none flex flex-row sm:flex-col justify-between gap-2.5 lg:gap-4 shrink-0 min-h-0 overflow-y-auto sm:overflow-visible">
-          {/* Omen / Node Inspector — Hanging Ritual Cloth Banner */}
-          <div className="relative flex-1 flex flex-col min-h-0">
-            {/* Top Timber & Brass Banner Rod */}
-            <div
-              className="relative z-20 h-3 w-[103%] -ml-[1.5%] rounded-full border border-[#8f6d4a]/90 shadow-[0_5px_12px_rgba(0,0,0,0.92)] flex items-center justify-between px-1 shrink-0"
-              style={{
-                backgroundColor: '#3a271a',
-                backgroundImage: `linear-gradient(to bottom, rgba(102,73,51,0.52), rgba(42,27,18,0.62), rgba(20,12,8,0.84)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
-                backgroundSize: '140px 140px',
-                backgroundRepeat: 'repeat',
-              }}
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
-            </div>
-
-            <div
-              className="relative flex-1 flex flex-col justify-center px-5 pt-3.5 pb-5 lg:px-6 lg:pt-4 lg:pb-6 -mt-0.5 rounded-b-[14px] border-x border-b border-[#7a3c2e]/90 shadow-[0_18px_42px_rgba(0,0,0,0.92),inset_0_12px_26px_rgba(0,0,0,0.72)] overflow-hidden"
-              style={{
-                background: 'radial-gradient(ellipse at 50% 0%, #6b0f12 0%, #44080a 52%, #1d0405 100%)',
-              }}
-            >
-              {/* Multiplied Cloth Weave Texture (preserves deep crimson without pink washout) */}
+        {(() => {
+          const mapStage = (mapData as any)?.stage ?? (mapData as any)?.act ?? (mapData as any)?.actNumber ?? 1;
+          const isAct4Burned = mapStage >= 4;
+          const mapSwayAnim =
+            mapStage === 2
+              ? 'bannerSwayMid 5.6s ease-in-out infinite'
+              : mapStage === 3
+                ? 'bannerSwayBrisk 4.6s ease-in-out infinite'
+                : 'bannerSwayGentle 7s ease-in-out infinite';
+          const mapRippleAnim =
+            mapStage === 2
+              ? 'bannerClothRipple 3.0s linear infinite'
+              : mapStage === 3
+                ? 'bannerClothRipple 1.9s linear infinite'
+                : 'bannerClothRipple 5.8s linear infinite';
+          const mapRippleOpacity = mapStage === 3 ? 0.22 : mapStage === 2 ? 0.14 : 0.07;
+          const mapWaveScale = mapStage === 3 ? 30 : mapStage === 2 ? 18 : 5;
+          const mapWaveDur = mapStage === 3 ? '2.3s' : mapStage === 2 ? '3.4s' : '6.0s';
+          const frayedClip =
+            'polygon(0% 0%, 100% 0%, 100% 97.2%, 99% 98.6%, 98% 97.4%, 97% 99.2%, 96% 97.8%, 95% 98.9%, 94% 96.6%, 93% 99.1%, 92% 97.7%, 91% 98.8%, 90% 97.4%, 89% 99.5%, 88% 97.6%, 87% 98.7%, 86% 96.4%, 85% 99.2%, 84% 97.8%, 83% 98.9%, 82% 97.3%, 81% 99.4%, 80% 97.5%, 79% 98.8%, 78% 97.1%, 77% 99.6%, 76% 97.6%, 75% 98.7%, 74% 96.5%, 73% 99.1%, 72% 97.8%, 71% 98.9%, 70% 97.4%, 69% 99.3%, 68% 97.6%, 67% 98.8%, 66% 96.8%, 65% 99.2%, 64% 97.7%, 63% 98.9%, 62% 97.3%, 61% 99.5%, 60% 97.5%, 59% 98.7%, 58% 96.2%, 57% 99.1%, 56% 97.8%, 55% 98.9%, 54% 97.4%, 53% 99.4%, 52% 97.6%, 51% 98.8%, 50% 96.7%, 49% 99.6%, 48% 97.5%, 47% 98.7%, 46% 97.2%, 45% 99.2%, 44% 97.7%, 43% 98.9%, 42% 96.4%, 41% 99.1%, 40% 97.6%, 39% 98.8%, 38% 97.3%, 37% 99.4%, 36% 97.5%, 35% 98.7%, 34% 96.6%, 33% 99.2%, 32% 97.8%, 31% 98.9%, 30% 97.4%, 29% 99.5%, 28% 97.6%, 27% 98.7%, 26% 96.3%, 25% 99.1%, 24% 97.7%, 23% 98.9%, 22% 97.3%, 21% 99.3%, 20% 97.6%, 19% 98.8%, 18% 96.8%, 17% 99.2%, 16% 97.7%, 15% 98.8%, 14% 97.2%, 13% 99.5%, 12% 97.5%, 11% 98.7%, 10% 96.5%, 9% 99.1%, 8% 97.7%, 7% 98.9%, 6% 97.3%, 5% 99.3%, 4% 97.6%, 3% 98.8%, 2% 97.2%, 1% 98.6%, 0% 97.2%)';
+          const bannerBg = isAct4Burned
+            ? 'linear-gradient(180deg, #4f0a0d 0%, #5c1214 55%, #31100f 76%, #120605 90%, #070303 100%)'
+            : 'linear-gradient(180deg, #520a0d 0%, #5c0f12 58%, #7f2424 79%, #a64641 100%)';
+          const frayThreadsBg = isAct4Burned
+            ? 'repeating-linear-gradient(90deg, rgba(20,8,6,0.95) 0px, rgba(20,8,6,0.95) 1px, transparent 1px, transparent 3px, rgba(120,40,18,0.6) 3px, rgba(120,40,18,0.6) 4px, transparent 4px, transparent 7px)'
+            : 'repeating-linear-gradient(90deg, rgba(226,190,118,0.58) 0px, rgba(226,190,118,0.58) 1px, transparent 1px, transparent 3px, rgba(176,78,72,0.85) 3px, rgba(176,78,72,0.85) 4px, transparent 4px, transparent 6px)';
+          const renderOrnateRod = () => (
+            <div className="relative z-20 w-[calc(100%+18px)] -ml-[9px] h-4 flex items-center shrink-0">
               <div
-                className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
+                className="relative w-full h-[9px] rounded-full"
                 style={{
-                  backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/cloth.jpg")`,
-                  backgroundSize: '170px 170px',
-                  backgroundRepeat: 'repeat',
+                  backgroundColor: '#2e1d12',
+                  backgroundImage: `linear-gradient(180deg, rgba(255,214,160,0.28) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.65) 100%), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
+                  backgroundSize: 'cover, 120px 120px',
+                  boxShadow: '0 5px 10px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(0,0,0,0.7)',
                 }}
               />
-              {/* Stitched Gold-Thread Banner Seam */}
-              <div className="pointer-events-none absolute inset-2 border border-dashed border-[#c49a5c]/50 rounded-b-[10px]" />
-              {/* Woven Center Fringe Accent at Bottom Hem */}
-              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#3a0a0a] via-[#cca059]/80 to-[#3a0a0a]" />
+              {[8, 30, 70, 92].map(p => (
+                <span
+                  key={p}
+                  className="pointer-events-none absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[7px] h-[14px] rounded-[2px]"
+                  style={{
+                    left: `${p}%`,
+                    backgroundImage: 'repeating-linear-gradient(115deg, #b08a52 0px, #b08a52 1.2px, #3a2511 1.2px, #3a2511 2.6px)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.85), inset 0 0 2px rgba(0,0,0,0.6)',
+                  }}
+                />
+              ))}
+              {(['left', 'right'] as const).map(side => (
+                <span key={side}>
+                  <span
+                    className="pointer-events-none absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
+                    style={{
+                      [side]: '-2px',
+                      background: 'radial-gradient(circle at 38% 34%, #8a6a3c 0%, #4a3016 55%, #1d1209 100%)',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.9)',
+                    }}
+                  />
+                  <span
+                    className="pointer-events-none absolute top-[62%] w-[2px] h-3"
+                    style={{ [side]: '3px', background: 'linear-gradient(to bottom, #8a6a3c, transparent)' }}
+                  />
+                </span>
+              ))}
+            </div>
+          );
+          const burnedClip =
+            'polygon(0% 0%, 100% 0%, 100% 92%, 99.5% 92.1%, 99% 92.5%, 98.5% 93.2%, 98% 94%, 97.5% 95%, 97% 96%, 96.3% 95.2%, 95.7% 94.5%, 95% 93.9%, 94.3% 93.4%, 93.7% 93.1%, 93% 93%, 92.3% 93.2%, 91.7% 93.7%, 91% 94.5%, 90.3% 95.5%, 89.7% 96.7%, 89% 98%, 88.2% 96.2%, 87.3% 94.5%, 86.5% 93.1%, 85.7% 91.9%, 84.8% 91.2%, 84% 91%, 83.2% 91.2%, 82.3% 91.8%, 81.5% 92.8%, 80.7% 94%, 79.8% 95.4%, 79% 97%, 78.2% 96.2%, 77.3% 95.5%, 76.5% 94.9%, 75.7% 94.4%, 74.8% 94.1%, 74% 94%, 73.2% 94.2%, 72.3% 94.7%, 71.5% 95.5%, 70.7% 96.5%, 69.8% 97.7%, 69% 99%, 68% 97.2%, 67% 95.5%, 66% 94.1%, 65% 92.9%, 64% 92.2%, 63% 92%, 62.2% 92.1%, 61.3% 92.5%, 60.5% 93.2%, 59.7% 94%, 58.8% 95%, 58% 96%, 57% 94.4%, 56% 93%, 55% 91.8%, 54% 90.8%, 53% 90.2%, 52% 90%, 51% 90.3%, 50% 91.1%, 49% 92.3%, 48% 94%, 47% 95.9%, 46% 98%, 45% 96.7%, 44% 95.5%, 43% 94.5%, 42% 93.7%, 41% 93.2%, 40% 93%, 39% 93.2%, 38% 93.8%, 37% 94.8%, 36% 96%, 35% 97.4%, 34% 99%, 33% 97.2%, 32% 95.5%, 31% 94.1%, 30% 92.9%, 29% 92.2%, 28% 92%, 27% 92.2%, 26% 92.7%, 25% 93.5%, 24% 94.5%, 23% 95.7%, 22% 97%, 21% 96%, 20% 95%, 19% 94.2%, 18% 93.5%, 17% 93.1%, 16% 93%, 15% 93.2%, 14% 93.7%, 13% 94.5%, 12% 95.5%, 11% 96.7%, 10% 98%, 9.2% 96.4%, 8.3% 95%, 7.5% 93.8%, 6.7% 92.8%, 5.8% 92.2%, 5% 92%, 4.5% 92.1%, 4% 92.5%, 3.5% 93.2%, 3% 94%, 2.5% 95%, 2% 96%, 1.7% 94.7%, 1.3% 93.5%, 1% 92.5%, 0.7% 91.7%, 0.3% 91.2%, 0% 91%)';
+          const renderAct4Rim = () =>
+            isAct4Burned ? (
+              <svg className="pointer-events-none absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="100,92 99.5,92.1 99,92.5 98.5,93.2 98,94 97.5,95 97,96 96.3,95.2 95.7,94.5 95,93.9 94.3,93.4 93.7,93.1 93,93 92.3,93.2 91.7,93.7 91,94.5 90.3,95.5 89.7,96.7 89,98 88.2,96.2 87.3,94.5 86.5,93.1 85.7,91.9 84.8,91.2 84,91 83.2,91.2 82.3,91.8 81.5,92.8 80.7,94 79.8,95.4 79,97 78.2,96.2 77.3,95.5 76.5,94.9 75.7,94.4 74.8,94.1 74,94 73.2,94.2 72.3,94.7 71.5,95.5 70.7,96.5 69.8,97.7 69,99 68,97.2 67,95.5 66,94.1 65,92.9 64,92.2 63,92 62.2,92.1 61.3,92.5 60.5,93.2 59.7,94 58.8,95 58,96 57,94.4 56,93 55,91.8 54,90.8 53,90.2 52,90 51,90.3 50,91.1 49,92.3 48,94 47,95.9 46,98 45,96.7 44,95.5 43,94.5 42,93.7 41,93.2 40,93 39,93.2 38,93.8 37,94.8 36,96 35,97.4 34,99 33,97.2 32,95.5 31,94.1 30,92.9 29,92.2 28,92 27,92.2 26,92.7 25,93.5 24,94.5 23,95.7 22,97 21,96 20,95 19,94.2 18,93.5 17,93.1 16,93 15,93.2 14,93.7 13,94.5 12,95.5 11,96.7 10,98 9.2,96.4 8.3,95 7.5,93.8 6.7,92.8 5.8,92.2 5,92 4.5,92.1 4,92.5 3.5,93.2 3,94 2.5,95 2,96 1.7,94.7 1.3,93.5 1,92.5 0.7,91.7 0.3,91.2 0,91" fill="none" stroke="rgba(234,88,12,0.35)" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                <polyline points="100,92 99.5,92.1 99,92.5 98.5,93.2 98,94 97.5,95 97,96 96.3,95.2 95.7,94.5 95,93.9 94.3,93.4 93.7,93.1 93,93 92.3,93.2 91.7,93.7 91,94.5 90.3,95.5 89.7,96.7 89,98 88.2,96.2 87.3,94.5 86.5,93.1 85.7,91.9 84.8,91.2 84,91 83.2,91.2 82.3,91.8 81.5,92.8 80.7,94 79.8,95.4 79,97 78.2,96.2 77.3,95.5 76.5,94.9 75.7,94.4 74.8,94.1 74,94 73.2,94.2 72.3,94.7 71.5,95.5 70.7,96.5 69.8,97.7 69,99 68,97.2 67,95.5 66,94.1 65,92.9 64,92.2 63,92 62.2,92.1 61.3,92.5 60.5,93.2 59.7,94 58.8,95 58,96 57,94.4 56,93 55,91.8 54,90.8 53,90.2 52,90 51,90.3 50,91.1 49,92.3 48,94 47,95.9 46,98 45,96.7 44,95.5 43,94.5 42,93.7 41,93.2 40,93 39,93.2 38,93.8 37,94.8 36,96 35,97.4 34,99 33,97.2 32,95.5 31,94.1 30,92.9 29,92.2 28,92 27,92.2 26,92.7 25,93.5 24,94.5 23,95.7 22,97 21,96 20,95 19,94.2 18,93.5 17,93.1 16,93 15,93.2 14,93.7 13,94.5 12,95.5 11,96.7 10,98 9.2,96.4 8.3,95 7.5,93.8 6.7,92.8 5.8,92.2 5,92 4.5,92.1 4,92.5 3.5,93.2 3,94 2.5,95 2,96 1.7,94.7 1.3,93.5 1,92.5 0.7,91.7 0.3,91.2 0,91" fill="none" stroke="rgba(255,150,60,0.9)" strokeWidth="0.6" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+              </svg>
+            ) : null;
+          const renderAct4Char = () =>
+            isAct4Burned ? (
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    'radial-gradient(ellipse 20% 62% at 7% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 14% 40% at 24% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 24% 70% at 44% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 13% 34% at 63% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 22% 58% at 83% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 14% 44% at 100% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 60% 22% at 50% 100%, rgba(234,88,12,0.38) 0%, transparent 100%), linear-gradient(to top, rgba(12,5,4,0.8) 0%, rgba(12,5,4,0.45) 9%, transparent 22%)',
+                }}
+              />
+            ) : null;
+          const renderAct4Cinders = () =>
+            isAct4Burned ? (
+              <>
+                <div className="pointer-events-none absolute bottom-1 inset-x-4 h-16 overflow-visible">
+                  {[
+                    { left: '26%', delay: '0s', dur: '6.8s', size: 2.5 },
+                    { left: '71%', delay: '3.7s', dur: '7.2s', size: 2.5 },
+                  ].map((cinder, i) => (
+                    <span
+                      key={i}
+                      className="absolute bottom-0 rounded-full bg-orange-500/75 shadow-[0_0_5px_rgba(251,146,60,0.6)]"
+                      style={{
+                        left: cinder.left,
+                        width: cinder.size,
+                        height: cinder.size,
+                        animation: `bannerCinderRise ${cinder.dur} ease-out ${cinder.delay} infinite`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null;
+
+          return (
+        <div className="w-full sm:w-[240px] md:w-[280px] lg:w-[330px] max-h-[38%] sm:max-h-none flex flex-row sm:flex-col justify-between gap-2.5 lg:gap-4 shrink-0 min-h-0 overflow-y-auto sm:overflow-visible">
+          {/* Hidden SVG Wave Displacement Filter for Map Banners */}
+          <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
+            <defs>
+              <filter id="map-cloth-wave" x="-28%" y="-6%" width="156%" height="116%">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.0025 0.011"
+                  numOctaves="1"
+                  seed="7"
+                  result="noise"
+                >
+                  <animate
+                    attributeName="baseFrequency"
+                    values="0.0022 0.010; 0.0042 0.017; 0.0022 0.010"
+                    dur={mapWaveDur}
+                    repeatCount="indefinite"
+                  />
+                </feTurbulence>
+                <feDisplacementMap
+                  in="SourceGraphic"
+                  in2="noise"
+                  scale={mapWaveScale}
+                  xChannelSelector="R"
+                  yChannelSelector="G"
+                />
+              </filter>
+            </defs>
+          </svg>
+
+          {/* Omen / Node Inspector — Hanging Ritual Cloth Banner */}
+          <div className="relative flex-1 flex flex-col min-h-0">
+            {renderOrnateRod()}
+
+            <div
+              className="relative z-10 flex-1 flex flex-col -mt-1.5 min-h-0"
+              style={{
+                transformOrigin: 'top center',
+                animation: mapSwayAnim,
+                filter: 'drop-shadow(0 12px 16px rgba(0,0,0,0.75))',
+              }}
+            >
+            <div className="relative flex-1 flex flex-col justify-center px-5 pt-3.5 pb-7 lg:px-6 lg:pt-4 lg:pb-8 min-h-0">
+              {/* Wavy Displaced Cloth Backdrop */}
+              <div
+                className="pointer-events-none absolute inset-0 shadow-[inset_0_12px_26px_rgba(0,0,0,0.72)] overflow-hidden"
+                style={{
+                  filter: 'url(#map-cloth-wave)',
+                  background: bannerBg,
+                  clipPath: isAct4Burned ? burnedClip : frayedClip,
+                }}
+              >
+                {/* Multiplied Cloth Weave Texture */}
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
+                  style={{
+                    backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/cloth.jpg")`,
+                    backgroundSize: '170px 170px',
+                    backgroundRepeat: 'repeat',
+                  }}
+                />
+                {/* Seamless Downward Wind Sheen */}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    opacity: mapRippleOpacity,
+                    backgroundImage:
+                      'repeating-linear-gradient(180deg, transparent 0px, rgba(255,220,185,0.22) 38px, transparent 84px, rgba(0,0,0,0.22) 132px, transparent 180px)',
+                    backgroundSize: '100% 180px',
+                    animation: mapRippleAnim,
+                  }}
+                />
+
+                {/* Detailed Frayed Thread Strands */}
+                <div
+                  className="pointer-events-none absolute bottom-0 inset-x-0 h-5 opacity-80"
+                  style={{
+                    backgroundImage: frayThreadsBg,
+                    maskImage: 'linear-gradient(to bottom, transparent 0%, black 45%, black 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 45%, black 100%)',
+                  }}
+                />
+                <div className="pointer-events-none absolute bottom-0 inset-x-0 h-9 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+                {renderAct4Char()}{renderAct4Rim()}
+              </div>
+              {renderAct4Cinders()}
 
             <div className="relative z-10 flex flex-col h-full min-h-0">
               {/* Header Bar */}
@@ -1105,10 +1264,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 </span>
                 {inspectedMeta && (
                   <span
-                    className={`px-2.5 py-0.5 rounded-[2px] border text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] text-center ${
-                      inspectedMeta.tone === 'boss' || inspectedMeta.tone === 'combat'
-                        ? 'bg-[#2b0607]/90 border-red-600/85 text-red-200'
-                        : 'bg-[#22090a]/90 border-[#8a5d42]/85 text-[#f0dec0]'
+                    className={`text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.24em] text-center drop-shadow-[0_1px_5px_rgba(0,0,0,0.95)] ${
+                      inspectedMeta.tone === 'boss' || inspectedMeta.tone === 'combat' ? 'text-red-400' : 'text-[#e0c79a]'
                     }`}
                   >
                     {inspectedMeta.tag}
@@ -1118,20 +1275,28 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
               {inspectedNode && inspectedMeta && (
                 <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center px-2 pb-2">
-                  {/* Carved Stone Glyph Medallion */}
-                  <div className="relative mb-2.5 shrink-0">
+                  {/* Lit Glyph (no medallion) */}
+                  <div className="relative mb-2.5 shrink-0 w-16 h-16 flex items-center justify-center">
                     <div
-                      className={`w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-[0_8px_20px_rgba(0,0,0,0.9),inset_0_0_12px_rgba(0,0,0,0.8)] ${
+                      className="pointer-events-none absolute -inset-3"
+                      style={{
+                        background:
+                          inspectedMeta.tone === 'boss' || inspectedMeta.tone === 'combat'
+                            ? 'radial-gradient(circle, rgba(0,0,0,0.6) 0%, rgba(120,16,14,0.3) 40%, transparent 70%)'
+                            : 'radial-gradient(circle, rgba(0,0,0,0.6) 0%, rgba(150,110,60,0.2) 40%, transparent 70%)',
+                      }}
+                    />
+                    <div
+                      className={`relative [&>svg]:scale-[1.9] ${
                         inspectedMeta.tone === 'boss'
-                          ? 'bg-gradient-to-b from-[#450d0d] to-[#1a0505] border-[#c49f62]/90 text-[#f5dfb4]'
+                          ? 'text-[#f5dfb4] drop-shadow-[0_0_14px_rgba(200,36,28,0.95)]'
                           : inspectedMeta.tone === 'combat'
-                            ? 'bg-gradient-to-b from-[#340d0e] to-[#160607] border-[#a13630]/90 text-[#f2b8ae]'
-                            : 'bg-gradient-to-b from-[#261619] to-[#12090b] border-[#8c7462]/90 text-[#efe2cc]'
+                            ? 'text-[#f2b8ae] drop-shadow-[0_0_12px_rgba(200,44,32,0.85)]'
+                            : 'text-[#efe2cc] drop-shadow-[0_0_10px_rgba(214,184,136,0.7)]'
                       }`}
                     >
                       {renderInkGlyph(inspectedNode.type, inspectedNode.type === 'boss')}
                     </div>
-                    <span className="pointer-events-none absolute -inset-1.5 rounded-full border border-dashed border-[#a68356]/45" />
                   </div>
 
                   <h2 className="text-lg lg:text-xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] text-[#f7ead3] leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
@@ -1151,40 +1316,65 @@ const MapScreen: React.FC<MapScreenProps> = ({
               )}
             </div>
             </div>
+            </div>
           </div>
 
           {/* Expedition Status & Act Boss Telemetry — Hanging Ritual Cloth Banner */}
           <div className="relative flex flex-col">
-            {/* Top Timber & Brass Banner Rod */}
-            <div
-              className="relative z-20 h-3 w-[103%] -ml-[1.5%] rounded-full border border-[#8f6d4a]/90 shadow-[0_5px_12px_rgba(0,0,0,0.92)] flex items-center justify-between px-1 shrink-0"
-              style={{
-                backgroundColor: '#3a271a',
-                backgroundImage: `linear-gradient(to bottom, rgba(102,73,51,0.52), rgba(42,27,18,0.62), rgba(20,12,8,0.84)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
-                backgroundSize: '140px 140px',
-                backgroundRepeat: 'repeat',
-              }}
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#2b1d12] border border-[#cfa76b]" />
-            </div>
+            {renderOrnateRod()}
 
             <div
-              className="relative px-5 pt-4 pb-5 -mt-0.5 rounded-b-[14px] border-x border-b border-[#7a3c2e]/90 shadow-[0_16px_34px_rgba(0,0,0,0.92),inset_0_10px_22px_rgba(0,0,0,0.72)] overflow-hidden"
+              className="relative z-10 -mt-1.5"
               style={{
-                background: 'radial-gradient(ellipse at 50% 0%, #610d10 0%, #3d0709 54%, #1a0304 100%)',
+                transformOrigin: 'top center',
+                animation: mapSwayAnim,
+                animationDelay: '-1.8s',
+                filter: 'drop-shadow(0 12px 16px rgba(0,0,0,0.75))',
               }}
             >
+            <div className="relative px-5 pt-4 pb-8">
+              {/* Wavy Displaced Cloth Backdrop */}
               <div
-                className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
+                className="pointer-events-none absolute inset-0 shadow-[inset_0_10px_22px_rgba(0,0,0,0.72)] overflow-hidden"
                 style={{
-                  backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/cloth.jpg")`,
-                  backgroundSize: '170px 170px',
-                  backgroundRepeat: 'repeat',
+                  filter: 'url(#map-cloth-wave)',
+                  background: bannerBg,
+                  clipPath: isAct4Burned ? burnedClip : frayedClip,
                 }}
-              />
-              <div className="pointer-events-none absolute inset-2 border border-dashed border-[#c49a5c]/45 rounded-b-[10px]" />
-              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#3a0a0a] via-[#cca059]/80 to-[#3a0a0a]" />
+              >
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
+                  style={{
+                    backgroundImage: `url("${import.meta.env.BASE_URL || './'}assets/text/cloth.jpg")`,
+                    backgroundSize: '170px 170px',
+                    backgroundRepeat: 'repeat',
+                  }}
+                />
+                {/* Seamless Downward Wind Sheen */}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    opacity: mapRippleOpacity,
+                    backgroundImage:
+                      'repeating-linear-gradient(180deg, transparent 0px, rgba(255,220,185,0.22) 38px, transparent 84px, rgba(0,0,0,0.22) 132px, transparent 180px)',
+                    backgroundSize: '100% 180px',
+                    animation: mapRippleAnim,
+                    animationDelay: '-1.1s',
+                  }}
+                />
+
+                <div
+                  className="pointer-events-none absolute bottom-0 inset-x-0 h-5 opacity-80"
+                  style={{
+                    backgroundImage: frayThreadsBg,
+                    maskImage: 'linear-gradient(to bottom, transparent 0%, black 45%, black 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 45%, black 100%)',
+                  }}
+                />
+                <div className="pointer-events-none absolute bottom-0 inset-x-0 h-9 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+                {renderAct4Char()}{renderAct4Rim()}
+              </div>
+              {renderAct4Cinders()}
 
             <div className="relative z-10">
               <div className="flex items-center justify-center pb-2.5 mb-2.5 border-b border-[#6b3428]/80 text-center">
@@ -1196,35 +1386,35 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
               <div className="divide-y divide-[#4d201c]/80 text-xs">
                 <div className="flex items-center justify-between py-2">
-                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em]">Act Boss</span>
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">Act Boss</span>
                   <span className="font-['Cinzel',_serif] font-bold text-sm text-red-200 uppercase tracking-[0.14em] drop-shadow-[0_1px_6px_rgba(185,28,28,0.65)]">
                     {bossMeta.name}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between py-2">
-                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em]">Creatures</span>
-                  <span className="px-2 py-0.5 rounded-[2px] bg-[#1a0c0d]/90 border border-[#6e4636] font-mono font-bold text-xs text-[#f5e7cf]">
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">Creatures</span>
+                  <span className="font-['Cinzel',_serif] font-bold text-sm text-[#f5e7cf] drop-shadow-[0_1px_5px_rgba(0,0,0,0.95)]">
                     {deckSize}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between py-2">
-                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em]">Overkill Blood</span>
-                  <span className="px-2 py-0.5 rounded-[2px] bg-[#2b090b]/90 border border-red-800/80 font-mono font-bold text-xs text-red-200">
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">Overkill Blood</span>
+                  <span className="font-['Cinzel',_serif] font-bold text-sm text-red-300 drop-shadow-[0_0_6px_rgba(185,28,28,0.7)]">
                     {overkillBlood} oz
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between py-2">
-                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em]">Starting Bones</span>
-                  <span className="px-2 py-0.5 rounded-[2px] bg-[#1a0c0d]/90 border border-[#6e4636] font-mono font-bold text-xs text-[#f5e7cf]">
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">Starting Bones</span>
+                  <span className="font-['Cinzel',_serif] font-bold text-sm text-[#f5e7cf] drop-shadow-[0_1px_5px_rgba(0,0,0,0.95)]">
                     {startingBones}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between gap-2 py-2">
-                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em] shrink-0">Effigy</span>
+                  <span className="font-['Cinzel',_serif] font-semibold text-[#d4bea0] uppercase tracking-[0.14em] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)] shrink-0">Effigy</span>
                   <span className="font-['Cinzel',_serif] font-bold text-xs text-[#efd4a0] truncate text-right tracking-[0.08em]">
                     {activeTotem?.head && activeTotem?.body
                       ? `${activeTotem.head} / ${activeTotem.body}`
@@ -1239,7 +1429,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                     <span
                       key={vId}
                       title={RITUAL_VOW_MAP[vId]?.desc}
-                      className="px-1.5 py-0.5 rounded-[2px] bg-[#260c0a]/90 border border-red-800/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.1em] text-red-200/95"
+                      className="text-[9px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.14em] text-red-300/95 drop-shadow-[0_0_5px_rgba(0,0,0,0.95)]"
                     >
                       ✦ {RITUAL_VOW_MAP[vId]?.shortTag || vId}
                     </span>
@@ -1249,7 +1439,10 @@ const MapScreen: React.FC<MapScreenProps> = ({
             </div>
           </div>
           </div>
+          </div>
         </div>
+          );
+        })()}
       </div>
     </div>
   );

@@ -33,7 +33,7 @@ export const RITUAL_VOWS: RitualVowDef[] = [
     numeral: 'II',
     name: 'Boiling Zeal',
     shortTag: '1 Baptism Only',
-    desc: 'The baptismal font extinguishes after a single blessing; second immersions are forbidden.',
+    desc: 'The Zealot will not lose his flock again; second immersions are forbidden.',
     scoreBonus: 25,
   },
   {
@@ -49,7 +49,7 @@ export const RITUAL_VOWS: RitualVowDef[] = [
     numeral: 'IV',
     name: 'Lean Offering',
     shortTag: 'Thinner Draft',
-    desc: 'Draft pool shrinks to 5 cards with 1 fewer Pelt trade (Unformed keeps 3 trades).',
+    desc: 'Draft pool shrinks to 5 cards with 1 fewer Pelt trade.',
     scoreBonus: 30,
   },
   {
@@ -57,7 +57,7 @@ export const RITUAL_VOWS: RitualVowDef[] = [
     numeral: 'V',
     name: 'Sanguine Debt',
     shortTag: 'Scale Debt -1',
-    desc: 'Begin every duel tipped -1 on the Bleeding Runnel.',
+    desc: 'Begin every duel drained of -1 Oz of Blood in the Vial.',
     scoreBonus: 30,
   },
   {
@@ -65,7 +65,7 @@ export const RITUAL_VOWS: RitualVowDef[] = [
     numeral: 'VI',
     name: 'Empty Satchel',
     shortTag: 'Barren Satchel',
-    desc: 'Begin with no starting relics, and Peddler relics cost 1.5x Blood.',
+    desc: 'Begin with no starting relics, and Merchant relics cost 1.5x Blood.',
     scoreBonus: 35,
   },
   {
@@ -73,7 +73,7 @@ export const RITUAL_VOWS: RitualVowDef[] = [
     numeral: 'VII',
     name: 'Swarming Dark',
     shortTag: '+1 Foe Queued',
-    desc: 'Standard battles draw and queue +1 extra enemy creature.',
+    desc: 'Standard duels are significantly more perilous; .',
     scoreBonus: 35,
   },
   {

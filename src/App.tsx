@@ -253,12 +253,13 @@ export default function App() {
 
     if (battleWipeTimerRef.current) clearTimeout(battleWipeTimerRef.current);
     setBattleWipePhase('IN');
+    triggerSfx('whoosh');
     battleWipeTimerRef.current = setTimeout(() => {
       setBattleWipePhase('OUT');
       battleWipeTimerRef.current = setTimeout(() => {
         setBattleWipePhase('IDLE');
-      }, 500);
-    }, 460);
+      }, 380);
+    }, 300);
   }, []);
 
   const isMenuScreen = (s: ScreenState) =>
@@ -294,25 +295,25 @@ export default function App() {
     if (!isConsecutiveDuel && !isSplash && !isMenuTransition) {
       if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
 
-      // Phase 1 (550ms): Soft volumetric smoke clouds roll inward from flanks
+      // Phase 1 (320ms): Volumetric smoke crossfade inward
       setSmokePhase('IN');
       triggerSfx('whoosh');
 
       transitionTimerRef.current = setTimeout(() => {
-        // Phase 2: Mount new screen safely behind pitch-black smoke blanket
+        // Phase 2: Mount new screen behind peak smoke veil
         prevScreenRef.current = nextVal;
         setScreenRaw(nextVal);
 
-        // Phase 3 (180ms hold): Allows card art and textures to paint completely
+        // Phase 3 (80ms): Brief settle before dissipating
         transitionTimerRef.current = setTimeout(() => {
           setSmokePhase('OUT');
 
-          // Phase 4 (600ms): Smoke lifts and dissipates away
+          // Phase 4 (380ms): Smoke lifts and clears
           transitionTimerRef.current = setTimeout(() => {
             setSmokePhase('IDLE');
-          }, 600);
-        }, 180);
-      }, 550);
+          }, 380);
+        }, 80);
+      }, 320);
     } else {
       if (isConsecutiveDuel) {
         triggerBattleWipe();
@@ -617,6 +618,8 @@ export default function App() {
   const [modalAlert, setModalAlert] = useState<{
     title: string;
     message: string;
+    eyebrow?: string;
+    previewCard?: CardDef | null;
     isWin?: boolean;
     btnText: string;
     onAction: () => void;
@@ -634,6 +637,7 @@ export default function App() {
   const [draftRevealedIndices, setDraftRevealedIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7]);
   const [draftFlippingDown, setDraftFlippingDown] = useState<boolean>(false);
   const [draftFlippingUp, setDraftFlippingUp] = useState<boolean>(false);
+  const isRandomizerDraftRef = useRef<boolean>(false);
 
   // Crossroads & Event States
   const [crossroadsOptions, setCrossroadsOptions] = useState<string[]>([]);
@@ -647,6 +651,7 @@ export default function App() {
   const runSeedRef = useRef<string>('');
   const duelRngRef = useRef<() => number>(() => Math.random());
   const [isLossSequenceActive, setIsLossSequenceActive] = useState<boolean>(false);
+  const [lossQuote, setLossQuote] = useState<string>('The Sacred Threads Drag you into the Abyss');
 
   const seededShuffle = <T,>(arr: T[], rng: () => number): T[] => {
     const copy = [...arr];
@@ -1210,9 +1215,12 @@ export default function App() {
     isAirborne: boolean;
     isDirect: boolean;
     direction: 'left' | 'right' | 'straight';
+    power?: number;
   }) => {
-    setActiveAttacker(attacker);
-    await new Promise(res => setTimeout(res, 400));
+    const { power = 1, ...lungeState } = attacker;
+    const windupMs = power >= 3 ? 90 : power === 2 ? 65 : 40;
+    setActiveAttacker(lungeState);
+    await new Promise(res => setTimeout(res, windupMs + 340));
     setActiveAttacker(null);
   };
 
@@ -1252,15 +1260,19 @@ export default function App() {
   };
 
   const animateCardDamage = async (isPlayer: boolean, lane: number, dmgAmount = 1, isLethal = false) => {
-    const isHeavy = dmgAmount >= 4 || isLethal;
+    const isHeavy = dmgAmount >= 3 || isLethal;
     triggerSfx(dmgAmount >= 2 || isLethal ? 'heavy_hit' : 'hit');
+    const hitstopMs = isLethal || dmgAmount >= 5 ? 65 : dmgAmount >= 3 ? 52 : dmgAmount === 2 ? 44 : 40;
+    await triggerMicroHitstop(hitstopMs);
     if (isHeavy) {
       setIsHeavyRecoil(true);
-      await triggerMicroHitstop(dmgAmount >= 5 ? 65 : 50);
-      window.setTimeout(() => setIsHeavyRecoil(false), 340);
+      window.setTimeout(() => setIsHeavyRecoil(false), 320);
+    } else if (dmgAmount >= 2) {
+      setIsBoardRumbling(true);
+      window.setTimeout(() => setIsBoardRumbling(false), 160);
     }
-    setDamagedCard({ isPlayer, lane });
-    await new Promise(res => setTimeout(res, 150));
+    setDamagedCard({ isPlayer, lane, power: dmgAmount } as any);
+    await new Promise(res => setTimeout(res, dmgAmount >= 3 ? 190 : 150));
     setDamagedCard(null);
   };
 
@@ -1271,17 +1283,18 @@ export default function App() {
   };
 
   const animateDirectDamageRumble = async (dmgAmount = 1, isLethalSwing = false) => {
-    const isHeavy = dmgAmount >= 4 || isLethalSwing;
+    const isHeavy = dmgAmount >= 3 || isLethalSwing;
     triggerSfx(dmgAmount >= 2 || isLethalSwing ? 'heavy_hit' : 'hit');
+    const hitstopMs = isLethalSwing || dmgAmount >= 5 ? 65 : dmgAmount >= 3 ? 54 : dmgAmount === 2 ? 45 : 40;
+    await triggerMicroHitstop(hitstopMs);
     if (isHeavy) {
       setIsHeavyRecoil(true);
       triggerScaleHeavySlam();
-      await triggerMicroHitstop(isLethalSwing ? 65 : 52);
-      await new Promise(res => setTimeout(res, 220));
+      await new Promise(res => setTimeout(res, 180));
       setIsHeavyRecoil(false);
     } else {
       setIsBoardRumbling(true);
-      await new Promise(res => setTimeout(res, 200));
+      await new Promise(res => setTimeout(res, dmgAmount === 2 ? 185 : 150));
       setIsBoardRumbling(false);
     }
   };
@@ -1479,12 +1492,18 @@ export default function App() {
       screen === 'VIEW_DECK' ||
       screen === 'DEV_MENU' ||
       screen === 'EVENT_HOARDER_SEARCH' ||
-      smokePhase === 'IN'
+      (smokePhase === 'IN' && screen !== 'GAME_OVER')
     ) {
       return;
     }
 
     if (screen === 'DUEL') {
+      if (isLossSequenceActive) {
+        if (ChiptuneAudio.currentTrack !== 'gameover') {
+          ChiptuneAudio.playGameOver?.(1.6);
+        }
+        return;
+      }
       if (isBossMatch) {
         if (bossState.type === 'BoneLord') {
           const desiredTrack = bossPhase === 3 ? 'bloodmoon-phase3' : 'finalboss';
@@ -1515,7 +1534,7 @@ export default function App() {
         ChiptuneAudio.playCabin();
       }
     }
-  }, [screen, audioEnabled, isBossMatch, bossState.type, bossState.ritualEndedVoluntarily, bossPhase, smokePhase, showContinueModal]);
+  }, [screen, audioEnabled, isBossMatch, bossState.type, bossState.ritualEndedVoluntarily, bossPhase, smokePhase, showContinueModal, isLossSequenceActive]);
 
   // Wake suspended AudioContext on first user interaction so Main Menu BGM starts cleanly
   useEffect(() => {
@@ -2072,6 +2091,7 @@ export default function App() {
 
       const playedCard = cloneCard(cardToPlay, ouroborosBuffs);
       if (!playedCard.id) playedCard.id = `card-${Date.now()}-${Math.random()}`;
+      (playedCard as any).masterId = (cardToPlay as any).masterId || cardToPlay.id;
       triggerSummonWipe(playedCard.id);
 
       if (playedCard.name.startsWith("Red ")) {
@@ -3071,6 +3091,8 @@ export default function App() {
           const canMove = target >= 0 && target <= 3 && nextBoard[target] === null;
 
           if (canMove) {
+            await triggerSigilJitter(isPlayer, i);
+            await new Promise(res => setTimeout(res, 65));
             await triggerLateralMove(card.id, target - i);
             nextBoard[target] = card;
             if (isCardNamed(card.name, "Demon Elk")) {
@@ -3144,6 +3166,7 @@ export default function App() {
                 shiftPromises.push(triggerLateralMove(shiftCard.id, dir));
               }
             }
+            if (card.id) shiftPromises.push(triggerLateralMove(card.id, dir));
             await Promise.all(shiftPromises);
             for (let j = emptySlot; j !== i; j -= dir) {
               nextBoard[j] = nextBoard[j - dir];
@@ -3377,6 +3400,7 @@ export default function App() {
           isAirborne,
           isDirect: isDirectLunge,
           direction,
+          power: pAtk,
         });
 
         if (eCard && !hitsDirectly) {
@@ -3463,8 +3487,8 @@ export default function App() {
                 if (permGain > 0) {
                   (pCard as any).caimanPermHpGained = ((pCard as any).caimanPermHpGained || 0) + permGain;
                   const targetMasterId = (pCard as any).masterId || pCard.id;
-                  setMasterDeck(prev =>
-                    prev.map(c =>
+                  setMasterDeck(prev => {
+                    const next = prev.map(c =>
                       c.id === targetMasterId
                         ? {
                             ...c,
@@ -3473,13 +3497,20 @@ export default function App() {
                             caimanLeechRemainder: nextRem,
                           } as any
                         : c
-                    )
-                  );
+                    );
+                    masterDeckRef.current = next;
+                    return next;
+                  });
                   addLog(`${pCard.name} permanently grew (+${permGain} Max HP)!`);
                 } else {
-                  setMasterDeck(prev =>
-                    prev.map(c => (c.id === ((pCard as any).masterId || pCard.id) ? ({ ...c, caimanLeechRemainder: nextRem } as any) : c))
-                  );
+                  const targetMasterId = (pCard as any).masterId || pCard.id;
+                  setMasterDeck(prev => {
+                    const next = prev.map(c =>
+                      c.id === targetMasterId ? ({ ...c, caimanLeechRemainder: nextRem } as any) : c
+                    );
+                    masterDeckRef.current = next;
+                    return next;
+                  });
                 }
               }
 
@@ -3559,13 +3590,16 @@ export default function App() {
 
                 // Hodag's Bloodlust permanently commits its attack growth to masterDeck
                 if (isCardNamed(pCard.name, 'Hodag')) {
-                  setMasterDeck(prev =>
-                    prev.map(c =>
-                      c.id === pCard.id || isCardNamed(c.name, 'Hodag')
+                  const targetMasterId = (pCard as any).masterId || pCard.id;
+                  setMasterDeck(prev => {
+                    const next = prev.map(c =>
+                      c.id === targetMasterId || isCardNamed(c.name, 'Hodag')
                         ? { ...c, attack: (c.attack || 0) + 1 }
                         : c
-                    )
-                  );
+                    );
+                    masterDeckRef.current = next;
+                    return next;
+                  });
                 }
 
                 setPlayerBoard([...currPBoard]);
@@ -3582,8 +3616,8 @@ export default function App() {
                   await animateDirectDamageRumble(excess, currentScale + excess >= 5);
                   let trampleVented = 0;
                   for (let pt = 0; pt < excess; pt++) {
-                    turnBloodDealt += 1;
                     if (turnNumber === 1 && currentScale >= 4) {
+                      turnBloodDealt += 1;
                       trampleVented += 1;
                       setIsAmpouleCracked(true);
                       setTotalOverkillDamage(prev => (prev || 0) + 1);
@@ -3653,10 +3687,10 @@ export default function App() {
           // Step gauge 1 point at a time with tick sound
           let ventedThisStrike = 0;
           for (let pt = 0; pt < pAtk; pt++) {
-            turnBloodDealt += 1;
             // Arterial Shunt: On Turn 1, hydraulic pressure cannot force the column past +4.
             // Excess volume diverts directly through the petcock into the banked ounce reservoir.
             if (turnNumber === 1 && currentScale >= 4) {
+              turnBloodDealt += 1;
               ventedThisStrike += 1;
               setIsAmpouleCracked(true);
               setTotalOverkillDamage(prev => (prev || 0) + 1);
@@ -4065,6 +4099,8 @@ export default function App() {
       }));
 
       if (overkillTotal > 0) {
+        turnBloodDealt += overkillTotal;
+        setHighestOverkill(prev => Math.max(prev, turnBloodDealt));
         setIsOverkill(true);
         setIsEnemyRetracting(true);
         const tickCount = Math.min(overkillTotal, 10);
@@ -4083,19 +4119,17 @@ export default function App() {
           await sleep(75);
         }
         triggerSfx('overkill');
+        triggerScaleHeavySlam();
 
-        // 1. Give the CSS transition 750ms to finish translating off the top
-        await sleep(750);
-
-        // 2. Clear both enemy rows while cards are invisible so they can't snap back
+        // Snappy overkill retract + pulse (~0.65s total)
+        await sleep(220);
         currEBoard = [null, null, null, null];
         currEQueue = [null, null, null, null];
         setEnemyBoard([null, null, null, null]);
         setEnemyQueue([null, null, null, null]);
         setIsEnemyRetracting(false);
 
-        // 3. Keep the OVERKILL banner visible for impact
-        await sleep(1400);
+        await sleep(430);
         setIsOverkill(false);
       }
 
@@ -4106,7 +4140,7 @@ export default function App() {
       setPhase('GAME_OVER');
       triggerSfx('victory');
 
-      await sleep(1500);
+      await sleep(400);
       handleWinMatch();
       return;
     }
@@ -4238,6 +4272,7 @@ export default function App() {
           isAirborne,
           isDirect: isDirectLunge,
           direction,
+          power: eAtk,
         });
 
         if (pCard && !hitsDirectly) {
@@ -4443,9 +4478,37 @@ export default function App() {
           setPlayerBoard(currPBoard);
           setEnemyBoard(currEBoard);
           setPhase('GAME_OVER');
+          const lossQuotes = [
+            "Nice Job.",
+            "You didn't think that through.",
+            "Really?",
+            "I've never seen someone lose that badly before.",
+            "Whats the matter? Bad at video games?",
+            "Sure bud, keep telling yourself that.",
+            "Oh! Well Bless your heart, sweetie.",
+            "That wasn't your fault, it never is.",
+            "Try Again?",
+            "Okay, now for real this time.",
+            "This loss is gonna bother you for a while.",
+            "You can always lower the difficulty in the settings.",
+            "Maybe one of these is the secret password?",
+            "Did you see where you misplayed now?",
+            "Ouch.",
+            "Are you feeling well?",
+            "You've played Inscryption before right?",
+            "ur ded lol.",
+            "That never gets old.",
+            "Just one more run, then to bed with you.",
+            "Were you expecting a taunt?",
+            "Too bad.",
+          ];
+          setLossQuote(lossQuotes[Math.floor(Math.random() * lossQuotes.length)]);
           setIsHeavyRecoil(true);
           setIsLossSequenceActive(true);
           triggerSfx('defeat');
+          if (audioEnabled && ChiptuneAudio.currentTrack !== 'gameover') {
+            ChiptuneAudio.playGameOver?.(1.6);
+          }
           await sleep(420);
           setIsHeavyRecoil(false);
           await sleep(2800);
@@ -4740,9 +4803,28 @@ export default function App() {
 
               // Prioritize combatants over 0-atk walls whenever damage budget remains
               const combatants = validPool.filter(c => getEffectiveAtk(c) > 0);
-              const poolToUse = (remainingAtkBudget > 0 && combatants.length > 0) ? combatants : validPool;
+              let poolToUse = (remainingAtkBudget > 0 && combatants.length > 0) ? combatants : validPool;
+
+              // If this encounter wields a poppet/totem, strongly favor cards matching its tribe
+              if (bossTotem && duelRngRef.current() < 0.8) {
+                const tribalPool = poolToUse.filter(
+                  c => c.class === bossTotem.class || c.class === 'ALL Classes'
+                );
+                const fallbackTribal = validPool.filter(
+                  c => c.class === bossTotem.class || c.class === 'ALL Classes'
+                );
+                if (tribalPool.length > 0) poolToUse = tribalPool;
+                else if (fallbackTribal.length > 0) poolToUse = fallbackTribal;
+              }
 
               const candidate = transformAmorphous(cloneCard(poolToUse[Math.floor(duelRngRef.current() * poolToUse.length)], 0));
+              if (
+                bossTotem &&
+                (candidate.class === bossTotem.class || candidate.class === 'ALL Classes') &&
+                !candidate.sigils.includes(bossTotem.sigil)
+              ) {
+                candidate.sigils.push(bossTotem.sigil);
+              }
               currEQueue[targetSlot] = candidate;
               currentQueueAtk += getEffectiveAtk(candidate);
               if (getEffectiveAtk(candidate) === 0) queuedZeroAtkCount++;
@@ -4906,6 +4988,9 @@ export default function App() {
   };
 
   const handleEndRitual = () => {
+    if (audioEnabled && ChiptuneAudio.currentTrack !== 'victory') {
+      ChiptuneAudio.playVictory?.(1.4);
+    }
     try {
       localStorage.removeItem(RUN_SAVE_KEY);
     } catch (_) {}
@@ -5298,7 +5383,11 @@ export default function App() {
     const currentTotem = totemOverride !== undefined ? totemOverride : activeTotem;
 
     const shuffledDeck = seededShuffle(
-      activeDeck.map(c => currentTotem ? applyPlayerTotem(cloneCard(c, ouroborosBuffs), currentTotem) : cloneCard(c, ouroborosBuffs)),
+      activeDeck.map(c => {
+        const cloned = currentTotem ? applyPlayerTotem(cloneCard(c, ouroborosBuffs), currentTotem) : cloneCard(c, ouroborosBuffs);
+        (cloned as any).masterId = (c as any).masterId || c.id;
+        return cloned;
+      }),
       duelRng
     );
 
@@ -5995,6 +6084,7 @@ export default function App() {
       pool.push(c);
     }
 
+    isRandomizerDraftRef.current = isRandomizer;
     setDraftPlayerDeck(pDeck);
     setDraftTradePool(pool);
     setDraftTradesLeft(isRandomizer ? (isThinnerDraft ? 3 : 4) : (isThinnerDraft ? 1 : 2));
@@ -6057,10 +6147,36 @@ export default function App() {
         const shuffled = [...validIndices].sort(() => Math.random() - 0.5);
         const chosenFour = shuffled.slice(0, 4);
 
+        // Randomizer special condition: reroll the 4 flipped cards fresh from the draft pool each time
+        if (isRandomizerDraftRef.current && chosenFour.length > 0) {
+          const eligiblePool = MAIN_DECK_POOL.filter(isStarterDraftEligible);
+          const rerolledPool = [...nextT];
+          const pickedNames = new Set<string>();
+          for (const slotIdx of chosenFour) {
+            let candidate: CardDef | null = null;
+            for (let attempt = 0; attempt < 60; attempt++) {
+              const raw = eligiblePool[Math.floor(Math.random() * eligiblePool.length)];
+              if (raw && !pickedNames.has(raw.name)) {
+                candidate = cloneCard(raw);
+                pickedNames.add(raw.name);
+                break;
+              }
+            }
+            if (candidate) {
+              rerolledPool[slotIdx] = candidate;
+            }
+          }
+          setDraftTradePool(rerolledPool);
+        }
+
         setDraftFlippingDown(false);
         setDraftFlippingUp(true);
-        setDraftRevealedIndices(chosenFour);
-        triggerSfx('draw');
+        chosenFour.forEach((slotIdx, stepIdx) => {
+          setTimeout(() => {
+            setDraftRevealedIndices(prev => (prev.includes(slotIdx) ? prev : [...prev, slotIdx]));
+            triggerSfx('flip');
+          }, stepIdx * 45);
+        });
 
         setTimeout(() => {
           setDraftFlippingUp(false);
@@ -6482,8 +6598,8 @@ export default function App() {
           updated.boneCost = Math.max(1, oldBones - 1);
         }
         if ((updated.health || 1) > 1) {
-          updated.health = (updated.health || 1) - 1;
-          outcomeMsg = `${updated.name} was hollowed out. Its summoning cost fell by 1, at the price of 1 Health.`;
+          updated.health = Math.max(1, Math.floor((updated.health || 1) / 2));
+          outcomeMsg = `${updated.name} was hollowed out. Its summoning cost fell by 1, at the price of half its Health.`;
         } else {
           if (!updated.sigils.includes('Brittle')) {
             updated.sigils = [...updated.sigils, 'Brittle'];
@@ -6743,7 +6859,7 @@ export default function App() {
     const pool = EVENT_CARD_POOL.filter(c => c.class === tribe || c.class === "ALL Classes");
     const chosen = applyBloodFamineIfActive(cloneCard(pool[Math.floor(Math.random() * pool.length)]));
     const nextDeck = [...masterDeck, chosen];
-    triggerSfx('draw');
+    triggerSfx('needle_stitch');
 
     // Beat 1 (480ms): Summoned creature materializes beneath the chosen hanging patch
     scheduleEventTimer(() => {
@@ -6757,7 +6873,9 @@ export default function App() {
     scheduleEventTimer(() => {
       setModalAlert({
         title: "THREAD WOVEN",
-        message: `The stitched ${tribe} crest summoned a ${chosen.name} to join you and your Creatures.`,
+        eyebrow: "◆ Sinew & Spool ◆",
+        previewCard: chosen,
+        message: `The stitched ${tribe} crest summoned ${chosen.name}${chosen.sigils?.length ? ` (${chosen.sigils.join(', ')})` : ''} to join your deck.`,
         isWin: true,
         btnText: "Proceed",
         onAction: () => {
@@ -8260,10 +8378,10 @@ export default function App() {
                 }
                 setBossIntroBanner(null);
               }}
-              className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/55 backdrop-blur-[2px] cursor-pointer select-none animate-menu-fade-in"
+              className="fixed inset-0 z-[60] flex items-center justify-center px-0 bg-black/55 backdrop-blur-[2px] cursor-pointer select-none animate-menu-fade-in"
             >
               <div
-                className={`w-full max-w-3xl relative py-7 sm:py-9 px-6 sm:px-10 text-center border-y shadow-[0_0_80px_rgba(0,0,0,0.95)] ${
+                className={`w-full max-w-none relative py-7 sm:py-9 px-6 sm:px-10 text-center border-y shadow-[0_0_80px_rgba(0,0,0,0.95)] ${
                   bossIntroBanner.accent === 'crimson'
                     ? 'border-red-600/85 bg-[linear-gradient(90deg,transparent_0%,rgba(16,4,5,0.96)_14%,rgba(38,6,8,0.98)_50%,rgba(16,4,5,0.96)_86%,transparent_100%)] shadow-[0_0_90px_rgba(185,28,28,0.55)]'
                     : bossIntroBanner.accent === 'violet'
@@ -8781,8 +8899,8 @@ export default function App() {
                             <div className="font-['Cinzel',_serif] font-bold text-[7px] uppercase tracking-[0.14em] leading-tight whitespace-nowrap">
                               {roleLabel}
                             </div>
-                            <div className="font-mono text-[7px] opacity-85 truncate leading-tight">
-                              {tribeName} · {sigilName || '—'}
+                            <div className="font-mono text-[7px] opacity-85 leading-tight break-words">
+                              {tribeName}<br />{sigilName || '—'}
                             </div>
                           </div>
 
@@ -9234,8 +9352,8 @@ export default function App() {
                                            : isEnemyRetracting
                                            ? 'transition-all duration-700 ease-in-out -translate-y-28 opacity-0 pointer-events-none'
                                            : isDropping
-                                             ? 'transition-transform duration-300 ease-in-out translate-y-[calc(100%+8px)] z-40 opacity-100 pointer-events-none'
-                                             : 'animate-queue-slide-in opacity-90'
+                                             ? 'transition-transform duration-300 ease-in-out translate-y-[calc(100%+8px)] z-40 opacity-100 brightness-100 scale-100 pointer-events-none'
+                                             : 'animate-queue-slide-in opacity-70 brightness-[0.76] contrast-[0.94] saturate-[0.8] scale-[0.94]'
                                        }`}
                                      >
                                        {renderCard(card, {
@@ -9263,6 +9381,7 @@ export default function App() {
                                  const isSigilJitterThisLane = jitteringCard?.isPlayer === false && jitteringCard?.lane === idx;
                                  const isDefendingThisLane = activeDefendingLane?.isPlayer === false && activeDefendingLane?.lane === idx;
                                  const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === false && zeroPowerShakingCard?.lane === idx;
+                                 const isMovingThisLane = Boolean(card?.id && lateralMovements[card.id] !== undefined);
                                  return (
                                    <div
                                      key={`e-slot-${idx}`}
@@ -9272,7 +9391,7 @@ export default function App() {
                                        }
                                      }}
                                      className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border border-black/75 bg-[#0d0c0e]/52 shadow-[inset_0_2px_14px_rgba(0,0,0,0.86)] overflow-visible ${
-                                       isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
+                                       isAttackingThisLane ? 'z-50' : isMovingThisLane ? 'z-40' : card ? 'z-20' : 'z-0'
                                      } ${
                                        itemTargetMode && card
                                          ? 'ring-2 ring-red-500/80 animate-pulse cursor-crosshair scale-[1.02]'
@@ -9358,6 +9477,7 @@ export default function App() {
                                          isAirborneAttack: isAttackingThisLane ? activeAttacker?.isAirborne : undefined,
                                          isDirectAttack: isAttackingThisLane ? activeAttacker?.isDirect : undefined,
                                          isDamaged: isDamagedThisLane,
+                                          damagePower: isDamagedThisLane ? ((damagedCard as any)?.power ?? 1) : undefined,
                                          isDestroyed: isDestroyedThisLane,
                                          isHpFlashing: isHpFlashingThisLane,
                                          isSigilJittering: isSigilJitterThisLane,
@@ -9512,6 +9632,7 @@ export default function App() {
                             const isSigilJitterThisLane = jitteringCard?.isPlayer === true && jitteringCard?.lane === idx;
                             const isDefendingThisLane = activeDefendingLane?.isPlayer === true && activeDefendingLane?.lane === idx;
                             const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === true && zeroPowerShakingCard?.lane === idx;
+                            const isMovingThisLane = Boolean(card?.id && lateralMovements[card.id] !== undefined);
 
                             const slotStyle = canSacrificeThis
                               ? 'border-red-500/85 bg-red-950/35 hover:bg-red-900/45 hover:border-red-300 shadow-[inset_0_2px_12px_rgba(0,0,0,0.75),0_0_16px_rgba(220,38,38,0.42)] cursor-pointer'
@@ -9526,7 +9647,7 @@ export default function App() {
                                 key={`p-slot-${idx}`}
                                 onClick={() => handlePlayerSlotClick(idx)}
                                 className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border transition-all duration-150 overflow-visible ${slotStyle} ${
-                                  isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
+                                  isAttackingThisLane ? 'z-50' : isMovingThisLane ? (card?.sigils?.includes('Hefty') ? 'z-[45]' : 'z-40') : card ? 'z-20' : 'z-0'
                                 }`}
                               >
                                 <div
@@ -9564,6 +9685,7 @@ export default function App() {
                                     isAirborneAttack: isAttackingThisLane ? activeAttacker?.isAirborne : undefined,
                                     isDirectAttack: isAttackingThisLane ? activeAttacker?.isDirect : undefined,
                                     isDamaged: isDamagedThisLane,
+                                          damagePower: isDamagedThisLane ? ((damagedCard as any)?.power ?? 1) : undefined,
                                     isDestroyed: isDestroyedThisLane,
                                     isHpFlashing: isHpFlashingThisLane,
                                     isSigilJittering: isSigilJitterThisLane,
@@ -9699,11 +9821,9 @@ export default function App() {
       isolation: 'isolate',
       backgroundColor: 'transparent',
       borderColor: 'transparent',
-      boxShadow: isScaleHeavySlam || scaleRumble ? undefined : 'none',
+      boxShadow: 'none',
     }}
-    className={`w-14 h-[396px] bg-[#171412] border border-[#4a3e35]/85 rounded-sm relative flex flex-col items-center justify-between py-2.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,235,210,0.08),0_6px_16px_rgba(0,0,0,0.88)] select-none transition-all ${
-      isScaleHeavySlam ? 'animate-scale-heavy-slam shadow-[0_0_28px_rgba(220,38,38,0.85)]' : scaleRumble ? 'animate-scale-rumble shadow-[0_0_20px_rgba(220,38,38,0.55)]' : ''
-    }`}
+    className="w-14 h-[396px] bg-[#171412] border border-[#4a3e35]/85 rounded-sm relative flex flex-col items-center justify-between py-2.5 select-none"
     title={`Runnel Balance: ${scale === 0 ? '0 (Balanced)' : scale > 0 ? `+${scale}` : `${scale}`}`}
   >
     {/* runnelEdgeLayer: hand-chiselled, non-parallel outline behind all runnel contents */}
@@ -9806,10 +9926,12 @@ export default function App() {
 
         return (
           <div
-            className={`absolute bottom-0 inset-x-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
-              scaleRumble || isOverkill
-                ? 'animate-pulse filter brightness-110'
-                : ''
+            className={`absolute bottom-0 inset-x-0 transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+              isScaleHeavySlam
+                ? 'brightness-125'
+                : scaleRumble || isOverkill
+                  ? 'brightness-110'
+                  : ''
             }`}
             style={{
               height: `${fillPercent}%`,
@@ -9926,6 +10048,7 @@ export default function App() {
   <div className="flex flex-col items-center gap-2 w-[84px] sm:w-[90px]">
     <DuelTelemetryBanner
       turnNumber={turnNumber}
+      stage={stage}
       isTurnOneDanger={turnNumber === 1 && scale >= 4}
       items={items.map((id) => (id && ALL_ITEMS[id] ? ALL_ITEMS[id] : null))}
       phase={phase}
@@ -9948,7 +10071,7 @@ export default function App() {
     <div className="w-[74px] sm:w-[80px]">
       <BoneOssuaryPlaque bones={bones} boneShaking={boneShaking} />
     </div>
-    <div className="flex items-center justify-center gap-4 w-full relative font-mono translate-y-3 sm:translate-y-4">
+    <div className="flex items-center justify-center gap-4 w-full min-w-[184px] sm:min-w-[192px] relative font-mono translate-y-3 sm:translate-y-4">
                   {/* Squirrel Deck */}
                   <div className="group flex flex-col items-center gap-1.5">
                     <div className="relative">
@@ -10183,7 +10306,15 @@ export default function App() {
                 modalAlert.isWin ? 'text-[#c99b56]/90' : 'text-red-400/85'
               }`}
             >
-              {modalAlert.isWin ? '◆ Thy Cup Runneth Over ◆' : '◆ I Hope This Hurts ◆'}
+              {modalAlert.eyebrow || (() => {
+                const t = (modalAlert.title || '').toUpperCase();
+                if (t.includes('DROWNED') || t.includes('BAPTIZ') || t.includes('CHAPEL')) return '◆ Sanguis Submersus ◆';
+                if (t.includes('THREAD') || t.includes('WOVEN') || t.includes('TOTEM')) return '◆ Sinew & Spool ◆';
+                if (t.includes('SACRIFIC') || t.includes('ALTAR') || t.includes('SIGIL')) return '◆ Ex Ossibus Virtus ◆';
+                if (t.includes('STAMP') || t.includes('FORGE') || t.includes('ANVIL')) return '◆ Ferrum & Cinis ◆';
+                if (t.includes('BARGAIN') || t.includes('TRADE') || t.includes('PELT')) return '◆ Pactum Obscurum ◆';
+                return modalAlert.isWin ? '◆ Benedictio Noctis ◆' : '◆ Memento Mori ◆';
+              })()}
             </div>
 
             {/* Engraved Title */}
@@ -10209,6 +10340,15 @@ export default function App() {
                 }`}
               />
             </div>
+
+            {/* Optional Woven/Rewarded Card Preview */}
+            {modalAlert.previewCard && (
+              <div className="relative z-10 flex flex-col items-center mb-4">
+                <div className="scale-[0.88] origin-center rounded-[4px] shadow-[0_0_28px_rgba(212,175,55,0.4)]">
+                  {renderCard(modalAlert.previewCard, { isClickable: false, disableHoverScale: true })}
+                </div>
+              </div>
+            )}
 
             {/* Body Copy */}
             <p className="relative z-10 text-xs sm:text-[13px] font-mono text-[#dfd0b6]/92 mb-6 leading-relaxed px-2">
@@ -10327,11 +10467,11 @@ export default function App() {
           <img
             src={`${import.meta.env.BASE_URL || './'}assets/text/gameover.png`}
             alt="Game Over"
-            className="w-72 sm:w-96 max-w-[82vw] object-contain drop-shadow-[0_0_28px_rgba(220,38,38,0.65)] animate-pulse"
+            className="w-[22rem] sm:w-[36rem] md:w-[44rem] max-w-[92vw] object-contain drop-shadow-[0_0_36px_rgba(220,38,38,0.78)] animate-pulse"
             draggable={false}
           />
-          <div className="mt-3 text-xs font-mono uppercase tracking-[0.35em] text-red-300/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-            The Sacred Threads Drag you into the Abyss
+          <div className="mt-6 text-base sm:text-xl md:text-2xl font-mono font-bold uppercase tracking-[0.16em] text-red-100 max-w-3xl leading-relaxed drop-shadow-[0_3px_14px_rgba(0,0,0,1)]">
+            {lossQuote}
           </div>
         </div>
       </div>

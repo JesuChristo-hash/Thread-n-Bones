@@ -176,8 +176,8 @@ export const calculateGrade = (
 export const isStarterDraftEligible = (card: CardDef) => {
   if (card.name === "Trade Pelt" || card.unsacrificable || card.isMassive) return false;
 
-  // Explicit exclusions: Red series, Mycelium, Silken Moth
-  const draftBannedNames = ['Red Stray', 'Red Hound', 'Red Behemoth', 'Red Colossus', 'Mycelium', 'Silken Moth'];
+  // Explicit exclusions: Red series, Mycelium, Silken Moth, Geck
+  const draftBannedNames = ['Red Stray', 'Red Hound', 'Red Behemoth', 'Red Colossus', 'Mycelium', 'Silken Moth', 'Geck'];
   if (draftBannedNames.includes(card.name)) return false;
 
   // Restrict cards costing more than 3 blood

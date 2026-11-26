@@ -238,7 +238,7 @@ export const BattleTransitionOverlay: React.FC<{ phase: 'IDLE' | 'IN' | 'OUT' }>
       <div
         className="absolute inset-0 bg-black/55 transition-opacity"
         style={{
-          transitionDuration: isClosing ? '260ms' : '420ms',
+          transitionDuration: isClosing ? '260ms' : '340ms',
           opacity: curtainsClosed ? 1 : 0,
         }}
       />
@@ -248,7 +248,7 @@ export const BattleTransitionOverlay: React.FC<{ phase: 'IDLE' | 'IN' | 'OUT' }>
         style={{
           background:
             'repeating-linear-gradient(90deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 14px, transparent 14px, transparent 34px), linear-gradient(90deg, #070504 0%, #170808 65%, #2a0b0b 100%)',
-          transitionDuration: isClosing ? '280ms' : '480ms',
+          transitionDuration: isClosing ? '280ms' : '360ms',
           transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
           transform: curtainsClosed ? 'translateX(0%)' : 'translateX(-104%)',
         }}
@@ -259,7 +259,7 @@ export const BattleTransitionOverlay: React.FC<{ phase: 'IDLE' | 'IN' | 'OUT' }>
         style={{
           background:
             'repeating-linear-gradient(-90deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 14px, transparent 14px, transparent 34px), linear-gradient(270deg, #070504 0%, #170808 65%, #2a0b0b 100%)',
-          transitionDuration: isClosing ? '280ms' : '480ms',
+          transitionDuration: isClosing ? '280ms' : '360ms',
           transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
           transform: curtainsClosed ? 'translateX(0%)' : 'translateX(104%)',
         }}
@@ -303,7 +303,7 @@ export const SmokeTransitionOverlay: React.FC<{ phase: 'IDLE' | 'IN' | 'OUT' }> 
     const sprites = spritesRef.current;
     let animId: number;
     const startTime = performance.now();
-    const duration = phase === 'IN' ? 550 : 600;
+    const duration = phase === 'IN' ? 320 : 380;
 
     const render = (now: number) => {
       const elapsed = now - startTime;
@@ -379,7 +379,7 @@ export const SmokeTransitionOverlay: React.FC<{ phase: 'IDLE' | 'IN' | 'OUT' }> 
       ref={canvasRef}
       width={1280}
       height={720}
-      className="absolute inset-0 pointer-events-auto select-none overflow-hidden"
+      className={`absolute inset-0 ${phase === 'IN' ? 'pointer-events-auto' : 'pointer-events-none'} select-none overflow-hidden`}
       style={{ zIndex: 999 }}
     />
   );

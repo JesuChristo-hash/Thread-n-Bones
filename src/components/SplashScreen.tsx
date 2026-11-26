@@ -582,7 +582,7 @@ export default function SplashScreen({
           <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-20 border-b border-r border-[#b8904a]/55" />
 
           <div className="relative z-10 p-6 sm:p-7">
-            <div className="text-[9px] font-['Cinzel',_serif] text-[#c7a97b]/85 uppercase tracking-[0.28em] mb-1">
+            <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#ecd19e] uppercase tracking-[0.28em] mb-1.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
               Occult Seal Detected
             </div>
             <h3 className="font-['Cinzel',_serif] text-xl font-bold text-[#f2e4cc] uppercase tracking-[0.2em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">

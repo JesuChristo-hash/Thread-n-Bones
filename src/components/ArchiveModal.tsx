@@ -281,6 +281,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                     <option value="Reptile">Reptile</option>
                     <option value="Insect">Insect</option>
                     <option value="Hooved">Hooved</option>
+                    <option value="Vermin">Vermin</option>
                     <option value="No Class">No Class</option>
                   </select>
                 )}

@@ -63,19 +63,19 @@ export const MAP_NODE_META: Record<MapNodeType, NodeMeta> = {
   start: {
     title: 'Trailhead',
     tag: 'Origin',
-    desc: 'Where your lantern first broke the mist.',
+    desc: 'Where your pyrric journey continues.',
     tone: 'neutral',
   },
   combat: {
     title: 'Ambush',
     tag: 'Battle',
-    desc: 'A hostile denizen bars the trail. Your creatures tremble.',
+    desc: 'Feral beasts bar the path ahead. Your creatures tremble.',
     tone: 'combat',
   },
   elite_combat: {
     title: 'Effigy Ward',
     tag: 'Cursed Battle',
-    desc: 'An enemy empowered by a stitched Effigy.',
+    desc: 'Occult Beasts empowered by a stitched Effigy.',
     tone: 'combat',
   },
   boss: {
@@ -87,7 +87,7 @@ export const MAP_NODE_META: Record<MapNodeType, NodeMeta> = {
   campfire: {
     title: 'Boiling Chapel',
     tag: 'Blessing',
-    desc: 'Bathe a creature in boiling blood for power or flesh—at a risk.',
+    desc: 'Bathe a creature in boiling blood- at your own risk.',
     tone: 'ritual',
   },
   altar: {
@@ -105,13 +105,13 @@ export const MAP_NODE_META: Record<MapNodeType, NodeMeta> = {
   cost: {
     title: 'Sealed Cards',
     tag: 'Barter',
-    desc: 'Pilfer an unmarked offering chosen strictly by its summon cost.',
+    desc: 'Pilfer an unmarked pack chosen strictly by its summon cost.',
     tone: 'boon',
   },
   bonelord: {
     title: 'Altar of Bones',
     tag: 'Tribute',
-    desc: 'Offer a creature to gain permanent Starting Bones every battle.',
+    desc: 'Offer a creature to gain a Starting Bone Blessing.',
     tone: 'ritual',
   },
   mycologist: {
@@ -153,13 +153,13 @@ export const MAP_NODE_META: Record<MapNodeType, NodeMeta> = {
   anvil: {
     title: 'Transmutation Table',
     tag: 'Transmute',
-    desc: 'Something about this feels wrong.',
+    desc: 'Something about this feels wrong. Alter Blood & Bones',
     tone: 'ritual',
   },
   flock: {
     title: "The Zealot's Flock",
     tag: 'Offering',
-    desc: 'Your creatures are ravenous.',
+    desc: 'Your creatures are ravenous. Choose one wicked spawn',
     tone: 'ritual',
   },
 };
@@ -188,7 +188,7 @@ export const BOSS_DISPLAY_META: Record<ActBossType, { name: string; title: strin
 };
 
 const ACT_THEMES: Record<number, { title: string; subtitle: string }> = {
-  1: { title: 'The Veiled Approach', subtitle: 'Act I — Mist Cloaked Cemetary' },
+  1: { title: 'The Veiled Approach', subtitle: 'Act I — Mist Cloaked Cemetery' },
   2: { title: 'The Weeping Ossuary', subtitle: 'Act II — Sodden Scrap Heap' },
   3: { title: 'The Storm-Wracked Chapel', subtitle: 'Act III — City of the Dead' },
   4: { title: 'The End of the World', subtitle: 'Act IV — Uzumaki' },

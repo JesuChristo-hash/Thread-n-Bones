@@ -26,6 +26,7 @@ const toRoman = (num: number): string => {
 
 interface DuelTelemetryBannerProps {
   turnNumber: number;
+  stage?: number;
   isTurnOneDanger: boolean;
   items: (ResolvedRelic | null)[];
   phase: string;
@@ -35,6 +36,7 @@ interface DuelTelemetryBannerProps {
 
 export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
   turnNumber,
+  stage = 1,
   isTurnOneDanger,
   items,
   phase,
@@ -42,46 +44,182 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
   onUseItem,
 }) => {
   const baseUrl = import.meta.env.BASE_URL || './';
+  const isAct4Burned = stage >= 4;
+  const swayAnimation =
+    stage === 2
+      ? 'bannerSwayMid 5.2s ease-in-out infinite'
+      : stage === 3
+        ? 'bannerSwayBrisk 4.2s ease-in-out infinite'
+        : 'bannerSwayGentle 6.6s ease-in-out infinite';
+  const rippleAnimation =
+    stage === 2
+      ? 'bannerClothRipple 2.8s linear infinite'
+      : stage === 3
+        ? 'bannerClothRipple 1.7s linear infinite'
+        : 'bannerClothRipple 5.5s linear infinite';
+  const rippleOpacity = stage === 3 ? 0.24 : stage === 2 ? 0.16 : 0.08;
+  const waveScale = stage === 3 ? 30 : stage === 2 ? 18 : 5;
+  const waveDur = stage === 3 ? '2.1s' : stage === 2 ? '3.2s' : '5.8s';
 
   return (
     <div className="relative w-[84px] sm:w-[90px] flex flex-col items-center select-none shrink-0">
-      {/* Top Wooden Banner Rod with Brass Finials */}
-      <div
-        className="relative z-10 w-[calc(100%+10px)] h-2.5 rounded-full border border-[#6e4a2b]/90 shadow-[0_3px_8px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,224,175,0.22)] flex items-center justify-between"
-        style={{
-          backgroundColor: '#2d1b10',
-          backgroundImage: `linear-gradient(180deg, rgba(255,215,165,0.16), rgba(0,0,0,0.45)), url("${baseUrl}assets/text/wood.jpg")`,
-          backgroundSize: 'cover, 160px 160px',
-        }}
-      >
-        <span className="-ml-1 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#e2be76] via-[#9c7238] to-[#3f2912] border border-[#2a190a] shadow-sm" />
-        <span className="-mr-1 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#e2be76] via-[#9c7238] to-[#3f2912] border border-[#2a190a] shadow-sm" />
+      {/* Ornate Carved Timber & Brass Banner Rod */}
+      <div className="relative z-20 w-[calc(100%+20px)] flex items-center justify-center">
+        {/* Left Spearhead Finial + Brass Collar */}
+        <div className="flex items-center shrink-0">
+          <span className="w-2.5 h-2.5 rotate-45 rounded-[1px] bg-gradient-to-br from-[#f6dfa4] via-[#b88940] to-[#4a3014] border border-[#2a190a] shadow-[0_2px_5px_rgba(0,0,0,0.9)]" />
+          <span className="-ml-1 w-1.5 h-3.5 rounded-[1px] bg-gradient-to-b from-[#f3d693] via-[#9c7032] to-[#3f260e] border border-[#2a190a]" />
+        </div>
+        {/* Carved Shaft */}
+        <div
+          className="relative flex-1 h-2.5 border-y border-[#9c7238]/90 shadow-[0_4px_10px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,228,178,0.32)] flex items-center justify-around"
+          style={{
+            backgroundColor: '#2d1b10',
+            backgroundImage: `linear-gradient(180deg, rgba(255,220,165,0.22), rgba(0,0,0,0.55)), url("${baseUrl}assets/text/wood.jpg")`,
+            backgroundSize: 'cover, 140px 140px',
+          }}
+        >
+          {/* Brass Hanging Rings */}
+          <span className="w-1 h-3 rounded-full bg-gradient-to-b from-[#f4d896] via-[#9c7032] to-[#3f260e] border border-[#241509]" />
+          <span className="w-2 h-2 rotate-45 bg-gradient-to-br from-[#f6dfa4] via-[#b88940] to-[#4a3014] border border-[#241509] shadow-sm" />
+          <span className="w-1 h-3 rounded-full bg-gradient-to-b from-[#f4d896] via-[#9c7032] to-[#3f260e] border border-[#241509]" />
+        </div>
+        {/* Right Brass Collar + Spearhead Finial */}
+        <div className="flex items-center shrink-0">
+          <span className="-mr-1 w-1.5 h-3.5 rounded-[1px] bg-gradient-to-b from-[#f3d693] via-[#9c7032] to-[#3f260e] border border-[#2a190a]" />
+          <span className="w-2.5 h-2.5 rotate-45 rounded-[1px] bg-gradient-to-br from-[#f6dfa4] via-[#b88940] to-[#4a3014] border border-[#2a190a] shadow-[0_2px_5px_rgba(0,0,0,0.9)]" />
+        </div>
       </div>
 
-      {/* Hanging Crimson Cloth Body */}
+      {/* Hidden SVG Wave Displacement Filter (ripples cloth edges smoothly without warping text) */}
+      <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
+        <defs>
+          <filter id="duel-cloth-wave" x="-32%" y="-6%" width="164%" height="116%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.0025 0.012"
+              numOctaves="1"
+              seed="3"
+              result="noise"
+            >
+              <animate
+                attributeName="baseFrequency"
+                values="0.0022 0.011; 0.0042 0.018; 0.0022 0.011"
+                dur={waveDur}
+                repeatCount="indefinite"
+              />
+            </feTurbulence>
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="noise"
+              scale={waveScale}
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </defs>
+      </svg>
+
+      {/* Hanging Crimson Cloth Body (mild top-anchored sway + wavy cloth layer + crisp foreground) */}
       <div
-        className={`relative w-full -mt-0.5 px-2 pt-2.5 pb-3 rounded-b-[10px] border-x border-b overflow-hidden shadow-[0_12px_26px_rgba(0,0,0,0.9),inset_0_8px_18px_rgba(0,0,0,0.62)] transition-colors duration-300 ${
-          isTurnOneDanger
-            ? 'border-red-500/90 shadow-[0_0_16px_rgba(220,38,38,0.55)]'
-            : 'border-[#7a3c2e]/90'
-        }`}
+        className="relative z-10 w-full -mt-1.5"
         style={{
-          background: 'radial-gradient(ellipse at 50% 0%, #6b0f12 0%, #44080a 54%, #1d0405 100%)',
+          transformOrigin: 'top center',
+          animation: swayAnimation,
+          filter: isTurnOneDanger
+            ? 'drop-shadow(0 0 10px rgba(220,38,38,0.55)) drop-shadow(0 10px 14px rgba(0,0,0,0.72))'
+            : 'drop-shadow(0 10px 14px rgba(0,0,0,0.72))',
         }}
       >
-        {/* Multiplied Cloth Weave Texture */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
-          style={{
-            backgroundImage: `url("${baseUrl}assets/text/cloth.jpg")`,
-            backgroundSize: '150px 150px',
-            backgroundRepeat: 'repeat',
-          }}
-        />
-        {/* Stitched Gold-Thread Banner Seam */}
-        <div className="pointer-events-none absolute inset-1.5 border border-dashed border-[#c49a5c]/45 rounded-b-[7px]" />
-        {/* Woven Center Fringe Accent at Bottom Hem */}
-        <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1 bg-gradient-to-r from-[#3a0a0a] via-[#cca059]/80 to-[#3a0a0a]" />
+        <div className="relative w-full px-2 pt-2.5 pb-7">
+          {/* Wavy Displaced Cloth Backdrop */}
+          <div
+            className={`pointer-events-none absolute inset-0 overflow-hidden shadow-[inset_0_8px_18px_rgba(0,0,0,0.62)] transition-colors duration-300 ${
+              isTurnOneDanger ? 'ring-1 ring-inset ring-red-500/70' : ''
+            }`}
+            style={{
+              filter: 'url(#duel-cloth-wave)',
+              background: isAct4Burned
+                ? 'linear-gradient(180deg, #4f0a0d 0%, #5c1214 54%, #31100f 75%, #120605 90%, #070303 100%)'
+                : 'linear-gradient(180deg, #520a0d 0%, #5c0f12 56%, #7f2424 78%, #a64641 100%)',
+              clipPath: isAct4Burned
+                ? 'polygon(0% 0%, 100% 0%, 100% 91%, 96% 95%, 92% 90%, 87% 97%, 82% 93%, 76% 99%, 70% 92%, 64% 96%, 58% 89%, 52% 98%, 45% 94%, 39% 99%, 32% 91%, 26% 96%, 19% 92%, 13% 98%, 7% 93%, 3% 96%, 0% 90%)'
+                : 'polygon(0% 0%, 100% 0%, 100% 96.8%, 98.5% 98.6%, 97% 97.1%, 95.5% 99.3%, 94% 97.4%, 92.5% 98.8%, 91% 96.4%, 89.2% 99.1%, 87.5% 97.5%, 85.8% 98.9%, 84% 96.2%, 82.2% 99.4%, 80.5% 97.6%, 78.8% 98.7%, 77% 97.2%, 75.2% 99.6%, 73.5% 96.8%, 71.8% 98.9%, 70% 97.3%, 68.2% 99.2%, 66.5% 97.6%, 64.8% 98.8%, 63% 95.9%, 61.2% 99.1%, 59.5% 97.4%, 57.8% 98.9%, 56% 97.2%, 54.2% 99.7%, 52.5% 97.5%, 50.8% 98.8%, 49% 96.5%, 47.2% 99.3%, 45.5% 97.4%, 43.8% 98.7%, 42% 97.1%, 40.2% 99.5%, 38.5% 96.9%, 36.8% 98.8%, 35% 97.3%, 33.2% 99.2%, 31.5% 96.3%, 29.8% 98.9%, 28% 97.5%, 26.2% 99.4%, 24.5% 97.2%, 22.8% 98.7%, 21% 96.7%, 19.2% 99.1%, 17.5% 97.4%, 15.8% 98.8%, 14% 96.4%, 12.2% 99.3%, 10.5% 97.5%, 8.8% 98.7%, 7% 97.1%, 5.2% 99.2%, 3.5% 97.3%, 1.8% 98.6%, 0% 96.8%)',
+            }}
+          >
+            {/* Multiplied Cloth Weave Texture */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-65 mix-blend-multiply"
+              style={{
+                backgroundImage: `url("${baseUrl}assets/text/cloth.jpg")`,
+                backgroundSize: '150px 150px',
+                backgroundRepeat: 'repeat',
+              }}
+            />
+            {/* Seamless Downward Wind Sheen */}
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                opacity: rippleOpacity,
+                backgroundImage:
+                  'repeating-linear-gradient(180deg, transparent 0px, rgba(255,220,185,0.22) 38px, transparent 84px, rgba(0,0,0,0.22) 132px, transparent 180px)',
+                backgroundSize: '100% 180px',
+                animation: rippleAnimation,
+              }}
+            />
+
+            {/* Detailed Frayed Thread Strands along Bottom Edge */}
+            <div
+              className="pointer-events-none absolute bottom-0 inset-x-0 h-5 opacity-80"
+              style={{
+                backgroundImage: isAct4Burned
+                  ? 'repeating-linear-gradient(90deg, rgba(20,8,6,0.95) 0px, rgba(20,8,6,0.95) 1px, transparent 1px, transparent 3px, rgba(120,40,18,0.6) 3px, rgba(120,40,18,0.6) 4px, transparent 4px, transparent 7px)'
+                  : 'repeating-linear-gradient(90deg, rgba(196,154,92,0.55) 0px, rgba(196,154,92,0.55) 1px, transparent 1px, transparent 3px, rgba(176,78,72,0.85) 3px, rgba(176,78,72,0.85) 4px, transparent 4px, transparent 6px)',
+                maskImage: 'linear-gradient(to bottom, transparent 0%, black 45%, black 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 45%, black 100%)',
+              }}
+            />
+            {/* Frayed Hem Shadow Wash */}
+            <div className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+            {/* Act 4 Scorched Lower Char & Smoldering Ember Rim (clipped to burned cloth edge) */}
+            {isAct4Burned && (
+              <svg className="pointer-events-none absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="100,91 96,95 92,90 87,97 82,93 76,99 70,92 64,96 58,89 52,98 45,94 39,99 32,91 26,96 19,92 13,98 7,93 3,96 0,90" fill="none" stroke="rgba(234,88,12,0.4)" strokeWidth="5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                <polyline points="100,91 96,95 92,90 87,97 82,93 76,99 70,92 64,96 58,89 52,98 45,94 39,99 32,91 26,96 19,92 13,98 7,93 3,96 0,90" fill="none" stroke="rgba(255,150,60,0.9)" strokeWidth="1.6" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+              </svg>
+            )}
+            {isAct4Burned && (
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    'radial-gradient(ellipse 20% 62% at 7% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 14% 40% at 24% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 24% 70% at 44% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 13% 34% at 63% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 22% 58% at 83% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 14% 44% at 100% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 60% 22% at 50% 100%, rgba(234,88,12,0.38) 0%, transparent 100%), linear-gradient(to top, rgba(12,5,4,0.8) 0%, rgba(12,5,4,0.45) 9%, transparent 22%)',
+                }}
+              />
+            )}
+          </div>
+          {/* Act 4 Rising Cinders */}
+          {isAct4Burned && (
+            <>
+              <div className="pointer-events-none absolute bottom-1 inset-x-2 h-14 overflow-visible">
+                {[
+                  { left: '30%', delay: '0s', dur: '6.8s', size: 2.5 },
+                  { left: '76%', delay: '3.7s', dur: '7.2s', size: 2.5 },
+                ].map((cinder, i) => (
+                  <span
+                    key={i}
+                    className="absolute bottom-0 rounded-full bg-orange-500/75 shadow-[0_0_5px_rgba(251,146,60,0.6)]"
+                    style={{
+                      left: cinder.left,
+                      width: cinder.size,
+                      height: cinder.size,
+                      animation: `bannerCinderRise ${cinder.dur} ease-out ${cinder.delay} infinite`,
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
 
         <div className="relative z-10 flex flex-col items-center gap-2.5">
           {/* 1. STYLIZED TURN HEADER (ROMAN NUMERALS) */}
@@ -114,23 +252,33 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
                   onClick={() => onUseItem(idx)}
                   disabled={phase !== 'PLAY' || !item}
                   title={item ? `${item.name}: ${item.description}` : 'Empty Slot'}
-                  className={`relative z-10 w-10 h-10 rounded-[2px] border flex items-center justify-center text-base outline-none transition-all duration-150 ${
+                  className={`relative z-10 w-10 h-10 flex items-center justify-center text-2xl bg-transparent border-0 outline-none transition-transform duration-150 ${
                     item
                       ? isTargetingThis
-                        ? 'border-red-400 bg-red-950/75 shadow-[0_0_12px_rgba(239,68,68,0.85)] scale-105 animate-pulse cursor-pointer'
-                        : 'border-[#8c5a3c]/85 bg-gradient-to-b from-[#230b0c]/95 to-[#120506]/95 hover:border-[#e5c16b] hover:scale-105 active:scale-95 shadow-[inset_0_1px_0_rgba(255,220,180,0.12),0_3px_8px_rgba(0,0,0,0.85)] cursor-pointer'
-                      : 'border-[#5a241e]/60 bg-[#140606]/65 cursor-not-allowed opacity-50 shadow-[inset_0_2px_6px_rgba(0,0,0,0.85)]'
+                        ? 'scale-115 animate-pulse cursor-pointer'
+                        : 'hover:scale-115 active:scale-95 cursor-pointer'
+                      : 'cursor-not-allowed opacity-40'
                   }`}
                 >
                   {item ? (
-                    <span>{item.emoji}</span>
+                    <span
+                      className="transition-[filter] duration-150"
+                      style={{
+                        filter: isTargetingThis
+                          ? 'sepia(0.25) saturate(0.95) brightness(1.05) contrast(1.1) drop-shadow(0 0 2px #090303) drop-shadow(0 0 8px rgba(251,191,36,0.9))'
+                          : 'sepia(0.55) saturate(0.52) brightness(0.8) contrast(1.15) drop-shadow(1px 0 0 #090303) drop-shadow(-1px 0 0 #090303) drop-shadow(0 1px 0 #090303) drop-shadow(0 -1px 0 #090303) drop-shadow(0 2px 3px rgba(0,0,0,0.85))',
+                      }}
+                    >
+                      {item.emoji}
+                    </span>
                   ) : (
-                    <span className="text-[#8a5d42]/70 text-xs font-mono">•</span>
+                    <span className="text-[#e5c27a]/45 text-sm font-mono">•</span>
                   )}
                 </button>
               );
             })}
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -151,15 +299,34 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
 }) => {
   const prevRef = useRef(displayBloodOz);
   const [delta, setDelta] = useState<number | null>(null);
+  const [shownOz, setShownOz] = useState<number>(displayBloodOz);
 
   useEffect(() => {
-    const diff = displayBloodOz - prevRef.current;
+    const startVal = prevRef.current;
+    const diff = displayBloodOz - startVal;
     prevRef.current = displayBloodOz;
+
     if (diff > 0) {
       setDelta(diff);
+      const steps = Math.min(diff, 12);
+      const stepMs = Math.max(24, Math.floor(260 / steps));
+      let step = 0;
+      const iv = window.setInterval(() => {
+        step += 1;
+        if (step >= steps) {
+          setShownOz(displayBloodOz);
+          window.clearInterval(iv);
+        } else {
+          setShownOz(Math.round(startVal + (diff * step) / steps));
+        }
+      }, stepMs);
       const t = window.setTimeout(() => setDelta(null), 1300);
-      return () => window.clearTimeout(t);
+      return () => {
+        window.clearInterval(iv);
+        window.clearTimeout(t);
+      };
     }
+    setShownOz(displayBloodOz);
   }, [displayBloodOz]);
 
   const isSurging = isOverkill || delta !== null;
@@ -272,9 +439,9 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
       {/* Main Glass Vial Body */}
       <div
         style={{ width: dims.w, height: dims.h }}
-        className={`relative -mt-[1px] w-[52px] h-[80px] rounded-t-[10px] rounded-b-[18px] bg-[#0a0405]/95 border-[1.5px] overflow-hidden flex flex-col justify-end transition-all duration-300 shadow-[inset_0_3px_12px_rgba(0,0,0,0.96),0_6px_14px_rgba(0,0,0,0.9)] ${
+        className={`relative -mt-[1px] w-[52px] h-[80px] rounded-t-[10px] rounded-b-[18px] bg-[#0a0405]/95 border-[1.5px] overflow-hidden flex flex-col justify-end transition-all duration-200 shadow-[inset_0_3px_12px_rgba(0,0,0,0.96),0_6px_14px_rgba(0,0,0,0.9)] ${
           isSurging
-            ? 'border-red-400/95 shadow-[0_0_18px_rgba(239,68,68,0.8),inset_0_0_12px_rgba(220,38,38,0.5)] scale-[1.05]'
+            ? 'border-red-300 ring-2 ring-red-500/75 shadow-[0_0_26px_rgba(239,68,68,0.95),inset_0_0_18px_rgba(239,68,68,0.65)] scale-[1.08]'
             : 'border-[#7c614c]/85'
         }`}
       >
@@ -305,11 +472,11 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
         {/* Centered OZ Readout Inside Vial */}
         <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center leading-none">
           <span
-            className={`font-['Cinzel',_serif] text-[15px] font-black tracking-wide drop-shadow-[0_1px_4px_rgba(0,0,0,1)] transition-colors duration-200 ${
-              isSurging ? 'text-white' : 'text-[#fde2e2]'
+            className={`font-['Cinzel',_serif] text-[15px] font-black tracking-wide drop-shadow-[0_1px_4px_rgba(0,0,0,1)] transition-all duration-150 ${
+              isSurging ? 'text-white scale-110' : 'text-[#fde2e2] scale-100'
             }`}
           >
-            {displayBloodOz}
+            {shownOz}
           </span>
           <span className="font-mono text-[7.5px] font-bold uppercase tracking-[0.14em] text-red-200/85 mt-0.5 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">
             oz

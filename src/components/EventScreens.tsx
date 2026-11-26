@@ -188,6 +188,13 @@ export default function EventScreens({ ctx }: { ctx: {
     triggerSfx
   } = ctx;
 
+  const hasDraftFlippedRef = React.useRef(false);
+  if (screen !== 'DRAFT') {
+    hasDraftFlippedRef.current = false;
+  } else if (draftFlippingDown) {
+    hasDraftFlippedRef.current = true;
+  }
+
   return (
     <>
       {screen === 'DRAFT' && (() => {
@@ -302,6 +309,11 @@ export default function EventScreens({ ctx }: { ctx: {
             <div
               key={c.id || `draft-t-${c.name}-${idx}`}
               className="relative w-[56px] h-[80px] sm:w-[88px] sm:h-[124px] lg:w-[124px] lg:h-[174px] shrink-0 flex items-center justify-center"
+              style={
+                !hasDraftFlippedRef.current && !draftFlippingDown && !draftFlippingUp
+                  ? { animation: `choiceCardDeal 340ms cubic-bezier(0.22, 1, 0.36, 1) ${idx * 45}ms both` }
+                  : undefined
+              }
             >
               <div
                 onClick={() => {
@@ -751,7 +763,7 @@ export default function EventScreens({ ctx }: { ctx: {
                               <div
                                 className="pointer-events-none absolute inset-0 opacity-30 group-hover:opacity-75 transition-opacity"
                                 style={{
-                                  background: 'radial-gradient(circle at 50% 28%, rgba(212,175,55,0.22) 0%, transparent 68%)',
+                                  background: 'radial-gradient(ellipse farthest-side at 50% 28%, rgba(212,175,55,0.22) 0%, transparent 68%)',
                                 }}
                               />
 
@@ -884,8 +896,8 @@ export default function EventScreens({ ctx }: { ctx: {
                       style={{
                         background:
                           campfireAnimState === 'blessed'
-                            ? 'radial-gradient(circle at 50% 55%, rgba(245,158,11,0.34) 0%, rgba(185,28,28,0.18) 48%, transparent 74%)'
-                            : 'radial-gradient(circle at 50% 65%, rgba(220,38,38,0.36) 0%, rgba(127,29,29,0.16) 46%, transparent 74%)',
+                            ? 'radial-gradient(ellipse farthest-side at 50% 55%, rgba(245,158,11,0.34) 0%, rgba(185,28,28,0.18) 48%, transparent 74%)'
+                            : 'radial-gradient(ellipse farthest-side at 50% 65%, rgba(220,38,38,0.36) 0%, rgba(127,29,29,0.16) 46%, transparent 74%)',
                       }}
                     />
 
@@ -968,21 +980,31 @@ export default function EventScreens({ ctx }: { ctx: {
                         )}
                       </div>
 
-                      {/* Rising Steam / Blood Bubbles */}
-                      <div className="pointer-events-none relative w-72 h-0 z-40">
-                        {[-68, -28, 12, 54].map((xOff, idx) => (
-                          <span
-                            key={idx}
-                            className={`absolute bottom-0 rounded-full ${
-                              isAnimating ? 'w-3 h-3 bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.9)]' : 'w-2 h-2 bg-red-500/60'
-                            }`}
-                            style={{
-                              left: `calc(50% + ${xOff}px)`,
-                              animation: `bloodBubbleRise ${isAnimating ? 0.65 : 2.1}s ease-out ${idx * 0.25}s infinite`,
-                            }}
-                          />
-                        ))}
-                      </div>
+                      {/* Rising Steam / Blood Bubbles (escalates on Perilous Second Bath) */}
+                      {(() => {
+                        const isPerilous = campfireStage > 0 && !isCampfireSafe;
+                        const bubbleOffsets = isPerilous ? [-84, -52, -22, 6, 36, 68] : [-68, -28, 12, 54];
+                        return (
+                          <div className="pointer-events-none relative w-72 h-0 z-40">
+                            {bubbleOffsets.map((xOff, idx) => (
+                              <span
+                                key={idx}
+                                className={`absolute bottom-0 rounded-full ${
+                                  isAnimating
+                                    ? 'w-3 h-3 bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.95)]'
+                                    : isPerilous
+                                      ? 'w-2.5 h-2.5 bg-orange-400/90 shadow-[0_0_10px_rgba(249,115,22,0.85)]'
+                                      : 'w-2 h-2 bg-red-500/60'
+                                }`}
+                                style={{
+                                  left: `calc(50% + ${xOff}px)`,
+                                  animation: `bloodBubbleRise ${isAnimating ? 0.55 : isPerilous ? 0.95 : 2.1}s ease-out ${idx * 0.18}s infinite`,
+                                }}
+                              />
+                            ))}
+                          </div>
+                        );
+                      })()}
 
                       {/* Carved Stone Baptismal Font SVG Prop */}
                       <svg
@@ -996,8 +1018,8 @@ export default function EventScreens({ ctx }: { ctx: {
                             <stop offset="100%" stopColor="#14100f" />
                           </linearGradient>
                           <radialGradient id="boilingBloodPool" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stopColor={isAnimating ? '#f87171' : '#dc2626'} />
-                            <stop offset="65%" stopColor="#991b1b" />
+                            <stop offset="0%" stopColor={isAnimating ? '#fca5a5' : campfireStage > 0 && !isCampfireSafe ? '#f97316' : '#dc2626'} />
+                            <stop offset="65%" stopColor={campfireStage > 0 && !isCampfireSafe ? '#b91c1c' : '#991b1b'} />
                             <stop offset="100%" stopColor="#450a0a" />
                           </radialGradient>
                         </defs>
@@ -1015,9 +1037,9 @@ export default function EventScreens({ ctx }: { ctx: {
                         <ellipse cx="215" cy="33" rx="52" ry="4.5" fill="none" stroke="#fca5a5" strokeWidth="1" opacity="0.45" />
                         <ellipse cx="255" cy="35" rx="34" ry="3" fill="none" stroke="#fecaca" strokeWidth="0.9" opacity="0.35" />
                         <path d="M36 52 L54 52 L50 74 L40 74 Z" fill="#231c19" stroke="#634d42" strokeWidth="1.2" />
-                        <path d="M39 50 Q45 32 51 50 Z" fill="#f97316" opacity="0.9" />
+                        <path d={campfireStage > 0 && !isCampfireSafe ? 'M37 50 Q45 22 53 50 Z' : 'M39 50 Q45 32 51 50 Z'} fill={campfireStage > 0 && !isCampfireSafe ? '#fb923c' : '#f97316'} opacity="0.95" className={campfireStage > 0 && !isCampfireSafe ? 'animate-pulse' : ''} />
                         <path d="M406 52 L424 52 L420 74 L410 74 Z" fill="#231c19" stroke="#634d42" strokeWidth="1.2" />
-                        <path d="M409 50 Q415 32 421 50 Z" fill="#f97316" opacity="0.9" />
+                        <path d={campfireStage > 0 && !isCampfireSafe ? 'M407 50 Q415 22 423 50 Z' : 'M409 50 Q415 32 421 50 Z'} fill={campfireStage > 0 && !isCampfireSafe ? '#fb923c' : '#f97316'} opacity="0.95" className={campfireStage > 0 && !isCampfireSafe ? 'animate-pulse' : ''} />
                       </svg>
                     </div>
 
@@ -1174,8 +1196,8 @@ export default function EventScreens({ ctx }: { ctx: {
                       style={{
                         background:
                           altarAnimPhase === 'sacrificing'
-                            ? 'radial-gradient(circle at 50% 66%, rgba(220,38,38,0.46) 0%, rgba(127,29,29,0.18) 46%, transparent 74%)'
-                            : 'radial-gradient(circle at 50% 58%, rgba(212,175,55,0.22) 0%, rgba(120,35,24,0.14) 48%, transparent 74%)',
+                            ? 'radial-gradient(ellipse farthest-side at 50% 66%, rgba(220,38,38,0.46) 0%, rgba(127,29,29,0.18) 46%, transparent 74%)'
+                            : 'radial-gradient(ellipse farthest-side at 50% 58%, rgba(212,175,55,0.22) 0%, rgba(120,35,24,0.14) 48%, transparent 74%)',
                       }}
                     />
 
@@ -2052,6 +2074,11 @@ export default function EventScreens({ ctx }: { ctx: {
               outerPath = 'M 16 8 H 164 L 168 156 L 138 172 L 114 158 L 90 176 L 66 158 L 42 172 L 12 156 Z';
               stitchPath = 'M 23 15 H 157 L 160 151 L 137 163 L 114 150 L 90 167 L 66 150 L 43 163 L 20 151 Z';
               break;
+            case 'Vermin':
+              // Gnawed, tattered-corner cellar scrap
+              outerPath = 'M 20 10 L 154 8 L 166 28 L 158 58 L 168 92 L 154 148 L 122 174 L 90 162 L 54 176 L 18 144 L 12 88 L 22 52 Z';
+              stitchPath = 'M 27 17 L 148 15 L 158 32 L 151 59 L 160 91 L 147 143 L 120 165 L 90 154 L 56 167 L 25 139 L 20 88 L 29 54 Z';
+              break;
             case 'Hooved':
             default:
               // Rounded apothecary / saddle-cloth medallion
@@ -2461,8 +2488,8 @@ export default function EventScreens({ ctx }: { ctx: {
                       style={{
                         background:
                           boneLordAnimPhase === 'blessed'
-                            ? 'radial-gradient(circle at 50% 48%, rgba(234,179,8,0.28) 0%, rgba(214,202,184,0.16) 46%, transparent 74%)'
-                            : 'radial-gradient(circle at 50% 52%, rgba(214,202,184,0.18) 0%, rgba(120,105,90,0.1) 48%, transparent 74%)',
+                            ? 'radial-gradient(ellipse farthest-side at 50% 48%, rgba(234,179,8,0.28) 0%, rgba(214,202,184,0.16) 46%, transparent 74%)'
+                            : 'radial-gradient(ellipse farthest-side at 50% 52%, rgba(214,202,184,0.18) 0%, rgba(120,105,90,0.1) 48%, transparent 74%)',
                       }}
                     />
 
@@ -2691,7 +2718,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       className="pointer-events-none absolute inset-0 opacity-75"
                       style={{
                         background:
-                          'radial-gradient(circle at 50% 54%, rgba(168,85,247,0.28) 0%, rgba(153,27,27,0.16) 48%, transparent 74%)',
+                          'radial-gradient(ellipse farthest-side at 50% 54%, rgba(168,85,247,0.28) 0%, rgba(153,27,27,0.16) 48%, transparent 74%)',
                       }}
                     />
 
@@ -2783,8 +2810,8 @@ export default function EventScreens({ ctx }: { ctx: {
                         style={{
                           background:
                             mycoAnimPhase === 'woven'
-                              ? 'radial-gradient(circle at 50% 62%, rgba(168,85,247,0.38) 0%, rgba(126,34,206,0.16) 48%, transparent 74%)'
-                              : 'radial-gradient(circle at 50% 54%, rgba(147,51,234,0.24) 0%, rgba(153,27,27,0.14) 50%, transparent 74%)',
+                              ? 'radial-gradient(ellipse farthest-side at 50% 62%, rgba(168,85,247,0.38) 0%, rgba(126,34,206,0.16) 48%, transparent 74%)'
+                              : 'radial-gradient(ellipse farthest-side at 50% 54%, rgba(147,51,234,0.24) 0%, rgba(153,27,27,0.14) 50%, transparent 74%)',
                         }}
                       />
 
@@ -3079,7 +3106,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       }`}
                       style={{
                         background:
-                          'radial-gradient(circle at 50% 60%, rgba(20,184,166,0.28) 0%, rgba(13,148,136,0.12) 48%, transparent 74%)',
+                          'radial-gradient(ellipse farthest-side at 50% 60%, rgba(20,184,166,0.28) 0%, rgba(13,148,136,0.12) 48%, transparent 74%)',
                       }}
                     />
 
@@ -3843,6 +3870,10 @@ export default function EventScreens({ ctx }: { ctx: {
               outerPath = 'M 16 8 H 164 L 168 156 L 138 172 L 114 158 L 90 176 L 66 158 L 42 172 L 12 156 Z';
               stitchPath = 'M 23 15 H 157 L 160 151 L 137 163 L 114 150 L 90 167 L 66 150 L 43 163 L 20 151 Z';
               break;
+            case 'Vermin':
+              outerPath = 'M 20 10 L 154 8 L 166 28 L 158 58 L 168 92 L 154 148 L 122 174 L 90 162 L 54 176 L 18 144 L 12 88 L 22 52 Z';
+              stitchPath = 'M 27 17 L 148 15 L 158 32 L 151 59 L 160 91 L 147 143 L 120 165 L 90 154 L 56 167 L 25 139 L 20 88 L 29 54 Z';
+              break;
             case 'Hooved':
             default:
               outerPath = 'M 22 10 H 158 Q 168 10 168 22 V 116 Q 168 172 90 176 Q 12 172 12 116 V 22 Q 12 10 22 10 Z';
@@ -3906,8 +3937,8 @@ export default function EventScreens({ ctx }: { ctx: {
                     style={{
                       background:
                         previewHead && previewBody
-                          ? 'radial-gradient(circle at 50% 48%, rgba(212,175,55,0.22) 0%, rgba(120,53,15,0.1) 50%, transparent 75%)'
-                          : 'radial-gradient(circle at 50% 48%, rgba(140,103,71,0.14) 0%, transparent 72%)',
+                          ? 'radial-gradient(ellipse farthest-side at 50% 48%, rgba(212,175,55,0.22) 0%, rgba(120,53,15,0.1) 50%, transparent 75%)'
+                          : 'radial-gradient(ellipse farthest-side at 50% 48%, rgba(140,103,71,0.14) 0%, transparent 72%)',
                     }}
                   />
                   <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9a7342]/70" />
@@ -4185,7 +4216,7 @@ export default function EventScreens({ ctx }: { ctx: {
                             </div>
 
                             {/* Compact Inspector Caption (fixed height prevents box/rack resizing) */}
-                            <div className="w-full max-w-md min-h-[34px] max-h-[46px] sm:h-[56px] lg:h-[64px] shrink-0 px-2 sm:px-3 flex flex-col items-center justify-center text-center overflow-hidden">
+                            <div className="w-full max-w-md min-h-[34px] sm:h-[56px] lg:h-[64px] shrink-0 px-2 sm:px-3 flex flex-col items-center justify-center text-center overflow-hidden">
                               {inspectedChoice && (
                                 inspectedChoice.type === 'body' ? (
                                   <>
