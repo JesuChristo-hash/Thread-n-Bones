@@ -1148,6 +1148,10 @@
   0%   { background-position: 0px 0px; }
   100% { background-position: 0px 180px; }
 }
+@keyframes bannerClothRippleGPU {
+  0%   { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, 180px, 0); }
+}
 @keyframes bannerCinderRise {
   0%   { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0; }
   18%  { opacity: 0.9; }

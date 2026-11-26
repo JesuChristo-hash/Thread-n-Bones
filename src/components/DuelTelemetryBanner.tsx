@@ -63,32 +63,45 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
 
   return (
     <div className="relative w-[84px] sm:w-[90px] flex flex-col items-center select-none shrink-0">
-      {/* Ornate Carved Timber & Brass Banner Rod */}
-      <div className="relative z-20 w-[calc(100%+20px)] flex items-center justify-center">
-        {/* Left Spearhead Finial + Brass Collar */}
-        <div className="flex items-center shrink-0">
-          <span className="w-2.5 h-2.5 rotate-45 rounded-[1px] bg-gradient-to-br from-[#f6dfa4] via-[#b88940] to-[#4a3014] border border-[#2a190a] shadow-[0_2px_5px_rgba(0,0,0,0.9)]" />
-          <span className="-ml-1 w-1.5 h-3.5 rounded-[1px] bg-gradient-to-b from-[#f3d693] via-[#9c7032] to-[#3f260e] border border-[#2a190a]" />
-        </div>
-        {/* Carved Shaft */}
+      {/* Ornate Carved Timber & Corded Brass Banner Rod */}
+      <div className="relative z-20 w-[calc(100%+18px)] h-4 flex items-center shrink-0">
         <div
-          className="relative flex-1 h-2.5 border-y border-[#9c7238]/90 shadow-[0_4px_10px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,228,178,0.32)] flex items-center justify-around"
+          className="relative w-full h-[9px] rounded-full"
           style={{
-            backgroundColor: '#2d1b10',
-            backgroundImage: `linear-gradient(180deg, rgba(255,220,165,0.22), rgba(0,0,0,0.55)), url("${baseUrl}assets/text/wood.jpg")`,
-            backgroundSize: 'cover, 140px 140px',
+            backgroundColor: '#2e1d12',
+            backgroundImage: `linear-gradient(180deg, rgba(255,214,160,0.28) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.65) 100%), url("${baseUrl}assets/text/wood.jpg")`,
+            backgroundSize: 'cover, 120px 120px',
+            boxShadow: '0 5px 10px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(0,0,0,0.7)',
           }}
-        >
-          {/* Brass Hanging Rings */}
-          <span className="w-1 h-3 rounded-full bg-gradient-to-b from-[#f4d896] via-[#9c7032] to-[#3f260e] border border-[#241509]" />
-          <span className="w-2 h-2 rotate-45 bg-gradient-to-br from-[#f6dfa4] via-[#b88940] to-[#4a3014] border border-[#241509] shadow-sm" />
-          <span className="w-1 h-3 rounded-full bg-gradient-to-b from-[#f4d896] via-[#9c7032] to-[#3f260e] border border-[#241509]" />
-        </div>
-        {/* Right Brass Collar + Spearhead Finial */}
-        <div className="flex items-center shrink-0">
-          <span className="-mr-1 w-1.5 h-3.5 rounded-[1px] bg-gradient-to-b from-[#f3d693] via-[#9c7032] to-[#3f260e] border border-[#2a190a]" />
-          <span className="w-2.5 h-2.5 rotate-45 rounded-[1px] bg-gradient-to-br from-[#f6dfa4] via-[#b88940] to-[#4a3014] border border-[#2a190a] shadow-[0_2px_5px_rgba(0,0,0,0.9)]" />
-        </div>
+        />
+        {[10, 32, 68, 90].map((p) => (
+          <span
+            key={p}
+            className="pointer-events-none absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[7px] h-[14px] rounded-[2px]"
+            style={{
+              left: `${p}%`,
+              backgroundImage:
+                'repeating-linear-gradient(115deg, #b08a52 0px, #b08a52 1.2px, #3a2511 1.2px, #3a2511 2.6px)',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.85), inset 0 0 2px rgba(0,0,0,0.6)',
+            }}
+          />
+        ))}
+        {(['left', 'right'] as const).map((side) => (
+          <span key={side}>
+            <span
+              className="pointer-events-none absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
+              style={{
+                [side]: '-2px',
+                background: 'radial-gradient(circle at 38% 34%, #8a6a3c 0%, #4a3016 55%, #1d1209 100%)',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.9)',
+              }}
+            />
+            <span
+              className="pointer-events-none absolute top-[62%] w-[2px] h-3"
+              style={{ [side]: '3px', background: 'linear-gradient(to bottom, #8a6a3c, transparent)' }}
+            />
+          </span>
+        ))}
       </div>
 
       {/* Hidden SVG Wave Displacement Filter (ripples cloth edges smoothly without warping text) */}
@@ -131,7 +144,7 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
             : 'drop-shadow(0 10px 14px rgba(0,0,0,0.72))',
         }}
       >
-        <div className="relative w-full px-2 pt-2.5 pb-7">
+        <div className="relative w-full mx-auto px-2.5 pt-4 pb-7 flex flex-col items-center">
           {/* Wavy Displaced Cloth Backdrop */}
           <div
             className={`pointer-events-none absolute inset-0 overflow-hidden shadow-[inset_0_8px_18px_rgba(0,0,0,0.62)] transition-colors duration-300 ${
