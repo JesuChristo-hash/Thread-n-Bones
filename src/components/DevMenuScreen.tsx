@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChiptuneAudio } from '../audio/ChiptuneAudio';
-import { ALL_CARD_LOOKUP, CARD_ART_OFFSETS, MAIN_DECK_POOL, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, getCardArtUrl } from '../data/gameData';
+import { ALL_CARD_LOOKUP, CARD_ART_OFFSETS, MAIN_DECK_POOL, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, getCardArtUrl , getCardDisplayName } from '../data/gameData';
 import type { CardDef, CardInstance } from '../data/gameData';
 import { resetArchive } from '../data/archive';
 
@@ -394,7 +394,10 @@ export default function DevMenuScreen({
                   className="w-full bg-transparent border-b border-amber-950/60 pb-1.5 text-xs text-amber-200 placeholder-stone-600 font-mono focus:outline-none focus:border-amber-600 mb-3"
                 />
                 <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto mb-3">
-                  {MAIN_DECK_POOL.filter(c => c.name.toLowerCase().includes(devCardSearch.toLowerCase())).map(c => (
+                  {MAIN_DECK_POOL.filter(c => {
+                    const q = devCardSearch.toLowerCase();
+                    return getCardDisplayName(c.name).toLowerCase().includes(q) || c.name.toLowerCase().includes(q);
+                  }).map(c => (
                     <button
                       key={c.name}
                       onClick={() => setDevAlterCard(c)}
@@ -402,7 +405,7 @@ export default function DevMenuScreen({
                         devAlterCard?.name === c.name ? 'border-amber-500 text-amber-100 bg-amber-950/40' : 'border-amber-950/50 text-stone-400 hover:text-amber-200'
                       }`}
                     >
-                      {c.name} {c.emoji}
+                      {getCardDisplayName(c.name)} {c.emoji}
                     </button>
                   ))}
                 </div>
@@ -410,11 +413,11 @@ export default function DevMenuScreen({
                 {devAlterCard && (
                   <div className="p-3 border border-amber-950/50 mb-3 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-amber-200 font-mono">Selected: {devAlterCard.name} ({devAlterCard.emoji})</span>
+                      <span className="text-xs text-amber-200 font-mono">Selected: {getCardDisplayName(devAlterCard.name)} ({devAlterCard.emoji})</span>
                       <button
                         onClick={() => {
                           setMasterDeck(prev => [...prev, cloneCard(devAlterCard, ouroborosBuffs)]);
-                          addLog(`[DEV] Added ${devAlterCard.name} to Master Deck.`);
+                          addLog(`[DEV] Added ${getCardDisplayName(devAlterCard.name)} to Master Deck.`);
                           setDevAlterCard(null);
                         }}
                         className="text-xs uppercase font-mono tracking-widest text-emerald-400 hover:text-emerald-200 hover:tracking-[0.15em] transition cursor-pointer"
@@ -436,13 +439,13 @@ export default function DevMenuScreen({
                                 const nextDeck = [...masterDeck];
                                 nextDeck[dIdx] = cloneCard(devAlterCard, ouroborosBuffs);
                                 setMasterDeck(nextDeck);
-                                addLog(`[DEV] Swapped ${dCard.name} with ${devAlterCard.name} in Master Deck.`);
+                                addLog(`[DEV] Swapped ${getCardDisplayName(dCard.name)} with ${getCardDisplayName(devAlterCard.name)} in Master Deck.`);
                                 setDevAlterCard(null);
                               }}
                               className="px-2 py-1 border border-amber-950/40 hover:border-amber-700 text-[11px] text-stone-400 hover:text-amber-200 font-mono transition flex items-center gap-1 cursor-pointer"
-                              title={`Click to replace ${dCard.name} with ${devAlterCard.name}`}
+                              title={`Click to replace ${getCardDisplayName(dCard.name)} with ${getCardDisplayName(devAlterCard.name)}`}
                             >
-                              <span>{dCard.name}</span>
+                              <span>{getCardDisplayName(dCard.name)}</span>
                               <span className="text-stone-600 text-[10px]">({dCard.attack}/{dCard.health})</span>
                             </button>
                           ))}
@@ -564,7 +567,7 @@ export default function DevMenuScreen({
               const filteredCards = Object.values(ALL_CARD_LOOKUP)
                 .filter(c => {
                   if (!term) return true;
-                  const nameMatches = c.name?.toLowerCase().includes(term);
+                  const nameMatches = getCardDisplayName(c.name).toLowerCase().includes(term) || c.name?.toLowerCase().includes(term);
                   const classMatches = c.class?.toLowerCase().includes(term);
                   const sigilMatches = (c.sigils || []).some(s => s?.toLowerCase().includes(term));
                   const costMatches =
@@ -572,7 +575,7 @@ export default function DevMenuScreen({
                     (c.boneCost !== undefined && String(c.boneCost) === term);
                   return nameMatches || classMatches || sigilMatches || costMatches;
                 })
-                .sort((a, b) => a.name.localeCompare(b.name));
+                .sort((a, b) => getCardDisplayName(a.name).localeCompare(getCardDisplayName(b.name)));
 
               const getCleanAssetPath = (card: CardDef) => {
                 if (card.name?.toLowerCase().includes('moon')) {
@@ -618,7 +621,10 @@ export default function DevMenuScreen({
                         </div>
                         <div className="text-left font-mono space-y-1.5">
                           <div className="text-sm font-bold text-amber-200 uppercase tracking-wider">
-                            {devInspectCard.name}
+                            {getCardDisplayName(devInspectCard.name)}
+                            {getCardDisplayName(devInspectCard.name) !== devInspectCard.name && (
+                              <span className="ml-2 text-[10px] text-stone-500 normal-case">({devInspectCard.name})</span>
+                            )}
                           </div>
                           <div className="text-xs text-emerald-400">
                             File:{' '}

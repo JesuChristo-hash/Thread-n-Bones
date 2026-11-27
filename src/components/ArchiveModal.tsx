@@ -8,7 +8,7 @@ import {
   getCardArtUrl,
   getSigilArtUrl,
   type Tribe,
-} from '../data/gameData';
+ getCardDisplayName } from '../data/gameData';
 import { type PersistentArchive } from '../data/archive';
 
 interface ArchiveModalProps {
@@ -57,7 +57,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
         sigils: [],
       });
     }
-    return list.sort((a, b) => a.name.localeCompare(b.name));
+    return list.sort((a, b) => getCardDisplayName(a.name).localeCompare(getCardDisplayName(b.name)));
   }, []);
 
   const filteredCards = useMemo(() => {
@@ -68,6 +68,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
       const isDiscovered = seenCardSet.has(c.name);
       if (!isDiscovered) return false;
       return (
+        getCardDisplayName(c.name).toLowerCase().includes(q) ||
         c.name.toLowerCase().includes(q) ||
         (c.sigils || []).some((s) => s.toLowerCase().includes(q))
       );
@@ -321,7 +322,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                                 discovered ? 'text-[#ede2ce]' : 'text-stone-600'
                               }`}
                             >
-                              {discovered ? card.name : '???'}
+                              {discovered ? getCardDisplayName(card.name) : '???'}
                             </span>
                             {discovered && (
                               <span className="text-[10px] text-[#d6c2a5]/90 shrink-0">
@@ -338,7 +339,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                             {discovered ? (
                               <img
                                 src={getCardArtUrl(card)}
-                                alt={card.name}
+                                alt={getCardDisplayName(card.name)}
                                 className="h-14 w-14 object-contain [image-rendering:pixelated]"
                                 onError={(e) => {
                                   (e.currentTarget as HTMLImageElement).style.display = 'none';

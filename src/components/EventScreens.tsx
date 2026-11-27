@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CardDef, Tribe } from '../data/gameData';
-import { ALL_ITEMS } from '../data/gameData';
+import { ALL_ITEMS , getCardDisplayName } from '../data/gameData';
 import MapScreen from '../components/MapScreen';
 import { generateActMap, getBossForAct } from '../data/mapGenerator';
 import { ALL_CARD_LOOKUP, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, getSigilArtUrl } from '../data/gameData';
@@ -214,11 +214,11 @@ export default function EventScreens({ ctx }: { ctx: {
         const statusPrompt = canVentureOnward
           ? 'The bargain is struck.'
           : canConfirmTrade && selectedShopCard
-            ? `Barter Pelt for ${selectedShopCard.name}`
+            ? `Barter Pelt for ${getCardDisplayName(selectedShopCard.name)}`
             : selectedPeltCard
               ? 'Claim an offering from the table'
               : selectedShopCard
-                ? `Offer a Pelt for ${selectedShopCard.name}`
+                ? `Offer a Pelt for ${getCardDisplayName(selectedShopCard.name)}`
                 : 'Offer a Pelt';
 
         const renderPlayerDraftSlot = (c: CardDef, idx: number) => {
@@ -1431,7 +1431,7 @@ export default function EventScreens({ ctx }: { ctx: {
                               if (isAnimating) return;
                               if (!altarHostId) {
                                 if (cannotBeHost) {
-                                  addLog(`${c.name} cannot receive more crests: it already bears more than its original nature allows.`);
+                                  addLog(`${getCardDisplayName(c.name)} cannot receive more crests: it already bears more than its original nature allows.`);
                                   return;
                                 }
                                 triggerSfx('draw');
@@ -1442,7 +1442,7 @@ export default function EventScreens({ ctx }: { ctx: {
                                 setAltarSacrificeId(null);
                               } else if (!altarSacrificeId) {
                                 if (wouldExceedFive) {
-                                  addLog(`Cannot sacrifice ${c.name}: ${hostCard?.name} would have 5 or more crests (max 4 allowed).`);
+                                  addLog(`Cannot sacrifice ${getCardDisplayName(c.name)}: ${getCardDisplayName(hostCard?.name)} would have 5 or more crests (max 4 allowed).`);
                                   return;
                                 }
                                 if (c.sigils && c.sigils.length > 0) {
@@ -3590,7 +3590,7 @@ export default function EventScreens({ ctx }: { ctx: {
                           key={c.id || `wit-pill-${idx}`}
                           className="px-2.5 py-0.5 rounded-[2px] bg-[#17110b]/90 border border-[#5c4328]/80 text-[#efe0be]"
                         >
-                          {c.name}{' '}
+                          {getCardDisplayName(c.name)}{' '}
                           <span className="text-amber-300/90 font-bold">
                             ({getWitnessContrib(caveSelectedTrial, c)})
                           </span>
@@ -4766,7 +4766,7 @@ export default function EventScreens({ ctx }: { ctx: {
                   const card = deck[hoarderSelectedIdx];
                   setDeck((prev: any[]) => prev.filter((_: any, i: number) => i !== hoarderSelectedIdx));
                   setHand((prev: any[]) => [...prev, applyPlayerTotem(transformAmorphous(card), activeTotem)]);
-                  addLog(`Hoarder retrieved ${card.name}!`);
+                  addLog(`Hoarder retrieved ${getCardDisplayName(card.name)}!`);
                   setHoarderSelectedIdx(null);
                   setScreen('DUEL');
                 }}
@@ -4911,7 +4911,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       <div className="shrink-0 border-t border-b border-[#3a271b]/80 py-2.5 my-2 flex items-center justify-between gap-2 text-left">
                         <div>
                           <h2 className="text-lg font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] text-[#f3dfb6]">
-                            {activeDetailCard.name}
+                            {getCardDisplayName(activeDetailCard.name)}
                           </h2>
                           <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#b49365] mt-0.5">
                             {activeDetailCard.class}

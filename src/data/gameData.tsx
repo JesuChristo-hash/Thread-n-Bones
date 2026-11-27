@@ -237,7 +237,7 @@ export const SIGIL_MAPPING: Record<string, string> = {
   'Leader': '🚩',
   'Corpse Eater': '🍖',
   'Bloodlust': '🗡️',
-  'Bellist': '🔔',
+  'Demon Spawn': '🔔',
   'Double Strike': '⚡',
   'Loose Tail': '🦎',
   'Guardian': '🐾',
@@ -285,7 +285,7 @@ export const SIGIL_DESCRIPTIONS: Record<string, string> = {
   'Leader': "Grants +1 Attack to adjacent allied creatures.",
   'Corpse Eater': "If an allied creature perishes in combat, this card enters the board automatically from hand.",
   'Bloodlust': "Gains +1 Attack whenever it kills an opposing creature.",
-  'Bellist': "When played, spawns Chimes (0/1) in adjacent empty spaces.",
+  'Demon Spawn': "When played, spawns Imps (0/1) in adjacent empty spaces.",
   'Double Strike': "Strikes the opposing target space an additional time.",
   'Loose Tail': "When attacked, leaves a Tail (0/2) behind and slips into an adjacent space.",
   'Guardian': "When an opposing creature is played opposite an empty slot, leaps to block it.",
@@ -432,7 +432,7 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Wild Bull", class: "Hooved", attack: 3, health: 2, cost: 2, emoji: "🐂", sigils: ["Rampager"] },
   { name: "Mud Turtle", class: "Reptile", attack: 2, health: 2, cost: 2, emoji: "🐢", sigils: ["Armored"] },
   { name: "Hodag", class: "Canine", attack: 1, health: 4, cost: 2, emoji: "👹", sigils: ["Bloodlust"] },
-  { name: "The Daus", class: "Hooved", attack: 2, health: 2, cost: 2, emoji: "🐖", sigils: ["Bellist"] },
+  { name: "The Daus", class: "Hooved", attack: 2, health: 2, cost: 2, emoji: "🐖", sigils: ["Demon Spawn"] },
   { name: "Elk", class: "Hooved", attack: 2, health: 4, cost: 2, emoji: "🦌", sigils: ["Sprinter"] },
   { name: "Pronghorn", class: "Hooved", attack: 1, health: 3, cost: 2, emoji: "🦌", sigils: ["Sprinter", "Bifurcated Strike"] },
   { name: "River Snapper", class: "Reptile", attack: 1, health: 6, cost: 2, emoji: "🐢", sigils: ["Scapegoat"] },
@@ -878,4 +878,77 @@ export function applyPlayerTotem(card: CardDef, activeTotem: Totem): CardDef {
     }
   }
   return card;
+}
+
+export const CARD_DISPLAY_NAMES: Record<string, string> = {
+  'Chime': 'Imp',
+  'Bee': 'Honeybee',
+  'Stone Wall': 'Boulder',
+  'Felled Tree': 'Great Oak',
+  'Adder': 'Komodo',
+  'Alpha': 'White Wolf',
+  'Amalgam': 'Chimera',
+  'Amoeba': 'Protozoan',
+  'Ant Queen': 'Queen Ant',
+  'Bat': 'Tadarida',
+  'Beaver': 'Woodchuck',
+  'Black Goat': 'Judas',
+  'Bloodhound': 'Bully',
+  'Bullfrog': 'Cane Toad',
+  'Cat': 'Anubis',
+  'Cockroach': 'Gokiburi',
+  'Coyote': 'Ganywa',
+  'Demon Elk': 'Wendigo',
+  'Dire Wolf': 'Aenocyon',
+  'Dire Wolf Pup': 'Aenocyon Pup',
+  'Elk': 'Wapiti',
+  'Elk Fawn': 'Wapiti Calf',
+  'Field Mice': 'Voles',
+  'Flying Ant': 'Winged Ant',
+  'Geck': 'Gecko',
+  'Great White': 'Bull Shark',
+  'Grizzly': 'Kodiak',
+  'Hodag': 'Rhinelander',
+  'Lammergeier': 'Barbatus',
+  'Magpie': 'Lark',
+  'Mantis': 'Stag Beetle',
+  'Mantiseater': 'Rhinoceros',
+  'Mealworm': 'Nightcrawler',
+  'Mole': 'Moldwarp',
+  'Moose Buck': 'Caribou',
+  'Mud Turtle': 'Box Turtle',
+  'Opossum': 'Possum',
+  'Ouroboros': 'Jörmungandr',
+  'Porcupine': 'Hedgehog',
+  'Pronghorn': 'Tetrameryx',
+  'Raccoon': 'Trash Panda',
+  'Rat King': 'The Vika',
+  'Rattler': 'Viper',
+  'Raven': 'Corvus',
+  'Rhino': 'Ivory Tusk',
+  'River Otter': 'Mustelid',
+  'River Snapper': 'Galápagos',
+  'Skink': 'Whiptail',
+  'Skunk': 'Polecat',
+  'Sparrow': 'Parakeet',
+  'Stoat': 'Ermine',
+  'Tadpole': 'Polliwog',
+  'The Daus': 'Dogman',
+  'Turkey Vulture': 'Condor',
+  'Warren': 'Coneygree',
+  'Wild Bull': 'Friesian',
+  'Wolf': 'Lupine',
+  'Wolf Cub': 'Lupine Cub',
+  'Wolverine': 'Carcajou',
+  'Worker Ant': 'Drone Ant',
+};
+
+export function getCardDisplayName(name?: string | null): string {
+  if (!name) return '';
+  if (CARD_DISPLAY_NAMES[name]) return CARD_DISPLAY_NAMES[name];
+  if (name.startsWith('Elder ')) {
+    const base = name.slice(6);
+    return `Elder ${CARD_DISPLAY_NAMES[base] || base}`;
+  }
+  return name;
 }

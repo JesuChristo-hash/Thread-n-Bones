@@ -47,17 +47,17 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
   const isAct4Burned = stage >= 4;
   const swayAnimation =
     stage === 2
-      ? 'bannerSwayMid 5.2s ease-in-out infinite'
+      ? 'bannerSwayMid 11s linear infinite'
       : stage === 3
-        ? 'bannerSwayBrisk 4.2s ease-in-out infinite'
+        ? 'bannerSwayBrisk 9s linear infinite'
         : 'bannerSwayGentle 6.6s ease-in-out infinite';
   const rippleAnimation =
     stage === 2
       ? 'bannerClothRipple 2.8s linear infinite'
       : stage === 3
-        ? 'bannerClothRipple 1.7s linear infinite'
+        ? 'bannerClothRipple 2.3s linear infinite'
         : 'bannerClothRipple 5.5s linear infinite';
-  const rippleOpacity = stage === 3 ? 0.24 : stage === 2 ? 0.16 : 0.08;
+  const rippleOpacity = stage === 3 ? 0.2 : stage === 2 ? 0.16 : 0.08;
   const waveScale = stage === 3 ? 30 : stage === 2 ? 18 : 5;
   const waveDur = stage === 3 ? '2.1s' : stage === 2 ? '3.2s' : '5.8s';
 
@@ -183,7 +183,7 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
 
             {/* Detailed Frayed Thread Strands along Bottom Edge */}
             <div
-              className="pointer-events-none absolute bottom-0 inset-x-0 h-5 opacity-80"
+              className={`pointer-events-none absolute bottom-0 inset-x-0 h-5 opacity-80 banner-hem banner-hem-s${stage}`}
               style={{
                 backgroundImage: isAct4Burned
                   ? 'repeating-linear-gradient(90deg, rgba(20,8,6,0.95) 0px, rgba(20,8,6,0.95) 1px, transparent 1px, transparent 3px, rgba(120,40,18,0.6) 3px, rgba(120,40,18,0.6) 4px, transparent 4px, transparent 7px)'

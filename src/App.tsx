@@ -109,7 +109,7 @@ import {
   cloneCard,
   transformAmorphous,
   applyPlayerTotem
-} from './data/gameData';
+, getCardDisplayName } from './data/gameData';
 
 // --- Built-in Chiptune Audio Synthesizer ---
 
@@ -1178,7 +1178,7 @@ export default function App() {
 
       triggerSfx('draw');
       setCacheConsolationCard(rewardCard);
-      addLog(`Peddler presents a token for the road: ${rewardCard.name}.`);
+      addLog(`Peddler presents a token for the road: ${getCardDisplayName(rewardCard.name)}.`);
     } else {
       addLog("Departed the Surplus Cache.");
       returnToMap();
@@ -1196,7 +1196,7 @@ export default function App() {
     }
 
     triggerSfx('play');
-    addLog(`${cacheConsolationCard.name} safely stowed into your deck.`);
+    addLog(`${getCardDisplayName(cacheConsolationCard.name)} safely stowed into your deck.`);
     setCacheConsolationCard(null);
     returnToMap(updatedMasterDeck);
   };
@@ -1832,7 +1832,7 @@ export default function App() {
         const drawn = remaining.pop()!;
         setDeck(remaining);
         card = transformAmorphous(applyPlayerTotem(drawn, activeTotem));
-        addLog(`Drew ${card.name}.`);
+        addLog(`Drew ${getCardDisplayName(card.name)}.`);
       }
     }
     if (flockSquirrelLockDraws > 0) {
@@ -1933,7 +1933,7 @@ export default function App() {
     if (existingCard) {
       const existingSacKey = existingCard.id || existingCard.name || '';
       if (existingSacKey && sacrificedUnkillableCardIds.includes(existingSacKey)) {
-        addLog(`${existingCard.name} has already been sacrificed for this summon.`);
+        addLog(`${getCardDisplayName(existingCard.name)} has already been sacrificed for this summon.`);
         return;
       }
       const targetCard = hand[activeHandIndex];
@@ -1941,12 +1941,12 @@ export default function App() {
 
       const requiredBlood = targetCard.cost || 0;
       if (requiredBlood <= 0) {
-        addLog(`${targetCard.name} does not require blood.`);
+        addLog(`${getCardDisplayName(targetCard.name)} does not require blood.`);
         return;
       }
 
       if (blood >= requiredBlood) {
-        addLog(`You already have enough blood to summon ${targetCard.name}.`);
+        addLog(`You already have enough blood to summon ${getCardDisplayName(targetCard.name)}.`);
         return;
       }
 
@@ -1954,13 +1954,13 @@ export default function App() {
       const isWorthyToken = (existingCard.name === 'Chime' || existingCard.name === 'Dam') && hasWorthySacrifice;
 
       if (existingCard.unsacrificable && !isWorthyToken) {
-        addLog(`${existingCard.name} cannot be sacrificed.`);
+        addLog(`${getCardDisplayName(existingCard.name)} cannot be sacrificed.`);
         return;
       }
 
       const cardIdentifier = existingCard.id || existingCard.name || '';
       if (existingCard.sigils.includes('Unkillable') && sacrificedUnkillableCardIds.includes(cardIdentifier)) {
-        addLog(`${existingCard.name} (Unkillable) has already been sacrificed for this summon attempt.`);
+        addLog(`${getCardDisplayName(existingCard.name)} (Unkillable) has already been sacrificed for this summon attempt.`);
         return;
       }
 
@@ -1998,7 +1998,7 @@ export default function App() {
             attack: prev.attack + (existingCard.attack || 0),
             health: prev.health + (existingCard.health || 0)
           }));
-          addLog(`Sacrificed ${existingCard.name}! Morsel buffs (+${existingCard.attack || 0}/+${existingCard.health || 0}) ready for next creature.`);
+          addLog(`Sacrificed ${getCardDisplayName(existingCard.name)}! Morsel buffs (+${existingCard.attack || 0}/+${existingCard.health || 0}) ready for next creature.`);
         }
 
         const bloodYield = existingCard.sigils.includes('Worthy Sacrifice') ? 3 : 1;
@@ -2010,7 +2010,7 @@ export default function App() {
           ...prev,
           cardsSacrificed: prev.cardsSacrificed + 1,
         }));
-        addLog(`Sacrificed ${existingCard.name}. Gained ${bloodYield} Blood and ${boneYield} Bone(s).`);
+        addLog(`Sacrificed ${getCardDisplayName(existingCard.name)}. Gained ${bloodYield} Blood and ${boneYield} Bone(s).`);
 
         if (isTutorialDuel && !tutorialSacrificeTriggered) {
           setTutorialSacrificeTriggered(true);
@@ -2025,7 +2025,7 @@ export default function App() {
 
           if (existingCard.sigils.includes('Many Lives')) {
             setSacrificedUnkillableCardIds(prev => [...prev, existingCard.id || existingCard.name || '']);
-            addLog(`${existingCard.name} was sacrificed but remains on the board thanks to Many Lives!`);
+            addLog(`${getCardDisplayName(existingCard.name)} was sacrificed but remains on the board thanks to Many Lives!`);
             return;
           }
 
@@ -2049,7 +2049,7 @@ export default function App() {
               returned.health = (existingCard.health || 0) + 1;
             }
             setHand(prev => [...prev, applyPlayerTotem(transformAmorphous(returned), activeTotem)]);
-            addLog(`${existingCard.name} returned to hand (Unkillable)!`);
+            addLog(`${getCardDisplayName(existingCard.name)} returned to hand (Unkillable)!`);
           } else if (existingCard.sigils.includes('Pack-Animal')) {
             const masterCard = masterDeck.find(c => c.id === existingCard.id);
             const returned = cloneCard(masterCard || existingCard, ouroborosBuffs);
@@ -2062,7 +2062,7 @@ export default function App() {
             const baseSigils = masterCard?.sigils || existingCard.sigils.filter(s => s !== activeTotem?.body);
             returned.sigils = Array.from(new Set(baseSigils));
             setDeck(prev => [transformAmorphous(returned), ...prev]);
-            addLog(`${existingCard.name} returned to the bottom of your deck (Pack-Animal)!`);
+            addLog(`${getCardDisplayName(existingCard.name)} returned to the bottom of your deck (Pack-Animal)!`);
           }
           return;
       }
@@ -2107,7 +2107,7 @@ export default function App() {
         playedCard.attack = (playedCard.attack || 0) + morselStats.attack;
         playedCard.health = (playedCard.health || 0) + morselStats.health;
         spawnSigilBadge(true, laneIndex, `MORSEL +${morselStats.attack}/+${morselStats.health}`, 'emerald');
-        addLog(`${playedCard.name} consumed the Morsel, gaining +${morselStats.attack}/+${morselStats.health}!`);
+        addLog(`${getCardDisplayName(playedCard.name)} consumed the Morsel, gaining +${morselStats.attack}/+${morselStats.health}!`);
         setMorselStats({ attack: 0, health: 0 });
       }
 
@@ -2125,14 +2125,14 @@ export default function App() {
       setBackupState(null);
       setSacrificedUnkillableCardIds([]);
       triggerSfx('play');
-      addLog(`Played ${playedCard.name} in lane ${laneIndex + 1}.`);
+      addLog(`Played ${getCardDisplayName(playedCard.name)} in lane ${laneIndex + 1}.`);
 
       // On-play sigil triggers
       if (playedCard.sigils.includes('Fecundity')) {
         const fecundityCopy = cloneCard(playedCard, ouroborosBuffs);
         fecundityCopy.sigils = fecundityCopy.sigils.filter(s => s !== 'Fecundity');
         setHand(prev => [...prev, applyPlayerTotem(fecundityCopy, activeTotem)]);
-        addLog(`${playedCard.name} duplicated into your hand!`);
+        addLog(`${getCardDisplayName(playedCard.name)} duplicated into your hand!`);
       }
       if (playedCard.sigils.includes('Rabbit Hole')) {
         const extraSigils = playedCard.sigils.filter(s => s !== 'Rabbit Hole');
@@ -2148,8 +2148,8 @@ export default function App() {
         setHand(prev => [...prev, applyPlayerTotem(ant, activeTotem)]);
         addLog("A Worker Ant scurried into your hand!");
       }
-      if (playedCard.sigils.includes('Bellist')) {
-        const extraSigils = playedCard.sigils.filter(s => s !== 'Bellist');
+      if (playedCard.sigils.includes('Demon Spawn')) {
+        const extraSigils = playedCard.sigils.filter(s => s !== 'Demon Spawn');
         setPlayerBoard(prev => {
           const nextBoard = [...prev];
           const createChime = () => {
@@ -2208,7 +2208,7 @@ export default function App() {
               nextBoard[guardianIdx] = null;
               return nextBoard;
             });
-            addLog(`Enemy ${gCard.name} leaped to guard lane ${laneIndex + 1}!`);
+            addLog(`Enemy ${getCardDisplayName(gCard.name)} leaped to guard lane ${laneIndex + 1}!`);
           }
         }
       }
@@ -2216,7 +2216,7 @@ export default function App() {
         if (deck.length > 0) {
           setScreen('EVENT_HOARDER_SEARCH');
         } else {
-          addLog(`Your deck is empty. ${playedCard.name} found nothing.`);
+          addLog(`Your deck is empty. ${getCardDisplayName(playedCard.name)} found nothing.`);
         }
       }
     }
@@ -2318,12 +2318,12 @@ export default function App() {
           const newAtk = Math.max(0, (c.attack || 0) - 1);
           const newHp = (c.health || 0) - 2;
           if (newHp <= 0) {
-            addLog(`The flames consume your ${c.name} in lane ${i + 1}.`);
+            addLog(`The flames consume your ${getCardDisplayName(c.name)} in lane ${i + 1}.`);
             next[i] = null;
           } else {
             c.attack = newAtk;
             c.health = newHp;
-            addLog(`Your ${c.name} in lane ${i + 1} suffers burn (-1 ATK, -2 HP).`);
+            addLog(`Your ${getCardDisplayName(c.name)} in lane ${i + 1} suffers burn (-1 ATK, -2 HP).`);
           }
         }
       }
@@ -2435,7 +2435,7 @@ export default function App() {
             if (existingVictim) {
               triggerSfx('sacrifice');
               await animateCardDestroy(true, lane);
-              addLog(`The Magical Hat drops a Stone Wall into lane ${lane + 1}, crushing your ${existingVictim.name}!`);
+              addLog(`The Magical Hat drops a ${getCardDisplayName('Stone Wall')} into lane ${lane + 1}, crushing your ${getCardDisplayName(existingVictim.name)}!`);
             } else {
               addLog(`The Magical Hat manifests a Stone Wall in lane ${lane + 1}.`);
             }
@@ -2476,7 +2476,7 @@ export default function App() {
             else if (card.class === 'Avian') replacementKey = 'Reaper';
 
             const baseCard = ALL_CARD_LOOKUP[replacementKey] || ALL_CARD_LOOKUP['Skeleton'];
-            addLog(`Your ${card.name} evolves into a ${baseCard.name}!`);
+            addLog(`Your ${getCardDisplayName(card.name)} evolves into a ${getCardDisplayName(baseCard.name)}!`);
             return {
               ...cloneCard(baseCard),
               id: `bonehorn-${Date.now()}-${idx}`
@@ -2715,7 +2715,7 @@ export default function App() {
         }
         return next;
       });
-      addLog(`The Joker Stamp brands enemy ${targetCard.name} with Waterborne, reducing it to 0/1.`);
+      addLog(`The Joker Stamp brands enemy ${getCardDisplayName(targetCard.name)} with Waterborne, reducing it to 0/1.`);
     } else if (mode === 'large_matchbook') {
       if (targetCard.name === 'Stone Wall') {
         setIsBoardShaking(true);
@@ -2735,7 +2735,7 @@ export default function App() {
       } else {
         triggerSfx('hit');
         setIncineratingLane(laneIndex);
-        addLog(`The Large Matchbook incinerates enemy ${targetCard.name}!`);
+        addLog(`The Large Matchbook incinerates enemy ${getCardDisplayName(targetCard.name)}!`);
         await new Promise(res => setTimeout(res, 950));
         setEnemyBoard(prev => {
           const next = [...prev];
@@ -2756,10 +2756,10 @@ export default function App() {
             pc.attack = Math.max(0, (pc.attack || 0) - 1);
             pc.health = (pc.health || 0) - 2;
             if (pc.health <= 0) {
-              addLog(`The backdraft burns away your ${pc.name} in lane ${col + 1}!`);
+              addLog(`The backdraft burns away your ${getCardDisplayName(pc.name)} in lane ${col + 1}!`);
               next[col] = null;
             } else {
-              addLog(`Your ${pc.name} in lane ${col + 1} catches fire (-1 ATK, -2 HP)!`);
+              addLog(`Your ${getCardDisplayName(pc.name)} in lane ${col + 1} catches fire (-1 ATK, -2 HP)!`);
             }
           }
         });
@@ -3101,13 +3101,13 @@ export default function App() {
               nextBoard[i] = null;
             }
             card.sprintDir = dir;
-            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} stepped into lane ${target + 1}.`);
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${getCardDisplayName(card.name)} stepped into lane ${target + 1}.`);
             if (isPlayer) setPlayerBoard([...nextBoard]);
             else setEnemyBoard([...nextBoard]);
             await new Promise(res => setTimeout(res, 100));
           } else {
             card.sprintDir = -dir;
-            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} was blocked and turned around.`);
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${getCardDisplayName(card.name)} was blocked and turned around.`);
             if (isPlayer) setPlayerBoard([...nextBoard]);
             else setEnemyBoard([...nextBoard]);
           }
@@ -3131,13 +3131,13 @@ export default function App() {
             nextBoard[target] = card;
             nextBoard[i] = swapped;
             card.sprintDir = dir;
-            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} rampaged, displacing ${swapped?.name || 'empty space'}.`);
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${getCardDisplayName(card.name)} rampaged, displacing ${swapped ? getCardDisplayName(swapped.name) : 'empty space'}.`);
             if (isPlayer) setPlayerBoard([...nextBoard]);
             else setEnemyBoard([...nextBoard]);
             await new Promise(res => setTimeout(res, 100));
           } else {
             card.sprintDir = -dir;
-            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} hit the edge and turned around.`);
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${getCardDisplayName(card.name)} hit the edge and turned around.`);
             if (isPlayer) setPlayerBoard([...nextBoard]);
             else setEnemyBoard([...nextBoard]);
           }
@@ -3178,13 +3178,13 @@ export default function App() {
               nextBoard[i] = null;
             }
             card.sprintDir = dir;
-            addLog(`${card.name} shoved the line toward lane ${emptySlot + 1}.`);
+            addLog(`${getCardDisplayName(card.name)} shoved the line toward lane ${emptySlot + 1}.`);
             if (isPlayer) setPlayerBoard([...nextBoard]);
             else setEnemyBoard([...nextBoard]);
             await new Promise(res => setTimeout(res, 100));
           } else {
             card.sprintDir = -dir;
-            addLog(`${card.name} could not shove and turned around.`);
+            addLog(`${getCardDisplayName(card.name)} could not shove and turned around.`);
             if (isPlayer) setPlayerBoard([...nextBoard]);
             else setEnemyBoard([...nextBoard]);
           }
@@ -3259,7 +3259,7 @@ export default function App() {
             });
 
             (evolved as any).hasEvolved = true;
-            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} matured into a ${evoName}!`);
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${getCardDisplayName(card.name)} matured into a ${getCardDisplayName(evoName)}!`);
             const finalEvolved = isPlayer ? applyPlayerTotem(evolved, activeTotem) : evolved;
             finalEvolved.sigils = (finalEvolved.sigils || []).filter(s => s !== 'Fledgling');
             return finalEvolved;
@@ -3270,7 +3270,7 @@ export default function App() {
           elder.attack = (elder.attack || 0) + 1;
           elder.health = (elder.health || 0) + 2;
           elder.sigils = (elder.sigils || []).filter(s => s !== 'Fledgling');
-          addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} matured into an Elder form! (+1 ATK / +2 HP)`);
+          addLog(`${isPlayer ? 'Your' : 'Enemy'} ${getCardDisplayName(card.name)} matured into an Elder form! (+1 ATK / +2 HP)`);
           return elder;
         }
       }
@@ -3380,7 +3380,7 @@ export default function App() {
             currEBoard[tLane] = currEBoard[burrowerIdx];
             currEBoard[burrowerIdx] = null;
             eCard = currEBoard[tLane];
-            addLog(`Enemy ${eCard?.name} burrowed to block lane ${tLane + 1}!`);
+            addLog(`Enemy ${getCardDisplayName(eCard?.name)} burrowed to block lane ${tLane + 1}!`);
             setEnemyBoard([...currEBoard]);
             await sleep(150);
           }
@@ -3417,7 +3417,7 @@ export default function App() {
                 currEBoard[tLane] = cloneCard(TOKEN_TAIL);
                 triggerSummonWipe(currEBoard[tLane].id);
                 eCard = currEBoard[tLane];
-                addLog(`Enemy ${currEBoard[esc]?.name} shed its tail and slipped away!`);
+                addLog(`Enemy ${getCardDisplayName(currEBoard[esc]?.name)} shed its tail and slipped away!`);
                 setEnemyBoard([...currEBoard]);
                 await sleep(150);
               }
@@ -3437,7 +3437,7 @@ export default function App() {
                 effectiveEnemyLane = adjScapegoatLane;
                 eCard = currEBoard[effectiveEnemyLane]!;
                 await triggerSigilJitter(false, effectiveEnemyLane);
-                addLog(`Enemy ${eCard.name} intercepted the lethal blow meant for ${protectedName}!`);
+                addLog(`Enemy ${getCardDisplayName(eCard.name)} intercepted the lethal blow meant for ${getCardDisplayName(protectedName)}!`);
               }
             }
           }
@@ -3449,7 +3449,7 @@ export default function App() {
             eCard.shieldBroken = true;
             triggerSfx('armor');
             spawnSigilBadge(false, effectiveEnemyLane, 'ARMOR BLOCKED', 'bone');
-            addLog(`Enemy ${eCard.name}'s armor absorbed the attack!`);
+            addLog(`Enemy ${getCardDisplayName(eCard.name)}'s armor absorbed the attack!`);
             setEnemyBoard([...currEBoard]);
           } else {
             const isTouchOfDeathLethal = pCard.sigils.includes('Touch of Death') && !eCard.sigils.includes('Made of Stone');
@@ -3463,10 +3463,10 @@ export default function App() {
               await triggerSigilJitter(true, lane);
               spawnSigilBadge(false, effectiveEnemyLane, 'DEATHTOUCH', 'blood');
               eCard.health = 0;
-              addLog(`Touch of Death! Enemy ${eCard.name} perishes instantly.`);
+              addLog(`Touch of Death! Enemy ${getCardDisplayName(eCard.name)} perishes instantly.`);
             } else {
               eCard.health -= pAtk;
-              addLog(`${pCard.name} dealt ${pAtk} damage to enemy ${eCard.name}.`);
+              addLog(`${getCardDisplayName(pCard.name)} dealt ${pAtk} damage to enemy ${getCardDisplayName(eCard.name)}.`);
             }
 
             // Leech: Steals the slain target's total health on kill
@@ -3501,7 +3501,7 @@ export default function App() {
                     masterDeckRef.current = next;
                     return next;
                   });
-                  addLog(`${pCard.name} permanently grew (+${permGain} Max HP)!`);
+                  addLog(`${getCardDisplayName(pCard.name)} permanently grew (+${permGain} Max HP)!`);
                 } else {
                   const targetMasterId = (pCard as any).masterId || pCard.id;
                   setMasterDeck(prev => {
@@ -3515,7 +3515,7 @@ export default function App() {
               }
 
               setPlayerBoard([...currPBoard]);
-              addLog(`${pCard.name}'s Leech drained ${stolenHealth} Health from ${eCard.name}!`);
+              addLog(`${getCardDisplayName(pCard.name)}'s Leech drained ${stolenHealth} Health from ${getCardDisplayName(eCard.name)}!`);
             }
 
             // Immediately cut all music to absolute silence when the Blood Moon is shattered
@@ -3536,12 +3536,12 @@ export default function App() {
               pCard.health -= 1;
               triggerHpFlash(true, lane);
               setPlayerBoard([...currPBoard]);
-              addLog(`Enemy ${eCard.name}'s Sharp Quills dealt 1 damage back to ${pCard.name}!`);
+              addLog(`Enemy ${getCardDisplayName(eCard.name)}'s Sharp Quills dealt 1 damage back to ${getCardDisplayName(pCard.name)}!`);
 
               if (pCard.sigils.includes('Bees Within')) {
                 await triggerSigilJitter(true, lane);
                 handAdditions.push(applyPlayerTotem(cloneCard(TOKEN_BEE), activeTotem));
-                addLog(`Your ${pCard.name}'s Bees Within stirred a Bee into hand!`);
+                addLog(`Your ${getCardDisplayName(pCard.name)}'s Bees Within stirred a ${getCardDisplayName('Bee')} into hand!`);
               }
 
               if (pCard.health <= 0) {
@@ -3550,7 +3550,7 @@ export default function App() {
                 const bYield = pCard.sigils.includes('Bone King') ? 4 : 1;
                 currBones += bYield;
                 setBones(currBones);
-                addLog(`Your ${pCard.name} perished from Sharp Quills. (+${bYield} Bones)`);
+                addLog(`Your ${getCardDisplayName(pCard.name)} perished from Sharp Quills. (+${bYield} Bones)`);
 
                 if (isCardNamed(pCard.name, "Ouroboros")) {
                   setOuroborosBuffs(prev => prev + 1);
@@ -3568,7 +3568,7 @@ export default function App() {
             }
 
             if (eCard.health <= 0) {
-              addLog(`Enemy ${eCard.name} was slain!`);
+              addLog(`Enemy ${getCardDisplayName(eCard.name)} was slain!`);
               // Card Destroyed: Upward vertical wipe/dissolve over 0.2s then remove from DOM
               await animateCardDestroy(false, finalEnemySlot);
               currEBoard[finalEnemySlot] = null;
@@ -3603,7 +3603,7 @@ export default function App() {
                 }
 
                 setPlayerBoard([...currPBoard]);
-                addLog(`${pCard.name}'s Bloodlust surged (+1 ATK)!`);
+                addLog(`${getCardDisplayName(pCard.name)}'s Bloodlust surged (+1 ATK)!`);
               }
 
               // Rule 1: Excess / Trample Damage
@@ -3632,9 +3632,9 @@ export default function App() {
                   }
                   spawnSigilBadge(true, lane, `TRAMPLE +${excess}`, 'gold');
                   if (trampleVented > 0) {
-                    addLog(`${pCard.name}'s Trample drove ${excess} excess damage into the scale (shunt vented ${trampleVented} oz)!`);
+                    addLog(`${getCardDisplayName(pCard.name)}'s Trample drove ${excess} excess damage into the scale (shunt vented ${trampleVented} oz)!`);
                   } else {
-                    addLog(`${pCard.name}'s Trample drove ${excess} excess damage directly into the opponent's scale!`);
+                    addLog(`${getCardDisplayName(pCard.name)}'s Trample drove ${excess} excess damage directly into the opponent's scale!`);
                   }
                 } else if (backRowCard) {
                   if (backRowCard.sigils.includes('Armored') && !backRowCard.shieldBroken) {
@@ -3644,7 +3644,7 @@ export default function App() {
                     triggerSfx('armor');
                     await sleep(150);
                     setDamagedQueueLane(null);
-                    addLog(`Excess damage (${excess}) struck enemy ${backRowCard.name} in the back row, but its Armor absorbed the blow!`);
+                    addLog(`Excess damage (${excess}) struck enemy ${getCardDisplayName(backRowCard.name)} in the back row, but its Armor absorbed the blow!`);
                     setEnemyQueue([...currEQueue]);
                   } else {
                     backRowCard.health -= excess;
@@ -3652,10 +3652,10 @@ export default function App() {
                     triggerSfx('hit');
                     await sleep(150);
                     setDamagedQueueLane(null);
-                    addLog(`Excess damage! Leftover ${excess} damage struck enemy ${backRowCard.name} in the back row (Lane ${effectiveEnemyLane + 1})!`);
+                    addLog(`Excess damage! Leftover ${excess} damage struck enemy ${getCardDisplayName(backRowCard.name)} in the back row (Lane ${effectiveEnemyLane + 1})!`);
 
                     if (backRowCard.health <= 0) {
-                      addLog(`Enemy ${backRowCard.name} in the back row was destroyed by excess damage!`);
+                      addLog(`Enemy ${getCardDisplayName(backRowCard.name)} in the back row was destroyed by excess damage!`);
                       currEQueue[effectiveEnemyLane] = { ...backRowCard, isDying: true };
                       setEnemyQueue([...currEQueue]);
                       await sleep(300);
@@ -3705,9 +3705,9 @@ export default function App() {
           }
 
           if (ventedThisStrike > 0) {
-            addLog(`${pCard.name} struck for ${pAtk}! Arterial shunt held gauge at +4; vented ${ventedThisStrike} oz into reservoir.`);
+            addLog(`${getCardDisplayName(pCard.name)} struck for ${pAtk}! Arterial shunt held gauge at +4; vented ${ventedThisStrike} oz into reservoir.`);
           } else {
-            addLog(`${pCard.name} struck the opponent directly for ${pAtk}!`);
+            addLog(`${getCardDisplayName(pCard.name)} struck the opponent directly for ${pAtk}!`);
           }
 
           // Forager: Draw 1 card from main deck on direct scale damage
@@ -3719,9 +3719,9 @@ export default function App() {
               handAdditions.push(processedCard);
               setDeck([...currDeck]);
               spawnSigilBadge(true, lane, 'FORAGER +1', 'gold');
-              addLog(`${pCard.name}'s Forager drew ${processedCard.name} from your deck!`);
+              addLog(`${getCardDisplayName(pCard.name)}'s Forager drew ${getCardDisplayName(processedCard.name)} from your deck!`);
             } else {
-              addLog(`${pCard.name}'s Forager searched your deck, but it was empty.`);
+              addLog(`${getCardDisplayName(pCard.name)}'s Forager searched your deck, but it was empty.`);
             }
           }
         }
@@ -4063,7 +4063,7 @@ export default function App() {
         bonesDug += 1;
         currBones += 1;
         spawnSigilBadge(true, c, '+1 BONE', 'bone');
-        addLog(`${card.name}'s Bone Digger unearthed 1 Bone.`);
+        addLog(`${getCardDisplayName(card.name)}'s Bone Digger unearthed 1 Bone.`);
       }
       if (card && card.sigils.includes('Brittle') && card.hasAttackedThisTurn) {
         currBones += 2;
@@ -4072,9 +4072,9 @@ export default function App() {
         if (isCardNamed(card.name, 'Arachnid')) {
           const m = masterDeck.find(mc => mc.id === card.id);
           setHand(prev => [...prev, applyPlayerTotem(cloneCard(m || card, ouroborosBuffs), activeTotem)]);
-          addLog(`Your ${card.name} shed its brittle husk and returned to your hand (+2 Bones)!`);
+          addLog(`Your ${getCardDisplayName(card.name)} shed its brittle husk and returned to your hand (+2 Bones)!`);
         } else {
-          addLog(`Your ${card.name} perished from Brittle (+2 Bones).`);
+          addLog(`Your ${getCardDisplayName(card.name)} perished from Brittle (+2 Bones).`);
         }
       } else if (card) {
         card.hasAttackedThisTurn = false;
@@ -4189,7 +4189,7 @@ export default function App() {
         currEQueue[i] = null;
         setDroppingQueueLane(null);
 
-        addLog(`Enemy ${currEBoard[i]?.name} advanced to lane ${i + 1}.`);
+        addLog(`Enemy ${getCardDisplayName(currEBoard[i]?.name)} advanced to lane ${i + 1}.`);
         triggerSfx('play');
         setEnemyBoard([...currEBoard]);
         setEnemyQueue([...currEQueue]);
@@ -4204,7 +4204,7 @@ export default function App() {
             }
             currPBoard[i] = currPBoard[pGuardianIdx];
             currPBoard[pGuardianIdx] = null;
-            addLog(`Your ${currPBoard[i]?.name} leaped to block lane ${i + 1}!`);
+            addLog(`Your ${getCardDisplayName(currPBoard[i]?.name)} leaped to block lane ${i + 1}!`);
             setPlayerBoard([...currPBoard]);
             await sleep(150);
           }
@@ -4252,7 +4252,7 @@ export default function App() {
             currPBoard[tLane] = currPBoard[burrowerIdx];
             currPBoard[burrowerIdx] = null;
             pCard = currPBoard[tLane];
-            addLog(`Your ${pCard?.name} burrowed to defend lane ${tLane + 1}!`);
+            addLog(`Your ${getCardDisplayName(pCard?.name)} burrowed to defend lane ${tLane + 1}!`);
             setPlayerBoard([...currPBoard]);
             await sleep(150);
           }
@@ -4286,7 +4286,7 @@ export default function App() {
               currPBoard[tLane] = applyPlayerTotem(cloneCard(TOKEN_TAIL), activeTotem);
               triggerSummonWipe(currPBoard[tLane].id);
               pCard = currPBoard[tLane];
-              addLog(`Your ${currPBoard[esc]?.name} slipped away, leaving its tail behind!`);
+              addLog(`Your ${getCardDisplayName(currPBoard[esc]?.name)} slipped away, leaving its tail behind!`);
               setPlayerBoard([...currPBoard]);
               await sleep(150);
             }
@@ -4305,7 +4305,7 @@ export default function App() {
                 effectivePlayerLane = adjScapegoatLane;
                 pCard = currPBoard[effectivePlayerLane]!;
                 await triggerSigilJitter(true, effectivePlayerLane);
-                addLog(`Your ${pCard.name} leaped in front of ${protectedName} to intercept the lethal blow!`);
+                addLog(`Your ${getCardDisplayName(pCard.name)} leaped in front of ${getCardDisplayName(protectedName)} to intercept the lethal blow!`);
               }
             }
           }
@@ -4314,7 +4314,7 @@ export default function App() {
             await triggerSigilJitter(true, effectivePlayerLane);
             pCard.shieldBroken = true;
             triggerSfx('armor');
-            addLog(`Your ${pCard.name}'s armor absorbed the attack!`);
+            addLog(`Your ${getCardDisplayName(pCard.name)}'s armor absorbed the attack!`);
             setPlayerBoard([...currPBoard]);
           } else {
             // Damage Reaction:
@@ -4329,10 +4329,10 @@ export default function App() {
             if (isTouchOfDeath) {
               await triggerSigilJitter(false, lane);
               pCard.health = 0;
-              addLog(`Enemy ${eCard.name} struck with Touch of Death! Your ${pCard.name} perished.`);
+              addLog(`Enemy ${getCardDisplayName(eCard.name)} struck with Touch of Death! Your ${getCardDisplayName(pCard.name)} perished.`);
             } else {
               pCard.health -= eAtk;
-              addLog(`Enemy ${eCard.name} dealt ${eAtk} damage to your ${pCard.name}.`);
+              addLog(`Enemy ${getCardDisplayName(eCard.name)} dealt ${eAtk} damage to your ${getCardDisplayName(pCard.name)}.`);
             }
 
             // Leech: Steals the slain target's total health on kill
@@ -4342,7 +4342,7 @@ export default function App() {
               eCard.health += stolenEnemyHealth;
               triggerHpFlash(false, lane);
               setEnemyBoard([...currEBoard]);
-              addLog(`Enemy ${eCard.name}'s Leech drained ${stolenEnemyHealth} Health from your ${pCard.name}!`);
+              addLog(`Enemy ${getCardDisplayName(eCard.name)}'s Leech drained ${stolenEnemyHealth} Health from your ${getCardDisplayName(pCard.name)}!`);
             }
 
             triggerHpFlash(true, effectivePlayerLane);
@@ -4366,7 +4366,7 @@ export default function App() {
                 await animateCardDamage(false, lane);
                 eCard.health -= dausAtk;
                 triggerHpFlash(false, lane);
-                addLog(`The Daus avenged the Chime, striking enemy ${eCard.name} for ${dausAtk}!`);
+                addLog(`${getCardDisplayName('The Daus')} avenged the ${getCardDisplayName('Chime')}, striking enemy ${getCardDisplayName(eCard.name)} for ${dausAtk}!`);
                 if (eCard.health <= 0) {
                   await animateCardDestroy(false, lane);
                   currEBoard[lane] = null;
@@ -4383,7 +4383,7 @@ export default function App() {
               await animateCardDamage(false, lane);
               eCard.health -= 1;
               triggerHpFlash(false, lane);
-              addLog(`Your ${pCard.name}'s Sharp Quills dealt 1 damage back to enemy ${eCard.name}!`);
+              addLog(`Your ${getCardDisplayName(pCard.name)}'s Sharp Quills dealt 1 damage back to enemy ${getCardDisplayName(eCard.name)}!`);
               if (eCard.health <= 0) {
                 await animateCardDestroy(false, lane);
                 currEBoard[lane] = null;
@@ -4395,7 +4395,7 @@ export default function App() {
             if (pCard.sigils.includes('Bees Within')) {
               await triggerSigilJitter(true, effectivePlayerLane);
               handAdditions.push(applyPlayerTotem(cloneCard(TOKEN_BEE), activeTotem));
-              addLog(`Your ${pCard.name}'s Bees Within yielded a Bee to hand!`);
+              addLog(`Your ${getCardDisplayName(pCard.name)}'s Bees Within yielded a ${getCardDisplayName('Bee')} to hand!`);
             }
 
             if (pCard.health <= 0) {
@@ -4403,7 +4403,7 @@ export default function App() {
               const bYield = pCard.sigils.includes('Bone King') ? 4 : 1;
               currBones += bYield;
               setBones(currBones);
-              addLog(`Your ${pCard.name} perished. (+${bYield} Bones)`);
+              addLog(`Your ${getCardDisplayName(pCard.name)} perished. (+${bYield} Bones)`);
 
               if (isCardNamed(pCard.name, "Ouroboros")) {
                 setOuroborosBuffs(prev => prev + 1);
@@ -4435,7 +4435,7 @@ export default function App() {
                   triggerSummonWipe(ceCard.id);
                   currPBoard[effectivePlayerLane] = ceCard;
                   spawnSigilBadge(true, effectivePlayerLane, 'CORPSE EATER', 'violet');
-                  addLog(`Corpse Eater triggered! ${ceCard.name} leaped into the fray!`);
+                  addLog(`Corpse Eater triggered! ${getCardDisplayName(ceCard.name)} leaped into the fray!`);
                 } else {
                   currPBoard[effectivePlayerLane] = null;
                 }
@@ -4452,7 +4452,7 @@ export default function App() {
                   await sleep(80);
                 }
                 setRunStats(s => ({ ...s, scaleDamageTaken: s.scaleDamageTaken + excess }));
-                addLog(`Enemy ${eCard.name}'s Trample drove ${excess} excess damage directly into your scale!`);
+                addLog(`Enemy ${getCardDisplayName(eCard.name)}'s Trample drove ${excess} excess damage directly into your scale!`);
               }
             }
           }
@@ -4466,7 +4466,7 @@ export default function App() {
             await sleep(80);
           }
           setRunStats(s => ({ ...s, scaleDamageTaken: s.scaleDamageTaken + eAtk }));
-          addLog(`Enemy ${eCard.name} struck you directly for ${eAtk}!`);
+          addLog(`Enemy ${getCardDisplayName(eCard.name)} struck you directly for ${eAtk}!`);
         }
 
         // Sequential async pause between each hit
@@ -4529,7 +4529,7 @@ export default function App() {
       if (card && card.sigils.includes('Brittle') && card.hasAttackedThisTurn) {
         await animateCardDestroy(false, lane);
         currEBoard[lane] = null;
-        addLog(`Enemy ${card.name} perished from Brittle.`);
+        addLog(`Enemy ${getCardDisplayName(card.name)} perished from Brittle.`);
       } else if (card) {
         card.hasAttackedThisTurn = false;
       }
@@ -5071,7 +5071,7 @@ export default function App() {
 
           evolved.wasPlayedThisDuel = false;
           (evolved as any).battlesPlayed = 0;
-          addLog(`The carnage transformed your ${card.name} into ${nextForm}!`);
+          addLog(`The carnage transformed your ${getCardDisplayName(card.name)} into ${getCardDisplayName(nextForm)}!`);
           return evolved;
         }
       }
@@ -6391,11 +6391,11 @@ export default function App() {
             title: "DROWNED BY THE ZEALOT",
             message: isPerilousFirstDip
               ? (poisonedSurvivors
-                  ? `Under the Vow of Boiling Zeal, the Zealot plunged ${targetCard.name} into the font on the first dip—yet its Unholy Crest poisoned the flock!`
-                  : `Under the Vow of Boiling Zeal, the Zealot snatched ${targetCard.name} into the boiling blood on the very first dip!`)
+                  ? `Under the Vow of Boiling Zeal, the Zealot plunged ${getCardDisplayName(targetCard.name)} into the font on the first dip—yet its Unholy Crest poisoned the flock!`
+                  : `Under the Vow of Boiling Zeal, the Zealot snatched ${getCardDisplayName(targetCard.name)} into the boiling blood on the very first dip!`)
               : (poisonedSurvivors
-                  ? `The Zealot plunged the ${targetCard.name} into the boiling blood! In its demise, its Unholy Crest cursed the Zealot's flock.`
-                  : `The Zealot plunged the ${targetCard.name} into the boiling blood! You watch helplessly...`),
+                  ? `The Zealot plunged the ${getCardDisplayName(targetCard.name)} into the boiling blood! In its demise, its Unholy Crest cursed the Zealot's flock.`
+                  : `The Zealot plunged the ${getCardDisplayName(targetCard.name)} into the boiling blood! You watch helplessly...`),
             isWin: false,
             btnText: "Flee the Chapel",
             onAction: () => {
@@ -6417,7 +6417,7 @@ export default function App() {
       if (!isSecondDip) {
         setCampfireStage(1);
         triggerSfx('play');
-        addLog(isPerilousFirstDip ? `${targetCard.name} survived the perilous first baptism.` : `Warmed ${targetCard.name} safely.`);
+        addLog(isPerilousFirstDip ? `${getCardDisplayName(targetCard.name)} survived the perilous first baptism.` : `Warmed ${getCardDisplayName(targetCard.name)} safely.`);
         scheduleEventTimer(() => {
           setCampfireAnimState('idle');
           setIsEventBusy(false);
@@ -6428,7 +6428,7 @@ export default function App() {
           setCampfireAnimState('idle');
           setModalAlert({
             title: "BATHED AGAIN",
-            message: `${targetCard.name} absorbs the blood blessing, you shudder at its abnormal growth...`,
+            message: `${getCardDisplayName(targetCard.name)} absorbs the blood blessing, you shudder at its abnormal growth...`,
             isWin: true,
             btnText: "Leave the Chapel",
             onAction: () => {
@@ -6494,7 +6494,7 @@ export default function App() {
     }
 
     if (hasMoreSigilsThanOriginal(host)) {
-      addLog(`Cannot perform ritual: ${host.name} already has more crests than it originally should.`);
+      addLog(`Cannot perform ritual: ${getCardDisplayName(host.name)} already has more crests than it originally should.`);
       setIsEventBusy(false);
       return;
     }
@@ -6505,7 +6505,7 @@ export default function App() {
     });
 
     if (mergedSigils.length >= 5) {
-      addLog(`Cannot perform ritual: ${host.name} would have 5 or more crests.`);
+      addLog(`Cannot perform ritual: ${getCardDisplayName(host.name)} would have 5 or more crests.`);
       setIsEventBusy(false);
       return;
     }
@@ -6535,7 +6535,7 @@ export default function App() {
       setAltarAnimPhase('done');
       setModalAlert({
         title: "RITUAL COMPLETE",
-        message: `${sacrifice.name} was surrendered to the Maker. Its essence now empowers ${host.name}.`,
+        message: `${getCardDisplayName(sacrifice.name)} was surrendered to the Maker. Its essence now empowers ${getCardDisplayName(host.name)}.`,
         isWin: true,
         btnText: "Leave Altar",
         onAction: () => {
@@ -6582,7 +6582,7 @@ export default function App() {
       const newBones = getBloodToBoneCost(oldBlood);
       updated.cost = 0;
       updated.boneCost = newBones;
-      outcomeMsg = `The hammer fell. ${updated.name}'s ${oldBlood} Blood cost shattered into ${newBones} Bones.`;
+      outcomeMsg = `The hammer fell. ${getCardDisplayName(updated.name)}'s ${oldBlood} Blood cost shattered into ${newBones} Bones.`;
     } else {
       const oldBlood = updated.cost || 0;
       const oldBones = updated.boneCost || 0;
@@ -6590,7 +6590,7 @@ export default function App() {
         if (!updated.sigils.includes('Unkillable')) {
           updated.sigils = [...updated.sigils, 'Unkillable'];
         }
-        outcomeMsg = `The forceps drew nothing from ${updated.name}'s empty veins—yet it refuses to die. Gained Unkillable.`;
+        outcomeMsg = `The forceps drew nothing from ${getCardDisplayName(updated.name)}'s empty veins—yet it refuses to die. Gained Unkillable.`;
       } else {
         if (oldBlood >= 2) {
           updated.cost = Math.max(1, oldBlood - 1);
@@ -6599,12 +6599,12 @@ export default function App() {
         }
         if ((updated.health || 1) > 1) {
           updated.health = Math.max(1, Math.floor((updated.health || 1) / 2));
-          outcomeMsg = `${updated.name} was hollowed out. Its summoning cost fell by 1, at the price of half its Health.`;
+          outcomeMsg = `${getCardDisplayName(updated.name)} was hollowed out. Its summoning cost fell by 1, at the price of half its Health.`;
         } else {
           if (!updated.sigils.includes('Brittle')) {
             updated.sigils = [...updated.sigils, 'Brittle'];
           }
-          outcomeMsg = `${updated.name} was hollowed to the bone. Its cost fell by 1, leaving it Brittle.`;
+          outcomeMsg = `${getCardDisplayName(updated.name)} was hollowed to the bone. Its cost fell by 1, leaving it Brittle.`;
         }
       }
     }
@@ -6875,7 +6875,7 @@ export default function App() {
         title: "THREAD WOVEN",
         eyebrow: "◆ Sinew & Spool ◆",
         previewCard: chosen,
-        message: `The stitched ${tribe} crest summoned ${chosen.name}${chosen.sigils?.length ? ` (${chosen.sigils.join(', ')})` : ''} to join your deck.`,
+        message: `The stitched ${tribe} crest summoned ${getCardDisplayName(chosen.name)}${chosen.sigils?.length ? ` (${chosen.sigils.join(', ')})` : ''} to join your deck.`,
         isWin: true,
         btnText: "Proceed",
         onAction: () => {
@@ -6929,7 +6929,7 @@ export default function App() {
     scheduleEventTimer(() => {
       setModalAlert({
         title: "BARGAIN SEALED",
-        message: `The Merchant stirs but does not wake. You pocketed a ${card.name}.`,
+        message: `The Merchant stirs but does not wake. You pocketed a ${getCardDisplayName(card.name)}.`,
         isWin: true,
         btnText: "Proceed",
         onAction: () => {
@@ -6989,7 +6989,7 @@ export default function App() {
         title: "THE BONE LORD REJOICES",
         message: isGoat
           ? "The Lord of Bones greedily accepts the Black Goat, bestowing a Miracle (+3 Starting Bones permanently)."
-          : `The Bone Lord accepts ${card.name}, bestowing a Blessing (+1 Starting Bone permanently).`,
+          : `The Bone Lord accepts ${getCardDisplayName(card.name)}, bestowing a Blessing (+1 Starting Bone permanently).`,
         isWin: true,
         btnText: "Accept Favor",
         onAction: () => {
@@ -7056,7 +7056,7 @@ export default function App() {
 
     setModalAlert({
       title: "TWIN CREATURE ADDED",
-      message: `The Weaver stuffed a twin of ${offered.name} into your deck!`,
+      message: `The Weaver stuffed a twin of ${getCardDisplayName(offered.name)} into your deck!`,
       isWin: true,
       btnText: "Venture Onwards",
       onAction: () => {
@@ -7108,7 +7108,7 @@ export default function App() {
     scheduleEventTimer(() => {
       setModalAlert({
         title: "FUSED IN SANGUINE WEB",
-        message: `The Weaver bound ${card1.name} and ${card2.name} into an abomination of exceptional might!`,
+        message: `The Weaver bound ${getCardDisplayName(card1.name)} and ${getCardDisplayName(card2.name)} into an abomination of exceptional might!`,
         isWin: true,
         btnText: "Leave Weaver",
         onAction: () => {
@@ -7153,17 +7153,17 @@ export default function App() {
     clone.id = `goobert-${Date.now()}`;
 
     const mutated = Math.random() < 0.5;
-    let desc = `The Press did indeed Stamp a pristine ${original.name}!`;
+    let desc = `The Press did indeed Stamp a pristine ${getCardDisplayName(original.name)}!`;
 
     if (mutated) {
       if (Math.random() < 0.5) {
         const delta = Math.random() < 0.5 ? 1 : -1;
         clone.attack = Math.max(0, (clone.attack || 0) + delta);
-        desc = `The Begotten slammed the Press shut. The Stamped ${original.name}'s attack shifted by ${delta > 0 ? '+1' : '-1'}.`;
+        desc = `The Begotten slammed the Press shut. The Stamped ${getCardDisplayName(original.name)}'s attack shifted by ${delta > 0 ? '+1' : '-1'}.`;
       } else {
         const pool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
         clone.sigils = [pool[Math.floor(Math.random() * pool.length)]];
-        desc = `The Begotten's carelessness cut ${original.name}'s crest in the Press, he Stamped it with ${clone.sigils[0]} to "compensate!"`;
+        desc = `The Begotten's carelessness cut ${getCardDisplayName(original.name)}'s crest in the Press, he Stamped it with ${clone.sigils[0]} to "compensate!"`;
       }
     }
 
@@ -9600,7 +9600,7 @@ export default function App() {
                               </div>
                             ) : showPlacePrompt ? (
                               <span className="text-amber-200">
-                                Place {activeSelectedCard.name} in an Open Lane
+                                Place {getCardDisplayName(activeSelectedCard.name)} in an Open Lane
                               </span>
                             ) : (
                               <span className="text-[#cfb794]">
@@ -10241,7 +10241,7 @@ export default function App() {
                   setDeck(remainingDeck);
                   setHand(prev => [...prev, ...drawnCards]);
                   triggerSfx('draw');
-                  addLog(`Loaded Die drew: ${drawnCards.map(c => c.name).join(', ')}.`);
+                  addLog(`Loaded Die drew: ${drawnCards.map(c => getCardDisplayName(c.name)).join(', ')}.`);
                   setDieModal(null);
                 }}
                 className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"

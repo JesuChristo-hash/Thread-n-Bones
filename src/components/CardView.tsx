@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import type { CardDef } from '../data/gameData';
-import { ALL_CARD_LOOKUP, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, CARD_ART_OFFSETS, getCardArtUrl, getSigilArtUrl, toAssetSlug } from '../data/gameData';
+import { ALL_CARD_LOOKUP, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, CARD_ART_OFFSETS, getCardArtUrl, getSigilArtUrl, toAssetSlug , getCardDisplayName } from '../data/gameData';
 
 export type RenderCardOptions = {
 isSelected?: boolean;
@@ -428,20 +428,20 @@ function CardViewInner({
                   fontWeight: 900,
                 }}
                 className={`font-['Cinzel',_serif] font-black uppercase text-center whitespace-nowrap leading-none pointer-events-none select-none ${
-                  card.name.length >= 15
+                  getCardDisplayName(card.name).length >= 15
                     ? 'text-[8px] tracking-[-0.06em]'
-                    : card.name.length >= 13
+                    : getCardDisplayName(card.name).length >= 13
                     ? 'text-[9px] tracking-[-0.04em]'
-                    : card.name.length >= 11
+                    : getCardDisplayName(card.name).length >= 11
                     ? 'text-[9.5px] tracking-[-0.03em]'
-                    : card.name.length >= 9
+                    : getCardDisplayName(card.name).length >= 9
                     ? 'text-[11px] tracking-[-0.01em]'
-                    : card.name.length >= 7
+                    : getCardDisplayName(card.name).length >= 7
                     ? 'text-[12px] tracking-normal'
                     : 'text-[13px] tracking-[0.01em]'
                 }`}
               >
-                {card.name}
+                {getCardDisplayName(card.name)}
               </span>
             </div>
 
@@ -465,7 +465,7 @@ function CardViewInner({
           <div className="absolute top-[21%] left-[19%] w-[62%] h-[46.5%] rounded-t-full flex items-center justify-center overflow-hidden pointer-events-none z-10">
             <img
               src={getCardArtUrl(card)}
-              alt={card.name}
+              alt={getCardDisplayName(card.name)}
               loading="eager"
               decoding="async"
               fetchPriority={options?.isOpponent ? 'high' : 'auto'}

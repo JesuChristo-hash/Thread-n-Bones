@@ -1395,17 +1395,17 @@ const MapScreen: React.FC<MapScreenProps> = ({
           const isAct4Burned = mapStage >= 4;
           const mapSwayAnim =
             mapStage === 2
-              ? 'bannerSwayMid 5.6s ease-in-out infinite'
+              ? 'bannerSwayMid 12s linear infinite'
               : mapStage === 3
-                ? 'bannerSwayBrisk 4.6s ease-in-out infinite'
+                ? 'bannerSwayBrisk 10s linear infinite'
                 : 'bannerSwayGentle 7s ease-in-out infinite';
           const mapRippleAnim =
             mapStage === 2
               ? 'bannerClothRippleGPU 3.0s linear infinite'
               : mapStage === 3
-                ? 'bannerClothRippleGPU 1.9s linear infinite'
+                ? 'bannerClothRippleGPU 2.5s linear infinite'
                 : 'bannerClothRippleGPU 5.8s linear infinite';
-          const mapRippleOpacity = mapStage === 3 ? 0.22 : mapStage === 2 ? 0.14 : 0.07;
+          const mapRippleOpacity = mapStage === 3 ? 0.18 : mapStage === 2 ? 0.14 : 0.07;
           const mapWaveScale = mapStage === 3 ? 30 : mapStage === 2 ? 18 : 5;
           const mapWaveDur = mapStage === 3 ? '2.3s' : mapStage === 2 ? '3.4s' : '6.0s';
           const frayedClip =
@@ -1567,7 +1567,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
                 {/* Detailed Frayed Thread Strands */}
                 <div
-                  className="pointer-events-none absolute bottom-0 inset-x-0 h-5 opacity-80"
+                  className={`pointer-events-none absolute bottom-0 inset-x-0 h-5 opacity-80 banner-hem banner-hem-s${mapStage}`}
                   style={{
                     backgroundImage: frayThreadsBg,
                     maskImage: 'linear-gradient(to bottom, transparent 0%, black 45%, black 100%)',
@@ -1813,7 +1813,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
               className="relative z-10 -mt-1.5 will-change-transform"
               style={{
                 transformOrigin: 'top center',
-                animation: mapSwayAnim,
+                animation: mapSwayAnim.replace(' infinite', ' -4.7s infinite'),
                 animationDelay: '-1.8s',
                 filter: 'drop-shadow(0 12px 16px rgba(0,0,0,0.75))',
               }}
@@ -1850,7 +1850,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 />
 
                 <div
-                  className="pointer-events-none absolute bottom-0 inset-x-0 h-5 opacity-80"
+                  className={`pointer-events-none absolute bottom-0 inset-x-0 h-5 opacity-80 banner-hem banner-hem-s${mapStage}`}
                   style={{
                     backgroundImage: frayThreadsBg,
                     maskImage: 'linear-gradient(to bottom, transparent 0%, black 45%, black 100%)',
