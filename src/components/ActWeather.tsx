@@ -13,6 +13,7 @@ interface Layer {
   cls: string;
   bg: string;
   anim: string;
+  desk?: boolean;
 }
 
 interface RainTier {
@@ -154,15 +155,18 @@ const GROUND_HAZE: Layer = {
   anim: 'weatherMistDriftB 30s ease-in-out -5s infinite',
 };
 
+// Act 4: one smoke layer, no blend modes, gradient embers (no box-shadow halos).
 const FIRE_SMOKE: Layer[] = [
   {
-    cls: 'absolute -inset-x-[12%] bottom-[-5%] h-[62%]',
-    bg: 'radial-gradient(ellipse at 40% 75%, rgba(92,82,78,0.26) 0%, rgba(45,40,38,0.14) 50%, transparent 76%)',
-    anim: 'weatherSmokeDrift 20s ease-in-out infinite',
+    cls: 'absolute -inset-x-[12%] bottom-[-5%] h-[66%]',
+    bg:
+      'radial-gradient(circle 34vmax at 38% 72%, rgba(92,82,78,0.28) 0%, rgba(45,40,38,0.14) 52%, transparent 100%), radial-gradient(circle 30vmax at 72% 62%, rgba(78,66,62,0.22) 0%, rgba(40,34,32,0.1) 52%, transparent 100%)',
+    anim: 'weatherSmokeDrift 22s ease-in-out infinite',
   },
   {
+    desk: true,
     cls: 'absolute -inset-x-[12%] bottom-[-8%] h-[70%]',
-    bg: 'radial-gradient(ellipse at 68% 70%, rgba(78,66,62,0.22) 0%, rgba(40,34,32,0.1) 50%, transparent 76%)',
+    bg: 'radial-gradient(circle 32vmax at 66% 68%, rgba(78,66,62,0.22) 0%, rgba(40,34,32,0.1) 52%, transparent 100%)',
     anim: 'weatherSmokeRise 27s ease-in-out -9s infinite',
   },
 ];
@@ -170,18 +174,19 @@ const FIRE_SMOKE: Layer[] = [
 const EMBERS = Array.from({ length: 28 }, (_, i) => {
   const spark = i % 7 === 3;
   const leftPct = (i * 33.7 + 4) % 96;
-  const sizePx = spark ? 1.6 : 2 + (i % 3) * 1.4;
+  const sizePx = (spark ? 1.6 : 2 + (i % 3) * 1.4) * 4;
   const durNum = spark ? 2.4 + (i % 4) * 0.35 : 4.2 + ((i * 13) % 10) * 0.42;
   const delayNum = -((i * 0.67) % durNum);
   const drift = (i % 2 === 0 ? 1 : -1) * (spark ? 10 + (i % 3) * 8 : 18 + (i % 5) * 14);
+  const c = spark || i % 3 === 0 ? '253,230,138' : i % 2 === 0 ? '251,146,60' : '239,68,68';
   return {
     i,
     style: {
       left: leftPct.toFixed(2) + '%',
       width: sizePx + 'px',
       height: sizePx + 'px',
-      backgroundColor: spark || i % 3 === 0 ? '#fde68a' : i % 2 === 0 ? '#fb923c' : '#ef4444',
-      boxShadow: '0 0 8px rgba(251,146,60,0.85), 0 0 14px rgba(239,68,68,0.55)',
+      background:
+        'radial-gradient(circle, rgba(' + c + ',1) 0%, rgba(' + c + ',0.95) 28%, rgba(251,146,60,0.4) 50%, transparent 70%)',
       ['--ember-drift' as any]: drift + 'px',
       animation: 'weatherEmberRise ' + durNum.toFixed(2) + 's ease-out ' + delayNum.toFixed(2) + 's infinite',
     } as React.CSSProperties,
@@ -207,7 +212,7 @@ const LightningBolt = React.memo<{ left: string; flip?: boolean; anim: string }>
 ));
 
 const renderLayer = (l: Layer, key: string) => (
-  <div key={key} className={'wx ' + l.cls} style={{ background: l.bg, animation: l.anim }} />
+  <div key={key} className={'wx ' + (l.desk ? 'wx-desk ' : '') + l.cls} style={{ background: l.bg, animation: l.anim }} />
 );
 
 export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefix }) => {
@@ -275,20 +280,18 @@ export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefi
             }}
           />
           <div
-            className="wx absolute inset-0 origin-bottom"
+            className="wx wx-blend absolute inset-x-0 bottom-0 h-[78%] origin-bottom"
             style={{
               background:
-                'radial-gradient(ellipse 95% 58% at 50% 100%, rgba(249,115,22,0.56) 0%, rgba(220,38,38,0.34) 38%, rgba(153,27,27,0.12) 64%, transparent 88%)',
-              mixBlendMode: 'screen',
+                'radial-gradient(ellipse 95% 75% at 50% 100%, rgba(249,115,22,0.56) 0%, rgba(220,38,38,0.34) 38%, rgba(153,27,27,0.12) 64%, transparent 88%)',
               animation: 'weatherFireGlow 4.8s ease-in-out infinite',
             }}
           />
           <div
-            className="wx absolute inset-0 origin-bottom"
+            className="wx wx-blend absolute inset-x-[10%] bottom-0 h-[46%] origin-bottom"
             style={{
               background:
-                'radial-gradient(ellipse 58% 36% at 50% 100%, rgba(253,186,116,0.46) 0%, rgba(249,115,22,0.24) 46%, transparent 82%)',
-              mixBlendMode: 'screen',
+                'radial-gradient(ellipse 70% 80% at 50% 100%, rgba(253,186,116,0.46) 0%, rgba(249,115,22,0.24) 46%, transparent 82%)',
               animation: 'weatherFireFlicker 2.7s ease-in-out -0.9s infinite',
             }}
           />
@@ -296,7 +299,7 @@ export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefi
           {EMBERS.map((e) => (
             <span
               key={keyPrefix + '-ember-' + e.i}
-              className="wx wx-particle absolute -bottom-3 rounded-full"
+              className={'wx wx-particle wx-ember absolute -bottom-3 rounded-full' + (e.i >= 20 ? ' wx-desk' : '')}
               style={e.style}
             />
           ))}

@@ -995,6 +995,13 @@
 @media (max-width: 768px), (pointer: coarse) {
   .wx-particle:nth-child(even) { display: none; }
 }
+/* Desktop-only extras: blend modes, ember halos, extra smoke and embers. */
+.wx-desk { display: none; }
+@media (min-width: 769px) and (pointer: fine) {
+  .wx-desk { display: block; }
+  .wx-blend { mix-blend-mode: screen; }
+  .wx-ember { box-shadow: 0 0 6px rgba(251,146,60,0.55), 0 0 10px rgba(239,68,68,0.3); }
+}
 
 @keyframes weatherMistDriftA {
   0%   { transform: translate3d(-8%, 0, 0) scale(1.04); opacity: 0.42; }
