@@ -43,6 +43,9 @@ export interface CardDef {
   isGoobertClone?: boolean;
   isMycologistCombined?: boolean;
   isAmalgam?: boolean;
+  extraClasses?: Tribe[];
+  isTransformed?: boolean;
+  experimentGrantedAirborne?: boolean;
 
   // Boss & combat mechanics
   isMassive?: boolean;
@@ -127,6 +130,7 @@ const CARD_ART_SLUG_ALIASES: Record<string, string> = {
   // Disk has bee.png for Beehive / Brood
   beehive: 'bee',
   brood: 'bee',
+  bee: 'workerbee',
   'house fly': 'maggots',
   housefly: 'maggots',
 
@@ -143,6 +147,11 @@ export const getCardArtUrl = (card: CardDef): string => {
   const rawSlug = toAssetSlug(card.name || '');
   if (rawSlug === 'bloodmoon') {
     return `${BASE}/assets/cardbases/blood_moon.webp?v=${ASSET_SESSION_VERSION}`;
+  }
+  const strippedSlug = toAssetSlug((card.name || '').replace(/^(Elder|Greater|God)\s+/i, ''));
+  if (strippedSlug === 'experiment') {
+    const variant = card.isTransformed ? 'experimentB' : 'experimentA';
+    return `${BASE}/assets/cardart/${variant}.png?v=${ASSET_SESSION_VERSION}`;
   }
   if (CARD_ART_SLUG_ALIASES[rawSlug]) {
     return `${BASE}/assets/cardart/${CARD_ART_SLUG_ALIASES[rawSlug]}.png?v=${ASSET_SESSION_VERSION}`;
@@ -499,7 +508,8 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Rhino", class: "Hooved", attack: 3, health: 5, cost: 3, emoji: "🦏", sigils: ["Armored"] },
   { name: "Maritimus", class: "No Class", attack: 4, health: 3, cost: 3, emoji: "🐻‍❄️", sigils: ["Waterborne", "Bloodlust"] },
   { name: "Elephant", class: "No Class", attack: 4, health: 8, cost: 4, emoji: "🐘", sigils: ["Trample"] },
-  { name: "Hyena", class: "Canine", attack: 3, health: 3, boneCost: 6, emoji: "🐕", sigils: ["Scavenger", "Bloodlust"] }
+  { name: "Hyena", class: "Canine", attack: 3, health: 3, boneCost: 6, emoji: "🐕", sigils: ["Scavenger", "Bloodlust"] },
+  { name: "Experiment", class: "Avian", extraClasses: ["Vermin"], attack: 0, health: 1, cost: 1, emoji: "🧪", sigils: ["Many Lives"] }
 ];
 
 export const ALL_CARD_LOOKUP: Record<string, CardDef> = {
@@ -711,6 +721,7 @@ export const preloadCoreAssets = async () => {
         .filter((url): url is string => Boolean(url))
     )
   );
+  cardUrls.push(`${BASE}/assets/cardart/experimentB.png?v=${ASSET_SESSION_VERSION}`);
   await preloadBatch(cardUrls, 8);
 
   // 3. Preload remaining battle/event plates & blood overlays in parallel batches
@@ -809,6 +820,7 @@ export const RARE_CARD_NAMES = new Set<string>([
   "Goose",
   "Hyena",
   "Amoeba",
+  "Experiment",
 ]);
 
 export const RARE_CARD_POOL: CardDef[] = MAIN_DECK_POOL.filter(c => RARE_CARD_NAMES.has(c.name));
@@ -863,6 +875,20 @@ export function transformAmorphous(card: CardDef): CardDef {
   return card;
 }
 
+export function cardMatchesTribe(card: CardDef | null | undefined, tribe?: Tribe | string | null): boolean {
+  if (!card || !tribe) return false;
+  if (card.class === 'ALL Classes' || tribe === 'ALL Classes') return true;
+  if (card.class === tribe) return true;
+  return Boolean(card.extraClasses && card.extraClasses.includes(tribe as Tribe));
+}
+
+export function getCardTribeLabel(card: CardDef): string {
+  if (card.extraClasses && card.extraClasses.length > 0) {
+    return [card.class, ...card.extraClasses].join(' / ');
+  }
+  return card.class;
+}
+
 export function applyPlayerTotem(card: CardDef, activeTotem: Totem): CardDef {
   if (!card || !activeTotem.head || !activeTotem.body) return card;
   if (
@@ -871,7 +897,7 @@ export function applyPlayerTotem(card: CardDef, activeTotem: Totem): CardDef {
   ) {
     return card;
   }
-  if (card.class === activeTotem.head || activeTotem.head === "ALL Classes") {
+  if (cardMatchesTribe(card, activeTotem.head)) {
     if (!card.sigils) card.sigils = [];
     if (!card.sigils.includes(activeTotem.body)) {
       card.sigils = [...card.sigils, activeTotem.body];
@@ -881,6 +907,7 @@ export function applyPlayerTotem(card: CardDef, activeTotem: Totem): CardDef {
 }
 
 export const CARD_DISPLAY_NAMES: Record<string, string> = {
+  'Arachnid': 'Tarantulas',
   'Chime': 'Imp',
   'Bee': 'Honeybee',
   'Stone Wall': 'Boulder',

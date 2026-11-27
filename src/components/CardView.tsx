@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import type { CardDef } from '../data/gameData';
-import { ALL_CARD_LOOKUP, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, CARD_ART_OFFSETS, getCardArtUrl, getSigilArtUrl, toAssetSlug , getCardDisplayName } from '../data/gameData';
+import { ALL_CARD_LOOKUP, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, CARD_ART_OFFSETS, getCardArtUrl, getSigilArtUrl, toAssetSlug , getCardDisplayName , cardMatchesTribe } from '../data/gameData';
 
 export type RenderCardOptions = {
 isSelected?: boolean;
@@ -91,12 +91,12 @@ function CardViewInner({
     const isPlayerTotemAffected =
       screen === 'DUEL' &&
       isPlayer &&
-      !!(activeTotem?.head && activeTotem?.body && (card.class === activeTotem.head || card.class === "ALL Classes")) &&
+      !!(activeTotem?.head && activeTotem?.body && cardMatchesTribe(card, activeTotem.head)) &&
       !(activeTotem.body === 'Fledgling' && hasAlreadyEvolved);
     const isBossTotemAffected =
       screen === 'DUEL' &&
       !isPlayer &&
-      !!(bossTotem?.class && (card.class === bossTotem.class || card.class === "ALL Classes")) &&
+      !!(bossTotem?.class && cardMatchesTribe(card, bossTotem.class)) &&
       !(bossTotem.sigil === 'Fledgling' && hasAlreadyEvolved);
     const isTotemAffected = isPlayerTotemAffected || isBossTotemAffected;
 
@@ -684,6 +684,7 @@ function cardsVisuallyEqual(a: CardDef | null, b: CardDef | null): boolean {
     (a as any).caimanBonusHp === (b as any).caimanBonusHp &&
     (a as any).caimanPermHpGained === (b as any).caimanPermHpGained &&
     (a as any).permanentHealthBonus === (b as any).permanentHealthBonus &&
+    a.artUrl === b.artUrl &&
     (a as any).artOverride === (b as any).artOverride &&
     (a as any).facing === (b as any).facing &&
     shallowSigilsEqual(a.sigils, b.sigils)

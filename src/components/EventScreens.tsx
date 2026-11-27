@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CardDef, Tribe } from '../data/gameData';
-import { ALL_ITEMS , getCardDisplayName } from '../data/gameData';
+import { ALL_ITEMS , getCardDisplayName , getCardTribeLabel } from '../data/gameData';
 import MapScreen from '../components/MapScreen';
 import { generateActMap, getBossForAct } from '../data/mapGenerator';
 import { ALL_CARD_LOOKUP, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, getSigilArtUrl } from '../data/gameData';
@@ -4914,7 +4914,7 @@ export default function EventScreens({ ctx }: { ctx: {
                             {getCardDisplayName(activeDetailCard.name)}
                           </h2>
                           <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#b49365] mt-0.5">
-                            {activeDetailCard.class}
+                            {getCardTribeLabel(activeDetailCard)}
                             {activeDetailCard.cost !== undefined && activeDetailCard.cost > 0 && ` • ${activeDetailCard.cost} Blood`}
                             {activeDetailCard.boneCost !== undefined && activeDetailCard.boneCost > 0 && ` • ${activeDetailCard.boneCost} Bones`}
                           </div>

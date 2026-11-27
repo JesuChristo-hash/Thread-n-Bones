@@ -109,7 +109,7 @@ import {
   cloneCard,
   transformAmorphous,
   applyPlayerTotem
-, getCardDisplayName } from './data/gameData';
+, getCardDisplayName , cardMatchesTribe } from './data/gameData';
 
 // --- Built-in Chiptune Audio Synthesizer ---
 
@@ -1378,8 +1378,10 @@ export default function App() {
         `${BASE}/assets/cardbases/bestowed-card-base.png`,
         `${BASE}/assets/cardbases/combined-card-base.png`,
         `${BASE}/assets/cardbases/duplicate-card-base.png`,
+        `${BASE}/assets/cardart/chime1.png`,
+        `${BASE}/assets/cardart/chime2.png`,
         ...Object.values(ALL_CARD_LOOKUP)
-          .filter((c) => c.name !== 'BLOOD MOON')
+          .filter((c) => c.name !== 'BLOOD MOON' && c.name !== 'Chime')
           .map((c) => getCardArtUrl(c)),
         ...Object.keys(SIGIL_MAPPING).map((s) => getSigilArtUrl(s)),
       ])).filter(Boolean);
@@ -2025,7 +2027,43 @@ export default function App() {
 
           if (existingCard.sigils.includes('Many Lives')) {
             setSacrificedUnkillableCardIds(prev => [...prev, existingCard.id || existingCard.name || '']);
-            addLog(`${getCardDisplayName(existingCard.name)} was sacrificed but remains on the board thanks to Many Lives!`);
+            if (isCardNamed(existingCard.name, 'Experiment')) {
+              const nextTransformed = !existingCard.isTransformed;
+              setPlayerBoard(prev => {
+                const copy = [...prev];
+                const cur = copy[laneIndex];
+                if (!cur) return prev;
+                if (nextTransformed) {
+                  const hadAirborne = (cur.sigils || []).includes('Airborne');
+                  copy[laneIndex] = {
+                    ...cur,
+                    isTransformed: true,
+                    attack: (cur.attack || 0) + 2,
+                    sigils: hadAirborne ? cur.sigils : [...(cur.sigils || []), 'Airborne'],
+                    experimentGrantedAirborne: !hadAirborne,
+                  };
+                } else {
+                  const nextSigils = cur.experimentGrantedAirborne
+                    ? (cur.sigils || []).filter(s => s !== 'Airborne')
+                    : (cur.sigils || []);
+                  copy[laneIndex] = {
+                    ...cur,
+                    isTransformed: false,
+                    attack: Math.max(0, (cur.attack || 0) - 2),
+                    sigils: nextSigils,
+                    experimentGrantedAirborne: false,
+                  };
+                }
+                return copy;
+              });
+              addLog(
+                nextTransformed
+                  ? `${getCardDisplayName(existingCard.name)} convulses under the knife—sprouting wings (+2 ATK, Airborne)!`
+                  : `${getCardDisplayName(existingCard.name)} collapses back into its docile form (-2 ATK, lost Airborne).`
+              );
+            } else {
+              addLog(`${getCardDisplayName(existingCard.name)} was sacrificed but remains on the board thanks to Many Lives!`);
+            }
             return;
           }
 
@@ -2111,7 +2149,7 @@ export default function App() {
         setMorselStats({ attack: 0, health: 0 });
       }
 
-      if (activeTotem.head && activeTotem.body && (playedCard.class === activeTotem.head || activeTotem.head === 'ALL Classes')) {
+      if (activeTotem.head && activeTotem.body && cardMatchesTribe(playedCard, activeTotem.head)) {
         spawnSigilBadge(true, laneIndex, `EFFIGY: ${activeTotem.body.toUpperCase()}`, 'violet');
       }
       setPlayerBoard(prev => {
@@ -2152,8 +2190,9 @@ export default function App() {
         const extraSigils = playedCard.sigils.filter(s => s !== 'Demon Spawn');
         setPlayerBoard(prev => {
           const nextBoard = [...prev];
-          const createChime = () => {
+          const createChime = (variant: 1 | 2) => {
             const chime = cloneCard(TOKEN_CHIME);
+        chime.artUrl = `${import.meta.env.BASE_URL || './'}assets/cardart/chime${variant}.png`;
             chime.id = `chime-${Date.now()}-${Math.random()}`;
             extraSigils.forEach(s => {
               if (!chime.sigils.includes(s)) chime.sigils.push(s);
@@ -2162,10 +2201,10 @@ export default function App() {
             return applyPlayerTotem(chime, activeTotem);
           };
           if (laneIndex > 0 && !nextBoard[laneIndex - 1]) {
-            nextBoard[laneIndex - 1] = createChime();
+            nextBoard[laneIndex - 1] = createChime(1);
           }
           if (laneIndex < 3 && !nextBoard[laneIndex + 1]) {
-            nextBoard[laneIndex + 1] = createChime();
+            nextBoard[laneIndex + 1] = createChime(2);
           }
           return nextBoard;
         });
@@ -3247,7 +3286,7 @@ export default function App() {
             const inheritedSigils = (card.sigils || []).filter(s => {
               if (basePreEvoSigils.includes(s)) return false;
               if (s === 'Fledgling') return false;
-              if (isPlayer && activeTotem && (card.class === activeTotem.head || activeTotem.head === 'ALL Classes') && s === activeTotem.body) {
+              if (isPlayer && activeTotem && cardMatchesTribe(card, activeTotem.head) && s === activeTotem.body) {
                 return false;
               }
               return true;
@@ -3786,14 +3825,14 @@ export default function App() {
             setBossTotem({ class: p2Tribe, sigil: chosenLethalSigil });
 
             // Siphon candidates exclusively from her second tribe
-            const tribePool = ENEMY_MAIN_DECK_POOL.filter(c => c.class === p2Tribe || c.class === 'ALL Classes');
+            const tribePool = ENEMY_MAIN_DECK_POOL.filter(c => cardMatchesTribe(c, p2Tribe));
             const validPool = tribePool.length > 0 ? tribePool : ENEMY_MAIN_DECK_POOL;
             const lowTier = validPool.filter(c => (c.attack || 0) <= 1);
             const frontPool = lowTier.length > 0 ? lowTier : validPool;
 
             const makeP2Beast = (pool: CardDef[]) => {
               const beast = cloneCard(pool[Math.floor(Math.random() * pool.length)], 0);
-              if ((beast.class === p2Tribe || beast.class === 'ALL Classes') && !beast.sigils.includes(chosenLethalSigil)) {
+              if (cardMatchesTribe(beast, p2Tribe) && !beast.sigils.includes(chosenLethalSigil)) {
                 beast.sigils.push(chosenLethalSigil);
               }
               return beast;
@@ -4808,10 +4847,10 @@ export default function App() {
               // If this encounter wields a poppet/totem, strongly favor cards matching its tribe
               if (bossTotem && duelRngRef.current() < 0.8) {
                 const tribalPool = poolToUse.filter(
-                  c => c.class === bossTotem.class || c.class === 'ALL Classes'
+                  c => cardMatchesTribe(c, bossTotem.class)
                 );
                 const fallbackTribal = validPool.filter(
-                  c => c.class === bossTotem.class || c.class === 'ALL Classes'
+                  c => cardMatchesTribe(c, bossTotem.class)
                 );
                 if (tribalPool.length > 0) poolToUse = tribalPool;
                 else if (fallbackTribal.length > 0) poolToUse = fallbackTribal;
@@ -4820,7 +4859,7 @@ export default function App() {
               const candidate = transformAmorphous(cloneCard(poolToUse[Math.floor(duelRngRef.current() * poolToUse.length)], 0));
               if (
                 bossTotem &&
-                (candidate.class === bossTotem.class || candidate.class === 'ALL Classes') &&
+                cardMatchesTribe(candidate, bossTotem.class) &&
                 !candidate.sigils.includes(bossTotem.sigil)
               ) {
                 candidate.sigils.push(bossTotem.sigil);
@@ -4955,12 +4994,12 @@ export default function App() {
     let pool = ENEMY_MAIN_DECK_POOL;
     if (bossTotem && Math.random() < 0.75) {
       const tribalPool = ENEMY_MAIN_DECK_POOL.filter(
-        c => c.class === bossTotem.class || c.class === "ALL Classes"
+        c => cardMatchesTribe(c, bossTotem.class)
       );
       if (tribalPool.length > 0) pool = tribalPool;
     }
     const card = cloneCard(pool[Math.floor(Math.random() * pool.length)], 0);
-    if (bossTotem && (card.class === bossTotem.class || card.class === "ALL Classes")) {
+    if (bossTotem && cardMatchesTribe(card, bossTotem.class)) {
       if (!card.sigils.includes(bossTotem.sigil)) {
         card.sigils.push(bossTotem.sigil);
       }
@@ -5608,7 +5647,7 @@ export default function App() {
           ritualEndedVoluntarily: false,
         });
 
-        const tribePool = ENEMY_MAIN_DECK_POOL.filter(c => c.class === bossTribe || c.class === "ALL Classes");
+        const tribePool = ENEMY_MAIN_DECK_POOL.filter(c => cardMatchesTribe(c, bossTribe));
         const validPool = tribePool.length > 0 ? tribePool : ENEMY_MAIN_DECK_POOL;
         const lowTierPool = validPool.filter(c => (c.attack || 0) <= 1);
         const frontPool = lowTierPool.length > 0 ? lowTierPool : validPool;
@@ -5849,10 +5888,10 @@ export default function App() {
           // If this encounter wields a poppet/totem, strongly favor cards that actually benefit from its tribe
           if (activeEncounterTotem && duelRng() < 0.8) {
             const tribalPool = poolToDraw.filter(
-              c => c.class === activeEncounterTotem.class || c.class === 'ALL Classes'
+              c => cardMatchesTribe(c, activeEncounterTotem.class)
             );
             const fallbackTribal = validCandidates.filter(
-              c => c.class === activeEncounterTotem.class || c.class === 'ALL Classes'
+              c => cardMatchesTribe(c, activeEncounterTotem.class)
             );
             if (tribalPool.length > 0) poolToDraw = tribalPool;
             else if (fallbackTribal.length > 0) poolToDraw = fallbackTribal;
@@ -5861,7 +5900,7 @@ export default function App() {
           const chosen = transformAmorphous(cloneCard(poolToDraw[Math.floor(duelRng() * poolToDraw.length)], 0));
           if (
             activeEncounterTotem &&
-            (chosen.class === activeEncounterTotem.class || chosen.class === "ALL Classes") &&
+            cardMatchesTribe(chosen, activeEncounterTotem.class) &&
             !chosen.sigils.includes(activeEncounterTotem.sigil)
           ) {
             chosen.sigils.push(activeEncounterTotem.sigil);
@@ -6856,7 +6895,7 @@ export default function App() {
     setCarvingPickedTribe(tribe);
     setCarvingSummonedCard(null);
 
-    const pool = EVENT_CARD_POOL.filter(c => c.class === tribe || c.class === "ALL Classes");
+    const pool = EVENT_CARD_POOL.filter(c => cardMatchesTribe(c, tribe));
     const chosen = applyBloodFamineIfActive(cloneCard(pool[Math.floor(Math.random() * pool.length)]));
     const nextDeck = [...masterDeck, chosen];
     triggerSfx('needle_stitch');

@@ -92,6 +92,14 @@ export const LEFT_FACING_CARD_NAMES = new Set([
     'iguana',
     'maritimus',
     'rhino',
+    'bat',
+    'dire wolf',
+    'direwolf',
+    'field mice',
+    'fieldmice',
+    'hodag',
+    'lammergeier',
+    'experiment',
   ]);
 
 export const isLeftFacingCard = (name?: string): boolean => {

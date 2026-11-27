@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChiptuneAudio } from '../audio/ChiptuneAudio';
-import { ALL_CARD_LOOKUP, CARD_ART_OFFSETS, MAIN_DECK_POOL, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, getCardArtUrl , getCardDisplayName } from '../data/gameData';
+import { ALL_CARD_LOOKUP, CARD_ART_OFFSETS, MAIN_DECK_POOL, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, getCardArtUrl , getCardDisplayName , getCardTribeLabel } from '../data/gameData';
 import type { CardDef, CardInstance } from '../data/gameData';
 import { resetArchive } from '../data/archive';
 
@@ -564,19 +564,7 @@ export default function DevMenuScreen({
             {/* Visual Card Art Inspector with Search */}
             {devTab === 'CARDS' && (() => {
               const term = devCardsFilter.trim().toLowerCase();
-              const filteredCards = Object.values(ALL_CARD_LOOKUP)
-                .filter(c => {
-                  if (!term) return true;
-                  const nameMatches = getCardDisplayName(c.name).toLowerCase().includes(term) || c.name?.toLowerCase().includes(term);
-                  const classMatches = c.class?.toLowerCase().includes(term);
-                  const sigilMatches = (c.sigils || []).some(s => s?.toLowerCase().includes(term));
-                  const costMatches =
-                    (c.cost !== undefined && String(c.cost) === term) ||
-                    (c.boneCost !== undefined && String(c.boneCost) === term);
-                  return nameMatches || classMatches || sigilMatches || costMatches;
-                })
-                .sort((a, b) => getCardDisplayName(a.name).localeCompare(getCardDisplayName(b.name)));
-
+              const assetBase = (import.meta.env.BASE_URL || './').replace(/\/?$/, '/');
               const getCleanAssetPath = (card: CardDef) => {
                 if (card.name?.toLowerCase().includes('moon')) {
                   return 'public/assets/cardbases/blood_moon.webp';
@@ -585,6 +573,47 @@ export default function DevMenuScreen({
                 const file = raw.split('/').pop()?.split('?')[0] || 'missing.png';
                 return `public/assets/cardart/${file}`;
               };
+
+              const galleryCards: CardDef[] = Object.values(ALL_CARD_LOOKUP).flatMap(c => {
+                if (c.name === 'Chime') {
+                  return [
+                    { ...c, id: 'dev-chime-1', artUrl: `${assetBase}assets/cardart/chime1.png` },
+                    { ...c, id: 'dev-chime-2', artUrl: `${assetBase}assets/cardart/chime2.png` },
+                  ];
+                }
+                if (c.name === 'Experiment') {
+                  const baseSigils = c.sigils || [];
+                  return [
+                    { ...c, id: 'dev-experiment-a', isTransformed: false },
+                    {
+                      ...c,
+                      id: 'dev-experiment-b',
+                      isTransformed: true,
+                      attack: (c.attack || 0) + 2,
+                      sigils: baseSigils.includes('Airborne') ? baseSigils : [...baseSigils, 'Airborne'],
+                    },
+                  ];
+                }
+                return [c];
+              });
+
+              const filteredCards = galleryCards
+                .filter(c => {
+                  if (!term) return true;
+                  const fileMatches = getCleanAssetPath(c).toLowerCase().includes(term);
+                  const nameMatches = getCardDisplayName(c.name).toLowerCase().includes(term) || c.name?.toLowerCase().includes(term);
+                  const classMatches = getCardTribeLabel(c).toLowerCase().includes(term);
+                  const sigilMatches = (c.sigils || []).some(s => s?.toLowerCase().includes(term));
+                  const costMatches =
+                    (c.cost !== undefined && String(c.cost) === term) ||
+                    (c.boneCost !== undefined && String(c.boneCost) === term);
+                  return fileMatches || nameMatches || classMatches || sigilMatches || costMatches;
+                })
+                .sort((a, b) => {
+                  const nameCmp = getCardDisplayName(a.name).localeCompare(getCardDisplayName(b.name));
+                  if (nameCmp !== 0) return nameCmp;
+                  return getCleanAssetPath(a).localeCompare(getCleanAssetPath(b));
+                });
 
               return (
                 <div className="border border-amber-950/40 p-3 mb-6">
@@ -636,7 +665,7 @@ export default function DevMenuScreen({
                             Offset: {CARD_ART_OFFSETS[devInspectCard.name] || 'none'}
                           </div>
                           <div className="text-[11px] text-stone-400">
-                            Tribe: {devInspectCard.class} | ATK/HP: {devInspectCard.attack}/{devInspectCard.health} | Sigils:{' '}
+                            Tribe: {getCardTribeLabel(devInspectCard)} | ATK/HP: {devInspectCard.attack}/{devInspectCard.health} | Sigils:{' '}
                             {devInspectCard.sigils?.join(', ') || 'None'}
                           </div>
                         </div>
@@ -654,12 +683,15 @@ export default function DevMenuScreen({
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[55vh] overflow-y-auto p-2 bg-[#090705]/80 border border-amber-950/30 rounded-sm">
                     {filteredCards.map(c => {
                       const fileName = getCleanAssetPath(c).split('/').pop() || 'missing.png';
+                      const cardKey = `${c.name}::${fileName}`;
                       const offset = CARD_ART_OFFSETS[c.name];
-                      const isInspected = devInspectCard?.name === c.name;
+                      const isInspected =
+                        devInspectCard?.name === c.name &&
+                        getCleanAssetPath(devInspectCard) === getCleanAssetPath(c);
 
                       return (
                         <div
-                          key={c.name}
+                          key={cardKey}
                           onClick={() => setDevInspectCard(c)}
                           className={`flex flex-col items-center p-2 rounded-sm border transition-colors cursor-pointer ${
                             isInspected

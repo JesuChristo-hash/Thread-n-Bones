@@ -8,7 +8,7 @@ import {
   getCardArtUrl,
   getSigilArtUrl,
   type Tribe,
- getCardDisplayName } from '../data/gameData';
+ getCardDisplayName , cardMatchesTribe , getCardTribeLabel } from '../data/gameData';
 import { type PersistentArchive } from '../data/archive';
 
 interface ArchiveModalProps {
@@ -63,7 +63,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
   const filteredCards = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return allCards.filter((c) => {
-      if (tribeFilter !== 'ALL' && c.class !== tribeFilter) return false;
+      if (tribeFilter !== 'ALL' && !cardMatchesTribe(c, tribeFilter)) return false;
       if (!q) return true;
       const isDiscovered = seenCardSet.has(c.name);
       if (!isDiscovered) return false;
@@ -356,7 +356,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                             <div className="flex items-center justify-between text-[11px] border-t border-stone-800/80 pt-1.5">
                               <span className="text-red-400 font-bold">ATK {card.attack}</span>
                               <span className="text-stone-400 text-[10px]">
-                                {TRIBE_ICONS[card.class as Tribe] || ''} {card.class}
+                                {TRIBE_ICONS[card.class as Tribe] || ''} {getCardTribeLabel(card)}
                               </span>
                               <span className="text-emerald-400 font-bold">HP {card.health}</span>
                             </div>
