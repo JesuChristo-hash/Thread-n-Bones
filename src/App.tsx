@@ -1567,6 +1567,7 @@ export default function App() {
   useEffect(() => {
     const shouldDuck = Boolean(showPauseMenu || showViewDeck || screen === 'SPLASH' || screen === 'VIEW_DECK' || screen === 'DEV_MENU' || screen === 'EVENT_HOARDER_SEARCH');
     ChiptuneAudio.setOverlayDuck?.(shouldDuck);
+    document.documentElement.setAttribute('data-wx-pause', shouldDuck ? '1' : '0');
   }, [showPauseMenu, showViewDeck, screen]);
 
   // Cleanup audio nodes on unmount

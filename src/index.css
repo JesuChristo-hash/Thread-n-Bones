@@ -1389,3 +1389,7 @@
   75%  { opacity: 0.55; }
   100% { transform: translate3d(6px, -46px, 0) scale(0.35); opacity: 0; }
 }
+
+/* --- Freeze weather while a full-screen menu is open --- */
+html[data-wx-pause="1"] .wx { animation-play-state: paused !important; }
+html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
