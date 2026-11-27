@@ -80,46 +80,26 @@ const buildRainDrops = (weatherAct: 2 | 3) => {
 const RAIN_ACT_2 = buildRainDrops(2);
 const RAIN_ACT_3 = buildRainDrops(3);
 
-// Act 1: ground fog, a near bank, a faint mid band, and two slow wisps sweeping through.
+// Act 1: three layers only. Round vmax puffs are baked into each layer's background,
+// so mobile GPUs keep a handful of textures instead of a pile of them.
 const MIST_ACT_1: Layer[] = [
   {
-    cls: 'absolute -inset-x-[20%] bottom-[-10%] h-[70%]',
+    cls: 'absolute -inset-x-[14%] bottom-[-8%] h-[64%]',
     bg:
-      'radial-gradient(ellipse 58% 62% at 28% 80%, rgba(214,210,200,0.32) 0%, rgba(164,160,152,0.17) 45%, transparent 80%), radial-gradient(ellipse 48% 54% at 78% 86%, rgba(208,202,190,0.27) 0%, rgba(144,140,132,0.13) 50%, transparent 78%)',
+      'radial-gradient(circle 40vmax at 22% 78%, rgba(214,210,200,0.42) 0%, rgba(168,164,156,0.2) 48%, transparent 100%), radial-gradient(circle 34vmax at 58% 92%, rgba(222,216,204,0.38) 0%, rgba(172,168,158,0.18) 48%, transparent 100%), radial-gradient(circle 38vmax at 88% 74%, rgba(208,202,190,0.36) 0%, rgba(150,146,138,0.16) 50%, transparent 100%)',
     anim: 'weatherMistDriftA 34s ease-in-out infinite',
   },
   {
-    cls: 'absolute -inset-x-[20%] bottom-[-6%] h-[44%]',
+    cls: 'absolute -inset-x-[14%] bottom-[8%] h-[52%]',
     bg:
-      'radial-gradient(ellipse 62% 58% at 70% 88%, rgba(224,218,206,0.36) 0%, rgba(174,170,160,0.17) 48%, transparent 80%)',
-    anim: 'weatherMistDriftB 23s ease-in-out -7s infinite',
+      'radial-gradient(circle 32vmax at 40% 62%, rgba(210,206,196,0.34) 0%, rgba(156,152,144,0.15) 50%, transparent 100%), radial-gradient(circle 28vmax at 80% 70%, rgba(204,200,190,0.3) 0%, rgba(148,144,136,0.13) 50%, transparent 100%)',
+    anim: 'weatherMistDriftB 26s ease-in-out -7s infinite',
   },
   {
-    cls: 'absolute -inset-x-[16%] top-[12%] h-[48%]',
+    cls: 'absolute -inset-x-[14%] top-[6%] h-[50%]',
     bg:
-      'radial-gradient(ellipse 62% 52% at 52% 50%, rgba(206,202,192,0.17) 0%, rgba(146,142,134,0.08) 52%, transparent 80%)',
-    anim: 'weatherMistDriftB 44s ease-in-out -15s infinite',
-  },
-  {
-    cls: 'absolute -inset-x-[16%] top-[-4%] h-[40%]',
-    bg:
-      'radial-gradient(ellipse 64% 54% at 40% 46%, rgba(198,194,184,0.12) 0%, rgba(138,134,126,0.05) 54%, transparent 80%)',
-    anim: 'weatherMistDriftA 58s ease-in-out -21s infinite',
-  },
-  {
-    cls: 'absolute -inset-x-[20%] bottom-[14%] h-[20%]',
-    bg: 'radial-gradient(ellipse 42% 52% at 50% 50%, rgba(228,224,214,0.28) 0%, transparent 72%)',
-    anim: 'weatherMistWisp 52s linear infinite',
-  },
-  {
-    cls: 'absolute -inset-x-[20%] bottom-[30%] h-[16%]',
-    bg: 'radial-gradient(ellipse 38% 52% at 50% 50%, rgba(216,212,202,0.2) 0%, transparent 70%)',
-    anim: 'weatherMistWisp 68s linear -31s infinite',
-  },
-  {
-    cls: 'absolute -inset-x-[20%] bottom-[46%] h-[14%]',
-    bg: 'radial-gradient(ellipse 36% 52% at 50% 50%, rgba(210,206,196,0.15) 0%, transparent 70%)',
-    anim: 'weatherMistWisp 84s linear -52s infinite',
+      'radial-gradient(circle 30vmax at 30% 50%, rgba(204,200,190,0.2) 0%, rgba(144,140,132,0.09) 52%, transparent 100%), radial-gradient(circle 26vmax at 74% 40%, rgba(198,194,184,0.17) 0%, rgba(140,136,128,0.08) 52%, transparent 100%)',
+    anim: 'weatherMistDriftB 46s ease-in-out -15s infinite',
   },
 ];
 

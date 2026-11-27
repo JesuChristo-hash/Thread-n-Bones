@@ -991,8 +991,10 @@
 
 
 /* --- Act 1-4 Global Weather & Atmosphere --- */
-/* All weather layers animate transform/opacity only (compositor). Particles skip will-change on purpose. */
-.wx:not(.wx-particle) { will-change: transform, opacity; }
+/* All weather layers animate transform/opacity only (compositor). No blanket will-change: pinned textures evict tiles on mobile GPUs. */
+@media (max-width: 768px), (pointer: coarse) {
+  .wx-particle:nth-child(even) { display: none; }
+}
 
 @keyframes weatherMistDriftA {
   0%   { transform: translate3d(-8%, 0, 0) scale(1.04); opacity: 0.42; }
