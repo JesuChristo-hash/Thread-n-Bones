@@ -93,8 +93,8 @@ const buildSpiralPath = (turns: number, startR: number, maxR: number, steps = 22
   return d;
 };
 
-const SPIRAL_PRIMARY = buildSpiralPath(4.5, 4, 46, 220, 0);
-const SPIRAL_SECONDARY = buildSpiralPath(4.1, 6, 44, 190, Math.PI);
+const SPIRAL_PRIMARY = buildSpiralPath(7.2, 3.2, 49.5, 340, 0);
+const SPIRAL_SECONDARY = buildSpiralPath(6.8, 4.6, 49.2, 300, Math.PI);
 
 // Sculpted gothic skull glyph (cranium + zygomatic arch + mandible + hollows)
 const SculptedSkull: React.FC<{ cx: number; cy: number; scale?: number; rot?: number; tone?: string; rim?: string }> = ({
@@ -354,27 +354,29 @@ const DESKTOP_RIDGE =
 
 const DesktopUzumakiScene: React.FC = () => (
   <>
-    {/* Bounded GPU-Isolated Counter-Rotating Vortex */}
-    <div
-      className="absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 act-cut-gpu"
-      style={{ width: '82vmin', height: '82vmin' }}
-    >
-      <div className="w-full h-full act-cut-gpu" style={{ animation: 'actCutSpin 78s linear infinite', willChange: 'transform' }}>
-        <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
-          <path d={SPIRAL_PRIMARY} fill="none" stroke="rgba(220,38,38,0.22)" strokeWidth="2.6" strokeLinecap="round" />
-          <path d={SPIRAL_PRIMARY} fill="none" stroke="rgba(251,146,60,0.62)" strokeWidth="0.58" strokeLinecap="round" />
-          <path d={SPIRAL_SECONDARY} fill="none" stroke="rgba(185,28,28,0.34)" strokeWidth="1.35" strokeLinecap="round" />
-        </svg>
+    {/* Full-Horizon GPU-Isolated Uzumaki Vortex */}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none act-cut-gpu">
+      <div
+        className="absolute left-1/2 top-[54%] -translate-x-1/2 -translate-y-1/2 act-cut-gpu"
+        style={{ width: '136vmax', height: '136vmax' }}
+      >
+        <div className="w-full h-full act-cut-gpu" style={{ animation: 'actCutSpin 84s linear infinite', willChange: 'transform' }}>
+          <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
+            <path d={SPIRAL_PRIMARY} fill="none" stroke="rgba(220,38,38,0.22)" strokeWidth="1.7" strokeLinecap="round" />
+            <path d={SPIRAL_PRIMARY} fill="none" stroke="rgba(251,146,60,0.62)" strokeWidth="0.4" strokeLinecap="round" />
+            <path d={SPIRAL_SECONDARY} fill="none" stroke="rgba(185,28,28,0.34)" strokeWidth="0.95" strokeLinecap="round" />
+          </svg>
+        </div>
       </div>
     </div>
     {/* Obsidian Eclipse Core */}
     <div
-      className="absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 rounded-full act-cut-gpu"
+      className="absolute left-1/2 top-[54%] -translate-x-1/2 -translate-y-1/2 rounded-full act-cut-gpu"
       style={{
         width: '21vmin',
         height: '21vmin',
         background:
-          'radial-gradient(circle closest-side, #000 0%, #000 50%, rgba(220,38,38,0.52) 74%, rgba(251,146,60,0.24) 86%, transparent 100%)',
+          'radial-gradient(circle closest-side, #000 0%, #000 50%, rgba(220,38,38,0.56) 74%, rgba(251,146,60,0.26) 86%, transparent 100%)',
       }}
     />
     {/* Volcanic Crags Silhouette */}
@@ -602,35 +604,35 @@ const MobileChapelScene: React.FC<{ portrait: boolean }> = ({ portrait }) =>
 
 const MobileUzumakiScene: React.FC<{ portrait: boolean }> = ({ portrait }) => (
   <>
-    {/* Strictly bounded GPU-composited vortex so mobile GPUs never tile-tear */}
-    <div
-      className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 act-cut-gpu"
-      style={{
-        top: portrait ? '60%' : '62%',
-        width: portrait ? '78vw' : '54vh',
-        height: portrait ? '78vw' : '54vh',
-        maxWidth: '340px',
-        maxHeight: '340px',
-      }}
-    >
-      <div className="w-full h-full act-cut-gpu" style={{ animation: 'actCutSpin 64s linear infinite', willChange: 'transform' }}>
-        <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
-          <path d={SPIRAL_PRIMARY} fill="none" stroke="rgba(220,38,38,0.28)" strokeWidth="2.8" strokeLinecap="round" />
-          <path d={SPIRAL_PRIMARY} fill="none" stroke="rgba(251,146,60,0.68)" strokeWidth="0.72" strokeLinecap="round" />
-          <path d={SPIRAL_SECONDARY} fill="none" stroke="rgba(185,28,28,0.36)" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
+    {/* Full-Horizon GPU-Isolated Vortex (overflow-clipped, no outer scale animation, zero tile tearing) */}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none act-cut-gpu">
+      <div
+        className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 act-cut-gpu"
+        style={{
+          top: portrait ? '58%' : '66%',
+          width: portrait ? '138vw' : '124vw',
+          height: portrait ? '138vw' : '124vw',
+        }}
+      >
+        <div className="w-full h-full act-cut-gpu" style={{ animation: 'actCutSpin 72s linear infinite', willChange: 'transform' }}>
+          <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
+            <path d={SPIRAL_PRIMARY} fill="none" stroke="rgba(220,38,38,0.26)" strokeWidth="1.8" strokeLinecap="round" />
+            <path d={SPIRAL_PRIMARY} fill="none" stroke="rgba(251,146,60,0.68)" strokeWidth="0.46" strokeLinecap="round" />
+            <path d={SPIRAL_SECONDARY} fill="none" stroke="rgba(185,28,28,0.36)" strokeWidth="1.0" strokeLinecap="round" />
+          </svg>
+        </div>
       </div>
     </div>
     <div
       className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full act-cut-gpu"
       style={{
-        top: portrait ? '60%' : '62%',
+        top: portrait ? '58%' : '66%',
         width: portrait ? '24vw' : '18vh',
         height: portrait ? '24vw' : '18vh',
         maxWidth: '104px',
         maxHeight: '104px',
         background:
-          'radial-gradient(circle closest-side, #000 0%, #000 50%, rgba(220,38,38,0.56) 76%, rgba(251,146,60,0.22) 88%, transparent 100%)',
+          'radial-gradient(circle closest-side, #000 0%, #000 50%, rgba(220,38,38,0.58) 76%, rgba(251,146,60,0.24) 88%, transparent 100%)',
       }}
     />
     <svg

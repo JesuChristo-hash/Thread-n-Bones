@@ -1084,32 +1084,32 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 pt-12 pb-2 sm:py-3 lg:py-4 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-2.5 sm:px-4 lg:px-8 pt-2 pb-2 lg:py-4 overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('campfireevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,8,5,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
             {renderActWeather('absolute inset-0 z-[5]', 'event_campfire')}
-            <div className="relative z-10 max-w-5xl w-full h-full min-h-0 flex flex-col items-center justify-between gap-2 sm:gap-4">
-              {/* Top Header */}
+            <div className="relative z-10 max-w-5xl w-full h-full min-h-0 flex flex-col items-center justify-between gap-1 sm:gap-2 lg:gap-4">
+              {/* Top Header (compact on short mobile landscape viewports) */}
               <div className="flex flex-col items-center text-center shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
-                  <span className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.26em] sm:tracking-[0.3em] text-[#d69758]">
+                <div className="hidden lg:flex items-center gap-3">
+                  <div className="h-px w-16 bg-gradient-to-r from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#d69758]">
                     Divine Blessing
                   </span>
-                  <div className="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
+                  <div className="h-px w-16 bg-gradient-to-l from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
                 </div>
-                <h1 className="text-lg sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-sm sm:text-lg lg:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.14em] lg:tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Baptism of Boiling Blood
                 </h1>
               </div>
 
-              {/* Two-Column Split on Desktop, Top-Stage + Bottom Horizontal Tray on Mobile */}
-              <div className="w-full flex-1 min-h-0 flex flex-col md:grid md:grid-cols-12 gap-2.5 sm:gap-4 lg:gap-5 items-stretch">
-                {/* LEFT COLUMN: Stone Baptismal Font Prop + Action Buttons */}
-                <div className="flex-1 md:col-span-7 flex flex-col items-center justify-between gap-1.5 sm:gap-2 lg:gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-3 sm:px-6 py-2 sm:py-4 flex flex-col items-center justify-between">
+              {/* Side-by-Side Two-Column Split on Mobile Landscape & Desktop (sm:grid), Vertical on Narrow Portrait */}
+              <div className="w-full flex-1 min-h-0 flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-3 lg:gap-5 items-stretch">
+                {/* LEFT COLUMN: Stone Baptismal Font Prop + Always-Accessible Action Buttons */}
+                <div className="flex-1 sm:col-span-7 flex flex-col items-center justify-between gap-1.5 lg:gap-3 min-h-0">
+                  <div className="relative w-full flex-1 min-h-0 overflow-hidden px-2 sm:px-4 lg:px-6 py-1 sm:py-2 lg:py-4 flex flex-col items-center justify-between">
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
                         isAnimating
@@ -1126,24 +1126,24 @@ export default function EventScreens({ ctx }: { ctx: {
                       }}
                     />
 
-                    <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9c643b]/70" />
-                    <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9c643b]/70" />
-                    <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9c643b]/70" />
-                    <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9c643b]/70" />
+                    <span className="pointer-events-none absolute top-1.5 left-1.5 lg:top-2 lg:left-2 w-2.5 h-2.5 lg:w-3 lg:h-3 border-t border-l border-[#9c643b]/70" />
+                    <span className="pointer-events-none absolute top-1.5 right-1.5 lg:top-2 lg:right-2 w-2.5 h-2.5 lg:w-3 lg:h-3 border-t border-r border-[#9c643b]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 lg:bottom-2 lg:left-2 w-2.5 h-2.5 lg:w-3 lg:h-3 border-b border-l border-[#9c643b]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 w-2.5 h-2.5 lg:w-3 lg:h-3 border-b border-r border-[#9c643b]/70" />
 
                     {/* Status / Blessing Telemetry Strip */}
-                    <div className="relative z-20 flex flex-wrap items-center justify-center gap-2">
-                      <span className="px-3 py-1 rounded-[2px] bg-[#1a0d09]/92 border border-[#783422]/80 text-[9.5px] font-mono font-bold uppercase tracking-[0.22em] text-[#f2b886]">
+                    <div className="relative z-20 flex flex-wrap items-center justify-center gap-1.5 lg:gap-2 shrink-0">
+                      <span className="px-2 lg:px-3 py-0.5 lg:py-1 rounded-[2px] bg-[#1a0d09]/92 border border-[#783422]/80 text-[8.5px] lg:text-[9.5px] font-mono font-bold uppercase tracking-[0.18em] lg:tracking-[0.22em] text-[#f2b886]">
                         Blessing: {campfireBuffType === 'attack' ? '+1 Power' : '+2 Health'}
                       </span>
                       {activeVows.includes('no_safe_campfire') && (
-                        <span className="px-2.5 py-1 rounded-[2px] border bg-[#240b09]/92 border-red-700/80 text-red-300 text-[9.5px] font-mono font-bold uppercase tracking-[0.18em]">
+                        <span className="px-2 py-0.5 lg:py-1 rounded-[2px] border bg-[#240b09]/92 border-red-700/80 text-red-300 text-[8.5px] lg:text-[9.5px] font-mono font-bold uppercase tracking-[0.14em] lg:tracking-[0.18em]">
                           Vow — Single Baptism Only
                         </span>
                       )}
                       {campfireStage > 0 && (
                         <span
-                          className={`px-2.5 py-1 rounded-[2px] border text-[9.5px] font-mono font-bold uppercase tracking-[0.18em] ${
+                          className={`px-2 py-0.5 lg:py-1 rounded-[2px] border text-[8.5px] lg:text-[9.5px] font-mono font-bold uppercase tracking-[0.14em] lg:tracking-[0.18em] ${
                             isCampfireSafe
                               ? 'bg-[#101c13]/92 border-emerald-700/75 text-emerald-300'
                               : 'bg-[#210b09]/92 border-red-700/80 text-red-300'
@@ -1154,7 +1154,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       )}
                     </div>
 
-                    {/* Centerpiece: Creature Suspended Over the Boiling Blood Font */}
+                    {/* Centerpiece: Creature Suspended Over the Boiling Blood Font (viewport-height clamped!) */}
                     {(() => {
                       const propBase = import.meta.env.BASE_URL || './';
                       const isPerilous = campfireStage > 0 && !isCampfireSafe;
@@ -1164,9 +1164,9 @@ export default function EventScreens({ ctx }: { ctx: {
                         { side: 'right', leftPct: '93.6%', delay: '0.28s' },
                       ];
                       return (
-                        <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[94px] sm:pt-[142px]">
-                          {/* Aspect-Locked Stone Baptismal Font Stage (845x944) */}
-                          <div className="relative w-[178px] sm:w-[278px] lg:w-[298px] aspect-[845/944] select-none">
+                        <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[clamp(58px,19vh,142px)]">
+                          {/* Aspect-Locked Stone Baptismal Font Stage (845x944), height-clamped so buttons NEVER clip on short phones */}
+                          <div className="relative w-[clamp(108px,32vh,296px)] aspect-[845/944] select-none">
                             {/* Base Stone Chalice Prop */}
                             <img
                               src={`${propBase}assets/props/campfire.png`}
@@ -1210,11 +1210,11 @@ export default function EventScreens({ ctx }: { ctx: {
                             </svg>
 
                             {/* Clip Viewport: Terminates Flush at the Blood Pool Surface so Sinking Cards Submerge Cleanly */}
-                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[90.4%] z-30 w-[144px] h-[116px] sm:w-[196px] sm:h-[156px] overflow-hidden flex items-start justify-center pt-1">
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[90.4%] z-30 w-[96px] h-[82px] lg:w-[196px] lg:h-[156px] overflow-hidden flex items-start justify-center pt-0.5 lg:pt-1">
                               <div
                                 data-event-drop-slot="campfire"
                                 data-event-drop-enabled={campfireStage === 0 && !isEventBusy ? 'true' : 'false'}
-                                className={`relative w-[84px] h-[112px] sm:w-[114px] sm:h-[152px] flex items-center justify-center rounded-[4px] transition-shadow duration-500 ${getDropSlotClass('campfire', campfireStage === 0 && !isEventBusy)} ${
+                                className={`relative w-[58px] h-[78px] lg:w-[114px] lg:h-[152px] flex items-center justify-center rounded-[4px] transition-shadow duration-500 ${getDropSlotClass('campfire', campfireStage === 0 && !isEventBusy)} ${
                                   campfireAnimState === 'blessed'
                                     ? 'shadow-[0_0_40px_rgba(245,158,11,0.65),0_0_20px_rgba(220,38,38,0.45)]'
                                     : selectedCard
@@ -1239,14 +1239,14 @@ export default function EventScreens({ ctx }: { ctx: {
                                       }
                                     }}
                                     title={campfireStage === 0 && !isEventBusy ? 'Click to return to deck' : undefined}
-                                    className={`scale-[0.72] sm:scale-[0.98] origin-center ${campfireStage === 0 && !isEventBusy ? 'cursor-pointer hover:-translate-y-1 transition-transform' : ''}`}
+                                    className={`scale-[0.48] lg:scale-[0.98] origin-center ${campfireStage === 0 && !isEventBusy ? 'cursor-pointer hover:-translate-y-1 transition-transform' : ''}`}
                                   >
                                     {renderCard(selectedCard, { isClickable: false, disableHoverScale: true })}
                                   </div>
                                 ) : (
-                                  <div className="w-[78px] h-[108px] sm:w-[106px] sm:h-[146px] rounded-[4px] border border-dashed border-[#8a4632]/75 bg-[#120807]/75 flex flex-col items-center justify-center gap-1 sm:gap-1.5 text-[#b57c62]">
-                                    <span className="text-base sm:text-xl opacity-70">🩸</span>
-                                    <span className="text-[8px] sm:text-[9.5px] uppercase tracking-[0.16em] sm:tracking-[0.2em] px-1 sm:px-2 text-center">Drop Vessel</span>
+                                  <div className="w-[54px] h-[74px] lg:w-[106px] lg:h-[146px] rounded-[4px] border border-dashed border-[#8a4632]/75 bg-[#120807]/75 flex flex-col items-center justify-center gap-0.5 lg:gap-1.5 text-[#b57c62]">
+                                    <span className="text-xs lg:text-xl opacity-70">🩸</span>
+                                    <span className="text-[6.5px] lg:text-[9.5px] uppercase tracking-[0.12em] lg:tracking-[0.2em] px-1 lg:px-2 text-center leading-tight">Drop Vessel</span>
                                   </div>
                                 )}
                               </div>
@@ -1254,7 +1254,7 @@ export default function EventScreens({ ctx }: { ctx: {
                               {/* Surface Blood Splash / Meniscus Glow where the card pierces the boiling blood */}
                               {isAnimating && (
                                 <div
-                                  className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-3 rounded-full bg-red-400/85 blur-[2px] shadow-[0_0_16px_rgba(248,113,113,0.95)]"
+                                  className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-24 lg:w-32 h-3 rounded-full bg-red-400/85 blur-[2px] shadow-[0_0_16px_rgba(248,113,113,0.95)]"
                                   style={{ animation: 'inkSplatterBurst 0.8s ease-out infinite' }}
                                 />
                               )}
@@ -1271,19 +1271,19 @@ export default function EventScreens({ ctx }: { ctx: {
                             />
 
                             {/* Rising Steam / Blood Bubbles from the Basin */}
-                            <div className="pointer-events-none absolute left-1/2 top-[9%] -translate-x-1/2 w-36 h-0 z-40">
+                            <div className="pointer-events-none absolute left-1/2 top-[9%] -translate-x-1/2 w-24 lg:w-36 h-0 z-40">
                               {bubbleOffsets.map((xOff, idx) => (
                                 <span
                                   key={idx}
                                   className={`absolute bottom-0 rounded-full ${
                                     isAnimating
-                                      ? 'w-2.5 h-2.5 bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.95)]'
+                                      ? 'w-2 h-2 lg:w-2.5 lg:h-2.5 bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.95)]'
                                       : isPerilous
-                                        ? 'w-2 h-2 bg-orange-400/90 shadow-[0_0_10px_rgba(249,115,22,0.85)]'
-                                        : 'w-1.5 h-1.5 bg-red-500/70'
+                                        ? 'w-1.5 h-1.5 lg:w-2 lg:h-2 bg-orange-400/90 shadow-[0_0_10px_rgba(249,115,22,0.85)]'
+                                        : 'w-1 h-1 lg:w-1.5 lg:h-1.5 bg-red-500/70'
                                   }`}
                                   style={{
-                                    left: `calc(50% + ${xOff}px)`,
+                                    left: `calc(50% + ${xOff * 0.65}px)`,
                                     animation: `bloodBubbleRise ${isAnimating ? 0.55 : isPerilous ? 0.95 : 2.1}s ease-out ${idx * 0.18}s infinite`,
                                   }}
                                 />
@@ -1322,7 +1322,6 @@ export default function EventScreens({ ctx }: { ctx: {
                                     animation: `sconceFlameFlicker ${isPerilous ? 0.48 : 0.85}s ease-in-out ${delay} infinite`,
                                   }}
                                 >
-                                  {/* Outer crimson-orange tongue */}
                                   <path
                                     d={
                                       isPerilous
@@ -1332,7 +1331,6 @@ export default function EventScreens({ ctx }: { ctx: {
                                     fill={isPerilous ? '#ea580c' : '#dc2626'}
                                     opacity="0.92"
                                   />
-                                  {/* Mid amber-gold body */}
                                   <path
                                     d={
                                       isPerilous
@@ -1341,7 +1339,6 @@ export default function EventScreens({ ctx }: { ctx: {
                                     }
                                     fill="#f59e0b"
                                   />
-                                  {/* Hot bright core */}
                                   <path
                                     d="M20 34 C16 41, 15 48, 16 54 C17 58, 18.5 59.5, 20 59.5 C21.5 59.5, 23 58, 24 54 C25 48, 24 41, 20 34 Z"
                                     fill="#fef08a"
@@ -1354,7 +1351,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       );
                     })()}
 
-                    <p className="relative z-20 mt-1 font-['Cinzel',_serif] text-sm sm:text-base tracking-[0.08em] text-[#ecd8bc] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                    <p className="relative z-20 mt-0.5 lg:mt-1 shrink-0 font-['Cinzel',_serif] text-[11px] lg:text-base tracking-[0.08em] text-[#ecd8bc] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                       {campfireStage === 0
                         ? 'Offer a creature.'
                         : isCampfireSafe
@@ -1363,13 +1360,14 @@ export default function EventScreens({ ctx }: { ctx: {
                     </p>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
+                  {/* Action Buttons — pinned shrink-0 above bottom edge so NEVER clipped on mobile */}
+                  <div className="relative z-30 flex flex-wrap items-center justify-center gap-2 lg:gap-3 shrink-0 pb-0.5">
                     {!(campfireStage > 0 && activeVows.includes('no_safe_campfire')) && (
                       <button
+                        data-campfire-action="baptize"
                         onClick={applyCampfireWarm}
                         disabled={campfireCardIdx === null || isEventBusy}
-                        className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#3b1610] to-[#1d0a07] hover:from-[#521e15] hover:to-[#290e0a] active:translate-y-[1px] border border-[#b85b3d]/90 hover:border-[#eb8a64] text-[#f7d6bf] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
+                        className="px-4 lg:px-7 py-1.5 lg:py-2.5 rounded-[2px] bg-gradient-to-b from-[#3b1610] to-[#1d0a07] hover:from-[#521e15] hover:to-[#290e0a] active:translate-y-[1px] border border-[#b85b3d]/90 hover:border-[#eb8a64] text-[#f7d6bf] hover:text-white font-['Cinzel',_serif] font-bold text-[10px] lg:text-xs uppercase tracking-[0.15em] lg:tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
                       >
                         {campfireHolding
                           ? 'Submerging...'
@@ -1380,9 +1378,10 @@ export default function EventScreens({ ctx }: { ctx: {
                     )}
                     {campfireStage > 0 && (
                       <button
+                        data-campfire-action="flee"
                         onClick={() => returnToMap()}
                         disabled={campfireHolding || isEventBusy}
-                        className="px-6 py-2.5 rounded-[2px] bg-[#140e0a]/92 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_16px_rgba(0,0,0,0.82)] transition-all select-none"
+                        className="px-4 lg:px-6 py-1.5 lg:py-2.5 rounded-[2px] bg-[#140e0a]/92 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-[10px] lg:text-xs uppercase tracking-[0.15em] lg:tracking-[0.2em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_6px_16px_rgba(0,0,0,0.82)] transition-all select-none"
                       >
                         Flee the Chapel
                       </button>
@@ -1390,9 +1389,9 @@ export default function EventScreens({ ctx }: { ctx: {
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Side Deck Selector Panel (Horizontal Touch Tray on Mobile) */}
+                {/* RIGHT COLUMN: Side Deck Selector Panel (Side Panel on Mobile Landscape & Desktop, Bottom Strip on Portrait) */}
                 <div
-                  className={`shrink-0 h-[150px] sm:h-[168px] md:h-auto md:col-span-5 relative flex flex-col md:min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#422719]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,220,180,0.06)] backdrop-blur-[2px] transition-opacity duration-300 ${
+                  className={`shrink-0 h-[116px] sm:h-auto sm:col-span-5 relative flex flex-col sm:min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#422719]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,220,180,0.06)] backdrop-blur-[2px] transition-opacity duration-300 ${
                     isEventBusy ? 'opacity-40 pointer-events-none' : 'opacity-100'
                   }`}
                 >
@@ -1401,17 +1400,17 @@ export default function EventScreens({ ctx }: { ctx: {
                   <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c643b]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c643b]/70" />
 
-                  <div className="px-3 sm:px-4 py-1.5 sm:py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
-                    <div className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#d69758]">
+                  <div className="px-2.5 lg:px-4 py-1.5 lg:py-3 border-b border-[#3a2618]/80 flex items-center justify-start lg:justify-between gap-2.5 shrink-0">
+                    <div className="text-[9px] lg:text-[10px] font-mono font-bold uppercase tracking-[0.18em] lg:tracking-[0.22em] text-[#d69758]">
                       Your Creatures ({masterDeck.length})
                     </div>
-                    <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9b7a5e]">
+                    <span className="text-[8px] lg:text-[8.5px] font-mono uppercase tracking-[0.14em] lg:tracking-[0.16em] text-[#9b7a5e]">
                       Tap or hold 1s
                     </span>
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden md:overflow-y-auto md:overflow-x-hidden px-3 py-1.5 md:py-4">
-                    <div className="flex flex-nowrap md:flex-wrap gap-x-2 md:gap-x-2.5 gap-y-4 justify-start md:justify-center items-center md:content-start h-full md:h-auto">
+                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden sm:overflow-y-auto sm:overflow-x-hidden px-2.5 py-1.5 lg:px-3 lg:py-4">
+                    <div className="flex flex-nowrap sm:flex-wrap gap-x-2 lg:gap-x-2.5 gap-y-2.5 lg:gap-y-4 justify-start sm:justify-center items-center sm:content-start h-full sm:h-auto">
                       {masterDeck.map((c, idx) => {
                         const isSelected = campfireCardIdx === idx;
                         if (isSelected) return null;
@@ -1442,7 +1441,7 @@ export default function EventScreens({ ctx }: { ctx: {
                                 setCampfireCardIdx(idx);
                               }
                             }}
-                            className={`relative shrink-0 flex flex-col items-center justify-center w-[78px] h-[108px] md:w-[104px] md:h-[146px] touch-pan-x md:touch-auto transition-all duration-200 ${
+                            className={`relative shrink-0 flex flex-col items-center justify-center w-[70px] h-[96px] lg:w-[104px] lg:h-[146px] touch-pan-x sm:touch-auto transition-all duration-200 ${
                               isBeingDragged
                                 ? 'opacity-25 scale-95'
                                 : lockedOut
@@ -1450,7 +1449,7 @@ export default function EventScreens({ ctx }: { ctx: {
                                   : 'hover:-translate-y-1 cursor-grab active:cursor-grabbing'
                             }`}
                           >
-                            <div className="transform origin-center transition-transform duration-200 scale-[0.66] md:scale-[0.86] md:hover:scale-[0.91]">
+                            <div className="transform origin-center transition-transform duration-200 scale-[0.60] lg:scale-[0.86] lg:hover:scale-[0.91]">
                               {renderCard(c, { isSelected, isClickable: !lockedOut, disableHoverScale: true })}
                             </div>
                           </div>
@@ -2815,32 +2814,32 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0b0908] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 pt-12 pb-2 sm:py-4 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0b0908] z-50 flex flex-col items-center justify-between px-2.5 sm:px-4 lg:px-8 pt-2 pb-2 lg:py-4 overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('bonelordevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,12,11,0.34)_0%,rgba(4,3,3,0.92)_100%)] pointer-events-none" />
 
             {renderActWeather('absolute inset-0 z-[5]', 'event_bone_lord')}
-            <div className="relative z-10 max-w-6xl w-full h-full min-h-0 flex flex-col items-center justify-between gap-2 sm:gap-3">
-              {/* Top Header */}
+            <div className="relative z-10 max-w-6xl w-full h-full min-h-0 flex flex-col items-center justify-between gap-1 sm:gap-2 lg:gap-3">
+              {/* Top Header (compact on short mobile landscape viewports) */}
               <div className="flex flex-col items-center text-center shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
-                  <span className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.26em] sm:tracking-[0.3em] text-[#c7beb0]">
+                <div className="hidden lg:flex items-center gap-3">
+                  <div className="h-px w-16 bg-gradient-to-r from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c7beb0]">
                     The Bone Lord
                   </span>
-                  <div className="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
+                  <div className="h-px w-16 bg-gradient-to-l from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
                 </div>
-                <h1 className="text-lg sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#ece5d8] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-sm sm:text-lg lg:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.14em] lg:tracking-[0.2em] text-[#ece5d8] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Ancient Altar of Bones
                 </h1>
               </div>
 
-              {/* Two-Column Split on Desktop, Top Stage + Bottom Horizontal Tray on Mobile */}
-              <div className="w-full flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 sm:gap-4 lg:gap-5 items-stretch">
-                {/* LEFT COLUMN: Ossuary Pedestal & Horned Skull Prop + Stylized Inscription + Offer Button */}
-                <div className="flex-1 lg:col-span-7 flex flex-col items-center justify-between gap-2 lg:gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-3 sm:px-6 py-2 sm:py-5 flex flex-col items-center justify-between">
+              {/* Side-by-Side Two-Column Split on Mobile Landscape & Desktop (sm:grid), Vertical on Narrow Portrait */}
+              <div className="w-full flex-1 min-h-0 flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-3 lg:gap-5 items-stretch">
+                {/* LEFT COLUMN: Ossuary Pedestal & Horned Skull Prop + Inscription + Always-Accessible Offer Button */}
+                <div className="flex-1 sm:col-span-7 flex flex-col items-center justify-between gap-1.5 lg:gap-3 min-h-0">
+                  <div className="relative w-full flex-1 min-h-0 overflow-hidden px-2 sm:px-4 lg:px-6 py-1 sm:py-2 lg:py-5 flex flex-col items-center justify-between">
                     {/* Ambient Ivory / Ember Aura */}
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
@@ -2858,21 +2857,21 @@ export default function EventScreens({ ctx }: { ctx: {
                       }}
                     />
 
-                    <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#a89f90]/70" />
-                    <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#a89f90]/70" />
-                    <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#a89f90]/70" />
-                    <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#a89f90]/70" />
+                    <span className="pointer-events-none absolute top-1.5 left-1.5 lg:top-2 lg:left-2 w-2.5 h-2.5 lg:w-3 lg:h-3 border-t border-l border-[#a89f90]/70" />
+                    <span className="pointer-events-none absolute top-1.5 right-1.5 lg:top-2 lg:right-2 w-2.5 h-2.5 lg:w-3 lg:h-3 border-t border-r border-[#a89f90]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 lg:bottom-2 lg:left-2 w-2.5 h-2.5 lg:w-3 lg:h-3 border-b border-l border-[#a89f90]/70" />
+                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 w-2.5 h-2.5 lg:w-3 lg:h-3 border-b border-r border-[#a89f90]/70" />
 
-                    {/* Centerpiece: Offering Card Seated on the Horned Bone Lord Altar Summit (831x1089) */}
-                    <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[86px] sm:pt-[136px]">
-                      <div className="relative w-[158px] sm:w-[254px] lg:w-[272px] aspect-[831/1089] select-none">
+                    {/* Centerpiece: Offering Card Seated on the Horned Bone Lord Altar Summit (831x1089), height-clamped! */}
+                    <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[clamp(56px,18vh,136px)]">
+                      <div className="relative w-[clamp(96px,29vh,272px)] aspect-[831/1089] select-none">
                         {/* Rising Bone Tokens Emerging from the Summit Circle */}
                         {boneLordAnimPhase !== 'idle' && (
                           <div className="pointer-events-none absolute left-1/2 bottom-[90%] -translate-x-1/2 z-40 flex items-center justify-center">
                             {(previewBonus === 3 ? [-42, 0, 42] : [0]).map((xOff, i) => (
                               <div
                                 key={i}
-                                className="absolute bottom-0 text-2xl drop-shadow-[0_0_12px_rgba(254,243,199,0.9)]"
+                                className="absolute bottom-0 text-xl lg:text-2xl drop-shadow-[0_0_12px_rgba(254,243,199,0.9)]"
                                 style={{
                                   marginLeft: `${xOff}px`,
                                   animation: `boneTokenRise 1.15s ease-out ${i * 0.16}s forwards`,
@@ -2888,15 +2887,15 @@ export default function EventScreens({ ctx }: { ctx: {
                         <div
                           data-event-drop-slot="bone-lord"
                           data-event-drop-enabled={!isEventBusy && !isAnimating ? 'true' : 'false'}
-                          className={`absolute left-1/2 -translate-x-1/2 bottom-[91%] z-20 w-[84px] h-[114px] sm:w-[116px] sm:h-[154px] flex items-end justify-center rounded-[4px] ${getDropSlotClass('bone-lord', !isEventBusy && !isAnimating)}`}
+                          className={`absolute left-1/2 -translate-x-1/2 bottom-[91%] z-20 w-[58px] h-[78px] lg:w-[116px] lg:h-[154px] flex items-end justify-center rounded-[4px] ${getDropSlotClass('bone-lord', !isEventBusy && !isAnimating)}`}
                         >
                           {boneLordAnimPhase === 'blessed' ? (
-                            <div className="flex flex-col items-center justify-center px-4 sm:px-5 py-3 sm:py-4 mb-2 rounded-[4px] bg-[#1a1612]/95 border-2 border-[#e5d5b7]/90 shadow-[0_0_38px_rgba(234,179,8,0.5)] animate-menu-fade-in">
-                              <span className="text-2xl sm:text-3xl mb-1">🦴</span>
-                              <span className="font-['Cinzel',_serif] font-black text-lg sm:text-xl text-amber-200 tracking-wider">
+                            <div className="flex flex-col items-center justify-center px-3 lg:px-5 py-2 lg:py-4 mb-1 lg:mb-2 rounded-[4px] bg-[#1a1612]/95 border-2 border-[#e5d5b7]/90 shadow-[0_0_38px_rgba(234,179,8,0.5)] animate-menu-fade-in">
+                              <span className="text-lg lg:text-3xl mb-0.5 lg:mb-1">🦴</span>
+                              <span className="font-['Cinzel',_serif] font-black text-base lg:text-xl text-amber-200 tracking-wider">
                                 +{previewBonus}
                               </span>
-                              <span className="text-[8px] sm:text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#d6cbb8] mt-0.5 whitespace-nowrap">
+                              <span className="text-[7.5px] lg:text-[8.5px] font-mono uppercase tracking-[0.2em] lg:tracking-[0.22em] text-[#d6cbb8] mt-0.5 whitespace-nowrap">
                                 Starting Bone{previewBonus > 1 ? 's' : ''}
                               </span>
                             </div>
@@ -2916,14 +2915,14 @@ export default function EventScreens({ ctx }: { ctx: {
                                     }
                                   }}
                                   title="Click to return creature to deck"
-                                  className="group relative scale-[0.72] sm:scale-[1.0] origin-bottom cursor-pointer transition-transform duration-200 hover:-translate-y-1 shadow-[0_14px_28px_rgba(0,0,0,0.95),0_0_24px_rgba(220,38,38,0.28)]"
+                                  className="group relative scale-[0.48] lg:scale-[1.0] origin-bottom cursor-pointer transition-transform duration-200 hover:-translate-y-1 shadow-[0_14px_28px_rgba(0,0,0,0.95),0_0_24px_rgba(220,38,38,0.28)]"
                                 >
                                   {renderCard(selectedCard, { isClickable: false, disableHoverScale: true, isMarkedSacrifice: true })}
                                 </div>
                               ) : (
-                                <div className="w-[78px] h-[108px] sm:w-[106px] sm:h-[146px] rounded-[4px] border border-dashed border-[#8a6d5e]/80 bg-[#120d0c]/80 shadow-[0_0_20px_rgba(220,38,38,0.18)] flex flex-col items-center justify-center gap-1 sm:gap-1.5 text-[#b5a392]">
-                                  <span className="text-base sm:text-xl opacity-75">💀</span>
-                                  <span className="text-[8px] sm:text-[9.5px] uppercase tracking-[0.16em] sm:tracking-[0.2em] px-1.5 sm:px-2 text-center">Drop Tribute</span>
+                                <div className="w-[54px] h-[74px] lg:w-[106px] lg:h-[146px] rounded-[4px] border border-dashed border-[#8a6d5e]/80 bg-[#120d0c]/80 shadow-[0_0_20px_rgba(220,38,38,0.18)] flex flex-col items-center justify-center gap-0.5 lg:gap-1.5 text-[#b5a392]">
+                                  <span className="text-xs lg:text-xl opacity-75">💀</span>
+                                  <span className="text-[6.5px] lg:text-[9.5px] uppercase tracking-[0.12em] lg:tracking-[0.2em] px-1 lg:px-2 text-center leading-tight">Drop Tribute</span>
                                 </div>
                               )}
                             </div>
@@ -2946,34 +2945,35 @@ export default function EventScreens({ ctx }: { ctx: {
                       </div>
                     </div>
 
-                    {/* Stylized & Enlarged Ossuary Inscription */}
-                    <div className="relative z-20 w-full max-w-xl flex flex-col items-center text-center pt-1">
-                      <div className="hidden sm:flex items-center gap-3 w-full max-w-xs mb-2 opacity-75">
+                    {/* Stylized Ossuary Inscription */}
+                    <div className="relative z-20 w-full max-w-xl flex flex-col items-center text-center pt-0.5 lg:pt-1 shrink-0">
+                      <div className="hidden lg:flex items-center gap-3 w-full max-w-xs mb-2 opacity-75">
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#8a7f70] to-[#c9bea9]" />
                         <span className="text-[10px] text-[#c9bea9]">✦</span>
                         <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[#8a7f70] to-[#c9bea9]" />
                       </div>
-                      <p className="font-['Cinzel',_serif] text-xs sm:text-lg tracking-[0.08em] sm:tracking-[0.1em] text-[#efe5d4] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] px-3">
+                      <p className="font-['Cinzel',_serif] text-[10.5px] lg:text-lg tracking-[0.06em] lg:tracking-[0.1em] text-[#efe5d4] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] px-2">
                         A flooding darkness envelops the chamber.
                       </p>
                     </div>
                   </div>
 
-                  {/* Action Button */}
-                  <div className="flex items-center justify-center shrink-0">
+                  {/* Action Button — pinned shrink-0 above bottom edge so NEVER clipped on mobile */}
+                  <div className="relative z-30 flex items-center justify-center shrink-0 pb-0.5">
                     <button
+                      data-bonelord-action="offer"
                       onClick={confirmBoneLordOffering}
                       disabled={boneLordSelectedIdx === null || isEventBusy || isAnimating}
-                      className="px-6 sm:px-8 py-2 sm:py-2.5 rounded-[2px] bg-gradient-to-b from-[#2e2620] to-[#171310] hover:from-[#3d322a] hover:to-[#211b17] active:translate-y-[1px] border border-[#b5a994]/85 hover:border-[#efe5d5] text-[#f2eadc] hover:text-white font-['Cinzel',_serif] font-bold text-[11px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
+                      className="px-5 lg:px-8 py-1.5 lg:py-2.5 rounded-[2px] bg-gradient-to-b from-[#2e2620] to-[#171310] hover:from-[#3d322a] hover:to-[#211b17] active:translate-y-[1px] border border-[#b5a994]/85 hover:border-[#efe5d5] text-[#f2eadc] hover:text-white font-['Cinzel',_serif] font-bold text-[10px] lg:text-xs uppercase tracking-[0.16em] lg:tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
                     >
                       {isAnimating ? 'The Bone Lord Consumes...' : 'Offer Sacrifice'}
                     </button>
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Side Deck Selector Panel (Horizontal Touch Tray on Mobile) */}
+                {/* RIGHT COLUMN: Side Deck Selector Panel (Side Panel on Mobile Landscape & Desktop, Bottom Strip on Portrait) */}
                 <div
-                  className={`shrink-0 h-[150px] sm:h-[168px] lg:h-auto lg:col-span-5 relative flex flex-col lg:min-h-0 rounded-[3px] bg-[#0c0a09]/84 border border-[#3f3830]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(235,225,210,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
+                  className={`shrink-0 h-[116px] sm:h-auto sm:col-span-5 relative flex flex-col sm:min-h-0 rounded-[3px] bg-[#0c0a09]/84 border border-[#3f3830]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(235,225,210,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
                     isAnimating ? 'opacity-30 pointer-events-none' : 'opacity-100'
                   }`}
                 >
@@ -2982,17 +2982,17 @@ export default function EventScreens({ ctx }: { ctx: {
                   <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c9282]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c9282]/70" />
 
-                  <div className="px-3 sm:px-4 py-1.5 sm:py-3 border-b border-[#38312a]/80 flex items-center justify-between gap-2 shrink-0">
-                    <div className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#d6cbb8]">
+                  <div className="px-2.5 lg:px-4 py-1.5 lg:py-3 border-b border-[#38312a]/80 flex items-center justify-start lg:justify-between gap-2.5 shrink-0">
+                    <div className="text-[9px] lg:text-[10px] font-mono font-bold uppercase tracking-[0.18em] lg:tracking-[0.22em] text-[#d6cbb8]">
                       Your Creatures ({boneLordSelectedIdx !== null ? Math.max(0, masterDeck.length - 1) : masterDeck.length})
                     </div>
-                    <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9c9282]">
+                    <span className="text-[8px] lg:text-[8.5px] font-mono uppercase tracking-[0.14em] lg:tracking-[0.16em] text-[#9c9282]">
                       Tap or hold 1s
                     </span>
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden lg:overflow-y-auto lg:overflow-x-hidden px-3 py-1.5 lg:py-4">
-                    <div className="flex flex-nowrap lg:flex-wrap gap-x-2 lg:gap-x-2.5 gap-y-4 justify-start lg:justify-center items-center lg:content-start h-full lg:h-auto">
+                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden sm:overflow-y-auto sm:overflow-x-hidden px-2.5 py-1.5 lg:px-3 lg:py-4">
+                    <div className="flex flex-nowrap sm:flex-wrap gap-x-2 lg:gap-x-2.5 gap-y-2.5 lg:gap-y-4 justify-start sm:justify-center items-center sm:content-start h-full sm:h-auto">
                       {masterDeck.map((c, idx) => {
                         if (boneLordSelectedIdx === idx) return null;
                         const cardKey = c.id || `bl-${c.name}-${idx}`;
@@ -3019,13 +3019,13 @@ export default function EventScreens({ ctx }: { ctx: {
                               triggerSfx('draw');
                               setBoneLordSelectedIdx(idx);
                             }}
-                            className={`relative shrink-0 flex flex-col items-center justify-center w-[78px] h-[108px] lg:w-[104px] lg:h-[146px] touch-pan-x lg:touch-auto transition-all duration-200 ${
+                            className={`relative shrink-0 flex flex-col items-center justify-center w-[70px] h-[96px] lg:w-[104px] lg:h-[146px] touch-pan-x sm:touch-auto transition-all duration-200 ${
                               isBeingDragged
                                 ? 'opacity-25 scale-95'
                                 : 'cursor-grab active:cursor-grabbing hover:-translate-y-1'
                             }`}
                           >
-                            <div className="transform origin-center transition-transform duration-200 scale-[0.66] lg:scale-[0.86] lg:hover:scale-[0.91]">
+                            <div className="transform origin-center transition-transform duration-200 scale-[0.60] lg:scale-[0.86] lg:hover:scale-[0.91]">
                               {renderCard(c, { isClickable: true, disableHoverScale: true })}
                             </div>
                           </div>
