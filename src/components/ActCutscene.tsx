@@ -674,6 +674,7 @@ export const ActCutscene: React.FC<ActCutsceneProps> = ({ act, onDone }) => {
   const a = Math.min(4, Math.max(1, act));
   const copy = ACT_COPY[a];
   const [leaving, setLeaving] = useState(false);
+  const [revealStage, setRevealStage] = useState<number>(0);
   const [viewportMode, setViewportMode] = useState<ViewportMode>(() => detectViewportMode());
   const armedRef = useRef(false);
   const doneRef = useRef(false);
@@ -699,6 +700,11 @@ export const ActCutscene: React.FC<ActCutsceneProps> = ({ act, onDone }) => {
   }, []);
 
   useEffect(() => {
+    // Explicit JS-driven reveal stages so mobile WebKit/Chromium NEVER freeze CSS animation-delay at opacity:0
+    timers.current.push(window.setTimeout(() => setRevealStage(1), 160));
+    timers.current.push(window.setTimeout(() => setRevealStage(2), 520));
+    timers.current.push(window.setTimeout(() => setRevealStage(3), 900));
+    timers.current.push(window.setTimeout(() => setRevealStage(4), 1350));
     timers.current.push(window.setTimeout(() => { armedRef.current = true; }, ARM_MS));
     timers.current.push(window.setTimeout(finish, TOTAL_MS));
     const onKey = (e: KeyboardEvent) => {
@@ -723,20 +729,24 @@ export const ActCutscene: React.FC<ActCutsceneProps> = ({ act, onDone }) => {
     <div
       onClick={() => { if (armedRef.current) finish(); }}
       data-cutscene-mode={viewportMode}
-      className="act-cut fixed inset-0 z-[130] overflow-hidden select-none cursor-pointer pointer-events-auto act-cut-gpu"
-      style={{ background: '#020103', opacity: leaving ? 0 : 1, transition: `opacity ${FADE_MS}ms ease-in` }}
+      className="act-cut fixed inset-0 z-[250] overflow-hidden select-none cursor-pointer pointer-events-auto"
+      style={{
+        background: '#020103',
+        opacity: leaving ? 0 : 1,
+        transition: `opacity ${FADE_MS}ms ease-in`,
+      }}
     >
       {/* Sky backdrop */}
-      <div className="absolute inset-0 act-cut-gpu" style={{ background: copy.bg, animation: 'actCutIn 1.3s ease-out both' }} />
+      <div className="absolute inset-0 z-0" style={{ background: copy.bg }} />
 
       {/* Atmospheric Horizon Rim Glow */}
-      <div className="absolute inset-0 pointer-events-none act-cut-gpu" style={{ background: copy.horizonGlow }} />
+      <div className="absolute inset-0 z-0 pointer-events-none" style={{ background: copy.horizonGlow }} />
 
       {/* Scene Layer: Desktop gets subtle slow push-in + full weather; Mobile uses tear-free dedicated artboard */}
       {isMobile ? (
-        <div className="absolute inset-0 act-cut-gpu" style={{ animation: 'actCutIn 1.1s ease-out both' }}>
+        <div className="absolute inset-0 z-[1] overflow-hidden">
           <MobileScene act={a} portrait={isPortrait} />
-          {/* Lightweight single-layer GPU-safe ground mist (no heavy multi-particle tearing on mobile) */}
+          {/* Lightweight single-layer GPU-safe ground mist */}
           <div
             className="absolute -inset-x-[10%] bottom-0 h-[32%] pointer-events-none act-cut-mist act-cut-gpu"
             style={{
@@ -750,75 +760,98 @@ export const ActCutscene: React.FC<ActCutsceneProps> = ({ act, onDone }) => {
       ) : (
         <>
           <div
-            className="absolute inset-0 act-cut-gpu"
+            className="absolute inset-0 z-[1] act-cut-gpu"
             style={{ animation: 'actCutPush 8s ease-out both', willChange: 'transform' }}
           >
             <DesktopScene act={a} />
           </div>
-          <ActWeather act={a} posClass="absolute inset-0" keyPrefix="cutscene" />
+          <ActWeather act={a} posClass="absolute inset-0 z-[2]" keyPrefix="cutscene" />
         </>
       )}
 
       {/* Cinematic Vignette */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 z-[5] pointer-events-none"
         style={{ background: 'radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,0.78) 100%)' }}
       />
 
-      {/* Act Title Banner — positioned cleanly above the silhouette landmarks on every screen aspect */}
+      {/* Act Title Banner — explicit high-z-index DOM layers (zero pseudo-element z-index:-1 loss on mobile WebKit) */}
       <div
-        className="absolute inset-x-0 z-10"
+        data-cutscene-banner="true"
+        className="absolute inset-x-0 z-[30] pointer-events-none"
         style={{
-          top: isMobile ? (isPortrait ? '15%' : '9%') : '16%',
+          top: isMobile ? (isPortrait ? '15%' : '8%') : '16%',
+          opacity: revealStage >= 1 ? 1 : 0,
+          transition: 'opacity 750ms ease-out',
         }}
       >
         <div
-          className={`edge-band edge-band--full relative w-full text-center act-cut-gpu ${
+          className={`relative w-full text-center ${
             isMobile ? (isPortrait ? 'py-5 px-5' : 'py-3 px-4') : 'py-7 px-6'
           }`}
           style={{
-            ['--band-rule' as any]: copy.rule,
-            ['--band-bg' as any]: 'rgba(4,3,6,0.66)',
-            ['--band-glow' as any]: copy.glow,
-            animation: 'actCutIn 0.95s ease-out 0.75s both',
+            background: `radial-gradient(ellipse closest-side at 50% 50%, ${copy.glow} 0%, transparent 100%), linear-gradient(90deg, rgba(4,3,6,0.72) 0%, rgba(4,3,6,0.82) 50%, rgba(4,3,6,0.72) 100%)`,
           }}
         >
+          {/* Explicit Top & Bottom Luminous Rules */}
           <div
-            className="act-cut-rise flex items-center justify-center gap-2.5 sm:gap-3.5"
-            style={{ ['--d' as any]: '1.15s' }}
+            className="pointer-events-none absolute top-0 inset-x-0 h-px"
+            style={{ background: `linear-gradient(90deg, transparent 0%, ${copy.rule} 18%, ${copy.rule} 82%, transparent 100%)` }}
+          />
+          <div
+            className="pointer-events-none absolute bottom-0 inset-x-0 h-px"
+            style={{ background: `linear-gradient(90deg, transparent 0%, ${copy.rule} 18%, ${copy.rule} 82%, transparent 100%)` }}
+          />
+
+          {/* Act Roman Numeral */}
+          <div
+            className="relative z-10 flex items-center justify-center gap-2.5 sm:gap-3.5"
+            style={{
+              opacity: revealStage >= 2 ? 1 : 0,
+              transform: revealStage >= 2 ? 'translate3d(0, 0, 0)' : 'translate3d(0, 10px, 0)',
+              transition: 'opacity 700ms ease-out, transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1)',
+            }}
           >
             <span className="h-px w-10 sm:w-24" style={{ background: `linear-gradient(to right, transparent, ${copy.rule})` }} />
-            <span className="w-1.5 h-1.5 rotate-45 opacity-80" style={{ background: copy.accent }} />
+            <span className="w-1.5 h-1.5 rotate-45 opacity-85" style={{ background: copy.accent }} />
             <span
               className="font-mono text-[10px] sm:text-xs font-bold uppercase tracking-[0.46em]"
               style={{ color: copy.accent }}
             >
               Act {copy.numeral}
             </span>
-            <span className="w-1.5 h-1.5 rotate-45 opacity-80" style={{ background: copy.accent }} />
+            <span className="w-1.5 h-1.5 rotate-45 opacity-85" style={{ background: copy.accent }} />
             <span className="h-px w-10 sm:w-24" style={{ background: `linear-gradient(to left, transparent, ${copy.rule})` }} />
           </div>
+
+          {/* Main Act Title */}
           <div
-            className="act-cut-rise mt-1.5 sm:mt-2 font-['Cinzel',_serif] font-black uppercase leading-tight"
+            data-cutscene-title="true"
+            className="relative z-10 mt-1.5 sm:mt-2 font-['Cinzel',_serif] font-black uppercase leading-tight"
             style={{
-              ['--d' as any]: '1.75s',
               fontSize: isMobile
                 ? (isPortrait ? 'clamp(1.35rem, 6.4vw, 2.05rem)' : 'clamp(1.15rem, 3.6vw, 1.75rem)')
                 : 'clamp(1.8rem, 4.4vw, 3.35rem)',
               letterSpacing: isMobile ? '0.13em' : '0.17em',
               color: copy.accent,
               textShadow: `0 2px 24px ${copy.rule}, 0 2px 8px rgba(0,0,0,1)`,
+              opacity: revealStage >= 3 ? 1 : 0,
+              transform: revealStage >= 3 ? 'translate3d(0, 0, 0)' : 'translate3d(0, 12px, 0)',
+              transition: 'opacity 800ms ease-out, transform 800ms cubic-bezier(0.2, 0.7, 0.2, 1)',
             }}
           >
             {copy.title}
           </div>
+
+          {/* Act Subtitle */}
           <div
-            className="act-cut-rise mt-1 sm:mt-2 font-['Cinzel',_serif] italic tracking-[0.14em]"
+            className="relative z-10 mt-1 sm:mt-2 font-['Cinzel',_serif] italic tracking-[0.14em]"
             style={{
-              ['--d' as any]: '2.45s',
               fontSize: isMobile ? (isPortrait ? '0.85rem' : '0.75rem') : '1rem',
               color: copy.accent,
-              opacity: 0.85,
+              opacity: revealStage >= 4 ? 0.86 : 0,
+              transform: revealStage >= 4 ? 'translate3d(0, 0, 0)' : 'translate3d(0, 10px, 0)',
+              transition: 'opacity 800ms ease-out, transform 800ms cubic-bezier(0.2, 0.7, 0.2, 1)',
             }}
           >
             {copy.sub}
@@ -826,9 +859,13 @@ export const ActCutscene: React.FC<ActCutsceneProps> = ({ act, onDone }) => {
         </div>
       </div>
 
+      {/* Skip Prompt */}
       <div
-        className="act-cut-rise absolute bottom-3.5 sm:bottom-5 inset-x-0 text-center text-[9px] font-mono uppercase tracking-[0.28em] text-[#a99174]/80 z-10"
-        style={{ ['--d' as any]: '1.5s' }}
+        className="absolute bottom-3.5 sm:bottom-5 inset-x-0 text-center text-[9px] font-mono uppercase tracking-[0.28em] text-[#b89f82] z-[30] pointer-events-none"
+        style={{
+          opacity: revealStage >= 2 ? 0.82 : 0,
+          transition: 'opacity 700ms ease-out',
+        }}
       >
         {isMobile ? 'Tap anywhere to continue' : 'Click or press Space to skip'}
       </div>

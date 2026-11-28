@@ -1264,22 +1264,52 @@ const MapScreen: React.FC<MapScreenProps> = ({
               ))}
             </div>
           );
-          const burnedClip =
-            'polygon(0% 0%, 100% 0%, 100% 92%, 99.5% 92.1%, 99% 92.5%, 98.5% 93.2%, 98% 94%, 97.5% 95%, 97% 96%, 96.3% 95.2%, 95.7% 94.5%, 95% 93.9%, 94.3% 93.4%, 93.7% 93.1%, 93% 93%, 92.3% 93.2%, 91.7% 93.7%, 91% 94.5%, 90.3% 95.5%, 89.7% 96.7%, 89% 98%, 88.2% 96.2%, 87.3% 94.5%, 86.5% 93.1%, 85.7% 91.9%, 84.8% 91.2%, 84% 91%, 83.2% 91.2%, 82.3% 91.8%, 81.5% 92.8%, 80.7% 94%, 79.8% 95.4%, 79% 97%, 78.2% 96.2%, 77.3% 95.5%, 76.5% 94.9%, 75.7% 94.4%, 74.8% 94.1%, 74% 94%, 73.2% 94.2%, 72.3% 94.7%, 71.5% 95.5%, 70.7% 96.5%, 69.8% 97.7%, 69% 99%, 68% 97.2%, 67% 95.5%, 66% 94.1%, 65% 92.9%, 64% 92.2%, 63% 92%, 62.2% 92.1%, 61.3% 92.5%, 60.5% 93.2%, 59.7% 94%, 58.8% 95%, 58% 96%, 57% 94.4%, 56% 93%, 55% 91.8%, 54% 90.8%, 53% 90.2%, 52% 90%, 51% 90.3%, 50% 91.1%, 49% 92.3%, 48% 94%, 47% 95.9%, 46% 98%, 45% 96.7%, 44% 95.5%, 43% 94.5%, 42% 93.7%, 41% 93.2%, 40% 93%, 39% 93.2%, 38% 93.8%, 37% 94.8%, 36% 96%, 35% 97.4%, 34% 99%, 33% 97.2%, 32% 95.5%, 31% 94.1%, 30% 92.9%, 29% 92.2%, 28% 92%, 27% 92.2%, 26% 92.7%, 25% 93.5%, 24% 94.5%, 23% 95.7%, 22% 97%, 21% 96%, 20% 95%, 19% 94.2%, 18% 93.5%, 17% 93.1%, 16% 93%, 15% 93.2%, 14% 93.7%, 13% 94.5%, 12% 95.5%, 11% 96.7%, 10% 98%, 9.2% 96.4%, 8.3% 95%, 7.5% 93.8%, 6.7% 92.8%, 5.8% 92.2%, 5% 92%, 4.5% 92.1%, 4% 92.5%, 3.5% 93.2%, 3% 94%, 2.5% 95%, 2% 96%, 1.7% 94.7%, 1.3% 93.5%, 1% 92.5%, 0.7% 91.7%, 0.3% 91.2%, 0% 91%)';
-          const renderAct4Rim = () =>
-            isAct4Burned ? (
+          const burnedPtsTall: [number, number][] = [
+            [100, 90.5], [97.8, 95.8], [95.8, 92.2], [93.2, 98.4], [91.2, 91.0],
+            [88.6, 94.2], [86.8, 92.8], [84.6, 87.8], [81.8, 99.2], [79.6, 93.4],
+            [77.2, 95.8], [75.0, 90.6], [71.8, 98.2], [69.6, 94.4], [67.8, 95.2],
+            [65.6, 88.0], [63.2, 96.8], [61.0, 93.2], [58.4, 99.5], [56.2, 92.6],
+            [53.4, 90.2], [50.8, 95.6], [48.6, 91.4], [45.8, 98.6], [43.4, 94.2],
+            [41.4, 95.8], [38.8, 88.6], [35.8, 99.3], [33.4, 92.4], [30.8, 94.8],
+            [28.6, 91.2], [25.6, 98.4], [23.2, 93.0], [21.0, 89.2], [18.2, 96.4],
+            [16.0, 92.8], [13.2, 99.1], [10.6, 91.4], [8.2, 95.4], [5.8, 93.2],
+            [3.4, 97.6], [1.4, 91.8], [0, 89.8],
+          ];
+          const burnedPtsShort: [number, number][] = [
+            [100, 88.5], [97.6, 95.2], [95.4, 90.4], [92.6, 98.6], [90.2, 87.2],
+            [87.4, 93.4], [85.2, 91.6], [82.6, 97.8], [80.2, 89.5], [77.8, 86.4],
+            [74.8, 99.2], [72.2, 92.0], [69.6, 95.0], [67.2, 89.8], [64.2, 98.4],
+            [61.8, 93.2], [59.4, 94.6], [56.8, 86.0], [53.8, 98.8], [51.2, 91.5],
+            [48.6, 94.8], [46.4, 88.4], [43.2, 99.4], [40.6, 92.6], [38.2, 95.2],
+            [35.6, 87.0], [32.8, 97.6], [30.4, 91.2], [28.0, 93.4], [25.6, 88.6],
+            [22.6, 99.0], [20.0, 91.8], [17.4, 95.4], [14.8, 87.6], [12.0, 98.2],
+            [9.6, 92.4], [7.2, 94.6], [4.6, 88.8], [2.4, 96.4], [0, 88.0],
+          ];
+          const toBurnedClip = (pts: [number, number][]) =>
+            `polygon(0% 0%, 100% 0%, ${pts.map(([x, y]) => `${x}% ${y}%`).join(', ')})`;
+          const toBurnedPolyline = (pts: [number, number][]) =>
+            pts.map(([x, y]) => `${x},${y}`).join(' ');
+          const burnedClipTall = toBurnedClip(burnedPtsTall);
+          const burnedClipShort = toBurnedClip(burnedPtsShort);
+          const burnedPolylineTall = toBurnedPolyline(burnedPtsTall);
+          const burnedPolylineShort = toBurnedPolyline(burnedPtsShort);
+          const renderAct4Rim = (variant: 'tall' | 'short') => {
+            if (!isAct4Burned) return null;
+            const pts = variant === 'tall' ? burnedPolylineTall : burnedPolylineShort;
+            return (
               <svg className="pointer-events-none absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                <polyline points="100,92 99.5,92.1 99,92.5 98.5,93.2 98,94 97.5,95 97,96 96.3,95.2 95.7,94.5 95,93.9 94.3,93.4 93.7,93.1 93,93 92.3,93.2 91.7,93.7 91,94.5 90.3,95.5 89.7,96.7 89,98 88.2,96.2 87.3,94.5 86.5,93.1 85.7,91.9 84.8,91.2 84,91 83.2,91.2 82.3,91.8 81.5,92.8 80.7,94 79.8,95.4 79,97 78.2,96.2 77.3,95.5 76.5,94.9 75.7,94.4 74.8,94.1 74,94 73.2,94.2 72.3,94.7 71.5,95.5 70.7,96.5 69.8,97.7 69,99 68,97.2 67,95.5 66,94.1 65,92.9 64,92.2 63,92 62.2,92.1 61.3,92.5 60.5,93.2 59.7,94 58.8,95 58,96 57,94.4 56,93 55,91.8 54,90.8 53,90.2 52,90 51,90.3 50,91.1 49,92.3 48,94 47,95.9 46,98 45,96.7 44,95.5 43,94.5 42,93.7 41,93.2 40,93 39,93.2 38,93.8 37,94.8 36,96 35,97.4 34,99 33,97.2 32,95.5 31,94.1 30,92.9 29,92.2 28,92 27,92.2 26,92.7 25,93.5 24,94.5 23,95.7 22,97 21,96 20,95 19,94.2 18,93.5 17,93.1 16,93 15,93.2 14,93.7 13,94.5 12,95.5 11,96.7 10,98 9.2,96.4 8.3,95 7.5,93.8 6.7,92.8 5.8,92.2 5,92 4.5,92.1 4,92.5 3.5,93.2 3,94 2.5,95 2,96 1.7,94.7 1.3,93.5 1,92.5 0.7,91.7 0.3,91.2 0,91" fill="none" stroke="rgba(234,88,12,0.35)" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                <polyline points="100,92 99.5,92.1 99,92.5 98.5,93.2 98,94 97.5,95 97,96 96.3,95.2 95.7,94.5 95,93.9 94.3,93.4 93.7,93.1 93,93 92.3,93.2 91.7,93.7 91,94.5 90.3,95.5 89.7,96.7 89,98 88.2,96.2 87.3,94.5 86.5,93.1 85.7,91.9 84.8,91.2 84,91 83.2,91.2 82.3,91.8 81.5,92.8 80.7,94 79.8,95.4 79,97 78.2,96.2 77.3,95.5 76.5,94.9 75.7,94.4 74.8,94.1 74,94 73.2,94.2 72.3,94.7 71.5,95.5 70.7,96.5 69.8,97.7 69,99 68,97.2 67,95.5 66,94.1 65,92.9 64,92.2 63,92 62.2,92.1 61.3,92.5 60.5,93.2 59.7,94 58.8,95 58,96 57,94.4 56,93 55,91.8 54,90.8 53,90.2 52,90 51,90.3 50,91.1 49,92.3 48,94 47,95.9 46,98 45,96.7 44,95.5 43,94.5 42,93.7 41,93.2 40,93 39,93.2 38,93.8 37,94.8 36,96 35,97.4 34,99 33,97.2 32,95.5 31,94.1 30,92.9 29,92.2 28,92 27,92.2 26,92.7 25,93.5 24,94.5 23,95.7 22,97 21,96 20,95 19,94.2 18,93.5 17,93.1 16,93 15,93.2 14,93.7 13,94.5 12,95.5 11,96.7 10,98 9.2,96.4 8.3,95 7.5,93.8 6.7,92.8 5.8,92.2 5,92 4.5,92.1 4,92.5 3.5,93.2 3,94 2.5,95 2,96 1.7,94.7 1.3,93.5 1,92.5 0.7,91.7 0.3,91.2 0,91" fill="none" stroke="rgba(255,150,60,0.9)" strokeWidth="0.6" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                <polyline points={pts} fill="none" stroke="rgba(234,88,12,0.4)" strokeWidth="5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                <polyline points={pts} fill="none" stroke="rgba(255,150,60,0.9)" strokeWidth="1.6" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
               </svg>
-            ) : null;
+            );
+          };
           const renderAct4Char = () =>
             isAct4Burned ? (
               <div
                 className="pointer-events-none absolute inset-0"
                 style={{
                   background:
-                    'radial-gradient(ellipse 20% 62% at 7% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 14% 40% at 24% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 24% 70% at 44% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 13% 34% at 63% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 22% 58% at 83% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 14% 44% at 100% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 60% 22% at 50% 100%, rgba(234,88,12,0.38) 0%, transparent 100%), linear-gradient(to top, rgba(12,5,4,0.8) 0%, rgba(12,5,4,0.45) 9%, transparent 22%)',
+                    'radial-gradient(ellipse 20% 62% at 7% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 14% 40% at 24% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 24% 70% at 44% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 13% 34% at 63% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 22% 58% at 83% 100%, rgba(10,4,3,0.9) 0%, rgba(10,4,3,0.41) 55%, transparent 100%), radial-gradient(ellipse 14% 44% at 100% 100%, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.38) 55%, transparent 100%), radial-gradient(ellipse 64% 26% at 50% 100%, rgba(234,88,12,0.38) 0%, transparent 100%), linear-gradient(to top, rgba(12,5,4,0.84) 0%, rgba(12,5,4,0.48) 13%, transparent 26%)',
                 }}
               />
             ) : null;
@@ -1342,14 +1372,14 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 filter: 'drop-shadow(0 12px 16px rgba(0,0,0,0.75))',
               }}
             >
-            <div className="relative flex-1 flex flex-col justify-center px-5 pt-3.5 pb-7 lg:px-6 lg:pt-4 lg:pb-8 min-h-0">
+            <div className={`relative flex-1 flex flex-col justify-center px-5 pt-3.5 lg:px-6 lg:pt-4 min-h-0 ${isAct4Burned ? 'pb-12 lg:pb-14' : 'pb-7 lg:pb-8'}`}>
               {/* Wavy Displaced Cloth Backdrop */}
               <div
                 className="pointer-events-none absolute inset-0 shadow-[inset_0_12px_26px_rgba(0,0,0,0.72)] overflow-hidden"
                 style={{
                   filter: 'url(#map-cloth-wave)',
                   background: bannerBg,
-                  clipPath: isAct4Burned ? burnedClip : frayedClip,
+                  clipPath: isAct4Burned ? burnedClipTall : frayedClip,
                 }}
               >
                 {/* Multiplied Cloth Weave Texture */}
@@ -1383,7 +1413,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   }}
                 />
                 <div className="pointer-events-none absolute bottom-0 inset-x-0 h-9 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
-                {renderAct4Char()}{renderAct4Rim()}
+                {renderAct4Rim('tall')}{renderAct4Char()}
               </div>
               {renderAct4Cinders()}
 
@@ -1635,14 +1665,14 @@ const MapScreen: React.FC<MapScreenProps> = ({
                 filter: 'drop-shadow(0 12px 16px rgba(0,0,0,0.75))',
               }}
             >
-            <div className="relative px-5 pt-4 pb-8">
+            <div className={`relative px-5 pt-4 ${isAct4Burned ? 'pb-12' : 'pb-8'}`}>
               {/* Wavy Displaced Cloth Backdrop */}
               <div
                 className="pointer-events-none absolute inset-0 shadow-[inset_0_10px_22px_rgba(0,0,0,0.72)] overflow-hidden"
                 style={{
                   filter: 'url(#map-cloth-wave)',
                   background: bannerBg,
-                  clipPath: isAct4Burned ? burnedClip : frayedClip,
+                  clipPath: isAct4Burned ? burnedClipShort : frayedClip,
                 }}
               >
                 <div
@@ -1675,7 +1705,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   }}
                 />
                 <div className="pointer-events-none absolute bottom-0 inset-x-0 h-9 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
-                {renderAct4Char()}{renderAct4Rim()}
+                {renderAct4Rim('short')}{renderAct4Char()}
               </div>
               {renderAct4Cinders()}
 

@@ -8092,7 +8092,6 @@ export default function App() {
         />
       )}
 
-      {actCutscene !== null && <ActCutscene key={actCutscene} act={actCutscene} onDone={() => setActCutscene(null)} />}
       {showPauseMenu && (
         <div
           onClick={() => setShowPauseMenu(false)}
@@ -10623,6 +10622,9 @@ export default function App() {
         {renderCard(battleDrag.card, { isClickable: false, disableHoverScale: true })}
       </div>
     )}
+
+    {/* Full-Viewport Act Transition Cutscene (mounted outside scaled #game-container for crisp mobile rendering) */}
+    {actCutscene !== null && <ActCutscene key={actCutscene} act={actCutscene} onDone={() => setActCutscene(null)} />}
 
     {/* Dramatic Loss Transition Overlay */}
     {isLossSequenceActive && (

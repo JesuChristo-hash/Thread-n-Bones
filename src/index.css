@@ -1748,7 +1748,6 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
   transform: translate3d(0, 0, 0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  contain: layout paint;
 }
 .act-cut-rise { animation: actCutRise 1.25s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s) both; }
 .act-cut-window { animation: actCutWindow 3.2s ease-in-out infinite; }
