@@ -9238,17 +9238,19 @@ export default function App() {
                       </pre>
                     </div>
 
-                  {/* Carved-Stone Utility Plaques (All 3 Fit Cleanly Onscreen!) */}
-                  <div className="flex flex-col items-center gap-1.5 w-full mt-1.5 -translate-x-6 sm:-translate-x-8">
+                  {/* Carved-Stone Utility Plaques (Expand when Dev Tools is hidden; compact when all 3 show) */}
+                  <div className={`flex flex-col items-center w-full -translate-x-6 sm:-translate-x-8 ${showDevTools ? 'gap-1.5 mt-1.5' : 'gap-2.5 mt-2.5'}`}>
                     <RitualSlateButton
                       onClick={openViewDeck}
-                      icon={<Layers className="w-3.5 h-3.5" />}
+                      icon={<Layers className={showDevTools ? 'w-3.5 h-3.5' : 'w-4 h-4'} />}
                       label="VIEW DECK"
+                      compact={showDevTools}
                     />
                     <RitualSlateButton
                       onClick={() => setShowPauseMenu(true)}
-                      icon={<Menu className="w-3.5 h-3.5" />}
+                      icon={<Menu className={showDevTools ? 'w-3.5 h-3.5' : 'w-4 h-4'} />}
                       label="SANCTUARY"
+                      compact={showDevTools}
                     />
                     {showDevTools && (
                       <RitualSlateButton
@@ -9256,6 +9258,7 @@ export default function App() {
                         label="DEV TOOLS"
                         title="Development Tools"
                         variant="dev"
+                        compact={true}
                       />
                     )}
                   </div>

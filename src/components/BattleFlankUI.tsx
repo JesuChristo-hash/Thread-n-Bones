@@ -546,6 +546,7 @@ export interface RitualSlateButtonProps {
   icon?: React.ReactNode;
   title?: string;
   variant?: 'default' | 'dev';
+  compact?: boolean;
 }
 
 export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
@@ -554,6 +555,7 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
   icon,
   title,
   variant = 'default',
+  compact = false,
 }) => {
   const uid = useId().replace(/:/g, '');
   const baseUrl = import.meta.env.BASE_URL || './';
@@ -564,7 +566,9 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
       type="button"
       onClick={onClick}
       title={title}
-      className="group/rbtn relative w-38 sm:w-40 py-[5.5px] px-3.5 flex items-center justify-center gap-2 cursor-pointer select-none bg-transparent border-0 outline-none transition-transform duration-120 hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.985]"
+      className={`group/rbtn relative w-38 sm:w-40 px-3.5 flex items-center justify-center gap-2 cursor-pointer select-none bg-transparent border-0 outline-none transition-all duration-150 hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.985] ${
+        compact ? 'py-[5.5px]' : 'py-[9.5px]'
+      }`}
       style={{
         filter: 'drop-shadow(0 5px 8px rgba(0,0,0,0.92))',
       }}
@@ -640,7 +644,9 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
       {/* Left & Right Riveted Tarnished-Brass Clamping End-Caps */}
       <svg
         viewBox="0 0 11 22"
-        className="pointer-events-none absolute -left-[2px] top-1/2 -translate-y-1/2 w-[11px] h-[22px] overflow-visible"
+        className={`pointer-events-none absolute -left-[2px] top-1/2 -translate-y-1/2 w-[11px] overflow-visible transition-all duration-150 ${
+          compact ? 'h-[20px]' : 'h-[26px]'
+        }`}
         aria-hidden="true"
       >
         <defs>
@@ -660,7 +666,9 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
       </svg>
       <svg
         viewBox="0 0 11 22"
-        className="pointer-events-none absolute -right-[2px] top-1/2 -translate-y-1/2 w-[11px] h-[22px] overflow-visible"
+        className={`pointer-events-none absolute -right-[2px] top-1/2 -translate-y-1/2 w-[11px] overflow-visible transition-all duration-150 ${
+          compact ? 'h-[20px]' : 'h-[26px]'
+        }`}
         aria-hidden="true"
       >
         <defs>
@@ -686,7 +694,9 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
         </span>
       )}
       <span
-        className="relative z-10 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] text-[#d6c2a5] group-hover/rbtn:text-[#fff1d6] transition-colors duration-150"
+        className={`relative z-10 font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#d6c2a5] group-hover/rbtn:text-[#fff1d6] transition-colors duration-150 ${
+          compact ? 'text-[9.5px] sm:text-[10px]' : 'text-[10.5px] sm:text-[11px]'
+        }`}
         style={{
           textShadow: '0 1px 3px rgba(0,0,0,1)',
         }}

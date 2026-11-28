@@ -1480,3 +1480,20 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
     backdrop-filter: none !important;
   }
 }
+
+/* --- Plinth Living Talisman Eye Rare Organic Blink --- */
+@keyframes talismanEyeBlink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  94.8% { transform: scaleY(0.06); }
+  97.4% { transform: scaleY(1); }
+}
+.talisman-eye-lid {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: talismanEyeBlink 7.8s ease-in-out infinite;
+}
+.talisman-eye-lid--locked {
+  animation: none;
+  transform: scaleY(1);
+}
+
