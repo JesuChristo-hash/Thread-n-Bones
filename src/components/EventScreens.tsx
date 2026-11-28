@@ -4625,10 +4625,12 @@ export default function EventScreens({ ctx }: { ctx: {
                     returnToMap(updatedDeck);
                   }}
                   disabled={choiceSelectedIdx === null}
-                  className={`px-7 py-2 rounded-[1px] border-y font-['Cinzel',_serif] font-black text-xs sm:text-sm uppercase tracking-[0.28em] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all select-none ${
-                    choiceIsRare
-                      ? 'border-[#d4af37]/85 text-[#f6dc93] hover:text-white bg-black/55'
-                      : 'border-red-700/85 text-red-400 hover:text-red-200 bg-black/55'
+                  className={`edge-band edge-band--btn relative px-8 sm:px-10 py-2 font-['Cinzel',_serif] font-black text-xs sm:text-sm uppercase tracking-[0.28em] transition-colors duration-150 select-none ${
+                    choiceSelectedIdx === null
+                      ? 'edge-band--dead text-stone-600 opacity-45 cursor-not-allowed'
+                      : choiceIsRare
+                        ? 'edge-band--gold text-[#f6dc93] hover:text-white cursor-pointer'
+                        : 'edge-band--red text-red-400 hover:text-red-200 cursor-pointer'
                   }`}
                   style={{
                     textShadow: choiceIsRare
