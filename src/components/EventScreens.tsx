@@ -2807,42 +2807,152 @@ export default function EventScreens({ ctx }: { ctx: {
                       <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-purple-400/60" />
 
                       {/* Aspect-Locked Illustrated Loom Prop Stage (1133x823) */}
-                      <div className="relative z-10 w-full max-w-[555px] aspect-[1133/823] flex items-center justify-center select-none">
+                      <div
+                        className="relative z-10 w-full max-w-[555px] aspect-[1133/823] flex items-center justify-center select-none"
+                        style={{
+                          animation: mycoAnimPhase === 'sewing' ? 'loomFrameTension 2.05s linear forwards' : undefined,
+                        }}
+                      >
                         <img
                           src={`${import.meta.env.BASE_URL || './'}assets/props/loom.png`}
                           alt="The Weaver's Loom"
                           draggable={false}
                           className={`pointer-events-none absolute inset-0 w-full h-full object-contain transition-all duration-500 ${
                             mycoAnimPhase === 'sewing'
-                              ? 'drop-shadow-[0_0_28px_rgba(244,63,94,0.5)] brightness-110'
-                              : 'drop-shadow-[0_20px_34px_rgba(0,0,0,0.96)]'
+                              ? 'drop-shadow-[0_0_34px_rgba(244,63,94,0.62)] brightness-115'
+                              : mycoAnimPhase === 'woven'
+                                ? 'drop-shadow-[0_0_28px_rgba(168,85,247,0.55)] brightness-105'
+                                : 'drop-shadow-[0_20px_34px_rgba(0,0,0,0.96)]'
                           }`}
                         />
+
+                        {/* Beat 1 & 4: Six Taut Crimson Sinew Guide-Threads Lashing Behind the Cards from Loom Beams to Center */}
+                        {mycoAnimPhase === 'sewing' && (
+                          <svg
+                            viewBox="0 0 555 403"
+                            className="pointer-events-none absolute inset-0 z-[5] w-full h-full overflow-visible"
+                          >
+                            <defs>
+                              <filter id="loomThreadGlow" x="-30%" y="-30%" width="160%" height="160%">
+                                <feGaussianBlur stdDeviation="2.6" result="blur" />
+                                <feMerge>
+                                  <feMergeNode in="blur" />
+                                  <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                              </filter>
+                            </defs>
+                            {[
+                              { d: 'M 106 72 Q 192 106 277 136', delay: '0s' },
+                              { d: 'M 98 198 Q 186 196 277 196', delay: '0.05s' },
+                              { d: 'M 106 318 Q 192 284 277 256', delay: '0.1s' },
+                              { d: 'M 449 72 Q 363 106 278 136', delay: '0.02s' },
+                              { d: 'M 457 198 Q 369 196 278 196', delay: '0.07s' },
+                              { d: 'M 449 318 Q 363 284 278 256', delay: '0.12s' },
+                            ].map((t, idx) => (
+                              <g key={idx} filter="url(#loomThreadGlow)">
+                                <path
+                                  d={t.d}
+                                  fill="none"
+                                  stroke="#be123c"
+                                  strokeWidth="2.4"
+                                  strokeLinecap="round"
+                                  strokeDasharray="340"
+                                  style={{
+                                    animation: `loomGuideThreadLash 2.05s cubic-bezier(0.22,1,0.36,1) ${t.delay} forwards`,
+                                  }}
+                                />
+                                <path
+                                  d={t.d}
+                                  fill="none"
+                                  stroke="#fb7185"
+                                  strokeWidth="0.9"
+                                  strokeLinecap="round"
+                                  strokeDasharray="340"
+                                  opacity="0.72"
+                                  style={{
+                                    animation: `loomGuideThreadLash 2.05s cubic-bezier(0.22,1,0.36,1) ${t.delay} forwards`,
+                                  }}
+                                />
+                              </g>
+                            ))}
+                          </svg>
+                        )}
 
                         {/* Cards Centered Directly Inside the Loom's Warp Window & Crossed Crimson Threads */}
                         <div className="relative z-10 -mt-[4%] flex items-center justify-center w-full h-full">
                           {mycoAnimPhase === 'woven' && fusedPreview ? (
-                            <div className="flex flex-col items-center animate-menu-fade-in">
-                              <span className="mb-2 px-3 py-0.5 rounded-[2px] bg-[#22112b]/95 border border-purple-400/90 text-[9px] font-mono font-bold uppercase tracking-[0.22em] text-purple-200 shadow-[0_0_16px_rgba(168,85,247,0.45)]">
+                            <div className="flex flex-col items-center">
+                              <span className="mb-2 px-3 py-0.5 rounded-[2px] bg-[#22112b]/95 border border-purple-400/90 text-[9px] font-mono font-bold uppercase tracking-[0.22em] text-purple-200 shadow-[0_0_18px_rgba(168,85,247,0.55)] animate-menu-fade-in">
                                 Stitched Vessel
                               </span>
-                              <div className="scale-[1.08] origin-center rounded-[4px] shadow-[0_0_46px_rgba(168,85,247,0.8),0_0_24px_rgba(220,38,38,0.5)]">
+                              <div
+                                className="relative origin-center rounded-[4px] shadow-[0_0_48px_rgba(168,85,247,0.82),0_0_26px_rgba(225,29,72,0.58)]"
+                                style={{ animation: 'loomVesselBorn 0.65s cubic-bezier(0.22,1,0.36,1) forwards' }}
+                              >
                                 {renderCard(fusedPreview, { isClickable: false, disableHoverScale: true })}
+                                {/* Freshly Bound Crimson Suture Scar Overlay Down the Artwork Center of the Born Abomination */}
+                                <svg
+                                  viewBox="0 0 108 152"
+                                  className="pointer-events-none absolute inset-0 z-30 w-full h-full overflow-visible"
+                                  style={{ animation: 'loomVesselScarGlow 1.35s ease-out forwards' }}
+                                >
+                                  <line
+                                    x1="54"
+                                    y1="28"
+                                    x2="54"
+                                    y2="138"
+                                    stroke="#9f1239"
+                                    strokeWidth="2.1"
+                                    strokeLinecap="round"
+                                    opacity="0.7"
+                                  />
+                                  <line
+                                    x1="54"
+                                    y1="28"
+                                    x2="54"
+                                    y2="138"
+                                    stroke="#fb7185"
+                                    strokeWidth="0.85"
+                                    strokeDasharray="3 3"
+                                    opacity="0.78"
+                                  />
+                                  {[38, 62, 86, 110, 130].map((sy, idx) => (
+                                    <g key={idx}>
+                                      <path
+                                        d={`M 45 ${sy - 4.5} L 63 ${sy + 4.5} M 63 ${sy - 4.5} L 45 ${sy + 4.5}`}
+                                        stroke="#29050c"
+                                        strokeWidth="3.2"
+                                        strokeLinecap="round"
+                                        opacity="0.72"
+                                      />
+                                      <path
+                                        d={`M 45 ${sy - 4.5} L 63 ${sy + 4.5} M 63 ${sy - 4.5} L 45 ${sy + 4.5}`}
+                                        stroke="#f43f5e"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
+                                      />
+                                    </g>
+                                  ))}
+                                </svg>
                               </div>
                             </div>
                           ) : (
-                            <div className="relative flex items-center justify-center gap-8 sm:gap-12">
-                              {/* Twin I */}
-                              <div
-                                className="flex flex-col items-center"
-                                style={{
-                                  animation: mycoAnimPhase === 'sewing' ? 'loomTwinConvergeLeft 0.9s ease-in-out forwards' : undefined,
-                                }}
-                              >
-                                <span className="mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 shadow-md">
+                            <div className="relative flex items-center justify-center gap-[44px]">
+                              {/* Twin I — pulls to center and cleanly bisects into the Left Half */}
+                              <div className="flex flex-col items-center">
+                                <span
+                                  className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 shadow-md transition-opacity duration-200 ${
+                                    mycoAnimPhase === 'sewing' ? 'opacity-0' : 'opacity-100'
+                                  }`}
+                                >
                                   Twin I
                                 </span>
-                                <div className="w-[108px] h-[150px] flex items-center justify-center">
+                                <div
+                                  className="w-[108px] h-[150px] flex items-center justify-center"
+                                  style={{
+                                    animation: mycoAnimPhase === 'sewing' ? 'loomTwinBisectLeft 2.05s linear forwards' : undefined,
+                                  }}
+                                >
                                   {twin1 ? (
                                     <div
                                       onClick={() => {
@@ -2863,17 +2973,21 @@ export default function EventScreens({ ctx }: { ctx: {
                                 </div>
                               </div>
 
-                              {/* Twin II */}
-                              <div
-                                className="flex flex-col items-center"
-                                style={{
-                                  animation: mycoAnimPhase === 'sewing' ? 'loomTwinConvergeRight 0.9s ease-in-out forwards' : undefined,
-                                }}
-                              >
-                                <span className="mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 shadow-md">
+                              {/* Twin II — pulls to center and cleanly bisects into the Right Half */}
+                              <div className="flex flex-col items-center">
+                                <span
+                                  className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 shadow-md transition-opacity duration-200 ${
+                                    mycoAnimPhase === 'sewing' ? 'opacity-0' : 'opacity-100'
+                                  }`}
+                                >
                                   Twin II
                                 </span>
-                                <div className="w-[108px] h-[150px] flex items-center justify-center">
+                                <div
+                                  className="w-[108px] h-[150px] flex items-center justify-center"
+                                  style={{
+                                    animation: mycoAnimPhase === 'sewing' ? 'loomTwinBisectRight 2.05s linear forwards' : undefined,
+                                  }}
+                                >
                                   {twin2 ? (
                                     <div
                                       onClick={() => {
@@ -2894,25 +3008,180 @@ export default function EventScreens({ ctx }: { ctx: {
                                 </div>
                               </div>
 
-                              {/* Foreground Active Bone Needle & Crimson Zig-Zag Stitch Right Over the Cards */}
+                              {/* Foreground Active Suture Seam, 5 Staggered Arterial X-Stitches, Sparks, Carved Bone Needle & Cinch Shockwave */}
                               {mycoAnimPhase === 'sewing' && (
-                                <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
-                                  <svg viewBox="0 0 180 200" className="w-44 h-52 overflow-visible drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
-                                    {/* Crimson Cross-Stitches Binding the Center Seam */}
-                                    <path
-                                      d="M 62 34 L 118 52 L 62 72 L 118 92 L 62 112 L 118 132 L 62 152 L 118 168"
-                                      fill="none"
-                                      stroke="#f43f5e"
-                                      strokeWidth="3.2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeDasharray="320"
-                                      style={{ animation: 'loomSeamStitchDraw 0.85s ease-out forwards' }}
+                                <div className="pointer-events-none absolute inset-0 pt-[22px] z-40 flex items-center justify-center">
+                                  {/* Final Knot Cinch Shockwave Ring (fires at 84%..100%) */}
+                                  <div
+                                    className="absolute w-36 h-36 rounded-full border-2 border-rose-400/90 shadow-[0_0_32px_rgba(244,63,94,0.9),inset_0_0_24px_rgba(168,85,247,0.75)]"
+                                    style={{ animation: 'loomBindShockwave 2.05s ease-out forwards' }}
+                                  />
+
+                                  <svg
+                                    viewBox="0 0 180 160"
+                                    className="relative w-[180px] h-[160px] overflow-visible drop-shadow-[0_6px_14px_rgba(0,0,0,0.96)]"
+                                  >
+                                    <defs>
+                                      <linearGradient id="boneNeedleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stopColor="#faf3e3" />
+                                        <stop offset="52%" stopColor="#d8c7a8" />
+                                        <stop offset="100%" stopColor="#7a6851" />
+                                      </linearGradient>
+                                      <linearGradient id="shearBladeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+                                        <stop offset="25%" stopColor="#fda4af" />
+                                        <stop offset="50%" stopColor="#ffffff" />
+                                        <stop offset="75%" stopColor="#f43f5e" />
+                                        <stop offset="100%" stopColor="rgba(225,29,72,0)" />
+                                      </linearGradient>
+                                    </defs>
+
+                                    {/* Beat 2: Arterial Flesh-Seam Glow Between Joined Card Halves */}
+                                    <g style={{ transformOrigin: '90px 80px', animation: 'loomSeamGlowPulse 2.05s linear forwards' }}>
+                                      <line x1="90" y1="8" x2="90" y2="152" stroke="#881337" strokeWidth="6.5" strokeLinecap="round" opacity="0.85" />
+                                      <line x1="90" y1="8" x2="90" y2="152" stroke="#f43f5e" strokeWidth="2.4" strokeLinecap="round" />
+                                      <line x1="90" y1="12" x2="90" y2="148" stroke="#ffe4e6" strokeWidth="0.9" strokeDasharray="5 4" opacity="0.85" />
+                                    </g>
+
+                                    {/* Beat 2: Razor-Sharp Vertical Bisection Shear Flash (30%..48%) */}
+                                    <rect
+                                      x="87.5"
+                                      y="-12"
+                                      width="5"
+                                      height="184"
+                                      rx="2.5"
+                                      fill="url(#shearBladeGrad)"
+                                      style={{
+                                        transformOrigin: '90px 80px',
+                                        animation: 'loomShearSlash 2.05s linear forwards',
+                                      }}
                                     />
-                                    {/* Sweeping Bone Needle */}
-                                    <g style={{ animation: 'loomNeedleSweep 0.85s ease-in-out forwards' }}>
-                                      <polygon points="34,96 138,96 154,100 138,104 34,104 22,100" fill="#efe4d0" stroke="#5c4d3c" strokeWidth="1.4" />
-                                      <ellipse cx="44" cy="100" rx="4" ry="2" fill="#7e22ce" />
+
+                                    {/* Beat 3: 5 Rhythmic Cross-Sutures + Puncture Dimples + Blood Sparks Synced to Needle Passes */}
+                                    {[
+                                      { y: 26, delay: 0.90 },
+                                      { y: 53, delay: 1.07 },
+                                      { y: 80, delay: 1.24 },
+                                      { y: 107, delay: 1.41 },
+                                      { y: 134, delay: 1.58 },
+                                    ].map((st, idx) => (
+                                      <g key={idx}>
+                                        {/* Puncture holes on Left & Right halves */}
+                                        <circle
+                                          cx="74"
+                                          cy={st.y}
+                                          r="2.4"
+                                          fill="#1f0409"
+                                          stroke="#9f1239"
+                                          strokeWidth="0.9"
+                                          style={{
+                                            animation: `loomStitchCinch 0.22s ease-out ${st.delay}s both`,
+                                          }}
+                                        />
+                                        <circle
+                                          cx="106"
+                                          cy={st.y}
+                                          r="2.4"
+                                          fill="#1f0409"
+                                          stroke="#9f1239"
+                                          strokeWidth="0.9"
+                                          style={{
+                                            animation: `loomStitchCinch 0.22s ease-out ${st.delay}s both`,
+                                          }}
+                                        />
+                                        {/* Beveled arterial shadow + crimson sinew cross-stitch */}
+                                        <path
+                                          d={`M 74 ${st.y - 7} L 106 ${st.y + 7} M 106 ${st.y - 7} L 74 ${st.y + 7}`}
+                                          fill="none"
+                                          stroke="#2a050b"
+                                          strokeWidth="5"
+                                          strokeLinecap="round"
+                                          strokeDasharray="68"
+                                          style={{
+                                            transformOrigin: `90px ${st.y}px`,
+                                            animation: `loomStitchCinch 0.24s cubic-bezier(0.22,1,0.36,1) ${st.delay}s both`,
+                                          }}
+                                        />
+                                        <path
+                                          d={`M 74 ${st.y - 7} L 106 ${st.y + 7} M 106 ${st.y - 7} L 74 ${st.y + 7}`}
+                                          fill="none"
+                                          stroke="#f43f5e"
+                                          strokeWidth="2.5"
+                                          strokeLinecap="round"
+                                          strokeDasharray="68"
+                                          style={{
+                                            transformOrigin: `90px ${st.y}px`,
+                                            animation: `loomStitchCinch 0.24s cubic-bezier(0.22,1,0.36,1) ${st.delay}s both`,
+                                          }}
+                                        />
+                                        <path
+                                          d={`M 75 ${st.y - 6.5} L 105 ${st.y + 6.5}`}
+                                          fill="none"
+                                          stroke="#fecdd3"
+                                          strokeWidth="0.9"
+                                          strokeLinecap="round"
+                                          strokeDasharray="68"
+                                          opacity="0.8"
+                                          style={{
+                                            transformOrigin: `90px ${st.y}px`,
+                                            animation: `loomStitchCinch 0.24s cubic-bezier(0.22,1,0.36,1) ${st.delay}s both`,
+                                          }}
+                                        />
+                                        {/* Crimson blood-droplet sparks popping off each puncture */}
+                                        {[
+                                          { cx: 74, sx: '-18px', sy: '-11px' },
+                                          { cx: 106, sx: '19px', sy: '-9px' },
+                                          { cx: 90, sx: idx % 2 === 0 ? '-12px' : '12px', sy: '14px' },
+                                        ].map((sp, spIdx) => (
+                                          <circle
+                                            key={spIdx}
+                                            cx={sp.cx}
+                                            cy={st.y}
+                                            r="2.2"
+                                            fill={spIdx === 2 ? '#c084fc' : '#fb7185'}
+                                            style={{
+                                              ['--sx' as string]: sp.sx,
+                                              ['--sy' as string]: sp.sy,
+                                              animation: `loomStitchSpark 0.36s ease-out ${st.delay + 0.03}s both`,
+                                            }}
+                                          />
+                                        ))}
+                                      </g>
+                                    ))}
+
+                                    {/* Beat 3: Ornate Hand-Carved Bone Needle & Trailing Arterial Sinew Thread */}
+                                    <g style={{ transformOrigin: '90px 80px', animation: 'loomBoneNeedleWeave 2.05s linear forwards' }}>
+                                      {/* Trailing glowing arterial sinew thread behind needle eye */}
+                                      <path
+                                        d="M 42 80 C 18 72, 6 94, -22 84 C -40 78, -54 88, -72 82"
+                                        fill="none"
+                                        stroke="#e11d48"
+                                        strokeWidth="2.6"
+                                        strokeLinecap="round"
+                                      />
+                                      <path
+                                        d="M 42 80 C 18 72, 6 94, -22 84 C -40 78, -54 88, -72 82"
+                                        fill="none"
+                                        stroke="#fda4af"
+                                        strokeWidth="0.9"
+                                        strokeLinecap="round"
+                                        opacity="0.8"
+                                      />
+                                      {/* Carved ivory-bone shaft */}
+                                      <path
+                                        d="M 32 80 L 42 75 L 128 76.5 L 152 80 L 128 83.5 L 42 85 Z"
+                                        fill="url(#boneNeedleGrad)"
+                                        stroke="#3f2e1f"
+                                        strokeWidth="1.5"
+                                        strokeLinejoin="round"
+                                      />
+                                      {/* Blood-stained piercing point */}
+                                      <path d="M 128 76.8 L 152 80 L 128 83.2 Z" fill="#be123c" opacity="0.88" />
+                                      {/* Specular bone ridge */}
+                                      <line x1="48" y1="78.2" x2="124" y2="78.8" stroke="#fffbeb" strokeWidth="1" opacity="0.7" />
+                                      {/* Pierced needle eye */}
+                                      <ellipse cx="46" cy="80" rx="5.5" ry="2.2" fill="#220914" stroke="#78350f" strokeWidth="0.9" />
+                                      <line x1="41" y1="80" x2="50" y2="80" stroke="#fb7185" strokeWidth="1.4" strokeLinecap="round" />
                                     </g>
                                   </svg>
                                 </div>

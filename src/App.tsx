@@ -7335,17 +7335,18 @@ export default function App() {
 
     setMycoStageCards({ twin1: card1, twin2: card2, fused });
     setMycoAnimPhase('sewing');
-    triggerSfx('sacrifice');
+    triggerSfx('weaver_stitch');
 
-    // Beat 1 (0 -> 850ms): Needles flash as Twin I & Twin II pull into the loom
+    // Beat 1 (0 -> 2050ms): Guide threads hook Twin I & II, bisecting shear slices down the center,
+    // ornate bone needle whip-stitches 5 arterial sutures, and final knot cinches the fused vessel shut
     scheduleEventTimer(() => {
       setMycoAnimPhase('woven');
       setMasterDeck(nextDeck);
       masterDeckRef.current = nextDeck;
       triggerSfx('bell');
-    }, 850);
+    }, 2050);
 
-    // Beat 2 (850 -> 2300ms): Fused abomination sits woven on the loom cloth before modal appears
+    // Beat 2 (2050 -> 3450ms): Fused abomination pulses with its glowing suture scar on the loom before modal appears
     scheduleEventTimer(() => {
       setModalAlert({
         title: "FUSED IN SANGUINE WEB",
@@ -7361,7 +7362,7 @@ export default function App() {
           returnToMap(nextDeck);
         }
       });
-    }, 2300);
+    }, 3450);
   };
 
   const initGoobert = () => {

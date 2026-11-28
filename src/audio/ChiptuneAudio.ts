@@ -1976,6 +1976,7 @@ export type SoundEffectType =
   | 'cauldron_devour'
   | 'overkill'
   | 'glass_shunt'
+  | 'weaver_stitch'
   | 'ritual_begin';
 
 export const playSound = (type: SoundEffectType) => {
@@ -2280,6 +2281,89 @@ export const playSound = (type: SoundEffectType) => {
       // 3. Sharp fracture crack + pressurized arterial blood mist spray
       crispNoise(0.032, 'highpass', 3200 * jitter, 5800 * jitter, 1.4, 0.42, 0.002, false, 0.0);
       crispNoise(0.145, 'bandpass', 4100 * jitter, 1350 * jitter, 2.2, 0.36, 0.006, false, 0.014);
+    } else if (type === 'weaver_stitch') {
+      // Multi-beat Sanguine Stitching choreography (2.05s):
+      // Beat 1 (0.00s): Loom warp tension creak & sinew guide-thread lash
+      // Beat 2 (0.68s): Razor-sharp shears SNIP bisecting the converging twins
+      // Beat 3 (0.92s..1.64s): 5 crisp rhythmic bone-needle pierces & taut sinew zip pulls
+      // Beat 4 (1.80s): Visceral final knot cinch thud & occult harmonic resonance
+      ChiptuneAudio.duckMusic?.(0.55, 2.15);
+
+      // Beat 1: Taut warp-string pull & low wood creak
+      const tensionOsc = ctx.createOscillator();
+      const tensionGain = ctx.createGain();
+      tensionOsc.type = 'sawtooth';
+      const tensionLp = ctx.createBiquadFilter();
+      tensionLp.type = 'lowpass';
+      tensionLp.frequency.setValueAtTime(340, now);
+      tensionLp.frequency.exponentialRampToValueAtTime(920, now + 0.62);
+      tensionOsc.frequency.setValueAtTime(92 * jitter, now);
+      tensionOsc.frequency.exponentialRampToValueAtTime(148 * jitter, now + 0.62);
+      tensionGain.gain.setValueAtTime(0.001, now);
+      tensionGain.gain.linearRampToValueAtTime(0.22, now + 0.12);
+      tensionGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.68);
+      tensionOsc.connect(tensionLp);
+      tensionLp.connect(tensionGain);
+      tensionGain.connect(dest);
+      tensionOsc.start(now);
+      tensionOsc.stop(now + 0.72);
+      crispNoise(0.18, 'bandpass', 950, 2100, 3.0, 0.22, 0.015, false, 0.04);
+
+      // Beat 2 (0.68s): Metallic shears SNIP
+      const snipAt = now + 0.68;
+      crispNoise(0.065, 'highpass', 3600 * jitter, 6400 * jitter, 1.8, 0.44, 0.002, false, 0.68);
+      [2320, 3780].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq * jitter, snipAt + idx * 0.01);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.72 * jitter, snipAt + 0.085);
+        g.gain.setValueAtTime(0.001, snipAt + idx * 0.01);
+        g.gain.linearRampToValueAtTime(0.24 - idx * 0.05, snipAt + idx * 0.01 + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, snipAt + 0.095);
+        osc.connect(g);
+        g.connect(dest);
+        osc.start(snipAt + idx * 0.01);
+        osc.stop(snipAt + 0.11);
+      });
+
+      // Beat 3 (0.92s..1.64s): 5 crisp bone-needle pierces & sinew thread-pull zips
+      const stitchTimes = [0.92, 1.09, 1.26, 1.43, 1.60];
+      stitchTimes.forEach((delay, idx) => {
+        const t = now + delay;
+        const pitchRise = 1 + idx * 0.085;
+        // Bone puncture click
+        const clickOsc = ctx.createOscillator();
+        const clickGain = ctx.createGain();
+        clickOsc.type = 'triangle';
+        clickOsc.frequency.setValueAtTime(620 * pitchRise * jitter, t);
+        clickOsc.frequency.exponentialRampToValueAtTime(190 * jitter, t + 0.036);
+        clickGain.gain.setValueAtTime(0.001, t);
+        clickGain.gain.linearRampToValueAtTime(0.32, t + 0.002);
+        clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.042);
+        clickOsc.connect(clickGain);
+        clickGain.connect(dest);
+        clickOsc.start(t);
+        clickOsc.stop(t + 0.048);
+        // Taut sinew zip through flesh/parchment
+        crispNoise(0.085, 'bandpass', 1800 * pitchRise, 3900 * pitchRise, 3.2, 0.26, 0.004, false, delay + 0.018);
+      });
+
+      // Beat 4 (1.79s): Final knot cinch thump + taut crimson cord snap
+      const cinchAt = now + 1.79;
+      const thudOsc = ctx.createOscillator();
+      const thudGain = ctx.createGain();
+      thudOsc.type = 'sine';
+      thudOsc.frequency.setValueAtTime(165, cinchAt);
+      thudOsc.frequency.exponentialRampToValueAtTime(44, cinchAt + 0.19);
+      thudGain.gain.setValueAtTime(0.001, cinchAt);
+      thudGain.gain.linearRampToValueAtTime(0.55, cinchAt + 0.004);
+      thudGain.gain.exponentialRampToValueAtTime(0.0001, cinchAt + 0.22);
+      thudOsc.connect(thudGain);
+      thudGain.connect(dest);
+      thudOsc.start(cinchAt);
+      thudOsc.stop(cinchAt + 0.24);
+      crispNoise(0.11, 'bandpass', 2400, 950, 2.0, 0.34, 0.003, false, 1.79);
     } else if (type === 'armor') {
       ChiptuneAudio.duckMusic?.(0.62, 0.2);
       // Heavy iron plate deflection & shatter (low-mid metal clunk + staggered plate crunch)

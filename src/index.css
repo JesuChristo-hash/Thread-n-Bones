@@ -909,32 +909,122 @@
   100% { transform: scale(1.45); opacity: 0; }
 }
 
-@keyframes loomNeedleSweep {
-  0%   { transform: translate(-36px, -46px) rotate(-18deg); }
-  25%  { transform: translate(36px, -16px) rotate(16deg); }
-  50%  { transform: translate(-36px, 16px) rotate(-18deg); }
-  75%  { transform: translate(36px, 46px) rotate(16deg); }
-  100% { transform: translate(-28px, 64px) rotate(-12deg); }
+/* --- Overhauled Weaver's Loom: Sanguine Stitching Choreography (2.05s synced with weaver_stitch SFX) --- */
+@keyframes loomFrameTension {
+  0%, 28%  { transform: translate(0px, 0px) scale(1); }
+  33%      { transform: translate(-2px, 1px) scale(1.008); }
+  36%      { transform: translate(2px, -1px) scale(1.005); }
+  45%, 53%, 61%, 69%, 78% { transform: translate(0px, 1.5px) scale(1.006); }
+  48%, 56%, 64%, 72%, 81% { transform: translate(0px, 0px) scale(1); }
+  88%      { transform: translate(0px, -2px) scale(1.016); }
+  94%      { transform: translate(0px, 1px) scale(0.996); }
+  100%     { transform: translate(0px, 0px) scale(1); }
 }
 
-@keyframes loomTwinConvergeLeft {
-  0%   { transform: translateX(0px) scale(1); opacity: 1; }
-  45%  { transform: translateX(52px) scale(0.96) rotate(2deg); opacity: 1; }
-  85%  { transform: translateX(62px) scale(0.92); opacity: 0.85; }
-  100% { transform: translateX(66px) scale(0.85); opacity: 0; }
+@keyframes loomGuideThreadLash {
+  0%   { stroke-dashoffset: 340; opacity: 0; }
+  8%   { opacity: 0.92; }
+  22%  { stroke-dashoffset: 0; opacity: 0.95; }
+  84%  { stroke-dashoffset: 0; opacity: 0.92; stroke-width: 2.2; }
+  90%  { stroke-dashoffset: 0; opacity: 1; stroke-width: 3.4; }
+  100% { stroke-dashoffset: -180; opacity: 0; stroke-width: 1; }
 }
 
-@keyframes loomTwinConvergeRight {
-  0%   { transform: translateX(0px) scale(1); opacity: 1; }
-  45%  { transform: translateX(-52px) scale(0.96) rotate(-2deg); opacity: 1; }
-  85%  { transform: translateX(-62px) scale(0.92); opacity: 0.85; }
-  100% { transform: translateX(-66px) scale(0.85); opacity: 0; }
+@keyframes loomTwinBisectLeft {
+  0%   { transform: translate(0px, 0px) scale(1) rotate(0deg); clip-path: inset(0 0% 0 0); filter: brightness(1); }
+  14%  { transform: translate(12px, -4px) scale(1.02) rotate(2.2deg); clip-path: inset(0 0% 0 0); filter: brightness(1.08); }
+  24%  { transform: translate(8px, -2px) scale(1.01) rotate(1.4deg); clip-path: inset(0 0% 0 0); filter: brightness(1.12); }
+  34%  { transform: translate(73px, 0px) scale(1.02) rotate(0deg); clip-path: inset(0 50% 0 0); filter: brightness(1.45) contrast(1.12); }
+  42%  { transform: translate(73px, 0px) scale(1) rotate(0deg); clip-path: inset(0 50% 0 0); filter: brightness(1.06); }
+  46%  { transform: translate(73.8px, -1px) scale(1.01); clip-path: inset(0 50% 0 0); filter: brightness(1.18); }
+  54%  { transform: translate(74.4px, 0.5px) scale(1.01); clip-path: inset(0 50% 0 0); filter: brightness(1.2); }
+  62%  { transform: translate(75px, -1px) scale(1.015); clip-path: inset(0 50% 0 0); filter: brightness(1.22); }
+  70%  { transform: translate(75.5px, 0.5px) scale(1.015); clip-path: inset(0 50% 0 0); filter: brightness(1.24); }
+  79%  { transform: translate(76px, 0px) scale(1.02); clip-path: inset(0 50% 0 0); filter: brightness(1.28); }
+  88%  { transform: translate(76px, 0px) scale(1.06); clip-path: inset(0 50% 0 0); filter: brightness(1.75) drop-shadow(0 0 18px rgba(244,63,94,0.9)); }
+  100% { transform: translate(76px, 0px) scale(1.08); clip-path: inset(0 50% 0 0); filter: brightness(1.9); opacity: 0.95; }
 }
 
-@keyframes loomSeamStitchDraw {
-  0%   { stroke-dashoffset: 320; opacity: 0.3; }
+@keyframes loomTwinBisectRight {
+  0%   { transform: translate(0px, 0px) scale(1) rotate(0deg); clip-path: inset(0 0 0 0%); filter: brightness(1); }
+  14%  { transform: translate(-12px, -4px) scale(1.02) rotate(-2.2deg); clip-path: inset(0 0 0 0%); filter: brightness(1.08); }
+  24%  { transform: translate(-8px, -2px) scale(1.01) rotate(-1.4deg); clip-path: inset(0 0 0 0%); filter: brightness(1.12); }
+  34%  { transform: translate(-73px, 0px) scale(1.02) rotate(0deg); clip-path: inset(0 0 0 50%); filter: brightness(1.45) contrast(1.12); }
+  42%  { transform: translate(-73px, 0px) scale(1) rotate(0deg); clip-path: inset(0 0 0 50%); filter: brightness(1.06); }
+  46%  { transform: translate(-73.8px, -1px) scale(1.01); clip-path: inset(0 0 0 50%); filter: brightness(1.18); }
+  54%  { transform: translate(-74.4px, 0.5px) scale(1.01); clip-path: inset(0 0 0 50%); filter: brightness(1.2); }
+  62%  { transform: translate(-75px, -1px) scale(1.015); clip-path: inset(0 0 0 50%); filter: brightness(1.22); }
+  70%  { transform: translate(-75.5px, 0.5px) scale(1.015); clip-path: inset(0 0 0 50%); filter: brightness(1.24); }
+  79%  { transform: translate(-76px, 0px) scale(1.02); clip-path: inset(0 0 0 50%); filter: brightness(1.28); }
+  88%  { transform: translate(-76px, 0px) scale(1.06); clip-path: inset(0 0 0 50%); filter: brightness(1.75) drop-shadow(0 0 18px rgba(244,63,94,0.9)); }
+  100% { transform: translate(-76px, 0px) scale(1.08); clip-path: inset(0 0 0 50%); filter: brightness(1.9); opacity: 0.95; }
+}
+
+@keyframes loomShearSlash {
+  0%, 30%  { transform: scaleY(0) scaleX(0.4); opacity: 0; }
+  34%      { transform: scaleY(1.12) scaleX(1.35); opacity: 1; }
+  41%      { transform: scaleY(1.02) scaleX(0.6); opacity: 0.72; }
+  48%, 100%{ transform: scaleY(0.95) scaleX(0.15); opacity: 0; }
+}
+
+@keyframes loomSeamGlowPulse {
+  0%, 33%  { opacity: 0; transform: scaleY(0.2); }
+  37%      { opacity: 1; transform: scaleY(1); }
+  84%      { opacity: 0.92; transform: scaleY(1); }
+  90%      { opacity: 1; transform: scaleY(1.05) scaleX(1.8); }
+  100%     { opacity: 0.85; transform: scaleY(1); }
+}
+
+@keyframes loomBoneNeedleWeave {
+  0%, 39%  { transform: translate(-96px, -68px) rotate(14deg) scaleX(1) scale(0.85); opacity: 0; }
+  42%      { transform: translate(-66px, -54px) rotate(15deg) scaleX(1) scale(1); opacity: 1; }
+  47%      { transform: translate(62px, -42px) rotate(10deg) scaleX(1) scale(1.04); opacity: 1; }
+  48.5%    { transform: translate(66px, -33px) rotate(0deg) scaleX(1) scale(0.95); opacity: 0; }
+  50%      { transform: translate(66px, -25px) rotate(-15deg) scaleX(-1) scale(1); opacity: 1; }
+  55%      { transform: translate(-62px, -13px) rotate(-10deg) scaleX(-1) scale(1.04); opacity: 1; }
+  56.5%    { transform: translate(-66px, -4px) rotate(0deg) scaleX(-1) scale(0.95); opacity: 0; }
+  58%      { transform: translate(-66px, 4px) rotate(15deg) scaleX(1) scale(1); opacity: 1; }
+  63%      { transform: translate(62px, 16px) rotate(10deg) scaleX(1) scale(1.04); opacity: 1; }
+  64.5%    { transform: translate(66px, 24px) rotate(0deg) scaleX(1) scale(0.95); opacity: 0; }
+  66%      { transform: translate(66px, 32px) rotate(-15deg) scaleX(-1) scale(1); opacity: 1; }
+  71%      { transform: translate(-62px, 42px) rotate(-10deg) scaleX(-1) scale(1.04); opacity: 1; }
+  72.5%    { transform: translate(-66px, 50px) rotate(0deg) scaleX(-1) scale(0.95); opacity: 0; }
+  74%      { transform: translate(-66px, 56px) rotate(15deg) scaleX(1) scale(1); opacity: 1; }
+  80%      { transform: translate(62px, 64px) rotate(8deg) scaleX(1) scale(1.06); opacity: 1; }
+  87%      { transform: translate(92px, 70px) rotate(4deg) scaleX(1) scale(0.96); opacity: 0.92; }
+  94%, 100%{ transform: translate(122px, 76px) rotate(0deg) scaleX(1) scale(0.8); opacity: 0; }
+}
+
+@keyframes loomStitchCinch {
+  0%   { stroke-dashoffset: 68; opacity: 0; transform: scale(1.18); }
+  25%  { opacity: 1; }
+  65%  { stroke-dashoffset: 0; opacity: 1; transform: scale(0.92); }
+  100% { stroke-dashoffset: 0; opacity: 1; transform: scale(1); }
+}
+
+@keyframes loomStitchSpark {
+  0%   { transform: translate(0px, 0px) scale(0.3); opacity: 0; }
   20%  { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 1; }
+  100% { transform: translate(var(--sx, 18px), var(--sy, -14px)) scale(0.1); opacity: 0; }
+}
+
+@keyframes loomBindShockwave {
+  0%, 84%  { transform: scale(0.35); opacity: 0; }
+  88%      { transform: scale(0.75); opacity: 0.95; }
+  100%     { transform: scale(1.85); opacity: 0; }
+}
+
+@keyframes loomVesselBorn {
+  0%   { transform: scale(0.92); filter: brightness(2) saturate(1.6); opacity: 0.85; }
+  36%  { transform: scale(1.13); filter: brightness(1.32) saturate(1.25); opacity: 1; }
+  68%  { transform: scale(1.06); filter: brightness(1.08); opacity: 1; }
+  100% { transform: scale(1.08); filter: brightness(1); opacity: 1; }
+}
+
+@keyframes loomVesselScarGlow {
+  0%   { opacity: 1; filter: drop-shadow(0 0 12px rgba(244,63,94,1)); }
+  45%  { opacity: 0.82; filter: drop-shadow(0 0 7px rgba(220,38,38,0.8)); }
+  100% { opacity: 0.54; filter: drop-shadow(0 0 4px rgba(185,28,28,0.6)); }
 }
 
 /* --- Event Props: Bone Lord Ossuary, Tribal Tapestry, Steeple Scales, Effigy Stand --- */
