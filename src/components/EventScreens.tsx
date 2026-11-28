@@ -2176,20 +2176,47 @@ export default function EventScreens({ ctx }: { ctx: {
                 <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
                 <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9a7342]/70" />
 
-                {/* Hanging Assembly (Crossbar + 3 Strictly Aligned Columns) */}
+                {/* Hanging Assembly (Ornate Carved Timber & Corded Brass Rod + 3 Strictly Aligned Columns) */}
                 <div className="relative z-20 w-full max-w-3xl flex flex-col items-center">
-                  {/* Continuous Timber Crossbar positioned directly behind the per-column brass rings */}
-                  <div
-                    className="pointer-events-none absolute top-[6px] left-2 right-2 h-3 rounded-full border border-[#8c6747]/90 shadow-[0_6px_14px_rgba(0,0,0,0.95)] z-10"
-                    style={{
-                      backgroundColor: '#3c281b',
-                      backgroundImage: `linear-gradient(to bottom, rgba(112,80,54,0.5), rgba(50,33,21,0.64), rgba(22,14,9,0.84)), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
-                      backgroundSize: '140px 140px',
-                      backgroundRepeat: 'repeat',
-                    }}
-                  >
-                    <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#2c1d13] border-2 border-[#a87e52]" />
-                    <span className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#2c1d13] border-2 border-[#a87e52]" />
+                  {/* Ornate Carved Timber & Corded Brass Banner Rod (synced with Map & Battle Screen poles) */}
+                  <div className="pointer-events-none absolute top-[2px] left-1 right-1 h-5 flex items-center z-10">
+                    <div
+                      className="relative w-full h-[10px] rounded-full"
+                      style={{
+                        backgroundColor: '#2e1d12',
+                        backgroundImage: `linear-gradient(180deg, rgba(255,214,160,0.28) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.65) 100%), url("${import.meta.env.BASE_URL || './'}assets/text/wood.jpg")`,
+                        backgroundSize: 'cover, 120px 120px',
+                        boxShadow: '0 5px 10px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(0,0,0,0.7)',
+                      }}
+                    />
+                    {[5, 33.33, 66.67, 95].map((p) => (
+                      <span
+                        key={p}
+                        className="pointer-events-none absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[8px] h-[16px] rounded-[2px]"
+                        style={{
+                          left: `${p}%`,
+                          backgroundImage:
+                            'repeating-linear-gradient(115deg, #b08a52 0px, #b08a52 1.2px, #3a2511 1.2px, #3a2511 2.6px)',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.85), inset 0 0 2px rgba(0,0,0,0.6)',
+                        }}
+                      />
+                    ))}
+                    {(['left', 'right'] as const).map((side) => (
+                      <span key={side}>
+                        <span
+                          className="pointer-events-none absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full"
+                          style={{
+                            [side]: '-3px',
+                            background: 'radial-gradient(circle at 38% 34%, #8a6a3c 0%, #4a3016 55%, #1d1209 100%)',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.9)',
+                          }}
+                        />
+                        <span
+                          className="pointer-events-none absolute top-[62%] w-[2px] h-3.5"
+                          style={{ [side]: '3px', background: 'linear-gradient(to bottom, #8a6a3c, transparent)' }}
+                        />
+                      </span>
+                    ))}
                   </div>
 
                   {/* Three Equal Columns: Brass Ring + Twine + Distinctly Shaped Patch all share exact column center */}
@@ -4019,20 +4046,48 @@ export default function EventScreens({ ctx }: { ctx: {
           WOODCARVER / WEAVER EFFIGY WORKBENCH SCREEN
          ========================================================================= */}
       {screen === 'EVENT_BUILD_TOTEM' && (() => {
+        const poppetBase = import.meta.env.BASE_URL || './';
+        const inspectedRewardIdx =
+          hoveredTotemRewardIdx !== null ? hoveredTotemRewardIdx : selectedTotemRewardIdx;
+        const inspectedRewardChoice =
+          inspectedRewardIdx !== null ? totemRewardChoices[inspectedRewardIdx] || null : null;
+
+        // Real-time preview on the physical poppet: reflects hover OR selection in REWARD, and active picks in ASSEMBLE
         const previewHead: string | null =
           totemStage === 'ASSEMBLE'
             ? (assemblyHeadIdx !== null ? totemPieces[assemblyHeadIdx]?.value || null : activeTotem.head)
-            : (selectedTotemRewardIdx !== null && totemRewardChoices[selectedTotemRewardIdx]?.type === 'head'
-                ? totemRewardChoices[selectedTotemRewardIdx].value
+            : (inspectedRewardChoice?.type === 'head'
+                ? inspectedRewardChoice.value
                 : activeTotem.head);
         const previewBody: string | null =
           totemStage === 'ASSEMBLE'
             ? (assemblyBodyIdx !== null ? totemPieces[assemblyBodyIdx]?.value || null : activeTotem.body)
-            : (selectedTotemRewardIdx !== null && totemRewardChoices[selectedTotemRewardIdx]?.type === 'body'
-                ? totemRewardChoices[selectedTotemRewardIdx].value
+            : (inspectedRewardChoice?.type === 'body'
+                ? inspectedRewardChoice.value
                 : activeTotem.body);
 
-        const renderHeadCutoutSvg = (tribe: string, highlighted: boolean, asGroup = false) => {
+        const isHoverPreviewHead =
+          totemStage === 'REWARD' && inspectedRewardChoice?.type === 'head' && inspectedRewardChoice.value !== activeTotem.head;
+        const isHoverPreviewBody =
+          totemStage === 'REWARD' && inspectedRewardChoice?.type === 'body' && inspectedRewardChoice.value !== activeTotem.body;
+
+        const selectedRewardChoice =
+          selectedTotemRewardIdx !== null ? totemRewardChoices[selectedTotemRewardIdx] || null : null;
+        const willUnlockAssembly = (() => {
+          if (!selectedRewardChoice) return false;
+          const nextHasHead = selectedRewardChoice.type === 'head' || totemPieces.some(p => p.type === 'head');
+          const nextHasBody = selectedRewardChoice.type === 'body' || totemPieces.some(p => p.type === 'body');
+          return nextHasHead && nextHasBody;
+        })();
+
+        const ownedHeadPieces = totemPieces
+          .map((p, idx) => ({ ...p, idx }))
+          .filter(p => p.type === 'head');
+        const ownedBodyPieces = totemPieces
+          .map((p, idx) => ({ ...p, idx }))
+          .filter(p => p.type === 'body');
+
+        const renderHeadCutoutSvg = (tribe: string, highlighted: boolean) => {
           const strokeCol = highlighted ? '#f4d78b' : '#9a734a';
           const fillTop = highlighted ? '#2b1d12' : '#1f150d';
           const fillBot = highlighted ? '#160e09' : '#100a06';
@@ -4068,543 +4123,763 @@ export default function EventScreens({ ctx }: { ctx: {
           }
           const patId = `effigyPatchTex-${tribe}-${highlighted ? 'hi' : 'lo'}`;
           return (
-            <svg viewBox="0 0 180 184" width={asGroup ? 180 : undefined} height={asGroup ? 184 : undefined} className={asGroup ? undefined : "absolute inset-0 w-full h-full pointer-events-none drop-shadow-[0_12px_22px_rgba(0,0,0,0.92)]"}>
+            <svg viewBox="0 0 180 184" className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-[0_10px_18px_rgba(0,0,0,0.9)]">
               <defs>
                 <pattern id={patId} patternUnits="userSpaceOnUse" width="180" height="184">
                   <image
-                    href={`${import.meta.env.BASE_URL || './'}assets/text/patches.jpg`}
+                    href={`${poppetBase}assets/text/patches.jpg`}
                     width="180"
                     height="184"
                     preserveAspectRatio="xMidYMid slice"
                   />
                 </pattern>
                 <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor={fillTop} stopOpacity={highlighted ? '0.42' : '0.52'} />
-                  <stop offset="100%" stopColor={fillBot} stopOpacity={highlighted ? '0.58' : '0.68'} />
+                  <stop offset="0%" stopColor={fillTop} stopOpacity={highlighted ? '0.38' : '0.52'} />
+                  <stop offset="100%" stopColor={fillBot} stopOpacity={highlighted ? '0.55' : '0.68'} />
                 </linearGradient>
               </defs>
               <path d={outerPath} fill={`url(#${patId})`} />
               <path d={outerPath} fill={`url(#${gradId})`} stroke={strokeCol} strokeWidth={highlighted ? '2.4' : '1.7'} strokeLinejoin="round" />
               <path d={stitchPath} fill="none" stroke={highlighted ? '#f4d78b' : '#b48d59'} strokeWidth="1.2" strokeDasharray="4 3.5" opacity={highlighted ? '0.95' : '0.6'} />
-            {asGroup && <path d={outerPath} fill="url(#effigyWrap)" />}
-              </svg>
+            </svg>
           );
         };
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 py-2.5 sm:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('weaverevent.jpg')}
           >
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.92)_100%)] pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.34)_0%,rgba(5,3,2,0.93)_100%)] pointer-events-none" />
             {renderActWeather('absolute inset-0 z-[5]', 'build-totem')}
 
-            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-between gap-1.5 sm:gap-2.5 lg:gap-3">
+            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-2.5 sm:gap-3.5">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                   <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
-                    The Weaver&apos;s Loom
+                    The Weaver&apos;s Workshop
                   </span>
                   <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
-                <h1 className="text-lg sm:text-2xl lg:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Needle &amp; Threadcraft
                 </h1>
               </div>
 
-              {/* Vertically Centered Two-Column Split: Stitched Effigy Left, Claim/Assembly Rack Right */}
-              <div className="w-full flex-1 lg:max-h-[540px] my-auto min-h-0 grid grid-cols-1 md:grid-cols-12 gap-2.5 sm:gap-4 lg:gap-5 items-stretch">
-                {/* LEFT COLUMN: Physical Stitched Effigy */}
-                <div className="md:col-span-4 relative flex flex-col items-center justify-center px-2 sm:px-4 lg:px-5 py-1.5 sm:py-3 lg:py-5 min-h-0">
+              {/* Two-Column Tailor Workbench: Live Poppet Cushion Left (5 cols), Reliquary Scrap Rack / Assembly Right (7 cols) */}
+              <div className="w-full flex-1 lg:max-h-[580px] my-auto min-h-0 grid grid-cols-1 md:grid-cols-12 gap-3.5 sm:gap-5 items-stretch">
+                {/* LEFT COLUMN: Candlelit Tailor's Cushion + Physical Stitched Poppet + Live Effect Plaque */}
+                <div className="md:col-span-5 relative flex flex-col items-center justify-between px-4 py-4 min-h-0">
+                  {/* Ambient Candlelight Aura */}
                   <div
-                    className="pointer-events-none absolute inset-0"
+                    className="pointer-events-none absolute inset-0 transition-opacity duration-500"
                     style={{
                       background:
                         previewHead && previewBody
-                          ? 'radial-gradient(ellipse farthest-side at 50% 48%, rgba(212,175,55,0.22) 0%, rgba(120,53,15,0.1) 50%, transparent 75%)'
-                          : 'radial-gradient(ellipse farthest-side at 50% 48%, rgba(140,103,71,0.14) 0%, transparent 72%)',
+                          ? 'radial-gradient(ellipse farthest-side at 50% 44%, rgba(212,175,55,0.24) 0%, rgba(153,27,27,0.12) 46%, transparent 74%)'
+                          : 'radial-gradient(ellipse farthest-side at 50% 44%, rgba(160,115,65,0.16) 0%, transparent 72%)',
                     }}
                   />
-                  <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9a7342]/70" />
+                  <span className="pointer-events-none absolute top-2 left-2 w-3 h-3 border-t border-l border-[#9a7342]/65" />
+                  <span className="pointer-events-none absolute top-2 right-2 w-3 h-3 border-t border-r border-[#9a7342]/65" />
+                  <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/65" />
+                  <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9a7342]/65" />
 
-                  {/* Physical Stitched Effigy Doll (effigy.png) with Pinned Head Patch & Torso Crest */}
-                  <div
-                    className="relative z-10 flex flex-col items-center justify-center my-auto"
-                    style={{
-                      animation: effigyStitchingAnim ? 'effigyStitchPulse 0.9s ease-in-out' : undefined,
-                    }}
-                  >
-                    <div className="relative h-[208px] sm:h-[260px] lg:h-[315px] aspect-[235/347] flex items-center justify-center select-none">
-                      <img
-                        src={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
-                        alt="Stitched Effigy"
-                        draggable={false}
-                        className="w-full h-full object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.95)]"
-                      />
-
-                      {/* Sewn-on patches: one SVG in doll space, masked to the doll's own silhouette */}
-                      <svg
-                        viewBox="0 0 235 347"
-                        className="absolute inset-0 w-full h-full pointer-events-none"
+                  {/* Physical Poppet Assembly Mounted Above Tailor's Velvet Cushion */}
+                  <div className="relative z-10 flex-1 min-h-0 flex flex-col items-center justify-center w-full">
+                    <div
+                      className="relative flex flex-col items-center justify-center"
+                      style={{
+                        animation: effigyStitchingAnim ? 'effigyStitchPulse 0.9s ease-in-out' : undefined,
+                      }}
+                    >
+                      {/* Tailor's Stitched Velvet & Brass Cushion Disc Beneath Poppet */}
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -bottom-3 left-1/2 -translate-x-1/2 w-[210px] sm:w-[244px] h-[52px] rounded-full border border-[#8f6a38]/55 shadow-[0_14px_26px_rgba(0,0,0,0.95),inset_0_2px_10px_rgba(244,215,139,0.12)]"
                         style={{
-                          WebkitMaskImage: `url(${import.meta.env.BASE_URL || './'}assets/text/effigy.png)`,
-                          maskImage: `url(${import.meta.env.BASE_URL || './'}assets/text/effigy.png)`,
-                          WebkitMaskSize: '100% 100%',
-                          maskSize: '100% 100%',
+                          background:
+                            'radial-gradient(ellipse at 50% 45%, #3a1214 0%, #1d090a 62%, #0c0505 100%)',
                         }}
                       >
-                        <defs>
-                          <filter id="effigyFray" x="-10%" y="-10%" width="120%" height="120%">
-                            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="n" />
-                            <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G" />
-                          </filter>
-                          <filter id="effigyBlur" x="-30%" y="-30%" width="160%" height="160%">
-                            <feGaussianBlur stdDeviation="2.4" />
-                          </filter>
-                          <radialGradient id="effigyWrap" cx="50%" cy="46%" r="62%">
-                            <stop offset="52%" stopColor="#000" stopOpacity="0" />
-                            <stop offset="100%" stopColor="#000" stopOpacity="0.6" />
-                          </radialGradient>
-                          <radialGradient id="effigyCollar" cx="50%" cy="50%" r="50%">
-                            <stop offset="70%" stopColor="#1a0f07" stopOpacity="0" />
-                            <stop offset="92%" stopColor="#5a3b1c" stopOpacity="0.32" />
-                            <stop offset="100%" stopColor="#3a2410" stopOpacity="0.42" />
-                          </radialGradient>
-                          <clipPath id="effigyCrestClip">
-                            <circle cx="129" cy="198" r="35" />
-                          </clipPath>
-                        </defs>
+                        <div className="absolute inset-[5px] rounded-full border border-dashed border-[#c49a5c]/35" />
+                      </div>
 
-                        {/* base copy of the doll so multiply has something to blend against */}
-                        <image
-                          href={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
-                          x="0"
-                          y="0"
-                          width="235"
-                          height="347"
-                          preserveAspectRatio="none"
+                      <div className="relative h-[228px] sm:h-[272px] lg:h-[308px] aspect-[235/347] flex items-center justify-center select-none z-10">
+                        <img
+                          src={`${poppetBase}assets/text/effigy.png`}
+                          alt="Stitched Poppet"
+                          draggable={false}
+                          className="w-full h-full object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.96)]"
                         />
 
-                        {!previewHead && (
-                          <g>
-                            <circle cx="101" cy="62" r="22" fill="#120b07" fillOpacity="0.4" stroke="#4a321d" strokeOpacity="0.8" strokeDasharray="3 3" />
-                            <text x="101" y="64" textAnchor="middle" fontSize="6" fontFamily="monospace" fill="#e5cfa8" fillOpacity="0.7" letterSpacing="1">PATCH</text>
-                          </g>
-                        )}
-
-                        {/* Torso crest */}
-                        <defs>
-                          <clipPath id="effigyCrestClip2">
-                            <circle cx="135" cy="189" r="30" />
-                          </clipPath>
-                          <radialGradient id="effigyBulge" cx="36%" cy="30%" r="78%">
-                            <stop offset="0%" stopColor="#fff" stopOpacity="0.3" />
-                            <stop offset="45%" stopColor="#fff" stopOpacity="0" />
-                            <stop offset="100%" stopColor="#000" stopOpacity="0.6" />
-                          </radialGradient>
-                        </defs>
-                        {previewBody ? (
-                          <>
-                            <g transform="translate(5 2) rotate(-14 130 187)">
-                              <g transform="translate(130 187) scale(0.9 1) translate(-130 -187)">
-                                <circle cx="130" cy="189" r="37" fill="#000" opacity="0.4" filter="url(#effigyBlur)" />
-                                <circle cx="130" cy="187" r="37" fill="url(#effigyCollar)" />
-                                <image
-                                  href={getSigilArtUrl(previewBody)}
-                                  x="101"
-                                  y="158"
-                                  width="58"
-                                  height="58"
-                                  preserveAspectRatio="xMidYMid meet"
-                                  style={{ imageRendering: 'pixelated' }}
-                                />
-                                <circle cx="130" cy="187" r="37" fill="url(#effigyBulge)" />
-                                <g strokeLinecap="round">
-                                  {Array.from({ length: 22 }, (_, i) => {
-                                    const ang = (i / 22) * Math.PI * 2;
-                                    const c = Math.cos(ang);
-                                    const sn = Math.sin(ang);
-                                    return (
-                                      <g key={'crest-st-' + i}>
-                                        <line x1={130 + 27.5 * c + 0.6} y1={187 + 27.5 * sn + 0.8} x2={130 + 37 * c + 0.6} y2={187 + 37 * sn + 0.8} stroke="#000" strokeOpacity="0.28" strokeWidth="1.4" />
-                                        <line x1={130 + 27.5 * c} y1={187 + 27.5 * sn} x2={130 + 37 * c} y2={187 + 37 * sn} stroke="#d8b46c" strokeOpacity="0.9" strokeWidth="1.05" />
-                                      </g>
-                                    );
-                                  })}
-                                </g>
-                              </g>
-                            </g>
-                            <image
-                              href={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
-                              x="0"
-                              y="0"
-                              width="235"
-                              height="347"
-                              preserveAspectRatio="none"
-                              clipPath="url(#effigyCrestClip2)"
-                              opacity="0.5"
-                              style={{ mixBlendMode: 'multiply' }}
-                            />
-                          </>
-                        ) : (
-                          <g>
-                            <circle cx="130" cy="187" r="28" fill="#120b07" fillOpacity="0.4" stroke="#4a321d" strokeOpacity="0.8" strokeDasharray="3 3" />
-                            <text x="130" y="189" textAnchor="middle" fontSize="5" fontFamily="monospace" fill="#e5cfa8" fillOpacity="0.7" letterSpacing="1">CREST</text>
-                          </g>
-                        )}
-                      </svg>
-
-                      {/* Tribe icon: embroidered into the skull, inset and curved */}
-                      {previewHead && (
-                        <div
-                          className="absolute pointer-events-none flex items-center justify-center"
+                        {/* Sewn-on patches masked cleanly to effigy.png silhouette */}
+                        <svg
+                          viewBox="0 0 235 347"
+                          className="absolute inset-0 w-full h-full pointer-events-none"
                           style={{
-                            left: '45%',
-                            top: '17%',
-                            width: '40%',
-                            aspectRatio: '1 / 1',
-                            transform: 'translate(-50%, -50%) perspective(30px) rotateZ(-9deg) rotateX(6deg)',
-                            WebkitMaskImage: 'repeating-linear-gradient(32deg, #000 0 1.4px, rgba(0,0,0,0.55) 1.4px 2.6px), radial-gradient(ellipse at 46% 44%, #000 56%, rgba(0,0,0,0.3) 100%)',
-                            maskImage: 'repeating-linear-gradient(32deg, #000 0 1.4px, rgba(0,0,0,0.55) 1.4px 2.6px), radial-gradient(ellipse at 46% 44%, #000 56%, rgba(0,0,0,0.3) 100%)',
-                            WebkitMaskComposite: 'source-in',
-                            maskComposite: 'intersect',
+                            WebkitMaskImage: `url(${poppetBase}assets/text/effigy.png)`,
+                            maskImage: `url(${poppetBase}assets/text/effigy.png)`,
+                            WebkitMaskSize: '100% 100%',
+                            maskSize: '100% 100%',
                           }}
                         >
-                          <div
-                            className="[&>*]:scale-[2.4] sm:[&>*]:scale-[3.1] lg:[&>*]:scale-[4]"
-                            style={{ filter: 'brightness(0.14) sepia(1) saturate(2.4) drop-shadow(-1px -1px 0.7px rgba(30,16,4,0.85)) drop-shadow(1px 1px 0.5px rgba(255,236,190,0.4))' }}
-                          >
-                            {TRIBE_EMBROIDERY[previewHead as Tribe] || <span className="text-lg">✦</span>}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                          <defs>
+                            <filter id="effigyBlur" x="-30%" y="-30%" width="160%" height="160%">
+                              <feGaussianBlur stdDeviation="2.4" />
+                            </filter>
+                            <radialGradient id="effigyCollar" cx="50%" cy="50%" r="50%">
+                              <stop offset="70%" stopColor="#1a0f07" stopOpacity="0" />
+                              <stop offset="92%" stopColor="#5a3b1c" stopOpacity="0.32" />
+                              <stop offset="100%" stopColor="#3a2410" stopOpacity="0.42" />
+                            </radialGradient>
+                            <clipPath id="effigyCrestClip2">
+                              <circle cx="135" cy="189" r="30" />
+                            </clipPath>
+                            <radialGradient id="effigyBulge" cx="36%" cy="30%" r="78%">
+                              <stop offset="0%" stopColor="#fff" stopOpacity="0.28" />
+                              <stop offset="45%" stopColor="#fff" stopOpacity="0" />
+                              <stop offset="100%" stopColor="#000" stopOpacity="0.58" />
+                            </radialGradient>
+                          </defs>
 
+                          <image
+                            href={`${poppetBase}assets/text/effigy.png`}
+                            x="0"
+                            y="0"
+                            width="235"
+                            height="347"
+                            preserveAspectRatio="none"
+                          />
+
+                          {/* Empty Head Stitch Target Ring */}
+                          {!previewHead && (
+                            <g opacity="0.85">
+                              <circle
+                                cx="104"
+                                cy="61"
+                                r="25"
+                                fill="#140c08"
+                                fillOpacity="0.42"
+                                stroke="#c49a5c"
+                                strokeWidth="1.5"
+                                strokeDasharray="4 3"
+                              />
+                              <circle cx="104" cy="61" r="3" fill="#c49a5c" fillOpacity="0.55" />
+                            </g>
+                          )}
+
+                          {/* Torso Crest Sewn Medallion */}
+                          {previewBody ? (
+                            <g opacity={isHoverPreviewBody ? 0.88 : 1}>
+                              <g transform="translate(5 2) rotate(-14 130 187)">
+                                <g transform="translate(130 187) scale(0.9 1) translate(-130 -187)">
+                                  <circle cx="130" cy="189" r="37" fill="#000" opacity="0.42" filter="url(#effigyBlur)" />
+                                  <circle cx="130" cy="187" r="37" fill="url(#effigyCollar)" />
+                                  <image
+                                    href={getSigilArtUrl(previewBody)}
+                                    x="101"
+                                    y="158"
+                                    width="58"
+                                    height="58"
+                                    preserveAspectRatio="xMidYMid meet"
+                                    style={{ imageRendering: 'pixelated' }}
+                                  />
+                                  <circle cx="130" cy="187" r="37" fill="url(#effigyBulge)" />
+                                  <g strokeLinecap="round">
+                                    {Array.from({ length: 22 }, (_, i) => {
+                                      const ang = (i / 22) * Math.PI * 2;
+                                      const c = Math.cos(ang);
+                                      const sn = Math.sin(ang);
+                                      return (
+                                        <g key={'crest-st-' + i}>
+                                          <line
+                                            x1={130 + 27.5 * c + 0.6}
+                                            y1={187 + 27.5 * sn + 0.8}
+                                            x2={130 + 37 * c + 0.6}
+                                            y2={187 + 37 * sn + 0.8}
+                                            stroke="#000"
+                                            strokeOpacity="0.28"
+                                            strokeWidth="1.4"
+                                          />
+                                          <line
+                                            x1={130 + 27.5 * c}
+                                            y1={187 + 27.5 * sn}
+                                            x2={130 + 37 * c}
+                                            y2={187 + 37 * sn}
+                                            stroke="#d8b46c"
+                                            strokeOpacity="0.92"
+                                            strokeWidth="1.1"
+                                          />
+                                        </g>
+                                      );
+                                    })}
+                                  </g>
+                                </g>
+                              </g>
+                              <image
+                                href={`${poppetBase}assets/text/effigy.png`}
+                                x="0"
+                                y="0"
+                                width="235"
+                                height="347"
+                                preserveAspectRatio="none"
+                                clipPath="url(#effigyCrestClip2)"
+                                opacity="0.48"
+                                style={{ mixBlendMode: 'multiply' }}
+                              />
+                            </g>
+                          ) : (
+                            <g opacity="0.85">
+                              <circle
+                                cx="131"
+                                cy="187"
+                                r="29"
+                                fill="#140c08"
+                                fillOpacity="0.42"
+                                stroke="#c49a5c"
+                                strokeWidth="1.5"
+                                strokeDasharray="4 3"
+                              />
+                              <circle cx="131" cy="187" r="3" fill="#c49a5c" fillOpacity="0.55" />
+                            </g>
+                          )}
+                        </svg>
+
+                        {/* Tribe Embroidery Sewn Onto Poppet Head */}
+                        {previewHead && (
+                          <div
+                            className={`absolute pointer-events-none flex items-center justify-center transition-opacity duration-200 ${
+                              isHoverPreviewHead ? 'opacity-85' : 'opacity-100'
+                            }`}
+                            style={{
+                              left: '45%',
+                              top: '17%',
+                              width: '40%',
+                              aspectRatio: '1 / 1',
+                              transform: 'translate(-50%, -50%) perspective(30px) rotateZ(-9deg) rotateX(6deg)',
+                              WebkitMaskImage:
+                                'repeating-linear-gradient(32deg, #000 0 1.4px, rgba(0,0,0,0.55) 1.4px 2.6px), radial-gradient(ellipse at 46% 44%, #000 56%, rgba(0,0,0,0.3) 100%)',
+                              maskImage:
+                                'repeating-linear-gradient(32deg, #000 0 1.4px, rgba(0,0,0,0.55) 1.4px 2.6px), radial-gradient(ellipse at 46% 44%, #000 56%, rgba(0,0,0,0.3) 100%)',
+                              WebkitMaskComposite: 'source-in',
+                              maskComposite: 'intersect',
+                            }}
+                          >
+                            <div
+                              className="[&>*]:scale-[2.6] sm:[&>*]:scale-[3.3] lg:[&>*]:scale-[3.8]"
+                              style={{
+                                filter:
+                                  'brightness(0.14) sepia(1) saturate(2.4) drop-shadow(-1px -1px 0.7px rgba(30,16,4,0.85)) drop-shadow(1px 1px 0.5px rgba(255,236,190,0.4))',
+                              }}
+                            >
+                              {TRIBE_EMBROIDERY[previewHead as Tribe] || <span className="text-lg">✦</span>}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Active Tailor's Golden Needle & Running Thread Animation on Stitch */}
+                        {effigyStitchingAnim && (
+                          <svg
+                            viewBox="0 0 235 347"
+                            className="pointer-events-none absolute inset-0 z-30 w-full h-full overflow-visible drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]"
+                          >
+                            <circle
+                              cx="104"
+                              cy="61"
+                              r="28"
+                              fill="none"
+                              stroke="#f4d78b"
+                              strokeWidth="2.4"
+                              strokeDasharray="240"
+                              style={{ animation: 'effigyRingDraw 0.55s ease-out forwards' }}
+                            />
+                            <circle
+                              cx="131"
+                              cy="187"
+                              r="36"
+                              fill="none"
+                              stroke="#f43f5e"
+                              strokeWidth="2.6"
+                              strokeDasharray="240"
+                              style={{ animation: 'effigyRingDraw 0.65s ease-out 0.18s both' }}
+                            />
+                            <g style={{ transformOrigin: '117px 173px', animation: 'effigyNeedleBind 0.9s ease-in-out forwards' }}>
+                              <path d="M 60 173 Q 28 164 6 178" fill="none" stroke="#f4d78b" strokeWidth="2.4" strokeLinecap="round" />
+                              <path d="M 58 173 L 68 169 L 146 170.5 L 166 173 L 146 175.5 L 68 177 Z" fill="#f5ead4" stroke="#452f1a" strokeWidth="1.4" />
+                              <ellipse cx="70" cy="173" rx="4.5" ry="1.8" fill="#7f1d1d" />
+                            </g>
+                          </svg>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Active Effigy Status Footer */}
-                  <div className="relative z-20 w-full min-h-[18px] sm:min-h-[24px] mt-1 sm:mt-2 flex items-center justify-center text-center">
-                    {previewHead && previewBody && (
-                      <div className="font-['Cinzel',_serif] text-sm tracking-[0.1em] text-[#f4d78b] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                        {previewHead} &mdash; {previewBody}
+                  {/* Fixed-Height Live Poppet Binding Readout Plaque */}
+                  <div className="relative z-20 w-full mt-3 px-3.5 py-2.5 bg-[#0e0907]/92 border border-[#523925]/85 shadow-[inset_0_2px_10px_rgba(0,0,0,0.9),0_8px_20px_rgba(0,0,0,0.8)] text-center">
+                    <span className="pointer-events-none absolute top-0.5 left-0.5 w-2 h-2 border-t border-l border-[#b08749]/55" />
+                    <span className="pointer-events-none absolute top-0.5 right-0.5 w-2 h-2 border-t border-r border-[#b08749]/55" />
+                    <span className="pointer-events-none absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l border-[#b08749]/55" />
+                    <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r border-[#b08749]/55" />
+
+                    <div className="grid grid-cols-2 gap-2 pb-2 mb-1.5 border-b border-[#3d291a]/80">
+                      <div className="px-2 py-1 bg-[#140d0a] border border-[#3d2a1b]/80">
+                        <div className="text-[8px] font-['Cinzel',_serif] uppercase tracking-[0.2em] text-[#9b8265]">
+                          Tribal Patch
+                        </div>
+                        <div className={`text-[11px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.12em] truncate mt-0.5 ${previewHead ? 'text-[#f4d78b]' : 'text-[#665647]'}`}>
+                          {previewHead || 'Unbound'}
+                        </div>
                       </div>
-                    )}
+                      <div className="px-2 py-1 bg-[#140d0a] border border-[#3d2a1b]/80">
+                        <div className="text-[8px] font-['Cinzel',_serif] uppercase tracking-[0.2em] text-[#9b8265]">
+                          Torso Crest
+                        </div>
+                        <div className={`text-[11px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.12em] truncate mt-0.5 ${previewBody ? 'text-[#f2a69c]' : 'text-[#665647]'}`}>
+                          {previewBody || 'Unbound'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="min-h-[30px] flex items-center justify-center px-1">
+                      {previewHead && previewBody ? (
+                        <p className="text-[11px] text-[#e8d6ba] leading-snug">
+                          All <span className="text-[#f4d78b] font-bold">{previewHead}</span> creatures gain{' '}
+                          <span className="text-[#f5a399] font-bold">{previewBody}</span>.
+                        </p>
+                      ) : previewHead ? (
+                        <p className="text-[10.5px] italic text-[#9e8970]">
+                          Bind a <span className="text-[#e2be7d]">Torso Crest</span> to awaken this poppet.
+                        </p>
+                      ) : previewBody ? (
+                        <p className="text-[10.5px] italic text-[#9e8970]">
+                          Bind a <span className="text-[#e2be7d]">Tribal Patch</span> to awaken this poppet.
+                        </p>
+                      ) : (
+                        <p className="text-[10.5px] italic text-[#8a755f]">
+                          Hover or select a scrap to preview on the poppet.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Reward Selection OR Assembly Bench */}
-                <div className="md:col-span-8 relative flex flex-col justify-between min-h-0 rounded-[3px] bg-[#0d0806]/86 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] px-3 sm:px-4 lg:px-5 py-2 sm:py-3 lg:py-4">
-                  <span className="pointer-events-none absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t border-l border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t border-r border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
-                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
+                {/* RIGHT COLUMN: Carved Reliquary Tailor Workbench */}
+                <RitualReliquaryShell
+                  variant="crimson"
+                  className="md:col-span-7 flex flex-col min-h-0"
+                >
+                  {/* Step Progress & Satchel Header */}
+                  <div className={`relative z-10 flex items-center justify-between gap-2 px-5 sm:px-6 pt-4 pb-3 border-b border-[#543a27]/70 bg-[#110808]/55 transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2.5 py-1 text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] border ${
+                          totemStage === 'REWARD'
+                            ? 'bg-[#29090b]/90 border-[#c49a5c]/85 text-[#f7e3bd] shadow-[inset_0_0_10px_rgba(185,28,28,0.28)]'
+                            : 'bg-[#100a08]/70 border-[#3d2c1f]/75 text-[#8a7560]'
+                        }`}
+                      >
+                        I. Claim Scrap
+                      </span>
+                      <span className="text-[#785c40] text-xs">›</span>
+                      <span
+                        className={`px-2.5 py-1 text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] border ${
+                          totemStage === 'ASSEMBLE'
+                            ? 'bg-[#29090b]/90 border-[#c49a5c]/85 text-[#f7e3bd] shadow-[inset_0_0_10px_rgba(185,28,28,0.28)]'
+                            : 'bg-[#100a08]/70 border-[#3d2c1f]/75 text-[#8a7560]'
+                        }`}
+                      >
+                        II. Stitch Poppet
+                      </span>
+                    </div>
+                    <span className="px-2.5 py-1 bg-[#120b09] border border-[#4a3423]/80 text-[10px] font-mono tracking-[0.16em] text-[#cbb390]">
+                      Satchel {totemPieces.length}/7
+                    </span>
+                  </div>
 
                   {totemStage === 'REWARD' ? (
-                    <div className="flex flex-col h-full justify-between gap-1.5 sm:gap-2 lg:gap-3 min-h-0">
-                      <div className={`flex items-center justify-between border-b border-[#3a2618]/80 pb-2 transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
-                        <span className="font-['Cinzel',_serif] text-xs font-bold uppercase tracking-[0.22em] text-[#dfc59a]">
-                          Claim a Scrap
-                        </span>
-                        <span className="text-[10px] font-mono tracking-[0.18em] text-[#9b8266]">
-                          {totemPieces.length}/7
-                        </span>
-                      </div>
+                    <div className="relative z-10 flex-1 min-h-0 flex flex-col justify-between px-5 sm:px-6 py-4 gap-3">
+                      {!totemChoicesHidden ? (
+                        <>
+                          {/* 3 Uniformly Framed Physical Scrap Cards */}
+                          <div className="flex-1 min-h-0 grid grid-cols-3 gap-2.5 sm:gap-3.5 items-stretch">
+                            {totemRewardChoices.map((tc, idx) => {
+                              const isSelected = selectedTotemRewardIdx === idx;
+                              const isOwned = totemPieces.some(p => p.type === tc.type && p.value === tc.value);
+                              const fadeAnim = isTotemFadingOut
+                                ? isSelected
+                                  ? 'animate-swipe-up-fade pointer-events-none'
+                                  : 'opacity-0 transition-opacity duration-300 pointer-events-none'
+                                : '';
 
-                      {!totemChoicesHidden ? (() => {
-                        const inspectedIdx = hoveredTotemRewardIdx !== null ? hoveredTotemRewardIdx : selectedTotemRewardIdx;
-                        const inspectedChoice = inspectedIdx !== null ? totemRewardChoices[inspectedIdx] || null : null;
+                              return (
+                                <button
+                                  key={`totem-rew-${idx}`}
+                                  type="button"
+                                  disabled={isEventBusy || isTotemFadingOut}
+                                  onMouseEnter={() => setHoveredTotemRewardIdx(idx)}
+                                  onMouseLeave={() =>
+                                    setHoveredTotemRewardIdx((prev: number | null) => (prev === idx ? null : prev))
+                                  }
+                                  onClick={() => {
+                                    if (!isEventBusy && !isTotemFadingOut) {
+                                      triggerSfx('draw');
+                                      setSelectedTotemRewardIdx(idx);
+                                    }
+                                  }}
+                                  className={`group relative flex flex-col items-center justify-between p-2.5 sm:p-3.5 border transition-all duration-200 select-none ${fadeAnim} ${
+                                    isSelected
+                                      ? 'bg-[#1c100d]/95 border-[#e2be7d] -translate-y-1 shadow-[0_0_24px_rgba(212,175,55,0.3),inset_0_2px_12px_rgba(0,0,0,0.85)]'
+                                      : 'bg-[#100a08]/90 border-[#4a3524]/85 hover:border-[#b08749] hover:-translate-y-0.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.9)]'
+                                  } ${isEventBusy || isTotemFadingOut ? 'opacity-45 cursor-not-allowed' : 'cursor-pointer'}`}
+                                >
+                                  {/* Corner Brass Ticks */}
+                                  <span className={`pointer-events-none absolute top-0.5 left-0.5 w-2 h-2 border-t border-l ${isSelected ? 'border-[#f4d78b]' : 'border-[#8f6a38]/55'}`} />
+                                  <span className={`pointer-events-none absolute top-0.5 right-0.5 w-2 h-2 border-t border-r ${isSelected ? 'border-[#f4d78b]' : 'border-[#8f6a38]/55'}`} />
+                                  <span className={`pointer-events-none absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l ${isSelected ? 'border-[#f4d78b]' : 'border-[#8f6a38]/55'}`} />
+                                  <span className={`pointer-events-none absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r ${isSelected ? 'border-[#f4d78b]' : 'border-[#8f6a38]/55'}`} />
 
-                        return (
-                          <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-1.5 sm:gap-3 lg:gap-5 py-1 sm:py-2 lg:py-3">
-                            <div className="flex flex-wrap gap-2.5 sm:gap-4 lg:gap-6 items-start justify-center">
-                              {totemRewardChoices.map((tc, idx) => {
-                                const isSelected = selectedTotemRewardIdx === idx;
-                                const fadeAnim = isTotemFadingOut
-                                  ? isSelected
-                                    ? 'animate-swipe-up-fade pointer-events-none'
-                                    : 'opacity-0 transition-opacity duration-300 pointer-events-none'
-                                  : '';
-
-                                return (
-                                  <div
-                                    key={`totem-rew-${idx}`}
-                                    onMouseEnter={() => setHoveredTotemRewardIdx(idx)}
-                                    onMouseLeave={() => setHoveredTotemRewardIdx((prev: number | null) => (prev === idx ? null : prev))}
-                                    onClick={() => {
-                                      if (!isEventBusy && !isTotemFadingOut) {
-                                        triggerSfx('draw');
-                                        setSelectedTotemRewardIdx(idx);
-                                      }
-                                    }}
-                                    className={`flex flex-col items-center select-none transition-all duration-200 ${fadeAnim} ${
-                                      isEventBusy || isTotemFadingOut
-                                        ? 'opacity-40 cursor-not-allowed'
-                                        : isSelected
-                                          ? 'scale-105 -translate-y-1.5 cursor-pointer'
-                                          : 'hover:-translate-y-1 cursor-pointer'
-                                    }`}
-                                  >
-                                    <span className="mb-1 sm:mb-1.5 lg:mb-2 text-[7.5px] sm:text-[8.5px] font-mono uppercase tracking-[0.24em] text-[#b48f5a]">
-                                      {tc.type === 'head' ? 'Tribal Patch' : 'Crest'}
+                                  {/* Top Type Pill */}
+                                  <div className="w-full flex items-center justify-between gap-1">
+                                    <span
+                                      className={`text-[8px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] ${
+                                        tc.type === 'head' ? 'text-[#d9b46e]' : 'text-[#e5928a]'
+                                      }`}
+                                    >
+                                      {tc.type === 'head' ? 'Tribal Patch' : 'Torso Crest'}
                                     </span>
+                                    {isOwned && (
+                                      <span className="px-1 py-0.2 bg-[#1a130c] border border-[#6e5232] text-[7px] uppercase tracking-wider text-[#b59c7b]">
+                                        Owned
+                                      </span>
+                                    )}
+                                  </div>
 
+                                  {/* Center Physical Scrap Art */}
+                                  <div className="my-auto py-2 flex items-center justify-center w-full">
                                     {tc.type === 'head' ? (
-                                      <div
-                                        className={`relative w-[96px] h-[102px] sm:w-[128px] sm:h-[136px] lg:w-[160px] lg:h-[168px] px-2 sm:px-3 lg:px-4 pb-2 sm:pb-3 text-center flex flex-col items-center justify-center ${
-                                          isSelected ? 'drop-shadow-[0_0_24px_rgba(212,175,55,0.4)]' : ''
-                                        }`}
-                                      >
+                                      <div className="relative w-[92px] h-[96px] sm:w-[112px] sm:h-[116px] flex items-center justify-center">
                                         {renderHeadCutoutSvg(tc.value, isSelected)}
-                                        <div className="relative z-10 flex items-center justify-center w-9 h-9 sm:w-12 sm:h-12 lg:w-14 lg:h-14 mb-1 sm:mb-1.5 lg:mb-2 bg-[#1c130c]/90 border border-[#523b26] rounded-[2px] shadow-inner [&>*]:scale-[1.4] sm:[&>*]:scale-[1.8] lg:[&>*]:scale-[2.2]">
-                                          {TRIBE_EMBROIDERY[tc.value as Tribe] || <span className="text-2xl">✦</span>}
-                                        </div>
-                                        <div className="relative z-10 font-['Cinzel',_serif] font-bold text-[#f2ddb7] text-xs uppercase tracking-[0.18em]">
-                                          {tc.value}
+                                        <div className="relative z-10 w-10 h-10 sm:w-12 sm:h-12 bg-[#1b120b]/92 border border-[#5a412a] rounded-[2px] flex items-center justify-center shadow-inner [&>*]:scale-[1.45] sm:[&>*]:scale-[1.8]">
+                                          {TRIBE_EMBROIDERY[tc.value as Tribe] || <span className="text-xl">✦</span>}
                                         </div>
                                       </div>
                                     ) : (
                                       <div
-                                        className={`w-[98px] h-[98px] sm:w-[130px] sm:h-[130px] lg:w-[164px] lg:h-[164px] p-2 sm:p-3 lg:p-4 rounded-full border-2 border-dashed text-center flex flex-col items-center justify-center transition-all duration-200 ${
+                                        className={`relative w-[92px] h-[92px] sm:w-[110px] sm:h-[110px] rounded-full border-2 border-dashed flex items-center justify-center transition-colors ${
                                           isSelected
-                                            ? 'border-[#e5c16b] shadow-[0_0_28px_rgba(212,175,55,0.34)]'
-                                            : 'border-[#8c6747]/80 hover:border-[#cfa159] shadow-[0_10px_24px_rgba(0,0,0,0.88)]'
+                                            ? 'border-[#e5c16b] shadow-[0_0_20px_rgba(212,175,55,0.28)]'
+                                            : 'border-[#8c6747]/80 group-hover:border-[#cfa159]'
                                         }`}
                                         style={{
                                           backgroundColor: '#1a120b',
-                                          backgroundImage: isSelected
-                                            ? `radial-gradient(circle at 50% 35%, rgba(43,29,18,0.44), rgba(18,11,7,0.72)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`
-                                            : `radial-gradient(circle at 50% 35%, rgba(28,19,12,0.52), rgba(14,9,6,0.78)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`,
+                                          backgroundImage: `radial-gradient(circle at 50% 35%, rgba(43,29,18,0.44), rgba(14,9,6,0.78)), url("${poppetBase}assets/text/patches.jpg")`,
                                           backgroundSize: 'cover',
                                           backgroundPosition: 'center',
                                         }}
                                       >
-                                        <div className="flex items-center justify-center w-[44px] h-[44px] sm:w-[60px] sm:h-[60px] lg:w-[76px] lg:h-[76px] mb-1 sm:mb-1.5 rounded-full bg-[#1a110b] border border-[#5a412a] shadow-inner">
+                                        <div className="w-[54px] h-[54px] sm:w-[66px] sm:h-[66px] rounded-full bg-[#150d0a] border border-[#8f6a38]/85 shadow-[inset_0_2px_6px_rgba(0,0,0,0.95)] flex items-center justify-center overflow-hidden">
                                           <img
                                             src={getSigilArtUrl(tc.value)}
                                             alt={tc.value}
-                                            className="w-8 h-8 sm:w-11 sm:h-11 lg:w-14 lg:h-14 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]"
-                                            style={{ imageRendering: 'pixelated' }}
+                                            className="w-10 h-10 sm:w-12 sm:h-12 object-contain [image-rendering:pixelated] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
                                           />
-                                        </div>
-                                        <div className="font-['Cinzel',_serif] font-bold text-[#f0dab2] text-xs uppercase tracking-[0.14em] leading-tight px-2">
-                                          {tc.value}
                                         </div>
                                       </div>
                                     )}
                                   </div>
-                                );
-                              })}
-                            </div>
 
-                            {/* Compact Inspector Caption (fixed height prevents box/rack resizing) */}
-                            <div className="w-full max-w-md min-h-[34px] sm:h-[56px] lg:h-[64px] shrink-0 px-2 sm:px-3 flex flex-col items-center justify-center text-center overflow-hidden">
-                              {inspectedChoice && (
-                                inspectedChoice.type === 'body' ? (
-                                  <>
-                                    <span className="font-['Cinzel',_serif] text-[11px] font-bold uppercase tracking-[0.18em] text-[#f4d78b]">
-                                      {inspectedChoice.value}
-                                    </span>
-                                    <span className="text-[11px] font-mono text-[#d8c3a5] leading-snug mt-0.5">
-                                      {SIGIL_DESCRIPTIONS[inspectedChoice.value]}
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span className="font-['Cinzel',_serif] text-xs uppercase tracking-[0.18em] text-[#e5cfa8]">
-                                    {inspectedChoice.value} &mdash; Tribal Patch
-                                  </span>
-                                )
-                              )}
-                            </div>
+                                  {/* Piece Name */}
+                                  <div className="w-full pt-1.5 border-t border-[#3b291d]/75 text-center">
+                                    <div className="font-['Cinzel',_serif] font-bold text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[#f3dfb8] group-hover:text-white leading-tight truncate">
+                                      {tc.value}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
                           </div>
-                        );
-                      })() : (
-                        <div className="flex-1 flex items-center justify-center text-[11px] font-mono uppercase tracking-[0.22em] text-[#9c8262]">
-                          Piece Bound to Satchel...
-                        </div>
-                      )}
 
-                      {!totemChoicesHidden && (
-                        <div className="flex justify-center pt-2">
-                          <button
-                            onClick={async () => {
-                              if (selectedTotemRewardIdx === null || isEventBusy) return;
-                              setIsEventBusy(true);
+                          {/* Fixed-Height Inspector Plaque (Always Explains Hovered or Selected Piece) */}
+                          <div className="relative shrink-0 min-h-[64px] px-4 py-2.5 bg-[#0c0807]/90 border border-[#4a3423]/80 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92)] flex flex-col items-center justify-center text-center">
+                            {inspectedRewardChoice ? (
+                              inspectedRewardChoice.type === 'body' ? (
+                                <>
+                                  <div className="font-['Cinzel',_serif] text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#f4d78b]">
+                                    ◆ {inspectedRewardChoice.value} ◆
+                                  </div>
+                                  <p className="text-[11px] text-[#e0cfb4] leading-snug mt-0.5 max-w-lg">
+                                    {SIGIL_DESCRIPTIONS[inspectedRewardChoice.value] || 'An inscrutable crest bound in crimson thread.'}
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="font-['Cinzel',_serif] text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#f4d78b]">
+                                    ◆ {inspectedRewardChoice.value} Tribal Patch ◆
+                                  </div>
+                                  <p className="text-[11px] text-[#d9c7aa] leading-snug mt-0.5 max-w-lg">
+                                    Sewn to a poppet&apos;s head to grant its Torso Crest to every <span className="text-[#f4d78b] font-bold">{inspectedRewardChoice.value}</span> creature in your deck.
+                                  </p>
+                                </>
+                              )
+                            ) : (
+                              <span className="text-[10.5px] font-['Cinzel',_serif] uppercase tracking-[0.2em] text-[#8d765c]">
+                                Select one scrap to bind to your satchel
+                              </span>
+                            )}
+                          </div>
 
-                              const chosen = totemRewardChoices[selectedTotemRewardIdx];
-                              const nextPieces = [...totemPieces, chosen];
-                              setTotemPieces(nextPieces);
-                              triggerSfx('play');
+                          {/* Primary Action Row */}
+                          <div className="flex items-center justify-center shrink-0">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (selectedTotemRewardIdx === null || isEventBusy) return;
+                                setIsEventBusy(true);
 
-                              if (nextPieces.length >= 7) {
-                                const sigils = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
-                                const randSigil = sigils[Math.floor(Math.random() * sigils.length)];
-                                const amalgam = cloneCard(ALL_CARD_LOOKUP["Amalgam"]);
-                                amalgam.sigils = [randSigil];
-                                const nextDeck = [...masterDeck, amalgam];
-                                setMasterDeck(nextDeck);
-                                masterDeckRef.current = nextDeck;
-                                addLog(`Your satchel overflowed with 7 effigy scraps! The Weaver gifted an Amalgam (${randSigil})!`);
-                              }
+                                const chosen = totemRewardChoices[selectedTotemRewardIdx];
+                                const nextPieces = [...totemPieces, chosen];
+                                setTotemPieces(nextPieces);
+                                triggerSfx('play');
 
-                              const hasHead = nextPieces.some(p => p.type === 'head');
-                              const hasBody = nextPieces.some(p => p.type === 'body');
+                                if (nextPieces.length >= 7) {
+                                  const sigils = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
+                                  const randSigil = sigils[Math.floor(Math.random() * sigils.length)];
+                                  const amalgam = cloneCard(ALL_CARD_LOOKUP["Amalgam"]);
+                                  amalgam.sigils = [randSigil];
+                                  const nextDeck = [...masterDeck, amalgam];
+                                  setMasterDeck(nextDeck);
+                                  masterDeckRef.current = nextDeck;
+                                  addLog(`Your satchel overflowed with 7 effigy scraps! The Weaver gifted an Amalgam (${randSigil})!`);
+                                }
 
-                              if (hasHead && hasBody) {
-                                setTotemStage('ASSEMBLE');
-                                setIsEventBusy(false);
-                              } else {
-                                setIsTotemFadingOut(true);
-                                await new Promise(res => setTimeout(res, 500));
-                                setTotemChoicesHidden(true);
-                                await new Promise(res => setTimeout(res, 950));
-                                returnToMap();
-                              }
-                            }}
-                            disabled={selectedTotemRewardIdx === null || isEventBusy}
-                            className={`px-5 sm:px-6 lg:px-8 py-1.5 sm:py-2 lg:py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-[10.5px] sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all duration-300 select-none ${
-                              isTotemFadingOut ? 'opacity-0 pointer-events-none' : ''
-                            }`}
-                          >
-                            Bind to Effigy
-                          </button>
+                                const hasHead = nextPieces.some(p => p.type === 'head');
+                                const hasBody = nextPieces.some(p => p.type === 'body');
+
+                                if (hasHead && hasBody) {
+                                  // Auto-preselect the newly claimed piece + current active counterpart (or first owned) so ASSEMBLE is zero-jank!
+                                  const newIdx = nextPieces.length - 1;
+                                  const nextHeadIdx =
+                                    chosen.type === 'head'
+                                      ? newIdx
+                                      : (() => {
+                                          const activeIdx = activeTotem.head
+                                            ? nextPieces.findIndex(p => p.type === 'head' && p.value === activeTotem.head)
+                                            : -1;
+                                          return activeIdx !== -1 ? activeIdx : nextPieces.findIndex(p => p.type === 'head');
+                                        })();
+                                  const nextBodyIdx =
+                                    chosen.type === 'body'
+                                      ? newIdx
+                                      : (() => {
+                                          const activeIdx = activeTotem.body
+                                            ? nextPieces.findIndex(p => p.type === 'body' && p.value === activeTotem.body)
+                                            : -1;
+                                          return activeIdx !== -1 ? activeIdx : nextPieces.findIndex(p => p.type === 'body');
+                                        })();
+
+                                  setAssemblyHeadIdx(nextHeadIdx >= 0 ? nextHeadIdx : null);
+                                  setAssemblyBodyIdx(nextBodyIdx >= 0 ? nextBodyIdx : null);
+                                  setHoveredTotemRewardIdx(null);
+                                  setTotemStage('ASSEMBLE');
+                                  setIsEventBusy(false);
+                                } else {
+                                  setIsTotemFadingOut(true);
+                                  await new Promise(res => setTimeout(res, 450));
+                                  setTotemChoicesHidden(true);
+                                  await new Promise(res => setTimeout(res, 750));
+                                  returnToMap();
+                                }
+                              }}
+                              disabled={selectedTotemRewardIdx === null || isEventBusy}
+                              className={`px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#331610] to-[#1a0b08] hover:from-[#471d14] hover:to-[#240f0b] active:translate-y-[1px] border border-[#c49a5c]/90 hover:border-[#f4d78b] text-[#f5e3be] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.9)] transition-all duration-200 select-none ${
+                                isTotemFadingOut ? 'opacity-0 pointer-events-none' : ''
+                              }`}
+                            >
+                              {willUnlockAssembly ? 'Claim & Stitch Poppet' : 'Claim Scrap to Satchel'}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center">
+                          <span className="text-xl text-[#d9b46e]">✦</span>
+                          <div className="font-['Cinzel',_serif] text-xs uppercase tracking-[0.24em] text-[#e6d1ad]">
+                            Scrap Bound to Satchel
+                          </div>
+                          <div className="text-[10.5px] text-[#9b8265]">
+                            Find its counterpart to stitch a complete poppet.
+                          </div>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="flex flex-col h-full justify-between min-h-0">
-                      <div className="text-left border-b border-[#3a2618]/80 pb-2 shrink-0">
-                        <div className="font-['Cinzel',_serif] text-xs font-bold uppercase tracking-[0.22em] text-[#dfc59a]">
-                          Stitch Effigy
-                        </div>
-                      </div>
-
-                      <div className="flex-1 min-h-0 overflow-y-auto py-3 flex flex-col gap-3">
+                    /* STAGE II: ASSEMBLE / STITCH POPPET BENCH */
+                    <div className="relative z-10 flex-1 min-h-0 flex flex-col justify-between px-5 sm:px-6 py-4 gap-3">
+                      <div className="flex-1 min-h-0 grid grid-rows-2 gap-3">
                         {/* Tribal Patches Shelf */}
-                        <div className="border border-dashed border-[#8c6747]/60 p-3.5 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
-                          <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-2.5 border-b border-[#3a271a] pb-1.5 text-left">
-                            Tribal Patches ({totemPieces.filter(p => p.type === 'head').length})
+                        <div className="relative p-3.5 bg-[#0e0908]/92 border border-[#4a3423]/85 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92)] flex flex-col min-h-0">
+                          <span className="pointer-events-none absolute top-0.5 left-0.5 w-2 h-2 border-t border-l border-[#b08749]/45" />
+                          <span className="pointer-events-none absolute top-0.5 right-0.5 w-2 h-2 border-t border-r border-[#b08749]/45" />
+                          <span className="pointer-events-none absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l border-[#b08749]/45" />
+                          <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r border-[#b08749]/45" />
+                          <div className="flex items-center justify-between border-b border-[#3a271a]/80 pb-1.5 mb-2.5 shrink-0">
+                            <span className="text-[10px] font-['Cinzel',_serif] font-bold text-[#d9b46e] uppercase tracking-[0.2em]">
+                              ◆ Tribal Patches (Head)
+                            </span>
+                            <span className="text-[9.5px] font-mono text-[#8e785f]">{ownedHeadPieces.length} Owned</span>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {totemPieces.map((p, idx) => p.type === 'head' && (
-                              <button
-                                key={`head-${idx}`}
-                                type="button"
-                                onClick={() => {
-                                  triggerSfx('draw');
-                                  setAssemblyHeadIdx(idx);
-                                }}
-                                className={`px-2.5 py-2 border border-dashed rounded-[2px] text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
-                                  assemblyHeadIdx === idx
-                                    ? 'border-[#e5c16b] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
-                                    : 'border-[#7a5a3c]/65 text-[#cbb697]/90 hover:border-[#c89e4c]'
-                                }`}
-                                style={{
-                                  backgroundColor: '#1a130d',
-                                  backgroundImage: assemblyHeadIdx === idx
-                                    ? `linear-gradient(to bottom, rgba(44,29,18,0.52), rgba(22,14,9,0.74)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`
-                                    : `linear-gradient(to bottom, rgba(26,18,12,0.62), rgba(14,9,6,0.8)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`,
-                                  backgroundSize: 'cover',
-                                  backgroundPosition: 'center',
-                                }}
-                              >
-                                <div className="w-6 h-6 flex items-center justify-center shrink-0 [&>*]:scale-[1.25]">
-                                  {TRIBE_EMBROIDERY[p.value as Tribe] || <span>✦</span>}
-                                </div>
-                                <span>{p.value}</span>
-                              </button>
-                            ))}
+                          <div className="flex-1 min-h-0 overflow-y-auto flex flex-wrap content-start gap-2.5 pr-0.5">
+                            {ownedHeadPieces.map((p) => {
+                              const isPicked = assemblyHeadIdx === p.idx;
+                              return (
+                                <button
+                                  key={`head-${p.idx}`}
+                                  type="button"
+                                  disabled={effigyStitchingAnim}
+                                  onClick={() => {
+                                    triggerSfx('draw');
+                                    setAssemblyHeadIdx(p.idx);
+                                  }}
+                                  className={`relative px-3.5 py-2 border border-dashed rounded-[2px] text-[11px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.14em] transition-all cursor-pointer flex items-center gap-2 ${
+                                    isPicked
+                                      ? 'border-[#f4d78b] text-[#fff2d4] shadow-[0_0_16px_rgba(212,175,55,0.34)] -translate-y-0.5'
+                                      : 'border-[#7a5a3c]/70 text-[#cbb697]/90 hover:border-[#c89e4c] hover:text-[#f2dfc0]'
+                                  }`}
+                                  style={{
+                                    backgroundColor: '#1a130d',
+                                    backgroundImage: isPicked
+                                      ? `linear-gradient(to bottom, rgba(58,34,18,0.56), rgba(24,14,8,0.78)), url("${poppetBase}assets/text/patches.jpg")`
+                                      : `linear-gradient(to bottom, rgba(26,18,12,0.62), rgba(14,9,6,0.84)), url("${poppetBase}assets/text/patches.jpg")`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                  }}
+                                >
+                                  <div className="w-6 h-6 bg-[#17100a]/90 border border-[#5a412a] flex items-center justify-center shrink-0 [&>*]:scale-[1.2]">
+                                    {TRIBE_EMBROIDERY[p.value as Tribe] || <span>✦</span>}
+                                  </div>
+                                  <span>{p.value}</span>
+                                  {isPicked && <span className="w-1.5 h-1.5 rounded-full bg-[#f4d78b] shadow-[0_0_6px_#f4d78b]" />}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
 
-                        {/* Circular Threadbound Crests Shelf */}
-                        <div className="border border-dashed border-[#8c6747]/60 p-3.5 bg-[#140e0a]/90 shadow-inner rounded-[3px]">
-                          <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#c79d5a] uppercase tracking-[0.2em] mb-2.5 border-b border-[#3a271a] pb-1.5 text-left">
-                            Threadbound Crests ({totemPieces.filter(p => p.type === 'body').length})
+                        {/* Threadbound Crests Shelf */}
+                        <div className="relative p-3.5 bg-[#0e0908]/92 border border-[#4a3423]/85 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92)] flex flex-col min-h-0">
+                          <span className="pointer-events-none absolute top-0.5 left-0.5 w-2 h-2 border-t border-l border-[#a34d47]/50" />
+                          <span className="pointer-events-none absolute top-0.5 right-0.5 w-2 h-2 border-t border-r border-[#a34d47]/50" />
+                          <span className="pointer-events-none absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l border-[#a34d47]/50" />
+                          <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r border-[#a34d47]/50" />
+                          <div className="flex items-center justify-between border-b border-[#3a271a]/80 pb-1.5 mb-2.5 shrink-0">
+                            <span className="text-[10px] font-['Cinzel',_serif] font-bold text-[#e5928a] uppercase tracking-[0.2em]">
+                              ◆ Threadbound Crests (Torso)
+                            </span>
+                            <span className="text-[9.5px] font-mono text-[#8e785f]">{ownedBodyPieces.length} Owned</span>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {totemPieces.map((p, idx) => p.type === 'body' && (
-                              <button
-                                key={`body-${idx}`}
-                                type="button"
-                                onClick={() => {
-                                  triggerSfx('draw');
-                                  setAssemblyBodyIdx(idx);
-                                }}
-                                className={`px-3 py-1.5 border border-dashed rounded-full text-xs font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-2 ${
-                                  assemblyBodyIdx === idx
-                                    ? 'border-[#e5c16b] text-[#f5e3be] shadow-[0_0_12px_rgba(212,175,55,0.28)]'
-                                    : 'border-[#7a5a3c]/65 text-[#cbb697]/90 hover:border-[#c89e4c]'
-                                }`}
-                                style={{
-                                  backgroundColor: '#1a130d',
-                                  backgroundImage: assemblyBodyIdx === idx
-                                    ? `linear-gradient(to bottom, rgba(44,29,18,0.52), rgba(22,14,9,0.74)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`
-                                    : `linear-gradient(to bottom, rgba(26,18,12,0.62), rgba(14,9,6,0.8)), url("${import.meta.env.BASE_URL || './'}assets/text/patches.jpg")`,
-                                  backgroundSize: 'cover',
-                                  backgroundPosition: 'center',
-                                }}
-                              >
-                                <div className="w-6 h-6 rounded-full bg-[#140d08] border border-[#4f3824] flex items-center justify-center shrink-0">
-                                  <img
-                                    src={getSigilArtUrl(p.value)}
-                                    alt={p.value}
-                                    className="w-4 h-4 object-contain"
-                                    style={{ imageRendering: 'pixelated' }}
-                                  />
-                                </div>
-                                <span>{p.value}</span>
-                              </button>
-                            ))}
+                          <div className="flex-1 min-h-0 overflow-y-auto flex flex-wrap content-start gap-2.5 pr-0.5">
+                            {ownedBodyPieces.map((p) => {
+                              const isPicked = assemblyBodyIdx === p.idx;
+                              return (
+                                <button
+                                  key={`body-${p.idx}`}
+                                  type="button"
+                                  disabled={effigyStitchingAnim}
+                                  onClick={() => {
+                                    triggerSfx('draw');
+                                    setAssemblyBodyIdx(p.idx);
+                                  }}
+                                  className={`relative px-3.5 py-2 border border-dashed rounded-full text-[11px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.12em] transition-all cursor-pointer flex items-center gap-2 ${
+                                    isPicked
+                                      ? 'border-[#f4d78b] text-[#fff2d4] shadow-[0_0_16px_rgba(212,175,55,0.34)] -translate-y-0.5'
+                                      : 'border-[#7a5a3c]/70 text-[#cbb697]/90 hover:border-[#c89e4c] hover:text-[#f2dfc0]'
+                                  }`}
+                                  style={{
+                                    backgroundColor: '#1a130d',
+                                    backgroundImage: isPicked
+                                      ? `linear-gradient(to bottom, rgba(58,34,18,0.56), rgba(24,14,8,0.78)), url("${poppetBase}assets/text/patches.jpg")`
+                                      : `linear-gradient(to bottom, rgba(26,18,12,0.62), rgba(14,9,6,0.84)), url("${poppetBase}assets/text/patches.jpg")`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                  }}
+                                >
+                                  <div className="w-7 h-7 rounded-full bg-[#140d08] border border-[#7c5b32] flex items-center justify-center shrink-0 overflow-hidden">
+                                    <img
+                                      src={getSigilArtUrl(p.value)}
+                                      alt={p.value}
+                                      className="w-5 h-5 object-contain [image-rendering:pixelated]"
+                                    />
+                                  </div>
+                                  <span>{p.value}</span>
+                                  {isPicked && <span className="w-1.5 h-1.5 rounded-full bg-[#f4d78b] shadow-[0_0_6px_#f4d78b]" />}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-center gap-3 pt-2 shrink-0">
-                        {assemblyHeadIdx !== null && assemblyBodyIdx !== null ? (
-                          <button
-                            disabled={effigyStitchingAnim}
-                            onClick={() => {
-                              const hVal = totemPieces[assemblyHeadIdx].value as Tribe;
-                              const bVal = totemPieces[assemblyBodyIdx].value;
-                              const newTotem = { head: hVal, body: bVal };
-                              setActiveTotem(newTotem);
-                              setEffigyStitchingAnim(true);
-                              triggerSfx('needle_stitch');
-                              addLog(`Effigy stitched: ${hVal} + ${bVal}`);
-                              scheduleEventTimer(() => {
-                                setEffigyStitchingAnim(false);
-                                returnToMap(undefined, newTotem);
-                              }, 950);
-                            }}
-                            className="px-5 sm:px-6 lg:px-8 py-1.5 sm:py-2 lg:py-2.5 rounded-[2px] bg-gradient-to-b from-[#2b1a10] to-[#170e09] hover:from-[#3a2315] hover:to-[#1f130c] active:translate-y-[1px] border border-[#b48844]/85 hover:border-[#e5c16b] text-[#f3dfb6] hover:text-white font-['Cinzel',_serif] font-bold text-[10.5px] sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.22em] cursor-pointer disabled:opacity-45 shadow-[0_8px_20px_rgba(0,0,0,0.88)] transition-all select-none"
-                          >
-                            {effigyStitchingAnim ? 'Stitching Effigy...' : 'Stitch Effigy'}
-                          </button>
+                      {/* Live Selected Crest Description Plaque (Never Stitch Blind!) */}
+                      <div className="relative shrink-0 min-h-[58px] px-4 py-2 bg-[#0c0807]/90 border border-[#4a3423]/80 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92)] flex flex-col items-center justify-center text-center">
+                        <span className="pointer-events-none absolute top-0.5 left-0.5 w-2 h-2 border-t border-l border-[#b08749]/45" />
+                        <span className="pointer-events-none absolute top-0.5 right-0.5 w-2 h-2 border-t border-r border-[#b08749]/45" />
+                        <span className="pointer-events-none absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l border-[#b08749]/45" />
+                        <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r border-[#b08749]/45" />
+                        {previewBody ? (
+                          <>
+                            <div className="font-['Cinzel',_serif] text-[10px] font-bold uppercase tracking-[0.2em] text-[#f2a69c]">
+                              ◆ {previewBody} ◆
+                            </div>
+                            <p className="text-[11px] text-[#e0cfb4] leading-snug mt-0.5 max-w-lg">
+                              {SIGIL_DESCRIPTIONS[previewBody] || 'An ancient crest bound in bone thread.'}
+                            </p>
+                          </>
                         ) : (
-                          <button
-                            onClick={() => {
-                              let nextHead = activeTotem.head;
-                              let nextBody = activeTotem.body;
-                              if (assemblyHeadIdx !== null) nextHead = totemPieces[assemblyHeadIdx!].value as Tribe;
-                              if (assemblyBodyIdx !== null) nextBody = totemPieces[assemblyBodyIdx!].value;
-                              const newTotem = { head: nextHead, body: nextBody };
-                              setActiveTotem(newTotem);
+                          <span className="text-[10.5px] font-['Cinzel',_serif] uppercase tracking-[0.18em] text-[#8d765c]">
+                            Select a Tribal Patch &amp; Crest above
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Stitch Action Row */}
+                      <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
+                        <button
+                          type="button"
+                          disabled={effigyStitchingAnim || assemblyHeadIdx === null || assemblyBodyIdx === null}
+                          onClick={() => {
+                            if (assemblyHeadIdx === null || assemblyBodyIdx === null) return;
+                            const hVal = totemPieces[assemblyHeadIdx].value as Tribe;
+                            const bVal = totemPieces[assemblyBodyIdx].value;
+                            const newTotem = { head: hVal, body: bVal };
+                            setActiveTotem(newTotem);
+                            setEffigyStitchingAnim(true);
+                            triggerSfx('needle_stitch');
+                            addLog(`Poppet stitched: ${hVal} + ${bVal}`);
+                            scheduleEventTimer(() => {
+                              setEffigyStitchingAnim(false);
                               returnToMap(undefined, newTotem);
-                            }}
-                            className="px-5 sm:px-6 lg:px-7 py-1.5 sm:py-2 lg:py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-[10.5px] sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.2em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
+                            }, 950);
+                          }}
+                          className="px-7 py-2.5 rounded-[2px] bg-gradient-to-b from-[#331610] to-[#1a0b08] hover:from-[#471d14] hover:to-[#240f0b] active:translate-y-[1px] border border-[#c49a5c]/90 hover:border-[#f4d78b] text-[#f5e3be] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.9)] transition-all select-none"
+                        >
+                          {effigyStitchingAnim ? 'Stitching Poppet...' : 'Stitch Poppet'}
+                        </button>
+
+                        {activeTotem.head && activeTotem.body && !effigyStitchingAnim && (
+                          <button
+                            type="button"
+                            onClick={() => returnToMap()}
+                            className="px-4 py-2.5 rounded-[2px] bg-[#140e0a]/90 hover:bg-[#1f1610] active:translate-y-[1px] border border-[#4a3322]/85 hover:border-[#8c6742] text-[#cbb697] hover:text-[#f3e6cf] font-['Cinzel',_serif] font-bold text-[10.5px] uppercase tracking-[0.18em] cursor-pointer shadow-[0_4px_14px_rgba(0,0,0,0.8)] transition-all select-none"
                           >
-                            Store Pieces &amp; Proceed
+                            Keep Current
                           </button>
                         )}
                       </div>
                     </div>
                   )}
-                </div>
+                </RitualReliquaryShell>
               </div>
             </div>
           </div>

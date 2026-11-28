@@ -364,14 +364,19 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                       >
                         {discovered && renderCornerTicks('border-[#9f773d]/45')}
 
-                        {/* Sculpted Circular Brass Sigil Medallion (True Un-Inverted Pixel Art!) */}
+                        {/* Sculpted Circular Brass Sigil Medallion (True Un-Inverted Pixel Art) */}
                         <div className="w-11 h-11 shrink-0 rounded-full bg-[#150d0a] border border-[#8f6a38]/85 shadow-[inset_0_2px_6px_rgba(0,0,0,0.95),0_2px_6px_rgba(0,0,0,0.8)] flex items-center justify-center overflow-hidden">
                           <img
                             src={getSigilArtUrl(sigil)}
                             alt={sigil}
-                            className={`w-7 h-7 object-contain [image-rendering:pixelated] ${
-                              discovered ? '' : 'opacity-50 grayscale'
+                            className={`w-9 h-9 object-contain [image-rendering:pixelated] ${
+                              discovered ? '' : 'opacity-45 grayscale brightness-75'
                             }`}
+                            style={{
+                              filter: discovered
+                                ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))'
+                                : undefined,
+                            }}
                             onError={(e) => {
                               const img = e.currentTarget;
                               img.style.display = 'none';
@@ -411,9 +416,62 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
         )}
 
         {/* LEDGER (LIFETIME RUN STATS) TAB */}
-        {activeTab === 'LEDGER' && (
-          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-6 sm:px-8 py-4 flex flex-col justify-center">
-            <div className="text-center mb-3.5">
+        {activeTab === 'LEDGER' && (() => {
+          const baseUrl = import.meta.env.BASE_URL || './';
+          const rawRank = (archive.highestRank || '').trim();
+          const baseLetter = rawRank.charAt(0).toUpperCase();
+          const suffix = rawRank.slice(1);
+          const hasRankGlyph = ['S', 'A', 'B', 'C', 'D', 'F'].includes(baseLetter);
+          const gradePalettes: Record<string, { gradient: string; glow: string }> = {
+            S: {
+              gradient: 'from-[#fff6c4] via-[#e5b84b] to-[#9a6719]',
+              glow: 'drop-shadow(0 0 10px rgba(245,196,81,0.58)) drop-shadow(0 3px 6px rgba(0,0,0,0.95))',
+            },
+            A: {
+              gradient: 'from-[#b7f7d8] via-[#34d399] to-[#0f6b4a]',
+              glow: 'drop-shadow(0 0 9px rgba(52,211,153,0.48)) drop-shadow(0 3px 6px rgba(0,0,0,0.95))',
+            },
+            B: {
+              gradient: 'from-[#c7e4ff] via-[#60a5fa] to-[#1e40af]',
+              glow: 'drop-shadow(0 0 9px rgba(96,165,250,0.48)) drop-shadow(0 3px 6px rgba(0,0,0,0.95))',
+            },
+            C: {
+              gradient: 'from-[#f3e3c3] via-[#c9a36a] to-[#735329]',
+              glow: 'drop-shadow(0 0 8px rgba(201,163,106,0.42)) drop-shadow(0 3px 6px rgba(0,0,0,0.95))',
+            },
+            D: {
+              gradient: 'from-[#fed7aa] via-[#ea7b2d] to-[#7c2d12]',
+              glow: 'drop-shadow(0 0 8px rgba(234,123,45,0.45)) drop-shadow(0 3px 6px rgba(0,0,0,0.95))',
+            },
+            F: {
+              gradient: 'from-[#fca5a5] via-[#dc2626] to-[#6b1111]',
+              glow: 'drop-shadow(0 0 10px rgba(220,38,38,0.6)) drop-shadow(0 3px 6px rgba(0,0,0,0.95))',
+            },
+          };
+          const rankPalette = gradePalettes[baseLetter] || gradePalettes.F;
+          const renderLedgerRankGlyph = (src: string, alt: string, heightClass: string, extraClass = '') => (
+            <span className={`relative inline-block ${extraClass}`}>
+              <img src={src} alt={alt} className={`${heightClass} w-auto object-contain opacity-0`} draggable={false} />
+              <span
+                aria-hidden="true"
+                className={`absolute inset-0 bg-gradient-to-b ${rankPalette.gradient}`}
+                style={{
+                  WebkitMaskImage: `url("${src}")`,
+                  maskImage: `url("${src}")`,
+                  WebkitMaskSize: 'contain',
+                  maskSize: 'contain',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center',
+                  maskPosition: 'center',
+                }}
+              />
+            </span>
+          );
+
+          return (
+          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-6 sm:px-8 py-3 flex flex-col justify-center">
+            <div className="text-center mb-2.5">
               <div className="flex items-center justify-center gap-3 mb-0.5">
                 <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent to-[#9e94ad]/60" />
                 <span className="text-[9px] font-['Cinzel',_serif] font-bold text-[#bdb3c9]/90 uppercase tracking-[0.28em]">
@@ -429,16 +487,32 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-2xl w-full mx-auto">
-              {/* Peak Ritual Record: Highest Rank, Score & Seed */}
-              <div className={`col-span-2 sm:col-span-3 ${ledgerPlaqueCls} px-4 py-2.5 flex items-center justify-around text-center`}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-w-2xl w-full mx-auto">
+              {/* Peak Ritual Record: Highest Rank Glyph, Score & Seed */}
+              <div className={`col-span-2 sm:col-span-3 ${ledgerPlaqueCls} px-4 py-2 flex items-center justify-around text-center`}>
                 {renderCornerTicks('border-[#a69cb5]/45')}
-                <div>
+                <div className="flex flex-col items-center">
                   <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.2em] mb-0.5">
                     Highest Rank
                   </div>
-                  <div className={`text-xl font-['Cinzel',_serif] font-black ${archive.highestRankColor || 'text-stone-400'}`}>
-                    {archive.highestRank || '—'}
+                  <div className="h-7 flex items-center justify-center">
+                    {hasRankGlyph ? (
+                      <div
+                        className="flex items-start justify-center gap-0.5 select-none"
+                        style={{ filter: rankPalette.glow }}
+                        aria-label={`Highest Rank ${rawRank}`}
+                      >
+                        {renderLedgerRankGlyph(`${baseUrl}assets/text/${baseLetter}.png`, baseLetter, 'h-7')}
+                        {suffix === '+' &&
+                          renderLedgerRankGlyph(`${baseUrl}assets/text/plus.png`, '+', 'h-4', '-ml-0.5 mt-0.5')}
+                        {suffix === '++' &&
+                          renderLedgerRankGlyph(`${baseUrl}assets/text/plus-plus.png`, '++', 'h-4', '-ml-0.5 mt-0.5')}
+                      </div>
+                    ) : (
+                      <div className={`text-xl font-['Cinzel',_serif] font-black leading-none ${archive.highestRankColor || 'text-stone-400'}`}>
+                        {archive.highestRank || '—'}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="h-8 w-px bg-gradient-to-b from-transparent via-[#585063] to-transparent" />
@@ -446,7 +520,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                   <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.2em] mb-0.5">
                     Highest Score
                   </div>
-                  <div className="text-xl font-bold text-[#f3dfb8]">
+                  <div className="h-7 flex items-center justify-center text-xl font-bold text-[#f3dfb8]">
                     {archive.highestScore || 0}
                   </div>
                 </div>
@@ -455,26 +529,28 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                   <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.2em] mb-0.5">
                     Record Seed
                   </div>
-                  {archive.highestScoreSeed ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard?.writeText(archive.highestScoreSeed);
-                        setCopiedLedgerSeed(true);
-                        setTimeout(() => setCopiedLedgerSeed(false), 1600);
-                      }}
-                      title="Copy record seed"
-                      className="text-xs font-mono font-bold tracking-widest text-[#e6d5bc] hover:text-white border border-[#524a5e] hover:border-[#b2a8be] bg-[#14111b] px-2.5 py-0.5 transition-colors cursor-pointer"
-                    >
-                      {copiedLedgerSeed ? 'COPIED ✓' : archive.highestScoreSeed}
-                    </button>
-                  ) : (
-                    <div className="text-sm font-mono text-[#6a6275]">—</div>
-                  )}
+                  <div className="h-7 flex items-center justify-center">
+                    {archive.highestScoreSeed ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(archive.highestScoreSeed);
+                          setCopiedLedgerSeed(true);
+                          setTimeout(() => setCopiedLedgerSeed(false), 1600);
+                        }}
+                        title="Copy record seed"
+                        className="text-xs font-mono font-bold tracking-widest text-[#e6d5bc] hover:text-white border border-[#524a5e] hover:border-[#b2a8be] bg-[#14111b] px-2.5 py-0.5 transition-colors cursor-pointer"
+                      >
+                        {copiedLedgerSeed ? 'COPIED ✓' : archive.highestScoreSeed}
+                      </button>
+                    ) : (
+                      <div className="text-sm font-mono text-[#6a6275]">—</div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className={`${ledgerPlaqueCls} px-3 py-2.5 text-center`}>
+              <div className={`${ledgerPlaqueCls} px-3 py-2 text-center`}>
                 {renderCornerTicks('border-[#7c738a]/35')}
                 <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.16em] mb-0.5">
                   Rituals Concluded
@@ -487,7 +563,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className={`${ledgerPlaqueCls} px-3 py-2.5 text-center`}>
+              <div className={`${ledgerPlaqueCls} px-3 py-2 text-center`}>
                 {renderCornerTicks('border-[#8f2e2e]/45')}
                 <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.16em] mb-0.5">
                   Peak Blood / Turn
@@ -497,7 +573,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className={`${ledgerPlaqueCls} px-3 py-2.5 text-center`}>
+              <div className={`${ledgerPlaqueCls} px-3 py-2 text-center`}>
                 {renderCornerTicks('border-[#7c738a]/35')}
                 <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.16em] mb-0.5">
                   Horrors Slain
@@ -507,7 +583,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className={`${ledgerPlaqueCls} px-3 py-2.5 text-center`}>
+              <div className={`${ledgerPlaqueCls} px-3 py-2 text-center`}>
                 {renderCornerTicks('border-[#8f2e2e]/45')}
                 <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.16em] mb-0.5">
                   Allies Sacrificed
@@ -517,7 +593,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className={`${ledgerPlaqueCls} px-3 py-2.5 text-center`}>
+              <div className={`${ledgerPlaqueCls} px-3 py-2 text-center`}>
                 {renderCornerTicks('border-[#7c738a]/35')}
                 <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.16em] mb-0.5">
                   Creatures Felled
@@ -527,7 +603,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className={`${ledgerPlaqueCls} px-3 py-2.5 text-center`}>
+              <div className={`${ledgerPlaqueCls} px-3 py-2 text-center`}>
                 {renderCornerTicks('border-[#7c738a]/35')}
                 <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.16em] mb-0.5">
                   Stages Traversed
@@ -537,7 +613,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                 </div>
               </div>
 
-              <div className={`col-span-2 sm:col-span-3 ${ledgerPlaqueCls} px-4 py-2.5 flex items-center justify-around text-center`}>
+              <div className={`col-span-2 sm:col-span-3 ${ledgerPlaqueCls} px-4 py-2 flex items-center justify-around text-center`}>
                 {renderCornerTicks('border-[#7c738a]/35')}
                 <div>
                   <div className="text-[9px] font-['Cinzel',_serif] text-[#a69db0] uppercase tracking-[0.18em] mb-0.5">
@@ -559,9 +635,9 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
               </div>
 
               {/* Lineages Proven Trophy Shelf */}
-              <div className={`col-span-2 sm:col-span-3 ${ledgerPlaqueCls} px-4 py-2.5`}>
+              <div className={`col-span-2 sm:col-span-3 ${ledgerPlaqueCls} px-4 py-2`}>
                 {renderCornerTicks('border-[#a69cb5]/45')}
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[9.5px] font-['Cinzel',_serif] font-bold text-[#cfc3d9] uppercase tracking-[0.22em]">
                     ◆ Lineages Proven
                   </span>
@@ -576,7 +652,7 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
                     return (
                       <div
                         key={lin.id}
-                        className={`px-1.5 py-2 border text-center transition-colors ${
+                        className={`px-1.5 py-1.5 border text-center transition-colors ${
                           proven
                             ? 'bg-[#131d19]/90 border-[#4d8c73]/80 text-[#d8f3e5] shadow-[inset_0_1px_0_rgba(110,231,183,0.18),0_0_10px_rgba(16,185,129,0.12)]'
                             : 'bg-[#07060a]/90 border-[#2b2633]/80 text-[#605969]'
@@ -599,7 +675,8 @@ export const ArchiveModal: React.FC<ArchiveModalProps> = ({
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
       </RitualReliquaryShell>
     </div>
   );
