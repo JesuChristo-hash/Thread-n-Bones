@@ -1,4 +1,4 @@
-import { RitualSlateButton } from './BattleFlankUI';
+import { RitualSlateButton, RitualReliquaryShell } from './BattleFlankUI';
 import { Layers as RbLayers, Menu as RbMenu } from 'lucide-react';
 import React from 'react';
 import type { CardDef, Tribe } from '../data/gameData';
@@ -4791,175 +4791,198 @@ export default function EventScreens({ ctx }: { ctx: {
       {(showViewDeck || screen === 'VIEW_DECK') && (() => {
         const activeDetailCard = selectedDeckCardDetail || masterDeck[0] || null;
 
-        const deckBase = import.meta.env.BASE_URL || './';
-        const deckKnob = 'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
-        const deckFrameStyle: React.CSSProperties = {
-          position: 'relative',
-          borderStyle: 'solid',
-          borderColor: 'transparent',
-          borderWidth: '16px 12px 12px 12px',
-          boxShadow: '0 0 0 1px #190e08, 0 0 0 2px #52361c, 0 26px 64px rgba(0,0,0,0.96), inset 0 1px 0 rgba(224,184,120,0.2)',
-          backgroundColor: '#24160e',
-          backgroundImage: [
-            deckKnob,
-            deckKnob,
-            deckKnob,
-            deckKnob,
-            'radial-gradient(ellipse at 50% 0%, #5e0d10 0%, #3a0709 54%, #180304 100%)',
-            
-            'linear-gradient(to bottom, rgba(56,37,23,0.62), rgba(28,17,11,0.76), rgba(14,8,5,0.9))',
-            `url("${deckBase}assets/text/wood.jpg")`,
-          ].join(', '),
-          backgroundSize: ['24px 16px', '24px 16px', '24px 12px', '24px 12px', 'auto', 'auto', '140px 140px'].join(', '),
-          backgroundPosition: 'left top, right top, left bottom, right bottom, 0 0, 0 0, center',
-          backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'repeat'].join(', '),
-          backgroundOrigin: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
-          backgroundClip: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
-        };
         return (
-          <div className={`absolute inset-0 bg-[#080504]/86 backdrop-blur-md z-[110] flex flex-col items-center justify-center px-5 py-4 sm:px-7 sm:py-5 overflow-hidden font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(24,14,9,0.36)_0%,rgba(4,3,2,0.92)_100%)] pointer-events-none" />
+          <div
+            onClick={() => {
+              setShowViewDeck(false);
+              if (screen === 'VIEW_DECK') setScreen(previousScreen || 'DUEL');
+            }}
+            className={`absolute inset-0 bg-[#050303]/86 backdrop-blur-[4px] z-[110] flex flex-col items-center justify-center px-4 py-4 sm:px-7 sm:py-5 overflow-hidden font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(28,12,10,0.34)_0%,rgba(4,2,2,0.92)_100%)] pointer-events-none" />
 
-            <div
-              style={deckFrameStyle}
-              className="relative z-10 w-full max-w-6xl h-full min-h-0 flex flex-col rounded-[2px] bg-[#180304] px-5 sm:px-7 py-4 sm:py-5 overflow-hidden"
+            <RitualReliquaryShell
+              variant="crimson"
+              onClick={(e) => e.stopPropagation()}
+              className="relative z-10 w-full max-w-6xl h-full min-h-0 flex flex-col"
             >
+              <div className="flex flex-col flex-1 min-h-0 px-6 sm:px-8 py-5 sm:py-6">
+                {/* Engraved Header with Sculpted Return Action */}
+                <div className="shrink-0 flex items-center justify-between gap-4 pb-3">
+                  <div className="flex flex-col text-left">
+                    <span
+                      className="text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.28em] text-[#c49a5c]/90"
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}
+                    >
+                      ◆ Grimoire • {masterDeck.length} {masterDeck.length === 1 ? 'Vessel' : 'Vessels'} ◆
+                    </span>
+                    <h1
+                      className="text-xl sm:text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#f3dfb8] mt-0.5"
+                      style={{ textShadow: '0 2px 8px rgba(0,0,0,1), 0 0 14px rgba(185,28,28,0.28)' }}
+                    >
+                      Your Creatures
+                    </h1>
+                  </div>
 
-              <div
-                className="pointer-events-none absolute inset-0 z-0 opacity-70 mix-blend-multiply"
-                style={{
-                  backgroundImage: `url("${deckBase}assets/text/cloth.jpg")`,
-                  backgroundSize: '170px 170px',
-                  backgroundRepeat: 'repeat',
-                }}
-              />
-              <div
-                className="pointer-events-none absolute inset-0 z-30"
-                style={{
-                  boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.92), inset 0 0 0 1px #140705, 0 0 0 1px rgba(184,138,68,0.24)',
-                }}
-              />
-              <div className="pointer-events-none absolute inset-[6px] z-30 border border-dashed border-[#b98d46]/28" />
-              <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-30 border-t border-l border-[#b8904a]/55" />
-              <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-30 border-t border-r border-[#b8904a]/55" />
-              <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-30 border-b border-l border-[#b8904a]/55" />
-              <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-30 border-b border-r border-[#b8904a]/55" />
-              {/* Engraved Header with Return Action */}
-              <div className="relative z-10 shrink-0 flex items-center justify-between border-b border-[#59261d]/80 pb-3 mb-4">
-                <div className="flex flex-col text-left">
-                  <span className="text-[9.5px] font-mono font-bold uppercase tracking-[0.28em] text-[#b9935a]">
-                    Grimoire • {masterDeck.length} Vessels
-                  </span>
-                  <h1 className="text-xl sm:text-2xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-                    Your Creatures
-                  </h1>
+                  <RitualSlateButton
+                    label="RETURN"
+                    onClick={() => {
+                      setShowViewDeck(false);
+                      if (screen === 'VIEW_DECK') setScreen(previousScreen || 'DUEL');
+                    }}
+                  />
                 </div>
 
-                <button
-                  onClick={() => {
-                    setShowViewDeck(false);
-                    if (screen === 'VIEW_DECK') setScreen(previousScreen || 'DUEL');
-                  }}
-                  className="bg-[#18120e] hover:bg-[#261c15] active:bg-[#120d0a] border border-[#5a412d] hover:border-[#cfa159] rounded-[2px] shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] text-[#e5cfa8] hover:text-white cursor-pointer px-5 py-2"
-                >
-                  Return
-                </button>
-              </div>
+                {/* Engraved Tapered Brass-Crimson Rule */}
+                <div className="shrink-0 w-full flex items-center justify-center gap-2 mb-4" aria-hidden="true">
+                  <div className="h-[1px] flex-1 bg-gradient-to-r from-[#9f773d]/20 via-[#9f773d]/65 to-[#b91c1c]/80" />
+                  <svg viewBox="0 0 10 10" className="w-[9px] h-[9px] shrink-0 overflow-visible">
+                    <polygon points="5,0.6 9.4,5 5,9.4 0.6,5" fill="#991b1b" stroke="#dfba7c" strokeWidth="0.9" />
+                  </svg>
+                  <div className="h-[1px] flex-1 bg-gradient-to-l from-[#9f773d]/20 via-[#9f773d]/65 to-[#b91c1c]/80" />
+                </div>
 
-              {/* Two-Column Split: Scrollable Deck Grid Left, Enlarged Specimen & Crests Right */}
-              <div className="relative z-10 flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-                {/* Left Column: Scrollable Deck Tray */}
-                <div className="lg:col-span-7 min-h-0 flex flex-col rounded-[2px] bg-[#110405]/75 border border-[#4a231c]/80 shadow-[inset_0_4px_14px_rgba(0,0,0,0.88)] overflow-hidden">
-                  <div className="flex-1 min-h-0 overflow-y-auto p-4">
-                    <div className="flex flex-wrap gap-3 justify-center content-start">
-                      {masterDeck.map((c, idx) => {
-                        const isSelected = activeDetailCard?.id === c.id || (!selectedDeckCardDetail && idx === 0);
-                        return (
-                          <div
-                            key={c.id || `view-${c.name}-${idx}`}
-                            onClick={() => {
-                              triggerSfx('flip');
-                              setSelectedDeckCardDetail(c);
-                            }}
-                            className={`cursor-pointer transform transition-all duration-200 ${
-                              isSelected
-                                ? 'scale-[0.98] -translate-y-1.5 z-30'
-                                : 'scale-[0.9] opacity-80 hover:opacity-100 hover:scale-[0.96] hover:-translate-y-0.5'
-                            }`}
-                          >
-                            {renderCard(c, { isSelected, disableHoverScale: true })}
-                          </div>
-                        );
-                      })}
+                {/* Two-Column Split: Scrollable Deck Tray Left, Enlarged Specimen & Crests Right */}
+                <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                  {/* Left Column: Recessed Carved-Obsidian Vessel Tray */}
+                  <div className="relative lg:col-span-7 min-h-0 flex flex-col bg-[#080505]/78 border border-[#4a3524]/75 shadow-[inset_0_4px_18px_rgba(0,0,0,0.95)] overflow-hidden">
+                    <span className="pointer-events-none absolute top-1 left-1 w-2.5 h-2.5 border-t border-l border-[#b08749]/60 z-10" />
+                    <span className="pointer-events-none absolute top-1 right-1 w-2.5 h-2.5 border-t border-r border-[#b08749]/60 z-10" />
+                    <span className="pointer-events-none absolute bottom-1 left-1 w-2.5 h-2.5 border-b border-l border-[#b08749]/60 z-10" />
+                    <span className="pointer-events-none absolute bottom-1 right-1 w-2.5 h-2.5 border-b border-r border-[#b08749]/60 z-10" />
+
+                    <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
+                      <div className="flex flex-wrap gap-3.5 justify-center content-start">
+                        {masterDeck.map((c, idx) => {
+                          const isSelected = activeDetailCard?.id === c.id || (!selectedDeckCardDetail && idx === 0);
+                          return (
+                            <div
+                              key={c.id || `view-${c.name}-${idx}`}
+                              onClick={() => {
+                                triggerSfx('flip');
+                                setSelectedDeckCardDetail(c);
+                              }}
+                              className={`cursor-pointer transform transition-all duration-200 ${
+                                isSelected
+                                  ? 'scale-[0.99] -translate-y-1.5 z-30'
+                                  : 'scale-[0.9] opacity-80 hover:opacity-100 hover:scale-[0.96] hover:-translate-y-0.5'
+                              }`}
+                            >
+                              {renderCard(c, { isSelected, disableHoverScale: true })}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Right Column: Enlarged Specimen & Crest Inscriptions */}
-                <div className="lg:col-span-5 min-h-0 flex flex-col justify-between rounded-[2px] bg-[#110405]/80 border border-[#4a231c]/85 p-5 shadow-[inset_0_4px_14px_rgba(0,0,0,0.88)] overflow-hidden">
-                  {activeDetailCard ? (
-                    <>
-                      {/* Specimen Pedestal */}
-                      <div className="shrink-0 flex flex-col items-center justify-center py-3 relative">
-                        <div className="pointer-events-none absolute inset-x-12 h-32 rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.14)_0%,transparent_70%)]" />
-                        <div className="scale-[1.15] transform transition-transform">
-                          {renderCard(activeDetailCard, { showCost: true, isClickable: false, disableHoverScale: true })}
-                        </div>
-                      </div>
+                  {/* Right Column: Enlarged Specimen Pedestal & Bound Crest Inscriptions */}
+                  <div className="relative lg:col-span-5 min-h-0 flex flex-col justify-between bg-[#090505]/84 border border-[#4a3524]/80 p-5 shadow-[inset_0_4px_18px_rgba(0,0,0,0.95)] overflow-hidden">
+                    <span className="pointer-events-none absolute top-1 left-1 w-2.5 h-2.5 border-t border-l border-[#b08749]/60 z-10" />
+                    <span className="pointer-events-none absolute top-1 right-1 w-2.5 h-2.5 border-t border-r border-[#b08749]/60 z-10" />
+                    <span className="pointer-events-none absolute bottom-1 left-1 w-2.5 h-2.5 border-b border-l border-[#b08749]/60 z-10" />
+                    <span className="pointer-events-none absolute bottom-1 right-1 w-2.5 h-2.5 border-b border-r border-[#b08749]/60 z-10" />
 
-                      {/* Vessel Title, Lineage & Cost */}
-                      <div className="shrink-0 border-t border-b border-[#3a271b]/80 py-2.5 my-2 flex items-center justify-between gap-2 text-left">
-                        <div>
-                          <h2 className="text-lg font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] text-[#f3dfb6]">
-                            {getCardDisplayName(activeDetailCard.name)}
-                          </h2>
-                          <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#b49365] mt-0.5">
-                            {getCardTribeLabel(activeDetailCard)}
-                            {activeDetailCard.cost !== undefined && activeDetailCard.cost > 0 && ` • ${activeDetailCard.cost} Blood`}
-                            {activeDetailCard.boneCost !== undefined && activeDetailCard.boneCost > 0 && ` • ${activeDetailCard.boneCost} Bones`}
+                    {activeDetailCard ? (
+                      <>
+                        {/* Specimen Pedestal with Engraved Brass Ritual Halo */}
+                        <div className="shrink-0 flex flex-col items-center justify-center py-3 relative">
+                          <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute w-44 h-44 rounded-full"
+                            style={{
+                              background:
+                                'radial-gradient(circle, rgba(185,28,28,0.22) 0%, rgba(196,154,92,0.12) 45%, transparent 72%)',
+                            }}
+                          />
+                          <svg
+                            viewBox="0 0 180 180"
+                            className="pointer-events-none absolute w-44 h-44 opacity-35"
+                            aria-hidden="true"
+                          >
+                            <circle cx="90" cy="90" r="78" fill="none" stroke="#c49a5c" strokeWidth="0.9" strokeDasharray="3 4" />
+                            <circle cx="90" cy="90" r="66" fill="none" stroke="#991b1b" strokeWidth="0.7" />
+                          </svg>
+                          <div className="relative z-10 scale-[1.14] transform transition-transform drop-shadow-[0_14px_22px_rgba(0,0,0,0.92)]">
+                            {renderCard(activeDetailCard, { showCost: true, isClickable: false, disableHoverScale: true })}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 px-3 py-1 rounded-[2px] bg-[#140d09] border border-[#3d291c] text-xs font-mono font-bold">
-                          <span className="text-amber-300">{activeDetailCard.attack} ATK</span>
-                          <span className="text-stone-600">/</span>
-                          <span className="text-red-300">{activeDetailCard.health} HP</span>
-                        </div>
-                      </div>
 
-                      {/* Bound Crests List */}
-                      <div className="flex-1 min-h-0 overflow-y-auto text-left pr-1">
-                        <div className="text-[9.5px] font-mono font-bold uppercase tracking-[0.26em] text-[#b9935a] mb-2">
-                          Bound Crests
+                        {/* Vessel Title, Lineage & Sculpted Stat Cartouche */}
+                        <div className="shrink-0 border-t border-b border-[#4a3524]/70 py-2.5 my-2.5 flex items-center justify-between gap-2 text-left">
+                          <div>
+                            <h2
+                              className="text-lg font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] text-[#f3dfb8]"
+                              style={{ textShadow: '0 1px 4px rgba(0,0,0,1)' }}
+                            >
+                              {getCardDisplayName(activeDetailCard.name)}
+                            </h2>
+                            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#c49a5c] mt-0.5">
+                              {getCardTribeLabel(activeDetailCard)}
+                              {activeDetailCard.cost !== undefined && activeDetailCard.cost > 0 && ` • ${activeDetailCard.cost} Blood`}
+                              {activeDetailCard.boneCost !== undefined && activeDetailCard.boneCost > 0 && ` • ${activeDetailCard.boneCost} Bones`}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2.5 px-3 py-1.5 bg-[#0f0907] border border-[#5a412d]/85 shadow-[inset_0_2px_6px_rgba(0,0,0,0.9)] text-xs font-mono font-bold">
+                            <span className="text-[#f0c878]">{activeDetailCard.attack} ATK</span>
+                            <span className="text-[#6e523a]">/</span>
+                            <span className="text-[#f28b82]">{activeDetailCard.health} HP</span>
+                          </div>
                         </div>
-                        {activeDetailCard.sigils && activeDetailCard.sigils.length > 0 ? (
-                          <div className="space-y-2.5">
-                            {activeDetailCard.sigils.map((s: any) => (
-                              <div key={s} className="p-2.5 rounded-[2px] bg-[#130d09]/90 border border-[#342318]">
-                                <div className="font-['Cinzel',_serif] text-xs font-bold text-[#efd8aa] uppercase tracking-[0.16em] flex items-center gap-2">
-                                  <span className="text-sm filter sepia-[0.35]">{SIGIL_MAPPING[s] || '✦'}</span>
-                                  <span>{s}</span>
+
+                        {/* Bound Crests List with Circular Brass Sigil Medallions */}
+                        <div className="flex-1 min-h-0 overflow-y-auto text-left pr-1">
+                          <div className="text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.26em] text-[#c49a5c]/90 mb-2">
+                            ◆ Bound Crests
+                          </div>
+                          {activeDetailCard.sigils && activeDetailCard.sigils.length > 0 ? (
+                            <div className="space-y-2.5">
+                              {activeDetailCard.sigils.map((s: any) => (
+                                <div
+                                  key={s}
+                                  className="relative p-2.5 flex items-start gap-3 bg-[#100a08]/92 border border-[#422f20]/80 shadow-[inset_0_2px_8px_rgba(0,0,0,0.88)]"
+                                >
+                                  <div className="w-9 h-9 shrink-0 rounded-full bg-[#150d0a] border border-[#8f6a38]/80 shadow-[inset_0_2px_6px_rgba(0,0,0,0.95)] flex items-center justify-center overflow-hidden">
+                                    <img
+                                      src={getSigilArtUrl(s)}
+                                      alt={s}
+                                      className="w-6 h-6 object-contain [image-rendering:pixelated]"
+                                      onError={(e) => {
+                                        const img = e.currentTarget;
+                                        img.style.display = 'none';
+                                        const fb = img.nextElementSibling as HTMLElement | null;
+                                        if (fb) fb.style.display = 'inline';
+                                      }}
+                                    />
+                                    <span className="hidden text-sm text-[#e5c185]">{SIGIL_MAPPING[s] || '✦'}</span>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-['Cinzel',_serif] text-xs font-bold text-[#f3dfb8] uppercase tracking-[0.15em]">
+                                      {s}
+                                    </div>
+                                    <div className="text-[11px] text-[#d6c6ae]/88 leading-relaxed font-mono mt-0.5">
+                                      {SIGIL_DESCRIPTIONS[s] || 'An ancient mark etched in bone.'}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="text-[11px] text-[#cbb89e]/85 leading-relaxed font-mono mt-1">
-                                  {SIGIL_DESCRIPTIONS[s] || 'An ancient mark etched in bone.'}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="font-['Cinzel',_serif] italic text-xs text-[#7c664e] py-2">
-                            Unmarked vessel.
-                          </div>
-                        )}
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="font-['Cinzel',_serif] italic text-xs text-[#8a7257] py-2">
+                              Unmarked vessel.
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center font-['Cinzel',_serif] italic text-sm text-[#8a7257]">
+                        No creatures bound.
                       </div>
-                    </>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center font-['Cinzel',_serif] italic text-sm text-[#7c664e]">
-                      No creatures bound.
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </RitualReliquaryShell>
           </div>
         );
       })()}

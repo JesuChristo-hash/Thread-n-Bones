@@ -21,6 +21,8 @@ import {
   RitualSlateButton,
   RitualCardDeck,
   SigilInspectionModal,
+  RitualReliquaryShell,
+  RitualBrassSlider,
 } from './components/BattleFlankUI';
 const DevMenuScreen = React.lazy(() => import('./components/DevMenuScreen'));
 const GameOverScreen = React.lazy(() => import('./components/GameOverScreen'));
@@ -8003,199 +8005,168 @@ export default function App() {
       )}
 
       {actCutscene !== null && <ActCutscene key={actCutscene} act={actCutscene} onDone={() => setActCutscene(null)} />}
-      {showPauseMenu && (() => {
-        const knob = 'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
-        const pausePanelStyle: React.CSSProperties = {
-          position: 'relative',
-          borderStyle: 'solid',
-          borderColor: 'transparent',
-          borderWidth: '16px 12px 12px 12px',
-          boxShadow: '0 0 0 1px #190e08, 0 0 0 2px #52361c, 0 26px 64px rgba(0,0,0,0.96), inset 0 1px 0 rgba(224,184,120,0.2)',
-          backgroundColor: '#24160e',
-          backgroundImage: [
-            knob,
-            knob,
-            knob,
-            knob,
-            'radial-gradient(ellipse at 50% 0%, #5e0d10 0%, #3a0709 54%, #180304 100%)',
-            'linear-gradient(to bottom, rgba(56,37,23,0.62), rgba(28,17,11,0.76), rgba(14,8,5,0.9))',
-            `url("${BASE}assets/text/wood.jpg")`,
-          ].join(', '),
-          backgroundSize: ['24px 16px', '24px 16px', '24px 12px', '24px 12px', 'auto', 'auto', '140px 140px'].join(', '),
-          backgroundPosition: 'left top, right top, left bottom, right bottom, 0 0, 0 0, center',
-          backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'repeat'].join(', '),
-          backgroundOrigin: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
-          backgroundClip: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
-        };
-
-        return (
-          <div
-            onClick={() => setShowPauseMenu(false)}
-            className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-up select-none"
+      {showPauseMenu && (
+        <div
+          onClick={() => setShowPauseMenu(false)}
+          className="fixed inset-0 bg-black/84 z-[120] flex items-center justify-center p-4 backdrop-blur-[3px] select-none"
+          role="dialog"
+          aria-modal="true"
+          aria-label="The Sanctuary Pause Menu"
+        >
+          <RitualReliquaryShell
+            variant="crimson"
+            onClick={(e) => e.stopPropagation()}
+            className="animate-sigil-modal-in max-w-[392px] w-full text-center"
           >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={pausePanelStyle}
-              className="max-w-sm w-full text-center rounded-[2px] bg-[#180304] overflow-hidden"
-            >
-              {/* Crimson Cloth Weave */}
+            <div className="px-7 pt-7 pb-6">
+              {/* Engraved Crown Eyebrow & Title */}
               <div
-                className="pointer-events-none absolute inset-0 z-0 opacity-70 mix-blend-multiply"
-                style={{
-                  backgroundImage: `url("${BASE}assets/text/cloth.jpg")`,
-                  backgroundSize: '170px 170px',
-                  backgroundRepeat: 'repeat',
-                }}
-              />
-              {/* Recessed Well Shadow, Stitched Seam & Tarnished-Brass Corner Brackets */}
-              <div
-                className="pointer-events-none absolute inset-0 z-20"
-                style={{
-                  boxShadow:
-                    'inset 0 4px 14px rgba(0,0,0,0.92), inset 0 0 0 1px #140705, 0 0 0 1px rgba(184,138,68,0.24)',
-                }}
-              />
-              <div className="pointer-events-none absolute inset-[6px] z-20 border border-dashed border-[#b98d46]/28" />
-              <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-20 border-t border-l border-[#b8904a]/55" />
-              <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-20 border-t border-r border-[#b8904a]/55" />
-              <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-20 border-b border-l border-[#b8904a]/55" />
-              <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-20 border-b border-r border-[#b8904a]/55" />
+                className="text-[9.5px] font-['Cinzel',_serif] font-bold text-[#c49a5c]/90 tracking-[0.3em] uppercase mb-1"
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}
+              >
+                ◆ Ritual Paused ◆
+              </div>
+              <h2
+                className="text-[21px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#f3dfb8] leading-tight"
+                style={{ textShadow: '0 2px 6px rgba(0,0,0,1), 0 0 14px rgba(185,28,28,0.34)' }}
+              >
+                The Sanctuary
+              </h2>
 
-              <div className="relative z-10 px-6 py-5">
-                <div className="text-[9px] font-['Cinzel',_serif] text-[#c7a97b]/80 tracking-[0.28em] uppercase mb-1">
-                  Ritual Paused
+              {/* Tapered Engraved Brass-Crimson Rule */}
+              <div className="w-full flex items-center justify-center gap-2 my-3.5" aria-hidden="true">
+                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#9f773d]/75 to-[#b91c1c]/85" />
+                <svg viewBox="0 0 10 10" className="w-[9px] h-[9px] shrink-0 overflow-visible">
+                  <polygon points="5,0.6 9.4,5 5,9.4 0.6,5" fill="#991b1b" stroke="#dfba7c" strokeWidth="0.9" />
+                </svg>
+                <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#9f773d]/75 to-[#b91c1c]/85" />
+              </div>
+
+              <div className="flex flex-col gap-3 w-full">
+                {/* Recessed Carved-Slate Audio Chamber */}
+                <div className="relative w-full py-3.5 px-4 flex flex-col gap-3.5 text-left bg-[#090505]/74 border border-[#4a3524]/70 shadow-[inset_0_3px_12px_rgba(0,0,0,0.92)]">
+                  <span className="pointer-events-none absolute top-0.5 left-0.5 w-2 h-2 border-t border-l border-[#b08749]/55" />
+                  <span className="pointer-events-none absolute top-0.5 right-0.5 w-2 h-2 border-t border-r border-[#b08749]/55" />
+                  <span className="pointer-events-none absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l border-[#b08749]/55" />
+                  <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r border-[#b08749]/55" />
+
+                  <RitualBrassSlider
+                    label="Music Volume"
+                    value={musicVol}
+                    onChange={(val) => {
+                      setMusicVol(val);
+                      if (!audioEnabled && val > 0) setAudioEnabled(true);
+                      ChiptuneAudio.setMusicVolume(val);
+                    }}
+                  />
+
+                  <RitualBrassSlider
+                    label="Sound FX Volume"
+                    value={sfxVol}
+                    onChange={(val) => {
+                      setSfxVol(val);
+                      if (!audioEnabled && val > 0) setAudioEnabled(true);
+                      ChiptuneAudio.setSfxVolume(val);
+                    }}
+                    onPointerUp={() => ChiptuneAudio.playSfxPreview()}
+                  />
                 </div>
-                <h2 className="text-xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#f2e4cc] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
-                  The Sanctuary
-                </h2>
-                <div className="mx-auto my-3 h-px w-28 bg-gradient-to-r from-transparent via-[#a8813e]/55 to-transparent" />
 
-                <div className="flex flex-col gap-3.5 w-full">
-                  {/* Volume Sliders */}
-                  <div className="w-full py-3 px-4 flex flex-col gap-3 font-mono text-xs text-left bg-[#120506]/75 border border-[#4a231c]/80 rounded-[2px] shadow-[inset_0_2px_10px_rgba(0,0,0,0.85)]">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between text-[10px] uppercase tracking-wider text-[#d9cbb5]">
-                        <span>Music Volume</span>
-                        <span className="font-bold text-[#e6c382]">{Math.round(musicVol * 100)}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value={musicVol}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          setMusicVol(val);
-                          if (!audioEnabled && val > 0) setAudioEnabled(true);
-                          ChiptuneAudio.setMusicVolume(val);
-                        }}
-                        className="w-full accent-amber-500 h-1 bg-[#1f0a0b] rounded cursor-pointer touch-manipulation"
-                      />
-                    </div>
+                {/* Compendium & Lifetime Ledger */}
+                <div className="grid grid-cols-2 gap-2.5 pt-0.5">
+                  <RitualSlateButton
+                    onClick={() => {
+                      setShowPauseMenu(false);
+                      setArchiveModalTab('COMPENDIUM');
+                    }}
+                    label="Compendium"
+                    block
+                  />
+                  <RitualSlateButton
+                    onClick={() => {
+                      setShowPauseMenu(false);
+                      setArchiveModalTab('LEDGER');
+                    }}
+                    label="Ledger"
+                    block
+                  />
+                </div>
 
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between text-[10px] uppercase tracking-wider text-[#d9cbb5]">
-                        <span>Sound FX Volume</span>
-                        <span className="font-bold text-[#e6c382]">{Math.round(sfxVol * 100)}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value={sfxVol}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          setSfxVol(val);
-                          if (!audioEnabled && val > 0) setAudioEnabled(true);
-                          ChiptuneAudio.setSfxVolume(val);
-                        }}
-                        onPointerUp={() => ChiptuneAudio.playSfxPreview()}
-                        className="w-full accent-amber-500 h-1 bg-[#1f0a0b] rounded cursor-pointer touch-manipulation"
-                      />
-                    </div>
-                  </div>
+                <div className="h-px w-full my-0.5 bg-gradient-to-r from-transparent via-[#9f773d]/45 to-transparent" />
 
-                  {/* Compendium & Lifetime Ledger */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <RitualSlateButton onClick={() => {
-                        setShowPauseMenu(false);
-                        setArchiveModalTab('COMPENDIUM');
-                      }} label="Compendium" block />
-                    <RitualSlateButton onClick={() => {
-                        setShowPauseMenu(false);
-                        setArchiveModalTab('LEDGER');
-                      }} label="Ledger" block />
-                  </div>
+                {/* Resume Ritual */}
+                <RitualSlateButton onClick={() => setShowPauseMenu(false)} label="Resume Ritual" block />
 
-                  <div className="h-px w-full bg-gradient-to-r from-transparent via-[#692924]/70 to-transparent" />
-
-                  {/* Resume Ritual */}
-                  <RitualSlateButton onClick={() => setShowPauseMenu(false)} label="Resume Ritual" block />
-
-                  {/* Postpone Ritual (Save & Return to Title) */}
-                  <RitualSlateButton onClick={() => {
-                      if (masterDeck && masterDeck.length > 0) {
-                        const isMidDuel = preDuelMapRef.current !== null;
-                        if (!isMidDuel || !localStorage.getItem(RUN_SAVE_KEY)) {
-                          try {
-                            localStorage.setItem(RUN_SAVE_KEY, JSON.stringify({
-                              masterDeck,
-                              items,
-                              totalOverkillDamage,
-                              stage,
-                              level,
-                              duelsCompleted,
-                              totemPieces,
-                              activeTotem,
-                              currentStageName,
-                              startingBones: startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones,
-                              ouroborosBuffs,
-                              runStats,
-                              standardBossOrder: (window as any).__standardBossOrder,
-                              hasDefeatedWeaver,
-                              permanentScaleDebuff,
-                              consecutiveOneTurnWins,
-                              otkCooldown,
-                              actMap: preDuelMapRef.current ?? actMapRef.current,
-                              savedAt: Date.now(),
-                            }));
-                            setSavedRunExists(true);
-                          } catch (e) {
-                            console.warn("Postpone save failed:", e);
-                          }
+                {/* Postpone Ritual (Save & Return to Title) */}
+                <RitualSlateButton
+                  onClick={() => {
+                    if (masterDeck && masterDeck.length > 0) {
+                      const isMidDuel = preDuelMapRef.current !== null;
+                      if (!isMidDuel || !localStorage.getItem(RUN_SAVE_KEY)) {
+                        try {
+                          localStorage.setItem(RUN_SAVE_KEY, JSON.stringify({
+                            masterDeck,
+                            items,
+                            totalOverkillDamage,
+                            stage,
+                            level,
+                            duelsCompleted,
+                            totemPieces,
+                            activeTotem,
+                            currentStageName,
+                            startingBones: startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones,
+                            ouroborosBuffs,
+                            runStats,
+                            standardBossOrder: (window as any).__standardBossOrder,
+                            hasDefeatedWeaver,
+                            permanentScaleDebuff,
+                            consecutiveOneTurnWins,
+                            otkCooldown,
+                            actMap: preDuelMapRef.current ?? actMapRef.current,
+                            savedAt: Date.now(),
+                          }));
+                          setSavedRunExists(true);
+                        } catch (e) {
+                          console.warn("Postpone save failed:", e);
                         }
                       }
-                      preDuelMapRef.current = null;
-                      try {
-                        ChiptuneAudio.playAmbient();
-                      } catch (e) {
-                        console.warn("Audio switch blocked:", e);
-                      }
-                      setShowPauseMenu(false);
-                      setScreen('SPLASH');
-                    }} label="Postpone Ritual" block />
+                    }
+                    preDuelMapRef.current = null;
+                    try {
+                      ChiptuneAudio.playAmbient();
+                    } catch (e) {
+                      console.warn("Audio switch blocked:", e);
+                    }
+                    setShowPauseMenu(false);
+                    setScreen('SPLASH');
+                  }}
+                  label="Postpone Ritual"
+                  block
+                />
 
-                  {/* End Ritual (Surrender & Wipe Save) */}
-                  <RitualSlateButton onClick={() => {
-                      clearRunSave();
-                      setShowPauseMenu(false);
-                      triggerSfx('defeat');
-                      setBossState(prev => ({
-                        ...prev,
-                        isRitualComplete: false,
-                        ritualEndedVoluntarily: false,
-                        ritualSurrendered: true,
-                      }));
-                      setScreen('GAME_OVER');
-                    }} label="End Ritual" block />
-                </div>
+                {/* End Ritual (Surrender & Wipe Save) */}
+                <RitualSlateButton
+                  variant="danger"
+                  onClick={() => {
+                    clearRunSave();
+                    setShowPauseMenu(false);
+                    triggerSfx('defeat');
+                    setBossState(prev => ({
+                      ...prev,
+                      isRitualComplete: false,
+                      ritualEndedVoluntarily: false,
+                      ritualSurrendered: true,
+                    }));
+                    setScreen('GAME_OVER');
+                  }}
+                  label="End Ritual"
+                  block
+                />
               </div>
             </div>
-          </div>
-        );
-      })()}
+          </RitualReliquaryShell>
+        </div>
+      )}
 
       {/* =========================================================================
           DRAFT SCREEN (PELT TRADING)

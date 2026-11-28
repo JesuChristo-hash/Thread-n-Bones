@@ -545,7 +545,7 @@ export interface RitualSlateButtonProps {
   onClick: () => void;
   icon?: React.ReactNode;
   title?: string;
-  variant?: 'default' | 'dev';
+  variant?: 'default' | 'dev' | 'danger';
   compact?: boolean;
   block?: boolean;
 }
@@ -562,6 +562,7 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
   const uid = useId().replace(/:/g, '');
   const baseUrl = import.meta.env.BASE_URL || './';
   const isDev = variant === 'dev';
+  const isDanger = variant === 'danger';
 
   return (
     <button
@@ -583,9 +584,11 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
           clipPath:
             'polygon(8px 1px, 34% 0.4px, 68% 1.2px, calc(100% - 8px) 0.8px, calc(100% - 1px) 7px, calc(100% - 1.4px) calc(100% - 7px), calc(100% - 8px) calc(100% - 0.8px), 54% calc(100% - 1.4px), 8px calc(100% - 0.8px), 1px calc(100% - 7px), 1.4px 7px)',
           backgroundImage: `linear-gradient(180deg, ${
-            isDev
-              ? 'rgba(30,22,20,0.72) 0%, rgba(16,12,12,0.88) 55%, rgba(9,7,7,0.95) 100%'
-              : 'rgba(28,23,20,0.68) 0%, rgba(15,12,12,0.85) 52%, rgba(8,6,6,0.95) 100%'
+            isDanger
+              ? 'rgba(54,14,16,0.78) 0%, rgba(26,7,9,0.9) 54%, rgba(12,4,5,0.96) 100%'
+              : isDev
+                ? 'rgba(30,22,20,0.72) 0%, rgba(16,12,12,0.88) 55%, rgba(9,7,7,0.95) 100%'
+                : 'rgba(28,23,20,0.68) 0%, rgba(15,12,12,0.85) 52%, rgba(8,6,6,0.95) 100%'
           }), url("${baseUrl}assets/text/slate.jpg")`,
           backgroundSize: 'cover, 130px 130px',
           backgroundPosition: 'center',
@@ -599,8 +602,9 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
         style={{
           clipPath:
             'polygon(8px 1px, 34% 0.4px, 68% 1.2px, calc(100% - 8px) 0.8px, calc(100% - 1px) 7px, calc(100% - 1.4px) calc(100% - 7px), calc(100% - 8px) calc(100% - 0.8px), 54% calc(100% - 1.4px), 8px calc(100% - 0.8px), 1px calc(100% - 7px), 1.4px 7px)',
-          background:
-            'radial-gradient(ellipse 75% 110% at 50% 50%, rgba(127,20,24,0.42) 0%, rgba(180,125,55,0.12) 60%, transparent 100%)',
+          background: isDanger
+            ? 'radial-gradient(ellipse 80% 120% at 50% 50%, rgba(185,28,28,0.52) 0%, rgba(127,20,24,0.22) 60%, transparent 100%)'
+            : 'radial-gradient(ellipse 75% 110% at 50% 50%, rgba(127,20,24,0.42) 0%, rgba(180,125,55,0.12) 60%, transparent 100%)',
         }}
       />
 
@@ -696,9 +700,11 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
         </span>
       )}
       <span
-        className={`relative z-10 font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#d6c2a5] group-hover/rbtn:text-[#fff1d6] transition-colors duration-150 ${
-          compact ? 'text-[9.5px] sm:text-[10px]' : 'text-[10.5px] sm:text-[11px]'
-        }`}
+        className={`relative z-10 font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] transition-colors duration-150 ${
+          isDanger
+            ? 'text-[#eab4aa] group-hover/rbtn:text-[#ffe2dc]'
+            : 'text-[#d6c2a5] group-hover/rbtn:text-[#fff1d6]'
+        } ${compact ? 'text-[9.5px] sm:text-[10px]' : 'text-[10.5px] sm:text-[11px]'}`}
         style={{
           textShadow: '0 1px 3px rgba(0,0,0,1)',
         }}
@@ -1261,4 +1267,201 @@ export const SigilInspectionModal: React.FC<SigilInspectionModalProps> = ({
     </div>
   );
 };
+
+/* =========================================================================
+   6. ARCHITECTURAL CHAMFERED SLATE & FORGED-BRASS RELIQUARY CONTAINER SHELL
+      (Shared by Sanctuary Pause Menu, Deck View, Compendium & Ritual Ledger)
+   ========================================================================= */
+export interface RitualReliquaryShellProps {
+  children: React.ReactNode;
+  variant?: 'crimson' | 'obsidian';
+  className?: string;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
+}
+
+const RELIQUARY_SHELL_CLIP =
+  'polygon(16px 1px, calc(100% - 16px) 1px, calc(100% - 1px) 16px, calc(100% - 1px) calc(100% - 16px), calc(100% - 16px) calc(100% - 1px), 16px calc(100% - 1px), 1px calc(100% - 16px), 1px 16px)';
+
+export const RitualReliquaryShell: React.FC<RitualReliquaryShellProps> = ({
+  children,
+  variant = 'crimson',
+  className = '',
+  onClick,
+}) => {
+  const uid = useId().replace(/:/g, '');
+  const baseUrl = import.meta.env.BASE_URL || './';
+  const isObsidian = variant === 'obsidian';
+
+  const metalStops = isObsidian
+    ? { c0: '#27232c', c1: '#867e90', c2: '#cfc8d8', c3: '#36303d', edge: 'rgba(176,166,188,0.58)', inner: 'rgba(176,166,188,0.22)', rivetStroke: '#d4cde0' }
+    : { c0: '#2a1a0c', c1: '#9f773d', c2: '#e2be7d', c3: '#3d2511', edge: 'rgba(182,140,78,0.68)', inner: 'rgba(196,154,92,0.24)', rivetStroke: '#dfba7c' };
+
+  const renderCornerClamp = (cornerKey: string, posClass: string, transform: string) => (
+    <svg
+      viewBox="0 0 46 46"
+      className={`pointer-events-none absolute ${posClass} w-[46px] h-[46px] z-30 overflow-visible`}
+      style={{ transform }}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={`shellBrass-${uid}-${cornerKey}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={metalStops.c0} />
+          <stop offset="38%" stopColor={metalStops.c1} />
+          <stop offset="65%" stopColor={metalStops.c2} />
+          <stop offset="100%" stopColor={metalStops.c3} />
+        </linearGradient>
+      </defs>
+      {/* Chamfered dark bevel shadow + forged metal corner bracket */}
+      <path
+        d="M 16 0.6 L 44 0.6 L 44 4.8 L 18.2 4.8 L 4.8 18.2 L 4.8 44 L 0.6 44 L 0.6 16 Z"
+        fill={`url(#shellBrass-${uid}-${cornerKey})`}
+        stroke="#100a06"
+        strokeWidth="0.9"
+      />
+      {/* Crisp inner chamfer miter groove */}
+      <path
+        d="M 21 8 L 44 8 M 8 21 L 8 44 M 21 8 L 8 21"
+        fill="none"
+        stroke={metalStops.inner}
+        strokeWidth="0.95"
+      />
+      {/* Forged corner rivet */}
+      <circle cx="17.5" cy="17.5" r="3.1" fill="#080505" />
+      <circle cx="17.5" cy="17.5" r="2.15" fill={isObsidian ? '#3e3846' : '#4f371e'} stroke={metalStops.rivetStroke} strokeWidth="0.65" />
+      <circle cx="16.9" cy="16.9" r="0.65" fill="#fff7e6" opacity="0.72" />
+    </svg>
+  );
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative ${className}`}
+      style={{
+        filter: isObsidian
+          ? 'drop-shadow(0 28px 52px rgba(0,0,0,0.97)) drop-shadow(0 0 18px rgba(108,96,128,0.16))'
+          : 'drop-shadow(0 28px 52px rgba(0,0,0,0.97)) drop-shadow(0 0 22px rgba(112,18,22,0.24))',
+      }}
+    >
+      {/* 1. CARVED AGED-SLATE OCTAGONAL STONE BODY */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          clipPath: RELIQUARY_SHELL_CLIP,
+          backgroundImage: isObsidian
+            ? `radial-gradient(ellipse 85% 42% at 50% 0%, rgba(56, 48, 68, 0.44) 0%, rgba(16, 14, 20, 0.72) 55%, rgba(7, 6, 9, 0.94) 100%), linear-gradient(180deg, rgba(22, 19, 26, 0.64) 0%, rgba(9, 8, 12, 0.9) 100%), url("${baseUrl}assets/text/slate.jpg")`
+            : `radial-gradient(ellipse 90% 42% at 50% 0%, rgba(122, 18, 22, 0.42) 0%, rgba(34, 15, 13, 0.56) 46%, rgba(8, 5, 5, 0.93) 100%), linear-gradient(180deg, rgba(24, 17, 15, 0.66) 0%, rgba(9, 7, 7, 0.91) 100%), url("${baseUrl}assets/text/slate.jpg")`,
+          backgroundSize: 'cover, cover, 180px 180px',
+          backgroundPosition: 'center',
+        }}
+      />
+
+      {/* Subtle recessed inner shadow well */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-20"
+        style={{
+          clipPath: RELIQUARY_SHELL_CLIP,
+          boxShadow: 'inset 0 6px 24px rgba(0,0,0,0.92), inset 0 -6px 24px rgba(0,0,0,0.9)',
+        }}
+      />
+
+      {/* 2. PERIMETER CHAMFERED BEVEL RAILS & ENGRAVED INNER HAIRLINE (Zero aspect distortion) */}
+      <div aria-hidden="true" className="pointer-events-none absolute top-[1px] left-[44px] right-[44px] h-[1.5px] z-30" style={{ background: metalStops.edge }} />
+      <div aria-hidden="true" className="pointer-events-none absolute bottom-[1px] left-[44px] right-[44px] h-[1.5px] z-30" style={{ background: metalStops.edge }} />
+      <div aria-hidden="true" className="pointer-events-none absolute left-[1px] top-[44px] bottom-[44px] w-[1.5px] z-30" style={{ background: metalStops.edge }} />
+      <div aria-hidden="true" className="pointer-events-none absolute right-[1px] top-[44px] bottom-[44px] w-[1.5px] z-30" style={{ background: metalStops.edge }} />
+
+      <div aria-hidden="true" className="pointer-events-none absolute top-[8px] left-[44px] right-[44px] h-px z-30" style={{ background: metalStops.inner }} />
+      <div aria-hidden="true" className="pointer-events-none absolute bottom-[8px] left-[44px] right-[44px] h-px z-30" style={{ background: metalStops.inner }} />
+      <div aria-hidden="true" className="pointer-events-none absolute left-[8px] top-[44px] bottom-[44px] w-px z-30" style={{ background: metalStops.inner }} />
+      <div aria-hidden="true" className="pointer-events-none absolute right-[8px] top-[44px] bottom-[44px] w-px z-30" style={{ background: metalStops.inner }} />
+
+      {/* 3. FOUR FIXED-PROPORTION FORGED METAL CORNER CLAMPS WITH RIVETS */}
+      {renderCornerClamp('tl', 'top-0 left-0', 'none')}
+      {renderCornerClamp('tr', 'top-0 right-0', 'scaleX(-1)')}
+      {renderCornerClamp('bl', 'bottom-0 left-0', 'scaleY(-1)')}
+      {renderCornerClamp('br', 'bottom-0 right-0', 'scale(-1, -1)')}
+
+      {/* 4. CONTENT SLOT */}
+      <div
+        className="relative z-10 flex flex-col w-full h-full min-h-0 overflow-hidden"
+        style={{ clipPath: RELIQUARY_SHELL_CLIP }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================================
+   7. DIEGETIC FORGED-BRASS & ARTERIAL CRIMSON VOLUME SLIDER
+   ========================================================================= */
+export interface RitualBrassSliderProps {
+  label: string;
+  value: number;
+  onChange: (val: number) => void;
+  onPointerUp?: () => void;
+}
+
+export const RitualBrassSlider: React.FC<RitualBrassSliderProps> = ({
+  label,
+  value,
+  onChange,
+  onPointerUp,
+}) => {
+  const pct = Math.min(100, Math.max(0, Math.round(value * 100)));
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.18em]">
+        <span className="text-[#d6c6ae]">{label}</span>
+        <span
+          className="font-bold text-[#ecc987]"
+          style={{ textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}
+        >
+          {pct}%
+        </span>
+      </div>
+      <div className="relative h-5 flex items-center select-none">
+        {/* Recessed Forged-Iron Channel Track */}
+        <div className="relative w-full h-[6px] rounded-[1px] bg-[#0a0505] border border-[#4a3524]/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.95)] overflow-hidden">
+          <div
+            className="h-full transition-[width] duration-75"
+            style={{
+              width: `${pct}%`,
+              background: 'linear-gradient(90deg, #5e0b0f 0%, #991b1b 55%, #c99449 100%)',
+              boxShadow: '0 0 8px rgba(185,28,28,0.65)',
+            }}
+          />
+        </div>
+        {/* Forged Tarnished-Brass Diamond Slider Thumb */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[14px] h-[14px] transition-[left] duration-75"
+          style={{ left: `${pct}%` }}
+        >
+          <svg viewBox="0 0 14 14" className="w-full h-full overflow-visible drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
+            <polygon points="7,0.8 13.2,7 7,13.2 0.8,7" fill="#3a2512" stroke="#e2be7d" strokeWidth="1.2" />
+            <polygon points="7,3.4 10.6,7 7,10.6 3.4,7" fill="#991b1b" />
+            <circle cx="7" cy="7" r="1.2" fill="#fde68a" />
+          </svg>
+        </div>
+        {/* Native Accessible Range Overlay */}
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={value}
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+          onPointerUp={onPointerUp}
+          aria-label={label}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer touch-manipulation"
+        />
+      </div>
+    </div>
+  );
+};
+
 
