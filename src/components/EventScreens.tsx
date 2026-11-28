@@ -197,7 +197,11 @@ export default function EventScreens({ ctx }: { ctx: {
     hasDraftFlippedRef.current = true;
   }
 
-  // --- Unified Desktop Mouse & Mobile Touch Drag-to-Place Engine for Event Card Slots ---
+  // --- Unified Desktop Mouse & Mobile Touch 1-Second Hold-to-Drag Engine for Event Card Slots ---
+  const HOLD_TO_DRAG_MS = 1000;
+  const HOLD_CHARGE_SHOW_MS = 150;
+  const HOLD_MOVE_TOLERANCE_PX = 14;
+
   type EventDragState = {
     card: CardDef;
     cardKey: string;
@@ -207,20 +211,40 @@ export default function EventScreens({ ctx }: { ctx: {
     isTouch: boolean;
     hoveredSlot: string | null;
   };
+  type EventHoldState = {
+    cardKey: string;
+    x: number;
+    y: number;
+    isTouch: boolean;
+  };
   const [eventDrag, setEventDrag] = React.useState<EventDragState | null>(null);
+  const [eventHold, setEventHold] = React.useState<EventHoldState | null>(null);
   const eventDragRef = React.useRef<EventDragState | null>(null);
   const suppressNextClickRef = React.useRef<boolean>(false);
   const pendingDragRef = React.useRef<{
     pointerId: number;
     startX: number;
     startY: number;
+    lastX: number;
+    lastY: number;
     isTouch: boolean;
     card: CardDef;
     cardKey: string;
     allowedSlots: string[];
     onDrop: (slotId: string) => void;
+    chargeTimer: number | null;
     holdTimer: number | null;
   } | null>(null);
+
+  const clearPendingDrag = React.useCallback(() => {
+    const pending = pendingDragRef.current;
+    if (pending) {
+      if (pending.chargeTimer) window.clearTimeout(pending.chargeTimer);
+      if (pending.holdTimer) window.clearTimeout(pending.holdTimer);
+    }
+    pendingDragRef.current = null;
+    setEventHold(null);
+  }, []);
 
   const findHoveredDropSlot = React.useCallback((clientX: number, clientY: number, allowedSlots: string[]): string | null => {
     const nodes = document.querySelectorAll<HTMLElement>('[data-event-drop-slot]');
@@ -252,14 +276,11 @@ export default function EventScreens({ ctx }: { ctx: {
   }, []);
 
   React.useEffect(() => {
-    // Clear any in-progress drag when switching event screens
-    if (pendingDragRef.current?.holdTimer) {
-      window.clearTimeout(pendingDragRef.current.holdTimer);
-    }
-    pendingDragRef.current = null;
+    // Clear any in-progress hold or drag when switching event screens
+    clearPendingDrag();
     eventDragRef.current = null;
     setEventDrag(null);
-  }, [screen]);
+  }, [screen, clearPendingDrag]);
 
   React.useEffect(() => {
     const onPointerMove = (e: PointerEvent) => {
@@ -277,48 +298,16 @@ export default function EventScreens({ ctx }: { ctx: {
       }
 
       if (!pending || e.pointerId !== pending.pointerId) return;
+      pending.lastX = e.clientX;
+      pending.lastY = e.clientY;
       const dx = e.clientX - pending.startX;
       const dy = e.clientY - pending.startY;
       const dist = Math.hypot(dx, dy);
 
-      if (pending.isTouch) {
-        // Let horizontal swipes scroll the mobile deck strip naturally
-        if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.15) {
-          if (pending.holdTimer) window.clearTimeout(pending.holdTimer);
-          pendingDragRef.current = null;
-          return;
-        }
-        // Upward / vertical pull immediately lifts the card into drag mode
-        if (dist >= 10 && Math.abs(dy) >= Math.abs(dx) * 0.85) {
-          if (pending.holdTimer) window.clearTimeout(pending.holdTimer);
-          const hoveredSlot = findHoveredDropSlot(e.clientX, e.clientY - 26, pending.allowedSlots);
-          const started: EventDragState = {
-            card: pending.card,
-            cardKey: pending.cardKey,
-            allowedSlots: pending.allowedSlots,
-            x: e.clientX,
-            y: e.clientY,
-            isTouch: true,
-            hoveredSlot,
-          };
-          eventDragRef.current = started;
-          setEventDrag(started);
-          triggerSfx('draw');
-        }
-      } else if (dist >= 7) {
-        const hoveredSlot = findHoveredDropSlot(e.clientX, e.clientY, pending.allowedSlots);
-        const started: EventDragState = {
-          card: pending.card,
-          cardKey: pending.cardKey,
-          allowedSlots: pending.allowedSlots,
-          x: e.clientX,
-          y: e.clientY,
-          isTouch: false,
-          hoveredSlot,
-        };
-        eventDragRef.current = started;
-        setEventDrag(started);
-        triggerSfx('draw');
+      // Moving beyond tolerance before the 1-second hold completes cancels drag arming
+      // (preserves mobile horizontal scrolling and normal click/tap behavior)
+      if (dist > HOLD_MOVE_TOLERANCE_PX) {
+        clearPendingDrag();
       }
     };
 
@@ -332,10 +321,6 @@ export default function EventScreens({ ctx }: { ctx: {
       const pending = pendingDragRef.current;
       const active = eventDragRef.current;
 
-      if (pending?.holdTimer) {
-        window.clearTimeout(pending.holdTimer);
-      }
-
       if (active && pending) {
         const hitX = e.clientX;
         const hitY = active.isTouch ? e.clientY - 26 : e.clientY;
@@ -343,13 +328,13 @@ export default function EventScreens({ ctx }: { ctx: {
         suppressNextClickRef.current = true;
         window.setTimeout(() => {
           suppressNextClickRef.current = false;
-        }, 120);
+        }, 160);
         if (dropSlot) {
           pending.onDrop(dropSlot);
         }
       }
 
-      pendingDragRef.current = null;
+      clearPendingDrag();
       eventDragRef.current = null;
       setEventDrag(null);
     };
@@ -364,7 +349,7 @@ export default function EventScreens({ ctx }: { ctx: {
       window.removeEventListener('pointerup', finishDrag);
       window.removeEventListener('pointercancel', finishDrag);
     };
-  }, [findHoveredDropSlot, triggerSfx]);
+  }, [findHoveredDropSlot, clearPendingDrag]);
 
   const startEventCardDrag = (
     e: React.PointerEvent,
@@ -383,39 +368,51 @@ export default function EventScreens({ ctx }: { ctx: {
     const startX = e.clientX;
     const startY = e.clientY;
 
-    if (pendingDragRef.current?.holdTimer) {
-      window.clearTimeout(pendingDragRef.current.holdTimer);
-    }
+    clearPendingDrag();
 
-    const holdTimer = isTouch
-      ? window.setTimeout(() => {
-          const cur = pendingDragRef.current;
-          if (!cur || eventDragRef.current) return;
-          const hoveredSlot = findHoveredDropSlot(cur.startX, cur.startY - 26, cur.allowedSlots);
-          const started: EventDragState = {
-            card: cur.card,
-            cardKey: cur.cardKey,
-            allowedSlots: cur.allowedSlots,
-            x: cur.startX,
-            y: cur.startY,
-            isTouch: true,
-            hoveredSlot,
-          };
-          eventDragRef.current = started;
-          setEventDrag(started);
-          triggerSfx('draw');
-        }, 170)
-      : null;
+    const chargeTimer = window.setTimeout(() => {
+      const cur = pendingDragRef.current;
+      if (!cur || eventDragRef.current) return;
+      setEventHold({
+        cardKey: cur.cardKey,
+        x: cur.lastX,
+        y: cur.lastY,
+        isTouch: cur.isTouch,
+      });
+    }, HOLD_CHARGE_SHOW_MS);
+
+    const holdTimer = window.setTimeout(() => {
+      const cur = pendingDragRef.current;
+      if (!cur || eventDragRef.current) return;
+      setEventHold(null);
+      const hitY = cur.isTouch ? cur.lastY - 26 : cur.lastY;
+      const hoveredSlot = findHoveredDropSlot(cur.lastX, hitY, cur.allowedSlots);
+      const started: EventDragState = {
+        card: cur.card,
+        cardKey: cur.cardKey,
+        allowedSlots: cur.allowedSlots,
+        x: cur.lastX,
+        y: cur.lastY,
+        isTouch: cur.isTouch,
+        hoveredSlot,
+      };
+      eventDragRef.current = started;
+      setEventDrag(started);
+      triggerSfx('draw');
+    }, HOLD_TO_DRAG_MS);
 
     pendingDragRef.current = {
       pointerId: e.pointerId,
       startX,
       startY,
+      lastX: startX,
+      lastY: startY,
       isTouch,
       card: opts.card,
       cardKey: opts.cardKey,
       allowedSlots: opts.allowedSlots,
       onDrop: opts.onDrop,
+      chargeTimer,
       holdTimer,
     };
   };
@@ -1409,7 +1406,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       Your Creatures ({masterDeck.length})
                     </div>
                     <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9b7a5e]">
-                      Drag or tap
+                      Tap or hold 1s
                     </span>
                   </div>
 
@@ -1686,7 +1683,7 @@ export default function EventScreens({ ctx }: { ctx: {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9c8469]">
-                        Drag or tap
+                        Tap or hold 1s
                       </span>
                       {(altarHostId || altarSacrificeId) && !isAnimating && (
                         <button
@@ -2007,7 +2004,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       Deck ({masterDeck.length})
                     </span>
                     <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9b8266]">
-                      Drag or tap
+                      Tap or hold 1s
                     </span>
                   </div>
                   <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden lg:overflow-y-auto lg:overflow-x-hidden px-3 py-1.5 lg:p-3">
@@ -2990,7 +2987,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       Your Creatures ({boneLordSelectedIdx !== null ? Math.max(0, masterDeck.length - 1) : masterDeck.length})
                     </div>
                     <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9c9282]">
-                      Drag or tap
+                      Tap or hold 1s
                     </span>
                   </div>
 
@@ -3588,7 +3585,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9c8469]">
-                          Drag or tap
+                          Tap or hold 1s
                         </span>
                         {mycoSelectedIndices.length > 0 && !isAnimating && (
                           <button
@@ -3883,7 +3880,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       Your Creatures ({masterDeck.length})
                     </div>
                     <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-teal-500/75">
-                      Drag or tap
+                      Tap or hold 1s
                     </span>
                   </div>
 
@@ -5818,10 +5815,32 @@ export default function EventScreens({ ctx }: { ctx: {
           </div>
         );
       })()}
+      {/* 1-Second Hold-to-Drag Charge Pill */}
+      {eventHold && !eventDrag && (
+        <div
+          aria-hidden="true"
+          className="fixed z-[215] pointer-events-none select-none flex flex-col items-center gap-1"
+          style={{
+            left: `${eventHold.x}px`,
+            top: `${eventHold.isTouch ? eventHold.y - 52 : eventHold.y - 34}px`,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <div className="px-2 py-0.5 rounded-[2px] bg-[#140a08]/95 border border-[#c8a363]/75 shadow-[0_6px_18px_rgba(0,0,0,0.92)]">
+            <div className="text-[8px] font-mono uppercase tracking-[0.2em] text-[#f4dfb6] text-center leading-none">
+              Hold to Drag
+            </div>
+            <div className="mt-1 h-[3px] w-16 rounded-full bg-black/80 overflow-hidden border border-[#6e5235]/50">
+              <div className="h-full w-full bg-gradient-to-r from-[#b91c1c] via-[#e5b85c] to-[#fef08a] card-hold-bar" />
+            </div>
+          </div>
+        </div>
+      )}
       {/* Floating Lifted Ghost Card for Event Slot Drag-and-Drop (Desktop & Mobile Touch) */}
       {eventDrag && (
         <div
           aria-hidden="true"
+          data-event-drag-ghost="true"
           className="fixed z-[220] pointer-events-none select-none will-change-transform"
           style={{
             left: `${eventDrag.x}px`,

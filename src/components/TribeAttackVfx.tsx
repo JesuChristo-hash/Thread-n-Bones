@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import type { CardDef } from '../data/gameData';
 
 export type TribeAttackStyle =
@@ -63,53 +63,76 @@ export const TribeAttackVfx: React.FC<{
   direction?: 'left' | 'right' | 'straight';
   className?: string;
 }> = ({ styleType, direction = 'straight', className = '' }) => {
+  const uid = useId().replace(/:/g, '');
   const flipX = direction === 'left' ? -1 : 1;
 
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none absolute inset-[-18%] z-[68] flex items-center justify-center overflow-visible select-none ${className}`}
+      className={`pointer-events-none absolute inset-[-20%] z-[68] flex items-center justify-center overflow-visible select-none ${className}`}
     >
       <svg
         viewBox="0 0 120 120"
         className="w-full h-full overflow-visible"
         style={{
-          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.92)) drop-shadow(0 0 8px rgba(185,28,28,0.45))',
+          filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.9)) drop-shadow(0 0 7px rgba(153,27,27,0.42))',
         }}
       >
         <defs>
-          <linearGradient id={`dgMetal-${styleType}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1b1f26" />
-            <stop offset="48%" stopColor="#464d59" />
-            <stop offset="82%" stopColor="#697280" />
-            <stop offset="100%" stopColor="#262b33" />
+          {/* Distressed ink / ragged brush displacement filter so strokes feel raw, never cartoony */}
+          <filter id={`inkRough-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="3" seed="11" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.6" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+          <filter id={`smokeBlur-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="1.9" />
+          </filter>
+
+          <linearGradient id={`inkSlash-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#121418" stopOpacity="0" />
+            <stop offset="22%" stopColor="#1e2229" stopOpacity="0.92" />
+            <stop offset="68%" stopColor="#454c59" stopOpacity="0.96" />
+            <stop offset="92%" stopColor="#991b1b" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#dc2626" stopOpacity="0" />
           </linearGradient>
-          <linearGradient id={`dgBlade-${styleType}`} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#181b20" stopOpacity="0.1" />
-            <stop offset="30%" stopColor="#3c434e" stopOpacity="0.96" />
-            <stop offset="72%" stopColor="#5a6372" stopOpacity="1" />
-            <stop offset="100%" stopColor="#dc2626" stopOpacity="0.95" />
+
+          <linearGradient id={`inkMetal-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#171a20" stopOpacity="0.96" />
+            <stop offset="48%" stopColor="#3b414d" stopOpacity="0.95" />
+            <stop offset="86%" stopColor="#636b7a" stopOpacity="0.92" />
+            <stop offset="100%" stopColor="#1c1f26" stopOpacity="0.95" />
           </linearGradient>
-          <linearGradient id={`redAccent-${styleType}`} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#7f1d1d" stopOpacity="0.15" />
-            <stop offset="42%" stopColor="#dc2626" stopOpacity="0.95" />
-            <stop offset="82%" stopColor="#ef4444" stopOpacity="1" />
-            <stop offset="100%" stopColor="#fca5a5" stopOpacity="0.95" />
+
+          <linearGradient id={`bloodCut-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#450a0a" stopOpacity="0" />
+            <stop offset="25%" stopColor="#991b1b" stopOpacity="0.92" />
+            <stop offset="72%" stopColor="#dc2626" stopOpacity="1" />
+            <stop offset="92%" stopColor="#f87171" stopOpacity="0.92" />
+            <stop offset="100%" stopColor="#dc2626" stopOpacity="0" />
           </linearGradient>
-          <radialGradient id={`redBruise-${styleType}`} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#dc2626" stopOpacity="0.72" />
-            <stop offset="45%" stopColor="#7f1d1d" stopOpacity="0.44" />
-            <stop offset="100%" stopColor="#181b20" stopOpacity="0" />
+
+          <radialGradient id={`bruiseBloom-${uid}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#991b1b" stopOpacity="0.72" />
+            <stop offset="42%" stopColor="#450a0a" stopOpacity="0.52" />
+            <stop offset="74%" stopColor="#1c1f26" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#090a0d" stopOpacity="0" />
+          </radialGradient>
+
+          <radialGradient id={`dustRing-${uid}`} cx="50%" cy="50%" r="50%">
+            <stop offset="52%" stopColor="#181b21" stopOpacity="0" />
+            <stop offset="76%" stopColor="#3c424d" stopOpacity="0.62" />
+            <stop offset="90%" stopColor="#991b1b" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#121418" stopOpacity="0" />
           </radialGradient>
         </defs>
 
-        {/* 1. NO TRIBE: Single swipe — 3 horizontal parallel curved claw slices */}
+        {/* 1. NO TRIBE: Single swipe — 3 horizontal parallel curved razor claw gashes */}
         {styleType === 'no_tribe' && (
           <g transform={`translate(60 60) scale(${flipX} 1) translate(-60 -60)`}>
             {[
-              { dy: -24, delay: '0ms', sc: 0.94 },
-              { dy: 0, delay: '32ms', sc: 1.06 },
-              { dy: 24, delay: '64ms', sc: 0.92 },
+              { dy: -21, delay: '0ms', w: 1.0 },
+              { dy: 0, delay: '28ms', w: 1.15 },
+              { dy: 21, delay: '56ms', w: 0.95 },
             ].map((row, idx) => (
               <g key={idx} transform={`translate(0 ${row.dy})`}>
                 <g
@@ -118,397 +141,405 @@ export const TribeAttackVfx: React.FC<{
                     animation: `tribeClawSweep 420ms cubic-bezier(0.16, 1, 0.3, 1) ${row.delay} both`,
                   }}
                 >
-                  {/* Broad dark-gray curved claw trail */}
+                  {/* Smoky dark-charcoal rake shadow wake */}
                   <path
-                    d="M 8 65 Q 58 46 114 59 Q 62 56 12 70 Z"
-                    fill={`url(#dgBlade-${styleType})`}
-                    stroke="#181b20"
-                    strokeWidth="1.2"
+                    d="M 4 65 Q 56 44 116 58 Q 62 57 10 70 Z"
+                    fill="#14171c"
+                    opacity="0.72"
+                    filter={`url(#smokeBlur-${uid})`}
                   />
-                  {/* Razor crimson inner edge */}
+                  {/* Distressed needle-tapered charcoal gash */}
                   <path
-                    d="M 16 64 Q 60 49 112 59"
+                    d="M 6 65 Q 58 46 115 58 Q 62 54 12 68 Z"
+                    fill={`url(#inkSlash-${uid})`}
+                    filter={`url(#inkRough-${uid})`}
+                  />
+                  {/* Razor crimson laceration streak */}
+                  <path
+                    d="M 14 64 Q 59 48 112 58"
                     fill="none"
-                    stroke={`url(#redAccent-${styleType})`}
-                    strokeWidth={idx === 1 ? '3.0' : '2.3'}
+                    stroke={`url(#bloodCut-${uid})`}
+                    strokeWidth={2.1 * row.w}
                     strokeLinecap="round"
                     strokeDasharray="120"
-                    style={{ animation: `tribeSlashDraw 360ms ease-out ${row.delay} both` }}
+                    filter={`url(#inkRough-${uid})`}
+                    style={{ animation: `tribeSlashDraw 340ms ease-out ${row.delay} both` }}
                   />
-                  {/* Fine bright red-white tip streak */}
+                  {/* Fine torn scarlet filament */}
                   <path
-                    d="M 62 52 Q 88 53 113 59"
+                    d="M 46 53 Q 80 51 113 58"
                     fill="none"
                     stroke="#fca5a5"
-                    strokeWidth="1.1"
+                    strokeWidth="0.75"
                     strokeLinecap="round"
-                    opacity="0.85"
+                    opacity="0.72"
                   />
                 </g>
               </g>
             ))}
-            {/* Crimson impact flecks at exit tip */}
+            {/* Whipped crimson splatter mist droplets */}
             {[
-              { cx: 102, cy: 36, r: 2.2 },
-              { cx: 110, cy: 58, r: 2.6 },
-              { cx: 98, cy: 82, r: 1.9 },
+              { x: 96, y: 34, l: 8, rot: -14 },
+              { x: 108, y: 55, l: 10, rot: -4 },
+              { x: 102, y: 78, l: 7, rot: 10 },
+              { x: 86, y: 45, l: 5, rot: -10 },
+              { x: 90, y: 70, l: 5, rot: 8 },
             ].map((sp, i) => (
-              <circle
+              <line
                 key={i}
-                cx={sp.cx}
-                cy={sp.cy}
-                r={sp.r}
-                fill={i === 1 ? '#ef4444' : '#b91c1c'}
-                style={{ animation: `tribeImpactFlash 380ms ease-out ${50 + i * 25}ms both` }}
+                x1={sp.x}
+                y1={sp.y}
+                x2={sp.x + sp.l}
+                y2={sp.y + sp.rot * 0.16}
+                stroke={i % 2 === 0 ? '#dc2626' : '#7f1d1d'}
+                strokeWidth={i === 1 ? '1.8' : '1.2'}
+                strokeLinecap="round"
+                style={{ animation: `tribeImpactFlash 360ms ease-out ${45 + i * 20}ms both` }}
               />
             ))}
           </g>
         )}
 
-        {/* 2. HOOVED: Single heavy cloven hoof stomp */}
+        {/* 2. HOOVED: Brutal dry-brush cloven hoof stomp & shattered impact crater */}
         {styleType === 'hooved' && (
           <g>
-            {/* Crimson kinetic shock bruise beneath impact */}
+            {/* Deep arterial bruise & gritty dust shockwave */}
             <ellipse
               cx="60"
-              cy="66"
-              rx="42"
-              ry="32"
-              fill={`url(#redBruise-${styleType})`}
-              style={{ transformOrigin: '60px 66px', animation: 'tribeImpactFlash 450ms ease-out 70ms both' }}
-            />
-            {/* Expanding dark-gray + red shockwave rings */}
-            <ellipse
-              cx="60"
-              cy="68"
-              rx="38"
-              ry="24"
-              fill="none"
-              stroke="#4b5360"
-              strokeWidth="4.5"
-              style={{ transformOrigin: '60px 68px', animation: 'tribeShockRing 440ms cubic-bezier(0.16, 1, 0.3, 1) 75ms both' }}
+              cy="64"
+              rx="48"
+              ry="34"
+              fill={`url(#bruiseBloom-${uid})`}
+              style={{ transformOrigin: '60px 64px', animation: 'tribeImpactFlash 450ms ease-out 70ms both' }}
             />
             <ellipse
               cx="60"
-              cy="68"
-              rx="32"
-              ry="20"
-              fill="none"
-              stroke="#dc2626"
-              strokeWidth="2.2"
-              style={{ transformOrigin: '60px 68px', animation: 'tribeShockRing 420ms cubic-bezier(0.16, 1, 0.3, 1) 90ms both' }}
+              cy="65"
+              rx="50"
+              ry="31"
+              fill={`url(#dustRing-${uid})`}
+              filter={`url(#inkRough-${uid})`}
+              style={{ transformOrigin: '60px 65px', animation: 'tribeShockRing 440ms cubic-bezier(0.16, 1, 0.3, 1) 75ms both' }}
             />
-            {/* Jagged dark-gray + crimson fracture cracks radiating from stomp */}
-            <g style={{ transformOrigin: '60px 66px', animation: 'tribeImpactFlash 460ms ease-out 85ms both' }}>
+            {/* Jagged splintered impact fissures */}
+            <g filter={`url(#inkRough-${uid})`} style={{ transformOrigin: '60px 65px', animation: 'tribeImpactFlash 460ms ease-out 85ms both' }}>
               {[
-                'M 34 58 L 14 48 L 6 54',
-                'M 86 58 L 106 49 L 114 56',
-                'M 38 78 L 22 94 L 14 92',
-                'M 82 78 L 99 95 L 108 91',
-                'M 60 88 L 56 106 L 63 114',
+                'M 34 54 L 18 44 L 6 49 M 18 44 L 13 33',
+                'M 86 54 L 102 44 L 114 49 M 102 44 L 107 33',
+                'M 38 78 L 20 96 L 9 100',
+                'M 82 78 L 100 96 L 111 99',
+                'M 60 85 L 56 105 L 63 115',
               ].map((d, i) => (
                 <g key={i}>
-                  <path d={d} fill="none" stroke="#232830" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d={d} fill="none" stroke="#dc2626" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+                  <path d={d} fill="none" stroke="#16191f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d={d} fill="none" stroke="#b91c1c" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round" opacity="0.92" />
                 </g>
               ))}
             </g>
-            {/* Cloven Hoof Silhouette slamming down */}
-            <g style={{ transformOrigin: '60px 62px', animation: 'tribeHoofStomp 460ms cubic-bezier(0.22, 1, 0.36, 1) both' }}>
-              {/* Left cloven toe */}
+            {/* Raw distressed dry-brush Cloven Hoof Imprint (asymmetrical chipped crescent walls) */}
+            <g
+              filter={`url(#inkRough-${uid})`}
+              style={{ transformOrigin: '60px 60px', animation: 'tribeHoofStomp 460ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+            >
+              <ellipse cx="60" cy="61" rx="30" ry="26" fill="#0b0d10" opacity="0.65" filter={`url(#smokeBlur-${uid})`} />
+              {/* Left chipped cloven crescent wall */}
               <path
-                d="M 56 30 C 40 30, 29 44, 30 62 C 31 76, 42 84, 54 83 C 56 82, 57 78, 56 70 L 56 30 Z"
-                fill={`url(#dgMetal-${styleType})`}
-                stroke="#14171c"
-                strokeWidth="2.2"
+                d="M 55 29 C 39 34, 29 50, 32 67 C 35 79, 44 85, 56 83 C 54 76, 46 73, 42 64 C 39 54, 44 42, 55 37 Z"
+                fill={`url(#inkMetal-${uid})`}
               />
-              {/* Right cloven toe */}
+              {/* Right chipped cloven crescent wall */}
               <path
-                d="M 64 30 C 80 30, 91 44, 90 62 C 89 76, 78 84, 66 83 C 64 82, 63 78, 64 70 L 64 30 Z"
-                fill={`url(#dgMetal-${styleType})`}
-                stroke="#14171c"
-                strokeWidth="2.2"
+                d="M 65 29 C 81 34, 91 50, 88 67 C 85 79, 76 85, 64 83 C 66 76, 74 73, 78 64 C 81 54, 76 42, 65 37 Z"
+                fill={`url(#inkMetal-${uid})`}
               />
-              {/* Red impact highlight rim around hoof outer edge & cleft */}
+              {/* Inner rough heel scars */}
               <path
-                d="M 32 62 C 34 74, 43 81, 53 80 M 88 62 C 86 74, 77 81, 67 80 M 60 34 L 60 82"
+                d="M 55 44 L 54 74 M 65 44 L 66 74"
+                stroke="#2c313b"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+              />
+              {/* Arterial crimson impact rim & cleft fissure */}
+              <path
+                d="M 33 64 C 36 77, 45 83, 55 82 M 87 64 C 84 77, 75 83, 65 82 M 60 31 L 60 85"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="1.9"
+                strokeLinecap="round"
+              />
+              {/* Scattered grit flecks */}
+              <path d="M 24 62 L 18 65 M 96 62 L 102 65 M 44 26 L 40 20 M 76 26 L 80 20" stroke="#7f1d1d" strokeWidth="1.8" strokeLinecap="round" />
+            </g>
+          </g>
+        )}
+
+        {/* 3. CANINE: Visceral vertical predatory fang punctures & shredded crimson tear */}
+        {styleType === 'canine' && (
+          <g>
+            {/* Horizontal torn crimson wound seam where fangs lock */}
+            <ellipse
+              cx="60"
+              cy="60"
+              rx="48"
+              ry="14"
+              fill={`url(#bruiseBloom-${uid})`}
+              style={{ transformOrigin: '60px 60px', animation: 'tribeImpactFlash 420ms ease-out 95ms both' }}
+            />
+            <path
+              d="M 10 60 Q 60 55 110 60 Q 60 65 10 60 Z"
+              fill="#b91c1c"
+              opacity="0.88"
+              filter={`url(#inkRough-${uid})`}
+              style={{ transformOrigin: '60px 60px', animation: 'tribeImpactFlash 360ms ease-out 102ms both' }}
+            />
+            {/* Upper Jaw: Individual needle-tapered ink fang strikes plunging down (no blocky slab!) */}
+            <g
+              filter={`url(#inkRough-${uid})`}
+              style={{ transformOrigin: '60px 22px', animation: 'tribeChompTop 440ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+            >
+              {/* Faint dark upper snout-ridge arc */}
+              <path d="M 16 20 Q 60 6 104 20" fill="none" stroke="#1f242c" strokeWidth="4.5" strokeLinecap="round" opacity="0.85" />
+              <path d="M 22 18 Q 60 8 98 18" fill="none" stroke="#991b1b" strokeWidth="1.6" strokeLinecap="round" opacity="0.9" />
+              {/* Primary long curved canines + smaller ragged incisors */}
+              <path d="M 33 17 Q 36 42 40 65 Q 43 42 45 18 Z" fill={`url(#inkMetal-${uid})`} />
+              <path d="M 87 17 Q 84 42 80 65 Q 77 42 75 18 Z" fill={`url(#inkMetal-${uid})`} />
+              <path d="M 19 22 L 24 44 L 29 22 Z M 50 15 L 54 37 L 58 15 Z M 62 15 L 66 37 L 70 15 Z M 91 22 L 96 44 L 101 22 Z" fill={`url(#inkMetal-${uid})`} opacity="0.9" />
+              {/* Bloodied vertical puncture streaks */}
+              <path
+                d="M 40 65 L 40 32 M 80 65 L 80 32 M 24 44 L 24 27 M 96 44 L 96 27"
+                stroke="#ef4444"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            </g>
+            {/* Lower Jaw: Individual needle-tapered ink fang strikes snapping up */}
+            <g
+              filter={`url(#inkRough-${uid})`}
+              style={{ transformOrigin: '60px 98px', animation: 'tribeChompBot 440ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+            >
+              <path d="M 16 100 Q 60 114 104 100" fill="none" stroke="#1f242c" strokeWidth="4.5" strokeLinecap="round" opacity="0.85" />
+              <path d="M 22 102 Q 60 112 98 102" fill="none" stroke="#991b1b" strokeWidth="1.6" strokeLinecap="round" opacity="0.9" />
+              <path d="M 38 103 Q 41 78 44 56 Q 48 78 50 102 Z" fill={`url(#inkMetal-${uid})`} />
+              <path d="M 82 103 Q 79 78 76 56 Q 72 78 70 102 Z" fill={`url(#inkMetal-${uid})`} />
+              <path d="M 22 98 L 27 77 L 32 98 Z M 54 104 L 58 84 L 62 104 Z M 60 104 L 64 84 L 68 104 Z M 88 98 L 93 77 L 98 98 Z" fill={`url(#inkMetal-${uid})`} opacity="0.9" />
+              <path
+                d="M 44 56 L 44 87 M 76 56 L 76 87 M 27 77 L 27 92 M 93 77 L 93 92"
+                stroke="#ef4444"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            </g>
+            {/* Arterial puncture spray */}
+            {[
+              { x1: 40, y1: 60, x2: 28, y2: 51 },
+              { x1: 80, y1: 60, x2: 92, y2: 69 },
+              { x1: 18, y1: 59, x2: 6, y2: 56 },
+              { x1: 102, y1: 61, x2: 114, y2: 64 },
+            ].map((sp, i) => (
+              <line
+                key={i}
+                x1={sp.x1}
+                y1={sp.y1}
+                x2={sp.x2}
+                y2={sp.y2}
+                stroke="#ef4444"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                style={{ animation: 'tribeImpactFlash 340ms ease-out 108ms both' }}
+              />
+            ))}
+          </g>
+        )}
+
+        {/* 4. AVIAN: Razor dark-ink raven feather plume diving downward with crimson wind-cuts */}
+        {styleType === 'avian' && (
+          <g>
+            {/* Steep ragged crimson & charcoal wind-shear cuts */}
+            {[22, 42, 60, 78, 98].map((x, idx) => (
+              <path
+                key={`wind-${idx}`}
+                d={`M ${x + (idx - 2) * 3} 4 Q ${x + (idx - 2)} 58 ${x - (idx - 2) * 2.5} 116`}
+                fill="none"
+                stroke={idx % 2 === 1 ? '#dc2626' : '#3a414d'}
+                strokeWidth={idx === 2 ? '2.2' : '1.4'}
+                strokeLinecap="round"
+                strokeDasharray="125"
+                filter={`url(#inkRough-${uid})`}
+                style={{ animation: `tribeSlashDraw 380ms ease-out ${idx * 22}ms both` }}
+              />
+            ))}
+            {/* Fan of 6 tattered dark-charcoal razor feathers plunging downward */}
+            {[
+              { x: 20, y: 48, rot: -16, delay: '24ms', sc: 0.85 },
+              { x: 37, y: 58, rot: -9, delay: '0ms', sc: 0.96 },
+              { x: 53, y: 66, rot: -2, delay: '14ms', sc: 1.08 },
+              { x: 69, y: 64, rot: 5, delay: '26ms', sc: 1.04 },
+              { x: 85, y: 56, rot: 12, delay: '38ms', sc: 0.94 },
+              { x: 100, y: 46, rot: 19, delay: '50ms', sc: 0.82 },
+            ].map((f, idx) => (
+              <g key={idx} transform={`translate(${f.x} ${f.y}) rotate(${f.rot}) scale(${f.sc})`}>
+                <g
+                  filter={`url(#inkRough-${uid})`}
+                  style={{
+                    transformOrigin: '0px 0px',
+                    animation: `tribeFeatherPlume 440ms cubic-bezier(0.16, 1, 0.3, 1) ${f.delay} both`,
+                  }}
+                >
+                  {/* Tapered frayed dark-ink raven feather (no cartoon border) */}
+                  <path
+                    d="M 0 -34 C 5 -20, 7 -4, 4 12 L 1.5 8 L 3.5 18 L 0 33 L -3.5 17 L -1.5 9 L -5 14 C -7 -4, -5 -20, 0 -34 Z"
+                    fill={`url(#inkMetal-${uid})`}
+                    opacity="0.94"
+                  />
+                  {/* Thin arterial crimson quill & barbed red blade tip */}
+                  <line x1="0" y1="-30" x2="0" y2="28" stroke="#dc2626" strokeWidth="1.2" strokeLinecap="round" />
+                  <path d="M -2.2 14 L 0 32 L 2.2 14 Z" fill="#ef4444" opacity="0.9" />
+                </g>
+              </g>
+            ))}
+          </g>
+        )}
+
+        {/* 5. INSECT: Two short razor-thin inward chitin pincer slices */}
+        {styleType === 'insect' && (
+          <g>
+            {/* Tight crimson shear bloom where pincers cross */}
+            <ellipse
+              cx="60"
+              cy="60"
+              rx="19"
+              ry="26"
+              fill={`url(#bruiseBloom-${uid})`}
+              style={{ transformOrigin: '60px 60px', animation: 'tribeImpactFlash 400ms ease-out 85ms both' }}
+            />
+            {/* Left razor-tapered serrated chitin sickle slicing sharply inward */}
+            <g
+              filter={`url(#inkRough-${uid})`}
+              style={{ transformOrigin: '24px 86px', animation: 'tribePincerLeft 420ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+            >
+              <path
+                d="M 18 90 C 12 63, 25 36, 62 26 C 46 39, 34 54, 34 74 L 38 66 L 32 78 L 28 89 Z"
+                fill="#12151a"
+                opacity="0.72"
+                filter={`url(#smokeBlur-${uid})`}
+              />
+              <path
+                d="M 20 88 C 16 63, 28 38, 63 27 C 46 39, 36 52, 41 56 L 34 61 L 41 66 L 33 74 C 29 81, 25 87, 20 88 Z"
+                fill={`url(#inkMetal-${uid})`}
+              />
+              <path
+                d="M 23 84 C 22 61, 34 41, 63 28"
                 fill="none"
                 stroke="#ef4444"
                 strokeWidth="2.1"
                 strokeLinecap="round"
               />
             </g>
-          </g>
-        )}
-
-        {/* 3. CANINE: Vertical teeth chomp */}
-        {styleType === 'canine' && (
-          <g>
-            {/* Horizontal crimson bite seam burst */}
-            <ellipse
-              cx="60"
-              cy="60"
-              rx="46"
-              ry="14"
-              fill={`url(#redBruise-${styleType})`}
-              style={{ transformOrigin: '60px 60px', animation: 'tribeImpactFlash 420ms ease-out 100ms both' }}
-            />
-            <line
-              x1="14"
-              y1="60"
-              x2="106"
-              y2="60"
-              stroke="#ef4444"
-              strokeWidth="3"
-              strokeLinecap="round"
-              style={{ transformOrigin: '60px 60px', animation: 'tribeImpactFlash 360ms ease-out 105ms both' }}
-            />
-            {/* Upper Fang Jaw snapping downward */}
-            <g style={{ transformOrigin: '60px 30px', animation: 'tribeChompTop 440ms cubic-bezier(0.22, 1, 0.36, 1) both' }}>
+            {/* Right razor-tapered serrated chitin sickle slicing sharply inward */}
+            <g
+              filter={`url(#inkRough-${uid})`}
+              style={{ transformOrigin: '96px 86px', animation: 'tribePincerRight 420ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+            >
               <path
-                d="M 14 26 Q 60 12 106 26 L 96 48 L 87 30 L 76 58 L 65 32 L 60 49 L 55 32 L 44 58 L 33 30 L 24 48 Z"
-                fill={`url(#dgMetal-${styleType})`}
-                stroke="#14171c"
-                strokeWidth="2"
-                strokeLinejoin="round"
-              />
-              {/* Red-stained fang tips & gumline */}
-              <path
-                d="M 24 48 L 28 38 M 44 58 L 48 44 M 76 58 L 72 44 M 96 48 L 92 38"
-                stroke="#ef4444"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-              />
-              <path d="M 18 25 Q 60 14 102 25" fill="none" stroke="#b91c1c" strokeWidth="2.4" strokeLinecap="round" />
-            </g>
-            {/* Lower Fang Jaw snapping upward */}
-            <g style={{ transformOrigin: '60px 90px', animation: 'tribeChompBot 440ms cubic-bezier(0.22, 1, 0.36, 1) both' }}>
-              <path
-                d="M 16 94 Q 60 108 104 94 L 94 72 L 84 90 L 74 63 L 64 88 L 60 72 L 56 88 L 46 63 L 36 90 L 26 72 Z"
-                fill={`url(#dgMetal-${styleType})`}
-                stroke="#14171c"
-                strokeWidth="2"
-                strokeLinejoin="round"
+                d="M 102 90 C 108 63, 95 36, 58 26 C 74 39, 86 54, 86 74 L 82 66 L 88 78 L 92 89 Z"
+                fill="#12151a"
+                opacity="0.72"
+                filter={`url(#smokeBlur-${uid})`}
               />
               <path
-                d="M 26 72 L 30 82 M 46 63 L 50 76 M 74 63 L 70 76 M 94 72 L 90 82"
-                stroke="#ef4444"
-                strokeWidth="2.4"
-                strokeLinecap="round"
+                d="M 100 88 C 104 63, 92 38, 57 27 C 74 39, 84 52, 79 56 L 86 61 L 79 66 L 87 74 C 91 81, 95 87, 100 88 Z"
+                fill={`url(#inkMetal-${uid})`}
               />
-              <path d="M 20 95 Q 60 106 100 95" fill="none" stroke="#b91c1c" strokeWidth="2.4" strokeLinecap="round" />
-            </g>
-            {/* Red puncture sparks bursting left & right */}
-            {[
-              { cx: 14, cy: 56, r: 2.3 },
-              { cx: 106, cy: 63, r: 2.4 },
-              { cx: 44, cy: 60, r: 2.8 },
-              { cx: 76, cy: 60, r: 2.8 },
-            ].map((sp, i) => (
-              <circle
-                key={i}
-                cx={sp.cx}
-                cy={sp.cy}
-                r={sp.r}
-                fill="#ef4444"
-                style={{ animation: `tribeImpactFlash 360ms ease-out 110ms both` }}
-              />
-            ))}
-          </g>
-        )}
-
-        {/* 4. AVIAN: Multiple feathers plume downward strike */}
-        {styleType === 'avian' && (
-          <g>
-            {/* Steep downward crimson wind-shear streaks */}
-            {[24, 46, 74, 96].map((x, idx) => (
-              <line
-                key={`wind-${idx}`}
-                x1={x + (idx - 1.5) * 4}
-                y1="6"
-                x2={x - (idx - 1.5) * 3}
-                y2="114"
-                stroke={idx % 2 === 0 ? '#dc2626' : '#525b68'}
-                strokeWidth={idx === 1 || idx === 2 ? '2.4' : '1.6'}
-                strokeLinecap="round"
-                strokeDasharray="115"
-                style={{ animation: `tribeSlashDraw 380ms ease-out ${idx * 24}ms both` }}
-              />
-            ))}
-            {/* Fan of 6 sculpted dark-gray razor feathers plunging downward */}
-            {[
-              { x: 22, y: 50, rot: -18, delay: '20ms', sc: 0.86 },
-              { x: 38, y: 58, rot: -10, delay: '0ms', sc: 0.98 },
-              { x: 54, y: 66, rot: -3, delay: '12ms', sc: 1.08 },
-              { x: 68, y: 64, rot: 5, delay: '24ms', sc: 1.04 },
-              { x: 84, y: 56, rot: 13, delay: '36ms', sc: 0.94 },
-              { x: 98, y: 48, rot: 21, delay: '50ms', sc: 0.84 },
-            ].map((f, idx) => (
-              <g key={idx} transform={`translate(${f.x} ${f.y}) rotate(${f.rot}) scale(${f.sc})`}>
-                <g
-                  style={{
-                    transformOrigin: '0px 0px',
-                    animation: `tribeFeatherPlume 440ms cubic-bezier(0.16, 1, 0.3, 1) ${f.delay} both`,
-                  }}
-                >
-                  {/* Sculpted feather vane with notched barbs */}
-                  <path
-                    d="M 0 -30 C 8 -16, 9 2, 5 17 L 2 13 L 0 30 L -2 13 L -6 17 C -9 2, -8 -16, 0 -30 Z"
-                    fill={`url(#dgMetal-${styleType})`}
-                    stroke="#14171c"
-                    strokeWidth="1.4"
-                  />
-                  {/* Crimson central quill & barbed red tip */}
-                  <line x1="0" y1="-26" x2="0" y2="26" stroke="#dc2626" strokeWidth="1.7" strokeLinecap="round" />
-                  <path d="M -3.5 11 L 0 29 L 3.5 11 Z" fill="#ef4444" opacity="0.94" />
-                </g>
-              </g>
-            ))}
-          </g>
-        )}
-
-        {/* 5. INSECT: Two short side-by-side inward slices / pincer chomp */}
-        {styleType === 'insect' && (
-          <g>
-            {/* Tight crimson pinch-flash where mandibles shear together */}
-            <ellipse
-              cx="60"
-              cy="60"
-              rx="22"
-              ry="30"
-              fill={`url(#redBruise-${styleType})`}
-              style={{ transformOrigin: '60px 60px', animation: 'tribeImpactFlash 400ms ease-out 90ms both' }}
-            />
-            {/* Left Curved Serrated Pincer slicing inward */}
-            <g style={{ transformOrigin: '26px 86px', animation: 'tribePincerLeft 420ms cubic-bezier(0.22, 1, 0.36, 1) both' }}>
               <path
-                d="M 22 90 C 12 68, 22 40, 56 30 C 44 42, 40 52, 48 56 L 41 61 L 50 67 L 42 74 C 36 80, 32 88, 22 90 Z"
-                fill={`url(#dgMetal-${styleType})`}
-                stroke="#14171c"
-                strokeWidth="1.8"
-                strokeLinejoin="round"
-              />
-              {/* Short inward red slash arc */}
-              <path
-                d="M 26 84 C 24 62, 34 44, 57 32"
+                d="M 97 84 C 98 61, 86 41, 57 28"
                 fill="none"
                 stroke="#ef4444"
-                strokeWidth="2.8"
+                strokeWidth="2.1"
                 strokeLinecap="round"
               />
             </g>
-            {/* Right Curved Serrated Pincer slicing inward */}
-            <g style={{ transformOrigin: '94px 86px', animation: 'tribePincerRight 420ms cubic-bezier(0.22, 1, 0.36, 1) both' }}>
-              <path
-                d="M 98 90 C 108 68, 98 40, 64 30 C 76 42, 80 52, 72 56 L 79 61 L 70 67 L 78 74 C 84 80, 88 88, 98 90 Z"
-                fill={`url(#dgMetal-${styleType})`}
-                stroke="#14171c"
-                strokeWidth="1.8"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M 94 84 C 96 62, 86 44, 63 32"
-                fill="none"
-                stroke="#ef4444"
-                strokeWidth="2.8"
-                strokeLinecap="round"
-              />
-            </g>
-            {/* Crossed pinch-shear sparks at center */}
+            {/* Razor X pinch-shear flash right at the crossing tips */}
             <path
-              d="M 50 42 L 70 76 M 70 42 L 50 76"
+              d="M 46 42 L 74 74 M 74 42 L 46 74"
               stroke="#fca5a5"
-              strokeWidth="2"
+              strokeWidth="1.5"
               strokeLinecap="round"
-              style={{ transformOrigin: '60px 59px', animation: 'tribeImpactFlash 340ms ease-out 105ms both' }}
+              filter={`url(#inkRough-${uid})`}
+              style={{ transformOrigin: '60px 58px', animation: 'tribeImpactFlash 330ms ease-out 100ms both' }}
             />
           </g>
         )}
 
-        {/* 6. REPTILE: Heavy blunt-object tail swipe impact */}
+        {/* 6. REPTILE: Heavy blunt-force tail swipe kinetic smear & shockwave impact */}
         {styleType === 'reptile' && (
           <g transform={`translate(60 60) scale(${flipX} 1) translate(-60 -60)`}>
-            {/* Blunt kinetic bruise & impact burst right at contact center */}
+            {/* Deep crimson & charcoal blunt-trauma burst at impact */}
             <circle
-              cx="64"
+              cx="66"
               cy="60"
-              r="34"
-              fill={`url(#redBruise-${styleType})`}
-              style={{ transformOrigin: '64px 60px', animation: 'tribeImpactFlash 450ms ease-out 80ms both' }}
+              r="38"
+              fill={`url(#bruiseBloom-${uid})`}
+              style={{ transformOrigin: '66px 60px', animation: 'tribeImpactFlash 450ms ease-out 75ms both' }}
             />
-            {/* Concave blunt-force shock arcs pushing outward */}
-            <path
-              d="M 74 26 C 92 40, 96 76, 74 96"
-              fill="none"
-              stroke="#525b68"
-              strokeWidth="5"
-              strokeLinecap="round"
-              style={{ transformOrigin: '78px 60px', animation: 'tribeShockRing 430ms cubic-bezier(0.16, 1, 0.3, 1) 85ms both' }}
-            />
-            <path
-              d="M 80 34 C 95 46, 97 72, 80 88"
-              fill="none"
-              stroke="#dc2626"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              style={{ transformOrigin: '82px 60px', animation: 'tribeShockRing 410ms cubic-bezier(0.16, 1, 0.3, 1) 95ms both' }}
-            />
-            {/* Heavy Armored Tapered Whip-Tail sweeping bluntly across */}
-            <g style={{ transformOrigin: '16px 76px', animation: 'tribeTailWhip 450ms cubic-bezier(0.16, 1, 0.3, 1) both' }}>
-              {/* Wide motion-blur wake */}
+            {/* Shattered concave blunt-force shock arcs */}
+            <g filter={`url(#inkRough-${uid})`}>
               <path
-                d="M 4 76 Q 52 38 110 54 Q 62 72 6 88 Z"
-                fill="#2b313a"
-                opacity="0.72"
-              />
-              {/* Thick muscular scaled tail shaft */}
-              <path
-                d="M 4 70 Q 50 42 108 54 C 113 55, 113 63, 106 65 Q 52 60 6 84 Z"
-                fill={`url(#dgMetal-${styleType})`}
-                stroke="#14171c"
-                strokeWidth="2"
-                strokeLinejoin="round"
-              />
-              {/* Dorsal scale ridges + crimson kinetic leading edge */}
-              <path
-                d="M 16 66 Q 58 46 108 55"
+                d="M 74 22 C 95 38, 99 78, 74 98"
                 fill="none"
-                stroke="#ef4444"
-                strokeWidth="2.8"
+                stroke="#3e4552"
+                strokeWidth="5.5"
                 strokeLinecap="round"
+                style={{ transformOrigin: '78px 60px', animation: 'tribeShockRing 430ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both' }}
               />
-              {[30, 48, 66, 84].map((rx, i) => (
-                <path
-                  key={i}
-                  d={`M ${rx} ${59 - i * 2} L ${rx + 5} ${65 - i * 1.4}`}
-                  stroke="#181b20"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              ))}
+              <path
+                d="M 81 30 C 98 44, 100 74, 81 90"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                style={{ transformOrigin: '83px 60px', animation: 'tribeShockRing 410ms cubic-bezier(0.16, 1, 0.3, 1) 92ms both' }}
+              />
             </g>
-            {/* Heavy impact debris blocks & red sparks */}
+            {/* Heavy kinetic dark-smoke tail-whip smear (raw painterly motion blur, zero cartoon box!) */}
+            <g style={{ transformOrigin: '12px 78px', animation: 'tribeTailWhip 450ms cubic-bezier(0.16, 1, 0.3, 1) both' }}>
+              <path
+                d="M 0 78 Q 50 32 114 52 Q 64 78 4 94 Z"
+                fill="#191d24"
+                opacity="0.76"
+                filter={`url(#smokeBlur-${uid})`}
+              />
+              <path
+                d="M 2 70 Q 52 39 112 54 C 116 56, 115 64, 107 66 Q 52 61 4 86 Z"
+                fill={`url(#inkSlash-${uid})`}
+                filter={`url(#inkRough-${uid})`}
+              />
+              {/* Leading blunt-impact crimson kinetic streak */}
+              <path
+                d="M 14 66 Q 58 44 111 55"
+                fill="none"
+                stroke={`url(#bloodCut-${uid})`}
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                filter={`url(#inkRough-${uid})`}
+              />
+            </g>
+            {/* Jagged flung stone/scale impact splinters */}
             {[
-              { x: 88, y: 34, w: 6, h: 4, c: '#48505e' },
-              { x: 98, y: 58, w: 8, h: 4, c: '#ef4444' },
-              { x: 86, y: 84, w: 6, h: 4, c: '#363c46' },
-            ].map((d, i) => (
-              <rect
+              { d: 'M 88 30 L 97 26 L 93 34 Z', c: '#48505e' },
+              { d: 'M 98 56 L 111 53 L 103 62 Z', c: '#dc2626' },
+              { d: 'M 86 84 L 98 89 L 90 92 Z', c: '#323842' },
+            ].map((sh, i) => (
+              <path
                 key={i}
-                x={d.x}
-                y={d.y}
-                width={d.w}
-                height={d.h}
-                rx="1"
-                fill={d.c}
-                transform={`rotate(${(i - 1) * 24} ${d.x} ${d.y})`}
-                style={{ animation: `tribeImpactFlash 380ms ease-out ${90 + i * 22}ms both` }}
+                d={sh.d}
+                fill={sh.c}
+                style={{ animation: `tribeImpactFlash 380ms ease-out ${88 + i * 20}ms both` }}
               />
             ))}
           </g>
         )}
 
-        {/* 7. VERMIN: 3 perpendicular rapid diagonal 2-curved stacked slices */}
+        {/* 7. VERMIN: 3 perpendicular rapid diagonal bursts of 2 curved stacked razor gashes */}
         {styleType === 'vermin' && (
           <g>
             {[
@@ -520,7 +551,6 @@ export const TribeAttackVfx: React.FC<{
                 key={bIdx}
                 transform={`translate(60 ${60 + burst.dy}) rotate(${burst.rot}) scale(${burst.flip} 1) translate(-60 -60)`}
               >
-                {/* 2 parallel curved stacked slices per burst */}
                 {[-9, 9].map((offsetY, sIdx) => (
                   <g key={sIdx} transform={`translate(0 ${offsetY})`}>
                     <g
@@ -529,19 +559,28 @@ export const TribeAttackVfx: React.FC<{
                         animation: `tribeVerminSlice 260ms cubic-bezier(0.16, 1, 0.3, 1) ${burst.delay} both`,
                       }}
                     >
+                      {/* Smoky ink wake */}
                       <path
-                        d="M 10 63 Q 60 47 110 61 Q 62 56 14 67 Z"
-                        fill={`url(#dgBlade-${styleType})`}
-                        stroke="#14171c"
-                        strokeWidth="1"
+                        d="M 8 64 Q 60 47 112 61 Q 62 58 14 68 Z"
+                        fill="#14171c"
+                        opacity="0.68"
+                        filter={`url(#smokeBlur-${uid})`}
                       />
+                      {/* Distressed razor charcoal slice */}
                       <path
-                        d="M 16 62 Q 60 49 108 61"
+                        d="M 10 63 Q 60 48 110 61 Q 62 55 14 66 Z"
+                        fill={`url(#inkSlash-${uid})`}
+                        filter={`url(#inkRough-${uid})`}
+                      />
+                      {/* Arterial crimson core gash */}
+                      <path
+                        d="M 16 62 Q 60 50 108 61"
                         fill="none"
-                        stroke={sIdx === 0 ? '#ef4444' : '#dc2626'}
-                        strokeWidth="2.3"
+                        stroke={`url(#bloodCut-${uid})`}
+                        strokeWidth={sIdx === 0 ? '2.1' : '1.8'}
                         strokeLinecap="round"
                         strokeDasharray="110"
+                        filter={`url(#inkRough-${uid})`}
                         style={{ animation: `tribeSlashDraw 210ms ease-out ${burst.delay} both` }}
                       />
                     </g>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChiptuneAudio , playSound } from '../audio/ChiptuneAudio';
+import { RitualReliquaryShell } from './BattleFlankUI';
 
 export interface SplashScreenProps {
   discordGif: any;
@@ -520,110 +521,94 @@ export default function SplashScreen({
     </div>
 
   {/* =========================================================================
-      CONTINUE RUN MODAL
+      CONTINUE / SEVER RUN RELIQUARY MODAL
      ========================================================================= */}
-  {showContinueModal && (() => {
-    const baseUrl = import.meta.env.BASE_URL || './';
-    const knob = 'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
-    const panelStyle: React.CSSProperties = {
-      position: 'relative',
-      borderStyle: 'solid',
-      borderColor: 'transparent',
-      borderWidth: '16px 12px 12px 12px',
-      boxShadow: '0 0 0 1px #190e08, 0 0 0 2px #52361c, 0 26px 64px rgba(0,0,0,0.96), inset 0 1px 0 rgba(224,184,120,0.2)',
-      backgroundColor: '#24160e',
-      backgroundImage: [
-        knob,
-        knob,
-        knob,
-        knob,
-        'radial-gradient(ellipse at 50% 0%, #5e0d10 0%, #3a0709 54%, #180304 100%)',
-        'linear-gradient(to bottom, rgba(56,37,23,0.62), rgba(28,17,11,0.76), rgba(14,8,5,0.9))',
-        `url("${baseUrl}assets/text/wood.jpg")`,
-      ].join(', '),
-      backgroundSize: ['24px 16px', '24px 16px', '24px 12px', '24px 12px', 'auto', 'auto', '140px 140px'].join(', '),
-      backgroundPosition: 'left top, right top, left bottom, right bottom, 0 0, 0 0, center',
-      backgroundRepeat: ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'no-repeat', 'repeat'].join(', '),
-      backgroundOrigin: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
-      backgroundClip: 'border-box, border-box, border-box, border-box, padding-box, border-box, border-box',
-    };
-
-    return (
-      <div
-        onClick={() => setShowContinueModal(false)}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-mono select-none animate-menu-fade-in"
+  {showContinueModal && (
+    <div
+      onClick={() => setShowContinueModal(false)}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Resume Expedition"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/86 backdrop-blur-[4px] p-4 font-mono select-none"
+    >
+      <RitualReliquaryShell
+        variant="crimson"
+        onClick={(e) => e.stopPropagation()}
+        className="animate-sigil-modal-in w-full max-w-[440px]"
       >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={panelStyle}
-          className="w-full max-w-md rounded-[2px] bg-[#180304] text-center relative overflow-hidden"
-        >
-          {/* Crimson Cloth Weave */}
-          <div
-            className="pointer-events-none absolute inset-0 z-0 opacity-70 mix-blend-multiply"
-            style={{
-              backgroundImage: `url("${baseUrl}assets/text/cloth.jpg")`,
-              backgroundSize: '170px 170px',
-              backgroundRepeat: 'repeat',
-            }}
-          />
-          {/* Recessed Well Shadow, Stitched Seam & Tarnished-Brass Corner Brackets */}
-          <div
-            className="pointer-events-none absolute inset-0 z-20"
-            style={{
-              boxShadow:
-                'inset 0 4px 14px rgba(0,0,0,0.92), inset 0 0 0 1px #140705, 0 0 0 1px rgba(184,138,68,0.24)',
-            }}
-          />
-          <div className="pointer-events-none absolute inset-[6px] z-20 border border-dashed border-[#b98d46]/28" />
-          <div className="pointer-events-none absolute top-[5px] left-[5px] w-3.5 h-3.5 z-20 border-t border-l border-[#b8904a]/55" />
-          <div className="pointer-events-none absolute top-[5px] right-[5px] w-3.5 h-3.5 z-20 border-t border-r border-[#b8904a]/55" />
-          <div className="pointer-events-none absolute bottom-[5px] left-[5px] w-3.5 h-3.5 z-20 border-b border-l border-[#b8904a]/55" />
-          <div className="pointer-events-none absolute bottom-[5px] right-[5px] w-3.5 h-3.5 z-20 border-b border-r border-[#b8904a]/55" />
+        <div className="relative z-10 px-6 sm:px-8 pt-6 pb-6 text-center flex flex-col items-center">
+          {/* Sculpted Wax & Brass Thread Medallion */}
+          <div className="relative mb-3.5 w-14 h-14 rounded-full bg-[#130908] border border-[#b08749]/85 shadow-[inset_0_2px_10px_rgba(0,0,0,0.95),0_0_22px_rgba(185,28,28,0.34)] flex items-center justify-center">
+            <div className="absolute inset-[4px] rounded-full border border-dashed border-[#c49a5c]/45 pointer-events-none" />
+            <svg viewBox="0 0 32 32" className="w-7 h-7" fill="none" aria-hidden="true">
+              <path d="M 6 24 C 11 19, 13 13, 18 11 C 21 10, 24 12, 26 8" stroke="#ef4444" strokeWidth="1.9" strokeLinecap="round" />
+              <path d="M 9 8 L 23 22" stroke="#e5c185" strokeWidth="2" strokeLinecap="round" />
+              <path d="M 21 20 L 24.5 23.5" stroke="#f5e6c8" strokeWidth="1.4" strokeLinecap="round" />
+              <ellipse cx="10.5" cy="9.5" rx="2.2" ry="1.1" transform="rotate(45 10.5 9.5)" fill="#160708" stroke="#e5c185" strokeWidth="1.1" />
+            </svg>
+          </div>
 
-          <div className="relative z-10 p-6 sm:p-7">
-            <div className="text-[10px] font-['Cinzel',_serif] font-bold text-[#ecd19e] uppercase tracking-[0.28em] mb-1.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-              Occult Seal Detected
-            </div>
-            <h3 className="font-['Cinzel',_serif] text-xl font-bold text-[#f2e4cc] uppercase tracking-[0.2em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
-              Resume Expedition?
-            </h3>
-            <div className="mx-auto my-3 h-px w-28 bg-gradient-to-r from-transparent via-[#a8813e]/55 to-transparent" />
-            <p className="text-xs text-[#d6c6b0]/90 mb-6 font-mono leading-relaxed">
-              A previous run is tethered to this machine. Resume your descent into the dark, or burn the thread and begin anew?
+          {/* Engraved Header */}
+          <div className="flex items-center justify-center gap-2.5 mb-1">
+            <div className="h-px w-8 sm:w-12 bg-gradient-to-r from-transparent to-[#c49a5c]/70" />
+            <span className="text-[9.5px] font-['Cinzel',_serif] font-bold text-[#e2be7d] uppercase tracking-[0.28em]">
+              ◆ Occult Seal Detected ◆
+            </span>
+            <div className="h-px w-8 sm:w-12 bg-gradient-to-l from-transparent to-[#c49a5c]/70" />
+          </div>
+
+          <h3
+            className="font-['Cinzel',_serif] text-xl sm:text-2xl font-bold text-[#f5e6c8] uppercase tracking-[0.2em]"
+            style={{ textShadow: '0 2px 10px rgba(0,0,0,0.98)' }}
+          >
+            Resume Expedition?
+          </h3>
+
+          {/* Recessed Lore Plaque */}
+          <div className="relative w-full mt-4 mb-5 px-4 py-3 bg-[#0c0707]/85 border border-[#4a3322]/80 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92)]">
+            <span className="pointer-events-none absolute top-0.5 left-0.5 w-2 h-2 border-t border-l border-[#b08749]/50" />
+            <span className="pointer-events-none absolute top-0.5 right-0.5 w-2 h-2 border-t border-r border-[#b08749]/50" />
+            <span className="pointer-events-none absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l border-[#b08749]/50" />
+            <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r border-[#b08749]/50" />
+            <p className="text-[11.5px] text-[#d8c7ae]/92 font-mono leading-relaxed">
+              A bound thread lingers upon this altar. Resume your descent into the dark, or sever the thread and begin anew?
             </p>
+          </div>
 
-            <div className="flex flex-col gap-2.5">
-              <button
-                onClick={handleContinueRun}
-                className="w-full py-2.5 px-4 bg-[#240b0d] hover:bg-[#331013] active:bg-[#170708] border border-[#8f6a2c]/85 hover:border-[#c99e52] rounded-[2px] shadow-[0_2px_0_#090304,inset_0_1px_0_rgba(241,213,143,0.12)] active:translate-y-[1px] active:shadow-none font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.18em] text-[#f2e1c2] hover:text-white transition-all duration-75 cursor-pointer"
-              >
-                Resume Expedition
-              </button>
+          {/* Action Stack */}
+          <div className="w-full flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={handleContinueRun}
+              className="relative w-full py-2.5 px-5 bg-gradient-to-b from-[#341410] to-[#1a0908] hover:from-[#471b16] hover:to-[#240d0b] active:translate-y-[1px] border border-[#c49a5c]/90 hover:border-[#f4d78b] rounded-[2px] shadow-[0_6px_18px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(244,215,139,0.16)] font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] text-[#f5e3be] hover:text-white transition-all cursor-pointer"
+            >
+              Resume Expedition
+            </button>
 
-              <button
-                onClick={() => {
-                  clearRunSave();
-                  setShowContinueModal(false);
-                  setScreen('DECK_SELECT');
-                }}
-                className="w-full py-2 px-4 bg-[#170708] hover:bg-[#260b0d] active:bg-[#100405] border border-[#591a16] hover:border-red-700/85 rounded-[2px] shadow-[0_2px_0_#090304,inset_0_1px_0_rgba(255,255,255,0.05)] active:translate-y-[1px] active:shadow-none font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.15em] text-red-400/90 hover:text-red-300 transition-all duration-75 cursor-pointer"
-              >
-                Sever Thread (New Game)
-              </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearRunSave();
+                setShowContinueModal(false);
+                setScreen('DECK_SELECT');
+              }}
+              className="relative w-full py-2.5 px-5 bg-gradient-to-b from-[#23090b] to-[#130506] hover:from-[#360d10] hover:to-[#1d0709] active:translate-y-[1px] border border-[#7f1d1d]/85 hover:border-red-500/90 rounded-[2px] shadow-[0_4px_14px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(248,113,113,0.1)] font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.18em] text-red-300/95 hover:text-red-100 transition-all cursor-pointer"
+            >
+              Sever Thread (New Game)
+            </button>
 
-              <button
-                onClick={() => setShowContinueModal(false)}
-                className="mt-1.5 text-[10px] font-['Cinzel',_serif] font-bold text-[#b89f7d]/75 hover:text-[#efe0be] uppercase tracking-[0.22em] transition-colors cursor-pointer"
-              >
-                Back to Title
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowContinueModal(false)}
+              className="mt-1 py-1.5 text-[10px] font-['Cinzel',_serif] font-bold text-[#a89275] hover:text-[#f2dfc0] uppercase tracking-[0.24em] transition-colors cursor-pointer"
+            >
+              ← Back to Title
+            </button>
           </div>
         </div>
-      </div>
-    );
-  })()}
+      </RitualReliquaryShell>
+    </div>
+  )}
     </>
   );
 }

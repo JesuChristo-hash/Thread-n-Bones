@@ -1724,12 +1724,37 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
 /* --- Act cutscenes --- */
 @keyframes actCutIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes actCutRise { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
-@keyframes actCutPush { from { transform: scale(1); } to { transform: scale(1.07); } }
-@keyframes actCutMoon { from { opacity: 0; transform: translate3d(0, 40px, 0); } to { opacity: 0.88; transform: translate3d(0, 0, 0); } }
-@keyframes actCutSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes actCutWindow { 0%, 100% { opacity: 0.85; } 18% { opacity: 0.55; } 32% { opacity: 0.95; } 61% { opacity: 0.7; } 80% { opacity: 0.9; } }
-.act-cut-rise { animation: actCutRise 1.3s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s) both; }
+@keyframes actCutPush { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(0, 0, 0) scale(1.06); } }
+@keyframes actCutMoon { from { opacity: 0; transform: translate3d(0, 32px, 0); } to { opacity: 0.94; transform: translate3d(0, 0, 0); } }
+@keyframes actCutSpin { from { transform: translate3d(0, 0, 0) rotate(0deg); } to { transform: translate3d(0, 0, 0) rotate(360deg); } }
+@keyframes actCutSpinRev { from { transform: translate3d(0, 0, 0) rotate(360deg); } to { transform: translate3d(0, 0, 0) rotate(0deg); } }
+@keyframes actCutWindow { 0%, 100% { opacity: 0.88; } 18% { opacity: 0.56; } 32% { opacity: 0.96; } 61% { opacity: 0.72; } 80% { opacity: 0.92; } }
+@keyframes actCutMistSlow {
+  0%, 100% { transform: translate3d(-2.5%, 0, 0); opacity: 0.52; }
+  50% { transform: translate3d(2.5%, 0, 0); opacity: 0.72; }
+}
+@keyframes actCutLightningGlow {
+  0%, 34%, 38%, 74%, 79%, 100% { opacity: 0; }
+  35.5% { opacity: 0.42; }
+  36.5% { opacity: 0.14; }
+  76% { opacity: 0.52; }
+  77.5% { opacity: 0.18; }
+}
+@keyframes actCutEmberPulse {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
+}
+.act-cut-gpu {
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  contain: layout paint;
+}
+.act-cut-rise { animation: actCutRise 1.25s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s) both; }
 .act-cut-window { animation: actCutWindow 3.2s ease-in-out infinite; }
+.act-cut-mist { animation: actCutMistSlow 16s ease-in-out infinite; will-change: transform, opacity; }
+.act-cut-lightning { animation: actCutLightningGlow 5.6s linear infinite; will-change: opacity; }
+.act-cut-ember-pulse { animation: actCutEmberPulse 3.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .act-cut, .act-cut * { animation: none !important; } }
 
 /* --- Tribe-Specific Card Battle Strike VFX (Dark Gray + Red Accents) --- */
@@ -1822,7 +1847,7 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
   100% { opacity: 0; transform: translateX(14px) scaleX(1.05); }
 }
 
-/* --- Event Card Drop-Slot Ready & Hover Pulse --- */
+/* --- Card Drop-Slot Ready & Hover Pulse (Events + Battle) --- */
 @keyframes eventDropSlotPulse {
   0%, 100% {
     box-shadow: 0 0 0 2px rgba(244, 215, 139, 0.55), 0 0 20px rgba(220, 38, 38, 0.35);
@@ -1838,4 +1863,28 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
   box-shadow: 0 0 0 3px rgba(254, 240, 138, 1), 0 0 38px rgba(239, 68, 68, 0.65) !important;
   transform: scale(1.04);
 }
+
+/* --- 1-Second Hold-to-Drag Charge Feedback --- */
+@keyframes cardHoldChargeGlow {
+  0% {
+    filter: drop-shadow(0 0 0px rgba(244, 215, 139, 0));
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    filter: drop-shadow(0 0 14px rgba(244, 215, 139, 0.95)) drop-shadow(0 0 26px rgba(185, 28, 28, 0.65));
+    transform: translate3d(0, -6px, 0) scale(1.04);
+  }
+}
+@keyframes cardHoldBarFill {
+  0% { transform: scaleX(0); opacity: 0.7; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+.card-hold-charging {
+  animation: cardHoldChargeGlow 850ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.card-hold-bar {
+  transform-origin: left center;
+  animation: cardHoldBarFill 850ms linear forwards;
+}
+
 

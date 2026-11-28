@@ -178,9 +178,9 @@ const MapScreen: React.FC<MapScreenProps> = ({
   const [isScrolledDown, setIsScrolledDown] = useState(false);
   const [isDraggingSlab, setIsDraggingSlab] = useState(false);
 
-  const parchmentHeight = Math.max(760, (mapData.rows || 9) * 96);
+  const parchmentHeight = Math.max(880, (mapData.rows || 9) * 114);
 
-  // Deterministic Act-themed cartography (landmarks, elevation rings, ink stains)
+  // Deterministic Act-themed cartography (spacious outer-margin landmarks so center trails & enlarged nodes stay uncluttered)
   const cartography = useMemo(() => {
     const rng = createSeededRng(`${mapData.seed || 'scroll'}:carto:${mapData.act}:${mapData.rows}`);
     const actPools: Record<number, DecorKind[]> = {
@@ -193,7 +193,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
     const vw = 500;
     const vh = parchmentHeight;
 
-    const isClearOfNodes = (px: number, py: number, minDist = 48) => {
+    const isClearOfNodes = (px: number, py: number, minDist = 66) => {
       for (const n of mapData.nodes) {
         const nx = (n.x / 100) * vw;
         const ny = (n.y / 100) * vh;
@@ -205,58 +205,52 @@ const MapScreen: React.FC<MapScreenProps> = ({
     };
 
     const props: ParchmentDecor[] = [];
-    const targetCount = Math.min(42, Math.max(18, mapData.rows * 2 + 4));
+    const targetCount = Math.min(18, Math.max(8, mapData.rows + 2));
     let tries = 0;
-    while (props.length < targetCount && tries < 260) {
+    while (props.length < targetCount && tries < 220) {
       tries++;
-      // Bias strongly toward left/right margins so the center trails stay uncluttered
-      const sideRoll = rng();
-      const x =
-        sideRoll < 0.44
-          ? 26 + rng() * 54
-          : sideRoll < 0.88
-            ? vw - 80 + rng() * 54
-            : 110 + rng() * (vw - 220);
-      const y = 78 + rng() * (vh - 156);
-      if (!isClearOfNodes(x, y, sideRoll < 0.88 ? 42 : 56)) continue;
-      if (props.some(p => (p.x - x) ** 2 + (p.y - y) ** 2 < 38 * 38)) continue;
+      // Keep decorative runes strictly along outer margins so the map trails stay crisp & uncluttered
+      const x = rng() < 0.5 ? 24 + rng() * 34 : vw - 58 + rng() * 34;
+      const y = 92 + rng() * (vh - 184);
+      if (!isClearOfNodes(x, y, 66)) continue;
+      if (props.some(p => (p.x - x) ** 2 + (p.y - y) ** 2 < 52 * 52)) continue;
 
       const kind = pool[Math.floor(rng() * pool.length)];
       props.push({
         id: `dec-${props.length}`,
         x: Math.round(x),
         y: Math.round(y),
-        scale: Number((0.78 + rng() * 0.55).toFixed(2)),
-        rot: kind === 'arch' || kind === 'candle' || kind === 'obelisk' || kind === 'reliquary' ? Math.round((rng() - 0.5) * 10) : Math.round((rng() - 0.5) * 32),
-        opacity: Number((0.24 + rng() * 0.18).toFixed(2)),
+        scale: Number((0.72 + rng() * 0.36).toFixed(2)),
+        rot: kind === 'arch' || kind === 'candle' || kind === 'obelisk' || kind === 'reliquary' ? Math.round((rng() - 0.5) * 10) : Math.round((rng() - 0.5) * 28),
+        opacity: Number((0.14 + rng() * 0.1).toFixed(2)),
         kind,
       });
     }
 
     // Subtle elevation contour loops
-    const contours = Array.from({ length: Math.max(4, Math.floor(mapData.rows / 2)) }, (_, i) => ({
+    const contours = Array.from({ length: Math.max(3, Math.floor(mapData.rows / 3)) }, (_, i) => ({
       id: `ct-${i}`,
       cx: Math.round(60 + rng() * (vw - 120)),
-      cy: Math.round(120 + (i / Math.max(1, Math.floor(mapData.rows / 2))) * (vh - 240) + (rng() - 0.5) * 60),
+      cy: Math.round(130 + (i / Math.max(1, Math.floor(mapData.rows / 3))) * (vh - 260) + (rng() - 0.5) * 50),
       rx: Math.round(55 + rng() * 65),
       ry: Math.round(28 + rng() * 38),
       rot: Math.round((rng() - 0.5) * 40),
     }));
 
-    // Deterministic blood splatters & smears (blood01.png - blood04.png)
-    const stains = Array.from({ length: Math.max(7, Math.floor(mapData.rows * 0.95)) }, (_, i) => {
-      const sideBias = rng() < 0.65;
+    // Subtle blood splatters biased to margins so trails and enlarged figurines stand out
+    const stains = Array.from({ length: Math.max(5, Math.floor(mapData.rows * 0.6)) }, (_, i) => {
+      const sideBias = rng() < 0.8;
       const cx = sideBias
-        ? (rng() < 0.5 ? Math.round(28 + rng() * 95) : Math.round(vw - 123 + rng() * 95))
-        : Math.round(90 + rng() * (vw - 180));
+        ? (rng() < 0.5 ? Math.round(24 + rng() * 78) : Math.round(vw - 102 + rng() * 78))
+        : Math.round(110 + rng() * (vw - 220));
       return {
         id: `st-${i}`,
         cx,
         cy: Math.round(210 + rng() * Math.max(120, vh - 290)),
-        size: Math.round(58 + rng() * 76),
+        size: Math.round(52 + rng() * 62),
         rot: Math.round(rng() * 360),
         variant: (Math.floor(rng() * 4) + 1) as 1 | 2 | 3 | 4,
-        opacity: Number((0.48 + rng() * 0.34).toFixed(2)),
+        opacity: Number((0.26 + rng() * 0.18).toFixed(2)),
       };
     });
 
@@ -1053,8 +1047,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
 
                   const figurineSizeClass =
                     isBoss && !isCurrent
-                      ? 'w-11 h-14 -translate-y-2'
-                      : 'w-8 h-10 -translate-y-1.5';
+                      ? 'w-[66px] h-[80px] -translate-y-2.5'
+                      : 'w-12 h-[58px] -translate-y-2';
 
                   // Physical tabletop directional cast shadow + lit ember rim glow matching the pawn piece aesthetic
                   const pieceFilter = isCurrent
@@ -1092,7 +1086,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                         onClick={() => isReachable && onSelectNode(node)}
                         aria-label={meta.title}
                         className={`relative flex items-center justify-center transition-transform duration-200 ${
-                          isBoss ? 'w-16 h-16' : 'w-14 h-14'
+                          isBoss ? 'w-20 h-20' : 'w-16 h-16'
                         } ${isOnTracedPath && !isBoss ? 'scale-105 ' : ''}${
                           isCurrent
                             ? 'cursor-default'
@@ -1104,8 +1098,8 @@ const MapScreen: React.FC<MapScreenProps> = ({
                         {/* Grounded Elliptical Tabletop Cast Shadow Beneath Every Figurine */}
                         <span
                           aria-hidden="true"
-                          className={`pointer-events-none absolute bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-black/85 blur-[2.2px] ${
-                            isBoss && !isCurrent ? 'w-11 h-3' : 'w-8 h-2.5'
+                          className={`pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-black/85 blur-[2.4px] ${
+                            isBoss && !isCurrent ? 'w-14 h-3.5' : 'w-11 h-3'
                           }`}
                         />
 
@@ -1118,9 +1112,9 @@ const MapScreen: React.FC<MapScreenProps> = ({
                               mixBlendMode: 'screen',
                               filter:
                                 isBoss || isCombat
-                                  ? 'blur(4.5px) drop-shadow(0 0 9px rgba(217,56,41,0.95))'
-                                  : 'blur(4.5px) drop-shadow(0 0 9px rgba(226,174,88,0.9))',
-                              opacity: 0.82,
+                                  ? 'blur(5px) drop-shadow(0 0 10px rgba(217,56,41,0.95))'
+                                  : 'blur(5px) drop-shadow(0 0 10px rgba(226,174,88,0.9))',
+                              opacity: 0.84,
                             }}
                           >
                             <MapFigurineToken
@@ -1146,7 +1140,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                         {isVisited && (
                           <svg
                             viewBox="0 0 48 48"
-                            className="pointer-events-none absolute inset-0 m-auto w-13 h-13 overflow-visible z-20"
+                            className="pointer-events-none absolute inset-0 m-auto w-15 h-15 overflow-visible z-20"
                             style={{ mixBlendMode: 'multiply' }}
                             aria-hidden="true"
                           >

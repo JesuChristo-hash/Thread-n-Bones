@@ -467,18 +467,46 @@ export default function App() {
     return () => window.removeEventListener('resize', updateScale);
   }, [updateScale]);
 
-  // Matrix Coordinate Calibrated Card Dragging State
-  const [dragState, setDragState] = useState<{
+  // Unified Desktop & Mobile 1-Second Hold-to-Drag State for Battle Hand -> Board Lanes
+  const BATTLE_HOLD_TO_DRAG_MS = 1000;
+  const BATTLE_HOLD_CHARGE_SHOW_MS = 150;
+  const BATTLE_HOLD_MOVE_TOLERANCE_PX = 14;
+  const [battleDrag, setBattleDrag] = useState<{
+    cardIndex: number;
+    card: CardDef;
+    x: number;
+    y: number;
+    isTouch: boolean;
+    hoveredLane: number | null;
+  } | null>(null);
+  const [battleHold, setBattleHold] = useState<{
+    cardIndex: number;
+    x: number;
+    y: number;
+    isTouch: boolean;
+  } | null>(null);
+  const battleDragRef = useRef<{
+    cardIndex: number;
+    card: CardDef;
+    x: number;
+    y: number;
+    isTouch: boolean;
+    hoveredLane: number | null;
+  } | null>(null);
+  const pendingBattleDragRef = useRef<{
+    pointerId: number;
     cardIndex: number;
     card: CardDef;
     startX: number;
     startY: number;
-    currentX: number;
-    currentY: number;
-    hasMoved: boolean;
+    lastX: number;
+    lastY: number;
+    isTouch: boolean;
+    chargeTimer: number | null;
+    holdTimer: number | null;
   } | null>(null);
-  const [hoveredSlotLane, setHoveredSlotLane] = useState<number | null>(null);
-  const playerSlotRefs = useRef<(HTMLDivElement | null)[]>([null, null, null, null]);
+  const suppressBattleClickRef = useRef<boolean>(false);
+  const handlePlayerSlotClickRef = useRef<(laneIndex: number, specificHandIndex?: number) => void>(() => {});
 
   const [phase, setPhase] = useState<GamePhase>('DRAW');
   const [turnNumber, setTurnNumber] = useState<number>(1);
@@ -2495,150 +2523,176 @@ export default function App() {
     triggerSfx
   ]);
 
-  // --- Calibrated Pointer Drag & Drop Calculation Handlers ---
-  const handleHandCardPointerDown = (e: React.PointerEvent, idx: number) => {
-    if (phase !== 'PLAY') return;
-    if (e.button !== 0) return; // Primary pointer only
+  handlePlayerSlotClickRef.current = handlePlayerSlotClick;
 
-    const container = gameContainerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const scale = currentScaleRef.current || (rect.width > 0 ? rect.width / 1280 : 1);
-    const virtualX = (e.clientX - rect.left) / scale;
-    const virtualY = (e.clientY - rect.top) / scale;
+  // --- Unified 1-Second Hold-to-Drag Engine for Battle Hand -> Player Board Slots ---
+  const clearPendingBattleDrag = useCallback(() => {
+    const pending = pendingBattleDragRef.current;
+    if (pending) {
+      if (pending.chargeTimer) window.clearTimeout(pending.chargeTimer);
+      if (pending.holdTimer) window.clearTimeout(pending.holdTimer);
+    }
+    pendingBattleDragRef.current = null;
+    setBattleHold(null);
+  }, []);
 
-    setDragState({
-      cardIndex: idx,
-      card: hand[idx],
-      startX: virtualX,
-      startY: virtualY,
-      currentX: virtualX,
-      currentY: virtualY,
-      hasMoved: false,
+  const findHoveredBattleLane = useCallback((clientX: number, clientY: number): number | null => {
+    const nodes = document.querySelectorAll<HTMLElement>('[data-battle-drop-lane]');
+    const pad = 22;
+    let bestLane: number | null = null;
+    let bestDist = Infinity;
+    nodes.forEach((el) => {
+      if (el.getAttribute('data-battle-drop-enabled') === 'false') return;
+      const laneAttr = el.getAttribute('data-battle-drop-lane');
+      if (laneAttr === null) return;
+      const laneIdx = Number(laneAttr);
+      if (Number.isNaN(laneIdx)) return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+      if (
+        clientX >= r.left - pad &&
+        clientX <= r.right + pad &&
+        clientY >= r.top - pad &&
+        clientY <= r.bottom + pad
+      ) {
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const d = Math.hypot(clientX - cx, clientY - cy);
+        if (d < bestDist) {
+          bestDist = d;
+          bestLane = laneIdx;
+        }
+      }
     });
-  };
+    return bestLane;
+  }, []);
 
   useEffect(() => {
-    if (!dragState) return;
+    if (screen !== 'DUEL' || phase !== 'PLAY' || sacrificingLane !== null) {
+      clearPendingBattleDrag();
+      battleDragRef.current = null;
+      setBattleDrag(null);
+    }
+  }, [screen, phase, sacrificingLane, clearPendingBattleDrag]);
 
-    const handleGlobalPointerMove = (e: PointerEvent) => {
-      const container = gameContainerRef.current;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const scale = currentScaleRef.current || (rect.width > 0 ? rect.width / 1280 : 1);
-      const virtualX = (e.clientX - rect.left) / scale;
-      const virtualY = (e.clientY - rect.top) / scale;
+  useEffect(() => {
+    const onPointerMove = (e: PointerEvent) => {
+      const active = battleDragRef.current;
+      const pending = pendingBattleDragRef.current;
 
-      const dist = Math.hypot(virtualX - dragState.startX, virtualY - dragState.startY);
-      const hasMoved = dragState.hasMoved || dist > 6;
-
-      setDragState(prev => (prev ? {
-        ...prev,
-        currentX: virtualX,
-        currentY: virtualY,
-        hasMoved,
-      } : null));
-
-      // Matrix Coordinate Calibrated Slot Targeting
-      let foundLane: number | null = null;
-      for (let lane = 0; lane < 4; lane++) {
-        const slotEl = playerSlotRefs.current[lane];
-        if (slotEl) {
-          const slotRect = slotEl.getBoundingClientRect();
-          const slotLeft = (slotRect.left - rect.left) / scale;
-          const slotTop = (slotRect.top - rect.top) / scale;
-          const slotWidth = slotRect.width / scale;
-          const slotHeight = slotRect.height / scale;
-
-          if (
-            virtualX >= slotLeft - 10 &&
-            virtualX <= slotLeft + slotWidth + 10 &&
-            virtualY >= slotTop - 10 &&
-            virtualY <= slotTop + slotHeight + 10
-          ) {
-            foundLane = lane;
-            break;
-          }
-        }
-      }
-      setHoveredSlotLane(foundLane);
-    };
-// --- ITEM EFFECT: Burn Ticks at End of Player Turn ---
-    setPlayerBoard(prev => {
-      const next = [...prev];
-      let boardChanged = false;
-      for (let i = 0; i < 4; i++) {
-        const c = next[i];
-        if (c && (c as any).isBurned) {
-          boardChanged = true;
-          const newAtk = Math.max(0, (c.attack || 0) - 1);
-          const newHp = (c.health || 0) - 2;
-          if (newHp <= 0) {
-            addLog(`The flames consume your ${getCardDisplayName(c.name)} in lane ${i + 1}.`);
-            next[i] = null;
-          } else {
-            c.attack = newAtk;
-            c.health = newHp;
-            addLog(`Your ${getCardDisplayName(c.name)} in lane ${i + 1} suffers burn (-1 ATK, -2 HP).`);
-          }
-        }
-      }
-      return boardChanged ? next : prev;
-    });
-    const handleGlobalPointerUp = (e: PointerEvent) => {
-      const container = gameContainerRef.current;
-      const currentDrag = dragState;
-      setDragState(null);
-      setHoveredSlotLane(null);
-
-      if (!container || !currentDrag) return;
-
-      const rect = container.getBoundingClientRect();
-      const scale = currentScaleRef.current || (rect.width > 0 ? rect.width / 1280 : 1);
-      const virtualX = (e.clientX - rect.left) / scale;
-      const virtualY = (e.clientY - rect.top) / scale;
-
-      let targetLane: number | null = null;
-      for (let lane = 0; lane < 4; lane++) {
-        const slotEl = playerSlotRefs.current[lane];
-        if (slotEl) {
-          const slotRect = slotEl.getBoundingClientRect();
-          const slotLeft = (slotRect.left - rect.left) / scale;
-          const slotTop = (slotRect.top - rect.top) / scale;
-          const slotWidth = slotRect.width / scale;
-          const slotHeight = slotRect.height / scale;
-
-          if (
-            virtualX >= slotLeft - 10 &&
-            virtualX <= slotLeft + slotWidth + 10 &&
-            virtualY >= slotTop - 10 &&
-            virtualY <= slotTop + slotHeight + 10
-          ) {
-            targetLane = lane;
-            break;
-          }
-        }
+      if (active) {
+        const hitX = e.clientX;
+        const hitY = active.isTouch ? e.clientY - 28 : e.clientY;
+        const hoveredLane = findHoveredBattleLane(hitX, hitY);
+        const next = { ...active, x: e.clientX, y: e.clientY, hoveredLane };
+        battleDragRef.current = next;
+        setBattleDrag(next);
+        return;
       }
 
-      if (currentDrag.hasMoved) {
-        if (targetLane !== null) {
-          handlePlayerSlotClick(targetLane, currentDrag.cardIndex);
-        }
-      } else {
-        selectHandCard(currentDrag.cardIndex);
+      if (!pending || e.pointerId !== pending.pointerId) return;
+      pending.lastX = e.clientX;
+      pending.lastY = e.clientY;
+      const dist = Math.hypot(e.clientX - pending.startX, e.clientY - pending.startY);
+      if (dist > BATTLE_HOLD_MOVE_TOLERANCE_PX) {
+        clearPendingBattleDrag();
       }
     };
 
-    window.addEventListener('pointermove', handleGlobalPointerMove);
-    window.addEventListener('pointerup', handleGlobalPointerUp);
-    window.addEventListener('pointercancel', handleGlobalPointerUp);
-
-      return () => {
-      window.removeEventListener('pointermove', handleGlobalPointerMove);
-      window.removeEventListener('pointerup', handleGlobalPointerUp);
-      window.removeEventListener('pointercancel', handleGlobalPointerUp);
+    const onTouchMove = (e: TouchEvent) => {
+      if (battleDragRef.current) {
+        e.preventDefault();
+      }
     };
-  }, [dragState]);
+
+    const finishBattleDrag = (e: PointerEvent) => {
+      const active = battleDragRef.current;
+
+      if (active) {
+        const hitX = e.clientX;
+        const hitY = active.isTouch ? e.clientY - 28 : e.clientY;
+        const dropLane = findHoveredBattleLane(hitX, hitY) ?? active.hoveredLane;
+        suppressBattleClickRef.current = true;
+        window.setTimeout(() => {
+          suppressBattleClickRef.current = false;
+        }, 160);
+        if (dropLane !== null) {
+          handlePlayerSlotClickRef.current(dropLane, active.cardIndex);
+        }
+      }
+
+      clearPendingBattleDrag();
+      battleDragRef.current = null;
+      setBattleDrag(null);
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('pointerup', finishBattleDrag);
+    window.addEventListener('pointercancel', finishBattleDrag);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('pointerup', finishBattleDrag);
+      window.removeEventListener('pointercancel', finishBattleDrag);
+    };
+  }, [findHoveredBattleLane, clearPendingBattleDrag]);
+
+  const handleHandCardPointerDown = (e: React.PointerEvent, idx: number) => {
+    if (screen !== 'DUEL' || phase !== 'PLAY' || sacrificingLane !== null) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const card = hand[idx];
+    if (!card) return;
+
+    const isTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    clearPendingBattleDrag();
+
+    const chargeTimer = window.setTimeout(() => {
+      const cur = pendingBattleDragRef.current;
+      if (!cur || battleDragRef.current) return;
+      setBattleHold({
+        cardIndex: cur.cardIndex,
+        x: cur.lastX,
+        y: cur.lastY,
+        isTouch: cur.isTouch,
+      });
+    }, BATTLE_HOLD_CHARGE_SHOW_MS);
+
+    const holdTimer = window.setTimeout(() => {
+      const cur = pendingBattleDragRef.current;
+      if (!cur || battleDragRef.current) return;
+      setBattleHold(null);
+      const hitY = cur.isTouch ? cur.lastY - 28 : cur.lastY;
+      const hoveredLane = findHoveredBattleLane(cur.lastX, hitY);
+      const started = {
+        cardIndex: cur.cardIndex,
+        card: cur.card,
+        x: cur.lastX,
+        y: cur.lastY,
+        isTouch: cur.isTouch,
+        hoveredLane,
+      };
+      battleDragRef.current = started;
+      setBattleDrag(started);
+      triggerSfx('draw');
+    }, BATTLE_HOLD_TO_DRAG_MS);
+
+    pendingBattleDragRef.current = {
+      pointerId: e.pointerId,
+      cardIndex: idx,
+      card,
+      startX,
+      startY,
+      lastX: startX,
+      lastY: startY,
+      isTouch,
+      chargeTimer,
+      holdTimer,
+    };
+  };
 
 // --- Items Engine Execution Handlers ---
   const handleUseItem = (slotIndex: number) => {
@@ -9862,7 +9916,10 @@ export default function App() {
 
                  {/* Row 3: Player Active Board Slots */}
                   {(() => {
-                    const activeSelectedCard = phase === 'PLAY' && selectedHandIndex !== null ? hand[selectedHandIndex] : null;
+                    const activeSelectedCard =
+                      phase === 'PLAY'
+                        ? (battleDrag?.card ?? (selectedHandIndex !== null ? hand[selectedHandIndex] : null))
+                        : null;
                     const reqBlood = activeSelectedCard?.cost || 0;
                     const reqBones = activeSelectedCard?.boneCost || 0;
                     const needsSacrifice = Boolean(activeSelectedCard && reqBlood > 0 && blood < reqBlood);
@@ -9914,7 +9971,9 @@ export default function App() {
                                 <span>
                                   {shortOnBlood
                                     ? `Need ${reqBlood} Blood (Only ${blood + availableBoardBlood} Available)`
-                                    : `Sacrifice ${blood}/${reqBlood} Blood — Click Creatures`}
+                                    : battleDrag
+                                      ? `Drop on Creature to Sacrifice (${blood}/${reqBlood} Blood)`
+                                      : `Sacrifice ${blood}/${reqBlood} Blood — Click Creatures`}
                                 </span>
                               </div>
                             ) : showPlacePrompt ? (
@@ -9940,6 +9999,8 @@ export default function App() {
                           {playerBoard.map((card, idx) => {
                             const canSacrificeThis = Boolean(needsSacrifice && isCardSacrificable(card) && sacrificingLane === null);
                             const canPlaceHere = Boolean(readyToPlace && !card && sacrificingLane === null);
+                            const canAcceptDrop = Boolean(battleDrag && (canPlaceHere || canSacrificeThis));
+                            const isDropHovered = Boolean(canAcceptDrop && battleDrag?.hoveredLane === idx);
                             const isDimmedTarget = Boolean(
                               (needsSacrifice && !canSacrificeThis && sacrificingLane !== idx) ||
                               (readyToPlace && Boolean(card))
@@ -9961,11 +10022,19 @@ export default function App() {
                               ? 'border-[#5e564f]/20 bg-[#0b0a0c]/30 opacity-45 cursor-not-allowed'
                               : 'border-black/75 hover:border-[#7f1d1d]/80 bg-[#0d0c0e]/58 hover:bg-[#1a0b0c]/72 shadow-[inset_0_2px_14px_rgba(0,0,0,0.88)] cursor-pointer';
 
+                            const dragSlotHighlight = isDropHovered
+                              ? 'event-drop-slot-active'
+                              : canAcceptDrop
+                                ? 'event-drop-slot-ready'
+                                : '';
+
                             return (
                               <div
                                 key={`p-slot-${idx}`}
+                                data-battle-drop-lane={idx}
+                                data-battle-drop-enabled={canAcceptDrop ? 'true' : 'false'}
                                 onClick={() => handlePlayerSlotClick(idx)}
-                                className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border transition-all duration-150 overflow-visible ${slotStyle} ${
+                                className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[2px] flex items-center justify-center relative box-border border transition-all duration-150 overflow-visible ${slotStyle} ${dragSlotHighlight} ${
                                   isAttackingThisLane ? 'z-50' : isMovingThisLane ? (card?.sigils?.includes('Hefty') ? 'z-[45]' : 'z-40') : card ? 'z-20' : 'z-0'
                                 }`}
                               >
@@ -9990,7 +10059,7 @@ export default function App() {
                                         : 'text-[11px] text-amber-900/40 tracking-widest'
                                     }`}
                                   >
-                                    {canPlaceHere ? 'PLACE' : '+'}
+                                    {canPlaceHere ? (isDropHovered ? 'DROP' : 'PLACE') : '+'}
                                   </span>
                                 )}
                                 {card ? (
@@ -10075,6 +10144,8 @@ export default function App() {
                             }
                           }
                           const isSelected = selectedHandIndex === idx;
+                          const isDraggingThis = battleDrag?.cardIndex === idx;
+                          const isHoldingThis = battleHold?.cardIndex === idx;
 
                           // Physical hand arc: outer cards dip and tilt outward from the palm
                           const mid = (hand.length - 1) / 2;
@@ -10083,10 +10154,15 @@ export default function App() {
                           const fanDipY = Math.min(18, Math.pow(Math.abs(offsetFromCenter), 1.65) * 2.4);
 
                           return (
-                            /* Stationary Slot Container: captures mouse events & maintains layout geometry */
+                            /* Stationary Slot Container: captures mouse/touch events & maintains layout geometry */
                             <div
                               key={card.id || `hand-${card.name}-${idx}`}
-                              onClick={() => selectHandCard(idx)}
+                              data-battle-hand-idx={idx}
+                              onPointerDown={(e) => handleHandCardPointerDown(e, idx)}
+                              onClick={() => {
+                                if (suppressBattleClickRef.current) return;
+                                selectHandCard(idx);
+                              }}
                               style={{
                                 ...overlapStyle,
                                 transform: `translateY(${fanDipY}px) rotate(${fanAngle}deg)`,
@@ -10097,8 +10173,8 @@ export default function App() {
                                   : { backfaceVisibility: 'hidden' }),
                               }}
                               className={`group/handcard relative shrink-0 cursor-pointer select-none hover:!rotate-0 hover:!translate-y-0 before:absolute before:-inset-x-3 before:-top-1 before:-bottom-6 before:z-0 before:content-[''] ${
-                                 isSelected ? 'z-40 !rotate-0 !translate-y-0' : 'hover:z-30 z-10'
-                               }`}
+                                 isSelected || isHoldingThis ? 'z-40 !rotate-0 !translate-y-0' : 'hover:z-30 z-10'
+                               } ${isDraggingThis ? 'opacity-25 pointer-events-none' : ''}`}
                              >
                                {/* Animated Card Surface: Decoupled from hit target with dampened spring physics */}
                                <div
@@ -10111,9 +10187,11 @@ export default function App() {
                                      : { backfaceVisibility: 'hidden', transform: 'translateZ(0)' }),
                                  }}
                                  className={`relative origin-top animate-card-draw group-hover/handcard:transition-delay-[0ms] ${
-                                   isSelected
-                                     ? 'z-40 -translate-y-1 scale-[1.03]'
-                                     : 'group-hover/handcard:z-30 group-hover/handcard:-translate-y-2 group-hover/handcard:scale-[1.04]'
+                                   isHoldingThis
+                                     ? 'z-40 card-hold-charging'
+                                     : isSelected
+                                       ? 'z-40 -translate-y-1 scale-[1.03]'
+                                       : 'group-hover/handcard:z-30 group-hover/handcard:-translate-y-2 group-hover/handcard:scale-[1.04]'
                                  }`}
                                >
                           {renderCard(card, {
@@ -10503,6 +10581,49 @@ export default function App() {
           </div>
         )}
       </div>
+    {/* 1-Second Hold-to-Drag Charge Pill (Battle Hand) */}
+    {battleHold && !battleDrag && (
+      <div
+        aria-hidden="true"
+        data-battle-hold-pill="true"
+        className="fixed z-[225] pointer-events-none select-none flex flex-col items-center gap-1"
+        style={{
+          left: `${battleHold.x}px`,
+          top: `${battleHold.isTouch ? battleHold.y - 48 : battleHold.y - 32}px`,
+          transform: 'translate(-50%, -100%)',
+        }}
+      >
+        <div className="px-2 py-0.5 rounded-[2px] bg-[#140a08]/95 border border-[#c8a363]/75 shadow-[0_6px_18px_rgba(0,0,0,0.92)]">
+          <div className="text-[8px] font-mono uppercase tracking-[0.2em] text-[#f4dfb6] text-center leading-none">
+            Hold to Drag
+          </div>
+          <div className="mt-1 h-[3px] w-16 rounded-full bg-black/80 overflow-hidden border border-[#6e5235]/50">
+            <div className="h-full w-full bg-gradient-to-r from-[#b91c1c] via-[#e5b85c] to-[#fef08a] card-hold-bar" />
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Floating Lifted Ghost Card for Battle Hand -> Board Lane Dragging */}
+    {battleDrag && (
+      <div
+        aria-hidden="true"
+        data-battle-drag-ghost="true"
+        className="fixed z-[230] pointer-events-none select-none will-change-transform"
+        style={{
+          left: `${battleDrag.x}px`,
+          top: `${battleDrag.isTouch ? battleDrag.y - 38 : battleDrag.y}px`,
+          transform: `translate(-50%, -50%) rotate(${battleDrag.hoveredLane !== null ? '0deg' : '-3deg'}) scale(${(Math.max(0.58, Math.min(1.06, currentScaleRef.current || 1))) * (battleDrag.hoveredLane !== null ? 1.03 : 0.96)})`,
+          transition: 'transform 120ms cubic-bezier(0.16, 1, 0.3, 1)',
+          filter: battleDrag.hoveredLane !== null
+            ? 'drop-shadow(0 18px 28px rgba(0,0,0,0.95)) drop-shadow(0 0 22px rgba(244,215,139,0.78))'
+            : 'drop-shadow(0 20px 30px rgba(0,0,0,0.95)) drop-shadow(0 0 14px rgba(220,38,38,0.45))',
+        }}
+      >
+        {renderCard(battleDrag.card, { isClickable: false, disableHoverScale: true })}
+      </div>
+    )}
+
     {/* Dramatic Loss Transition Overlay */}
     {isLossSequenceActive && (
       <div className="fixed inset-0 z-[220] pointer-events-auto flex flex-col items-center justify-center overflow-hidden select-none animate-menu-fade-in">
