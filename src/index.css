@@ -1101,6 +1101,40 @@
   0% { transform: translate3d(0, 0, 0); }
   100% { transform: translate3d(-50%, 0, 0); }
 }
+@keyframes bloodWaveScrollSlow {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes jarWaveScrollA {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-48px, 0, 0); }
+}
+@keyframes jarWaveScrollB {
+  0% { transform: translate3d(-48px, 0, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+@keyframes jarBubbleRiseA {
+  0% { transform: translate3d(0, 0, 0) scale(0.65); opacity: 0; }
+  18% { opacity: 0.72; }
+  80% { opacity: 0.55; transform: translate3d(1.5px, -46px, 0) scale(1); }
+  100% { transform: translate3d(-0.5px, -62px, 0) scale(1.1); opacity: 0; }
+}
+@keyframes jarBubbleRiseB {
+  0% { transform: translate3d(0, 0, 0) scale(0.55); opacity: 0; }
+  22% { opacity: 0.65; }
+  75% { opacity: 0.5; transform: translate3d(-1.5px, -52px, 0) scale(0.95); }
+  100% { transform: translate3d(1px, -74px, 0) scale(1.05); opacity: 0; }
+}
+@keyframes jarBubbleRiseC {
+  0% { transform: translate3d(0, 0, 0) scale(0.7); opacity: 0; }
+  20% { opacity: 0.78; }
+  78% { opacity: 0.52; transform: translate3d(1px, -38px, 0) scale(1.05); }
+  100% { transform: translate3d(-1px, -54px, 0) scale(1.15); opacity: 0; }
+}
+@keyframes jarStreamPulse {
+  0% { stroke-dashoffset: 28; opacity: 0.95; }
+  100% { stroke-dashoffset: 0; opacity: 0.8; }
+}
 @keyframes bloodBubbleAscendA {
   0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
   15% { opacity: 0.85; }
@@ -1150,18 +1184,18 @@
 
 /* Overkill Siphon Hose Blood Surge */
 @keyframes hoseBloodRush {
-  0% { stroke-dashoffset: 96; opacity: 0.95; }
+  0% { stroke-dashoffset: 108; opacity: 0.95; }
   100% { stroke-dashoffset: 0; opacity: 1; }
 }
 @keyframes hoseBloodFlow {
-  0% { stroke-dashoffset: 24; }
+  0% { stroke-dashoffset: 18; }
   100% { stroke-dashoffset: 0; }
 }
 .animate-hose-rush {
-  animation: hoseBloodRush 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: hoseBloodRush 0.44s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 .animate-hose-flow {
-  animation: hoseBloodFlow 0.35s linear infinite;
+  animation: hoseBloodFlow 0.34s linear infinite;
 }
 
 @font-face {

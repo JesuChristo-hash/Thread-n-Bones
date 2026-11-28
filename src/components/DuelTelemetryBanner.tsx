@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { getItemArtUrl } from '../data/gameData';
 
 export interface ResolvedRelic {
@@ -313,18 +313,142 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
   );
 };
 
-const JAR_TIERS: Record<1 | 2 | 3, { w: number; h: number; cap: number; ticks: number; stop: number; neck: number; base: number; hoseShift: number }> = {
-  1: { w: 52, h: 80, cap: 12.5, ticks: 4, stop: 20, neck: 16, base: 36, hoseShift: 0 },
-  2: { w: 52, h: 116, cap: 50, ticks: 6, stop: 20, neck: 16, base: 36, hoseShift: 0 },
-  3: { w: 76, h: 116, cap: 100, ticks: 8, stop: 28, neck: 22, base: 52, hoseShift: 12 },
+interface JarTierSpec {
+  id: 1 | 2 | 3;
+  roman: 'I' | 'II' | 'III';
+  label: string;
+  w: number;
+  h: number;
+  cap: number;
+  cx: number;
+  outerPath: string;
+  innerPath: string;
+  fillBottomY: number;
+  fillTopY: number;
+  readoutTopPct: number;
+  leftGlintPath: string;
+  leftShoulderGlint: string;
+  rightGlintPath: string;
+  bottomLensPath: string;
+  ticks: { y: number; x1: number; x2: number; major?: boolean }[];
+  bubbles: { cx: number; cy: number; r: number; anim: string; dur: string; delay: string }[];
+}
+
+const JAR_TIERS: Record<1 | 2 | 3, JarTierSpec> = {
+  // Tier 1 (0–19 oz): Squat Apothecary Phial with wax-dipped cork & bulbous shoulders
+  1: {
+    id: 1,
+    roman: 'I',
+    label: 'Apothecary Phial',
+    w: 60,
+    h: 96,
+    cap: 12.5,
+    cx: 30,
+    outerPath:
+      'M 23 10 L 37 10 L 37 16 C 37 21.5, 54 22.5, 54 34 L 54 69 C 54 80.5, 46 85.5, 36 85.5 L 24 85.5 C 14 85.5, 6 80.5, 6 69 L 6 34 C 6 22.5, 23 21.5, 23 16 Z',
+    innerPath:
+      'M 25 11.5 L 35 11.5 L 35 16.5 C 35 22.4, 51.6 23.6, 51.6 34.4 L 51.6 68.8 C 51.6 78.2, 44.8 83, 35.6 83 L 24.4 83 C 15.2 83, 8.4 78.2, 8.4 68.8 L 8.4 34.4 C 8.4 23.6, 25 22.4, 25 16.5 Z',
+    fillBottomY: 83.2,
+    fillTopY: 25,
+    readoutTopPct: 55,
+    leftShoulderGlint: 'M 11.5 31 C 12.5 25.5, 19.5 23.8, 23.8 19.5',
+    leftGlintPath: 'M 10.6 35 L 10.6 67.5 C 10.6 74, 13.8 78.2, 18.5 80',
+    rightGlintPath: 'M 49.4 36 L 49.4 67 C 49.4 73.5, 46.5 77.5, 42.5 79.5',
+    bottomLensPath: 'M 19 81.2 Q 30 84.2, 41 81.2',
+    ticks: [
+      { y: 37, x1: 44.5, x2: 50.5, major: true },
+      { y: 49, x1: 46.2, x2: 50.5 },
+      { y: 61, x1: 44.5, x2: 50.5, major: true },
+      { y: 73, x1: 46.2, x2: 49.8 },
+    ],
+    bubbles: [
+      { cx: 19, cy: 78, r: 1.4, anim: 'jarBubbleRiseA', dur: '3.6s', delay: '0s' },
+      { cx: 38, cy: 80, r: 1.1, anim: 'jarBubbleRiseC', dur: '4.4s', delay: '1.4s' },
+      { cx: 28, cy: 79, r: 1.25, anim: 'jarBubbleRiseA', dur: '3.1s', delay: '2.2s' },
+    ],
+  },
+  // Tier 2 (20–49 oz): Tall Brass-Banded Specimen Jar with beveled shoulders & compression rings
+  2: {
+    id: 2,
+    roman: 'II',
+    label: 'Brass-Banded Specimen Jar',
+    w: 64,
+    h: 132,
+    cap: 50,
+    cx: 32,
+    outerPath:
+      'M 23 10.5 L 41 10.5 L 41 16.5 C 41 20, 57 22, 57 29.5 L 57 109.5 C 57 117.2, 51 120.5, 43 120.5 L 21 120.5 C 13 120.5, 7 117.2, 7 109.5 L 7 29.5 C 7 22, 23 20, 23 16.5 Z',
+    innerPath:
+      'M 25.2 12 L 38.8 12 L 38.8 17 C 38.8 21.3, 54.6 23.3, 54.6 30 L 54.6 109 C 54.6 115.2, 49.6 118, 42.4 118 L 21.6 118 C 14.4 118, 9.4 115.2, 9.4 109 L 9.4 30 C 9.4 23.3, 25.2 21.3, 25.2 17 Z',
+    fillBottomY: 118.2,
+    fillTopY: 25,
+    readoutTopPct: 54,
+    leftShoulderGlint: 'M 12.2 28.5 C 14 24.5, 20.5 23, 25.5 19',
+    leftGlintPath: 'M 11.8 40 L 11.8 100.5',
+    rightGlintPath: 'M 52.4 40 L 52.4 100',
+    bottomLensPath: 'M 18.5 115.8 Q 32 119, 45.5 115.8',
+    ticks: [
+      { y: 44, x1: 46.5, x2: 53.2, major: true },
+      { y: 54.5, x1: 48.8, x2: 53.2 },
+      { y: 65, x1: 46.5, x2: 53.2, major: true },
+      { y: 75.5, x1: 48.8, x2: 53.2 },
+      { y: 86, x1: 46.5, x2: 53.2, major: true },
+      { y: 96.5, x1: 48.8, x2: 53.2 },
+    ],
+    bubbles: [
+      { cx: 20, cy: 112, r: 1.5, anim: 'jarBubbleRiseB', dur: '4.1s', delay: '0.2s' },
+      { cx: 43, cy: 114, r: 1.15, anim: 'jarBubbleRiseA', dur: '3.5s', delay: '1.5s' },
+      { cx: 30, cy: 113, r: 1.35, anim: 'jarBubbleRiseB', dur: '4.8s', delay: '2.6s' },
+      { cx: 25, cy: 110, r: 1.0, anim: 'jarBubbleRiseC', dur: '3.2s', delay: '0.9s' },
+    ],
+  },
+  // Tier 3 (50+ oz): Wide Ribbed & Iron-Caged Alchemical Carboy with double-valve crown
+  3: {
+    id: 3,
+    roman: 'III',
+    label: 'Caged Alchemical Carboy',
+    w: 84,
+    h: 138,
+    cap: 100,
+    cx: 42,
+    outerPath:
+      'M 30 10.5 L 54 10.5 L 54 17.5 C 54 22.5, 78 23.8, 78 36 L 75.6 112.5 C 75.2 121.2, 68 125.8, 58 125.8 L 26 125.8 C 16 125.8, 8.8 121.2, 8.4 112.5 L 6 36 C 6 23.8, 30 22.5, 30 17.5 Z',
+    innerPath:
+      'M 32.4 12 L 51.6 12 L 51.6 18 C 51.6 24, 75.2 25.3, 75.2 36.4 L 72.8 112 C 72.5 119.3, 66.2 123.2, 57.4 123.2 L 26.6 123.2 C 17.8 123.2, 11.5 119.3, 11.2 112 L 8.8 36.4 C 8.8 25.3, 32.4 24, 32.4 18 Z',
+    fillBottomY: 123.4,
+    fillTopY: 27,
+    readoutTopPct: 55,
+    leftShoulderGlint: 'M 12.2 33.5 C 14.5 27.2, 24.5 25.2, 31.8 20.2',
+    leftGlintPath: 'M 11.5 45 L 13.4 105.5',
+    rightGlintPath: 'M 72.5 45 L 70.6 105.5',
+    bottomLensPath: 'M 22 120.8 Q 42 124.2, 62 120.8',
+    ticks: [
+      { y: 47, x1: 63.5, x2: 71.2, major: true },
+      { y: 55, x1: 66.5, x2: 71.0 },
+      { y: 63, x1: 63.5, x2: 70.8, major: true },
+      { y: 71, x1: 66.5, x2: 70.6 },
+      { y: 79, x1: 63.5, x2: 70.4, major: true },
+      { y: 87, x1: 66.5, x2: 70.2 },
+      { y: 95, x1: 63.5, x2: 70.0, major: true },
+      { y: 103, x1: 66.5, x2: 69.8 },
+    ],
+    bubbles: [
+      { cx: 23, cy: 117, r: 1.6, anim: 'jarBubbleRiseB', dur: '4.0s', delay: '0.1s' },
+      { cx: 56, cy: 118, r: 1.3, anim: 'jarBubbleRiseA', dur: '3.6s', delay: '1.2s' },
+      { cx: 36, cy: 116, r: 1.45, anim: 'jarBubbleRiseB', dur: '4.6s', delay: '2.1s' },
+      { cx: 49, cy: 119, r: 1.1, anim: 'jarBubbleRiseC', dur: '3.1s', delay: '0.8s' },
+      { cx: 29, cy: 114, r: 1.0, anim: 'jarBubbleRiseA', dur: '4.3s', delay: '3.0s' },
+    ],
+  },
 };
 
-/* --- STANDALONE DIEGETIC BLOOD BANK VIAL + RUNNEL SIPHON HOSE --- */
+/* --- STANDALONE DIEGETIC BLOOD BANK VESSEL (3-TIER ALCHEMICAL JARS) + SPIGOT SIPHON HOSE --- */
 export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: boolean; tier?: 1 | 2 | 3 }> = ({
   displayBloodOz,
   isOverkill = false,
   tier = 1,
 }) => {
+  const uid = useId().replace(/:/g, '');
   const prevRef = useRef(displayBloodOz);
   const [delta, setDelta] = useState<number | null>(null);
   const [shownOz, setShownOz] = useState<number>(displayBloodOz);
@@ -358,165 +482,567 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
   }, [displayBloodOz]);
 
   const isSurging = isOverkill || delta !== null;
-  const dims = JAR_TIERS[tier] ?? JAR_TIERS[1];
-  const fillPct = displayBloodOz > 0
-    ? (tier === 1 ? Math.min(100, Math.max(18, displayBloodOz * 8)) : Math.min(100, (displayBloodOz / dims.cap) * 100))
-    : 0;
+  const spec = JAR_TIERS[tier] ?? JAR_TIERS[1];
+  const fillPct =
+    displayBloodOz > 0
+      ? tier === 1
+        ? Math.min(100, Math.max(18, displayBloodOz * 8))
+        : Math.min(100, (displayBloodOz / spec.cap) * 100)
+      : 0;
+
+  // Vertical Y position of the blood meniscus inside the tier's inner glass cavity
+  const fillSpan = spec.fillBottomY - spec.fillTopY;
+  const surfaceY = fillPct > 0 ? spec.fillBottomY - (fillSpan * fillPct) / 100 : spec.fillBottomY + 6;
+  const liquidHeight = spec.fillBottomY - surfaceY + 8;
+
+  // Seamless 48px-period dual wave paths (192px wide) for liquid meniscus
+  const waveBackPath =
+    'M 0 0 Q 12 2.1, 24 0 T 48 0 T 96 0 T 144 0 T 192 0 L 192 14 L 0 14 Z';
+  const waveFrontPath =
+    'M 0 0 Q 12 -2.2, 24 0 T 48 0 T 96 0 T 144 0 T 192 0 L 192 14 L 0 14 Z';
+  const waveFrontCrest = 'M 0 0 Q 12 -2.2, 24 0 T 48 0 T 96 0 T 144 0 T 192 0';
 
   return (
     <div
-      className="relative flex flex-col items-center select-none pt-1"
-      title={`Blood Bank: ${displayBloodOz} oz (Overkill Blood)`}
+      className="relative flex flex-col items-center select-none"
+      title={`Blood Bank (${spec.label}): ${displayBloodOz} oz Overkill Blood`}
     >
-      {/* Semi-Opaque Siphon Hose Connecting Runnel Right Edge -> Top of Vial Stopper */}
+      {/* REWORKED SPIGOT VALVE & BRAIDED TRANSLUCENT SIPHON HOSE (Center-anchored across all 3 tiers!) */}
       <svg
-        viewBox="0 0 82 40"
-        className="pointer-events-none absolute -left-[46px] sm:-left-[48px] -top-[14px] w-[82px] h-[40px] overflow-visible z-20"
-        style={{ marginLeft: dims.hoseShift }}
+        viewBox="0 0 84 44"
+        className="pointer-events-none absolute left-1/2 -ml-[74px] -top-[16px] w-[84px] h-[44px] overflow-visible z-20"
         aria-hidden="true"
       >
         <defs>
-          <linearGradient id="hoseCasingGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#3a2f2a" />
-            <stop offset="50%" stopColor="#1d1716" />
-            <stop offset="100%" stopColor="#2c221e" />
+          <linearGradient id={`hoseBrass-${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c49a5c" />
+            <stop offset="45%" stopColor="#6b4a26" />
+            <stop offset="100%" stopColor="#26180d" />
           </linearGradient>
-          <linearGradient id="hoseBloodGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#991b1b" />
-            <stop offset="55%" stopColor="#dc2626" />
-            <stop offset="100%" stopColor="#f87171" />
+          <linearGradient id={`hoseWall-${uid}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#3b2f29" />
+            <stop offset="50%" stopColor="#1d1615" />
+            <stop offset="100%" stopColor="#2f241f" />
+          </linearGradient>
+          <linearGradient id={`hoseBlood-${uid}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#7f1d1d" />
+            <stop offset="50%" stopColor="#dc2626" />
+            <stop offset="100%" stopColor="#fca5a5" />
           </linearGradient>
         </defs>
 
-        {/* Left Brass Spigot Mounted into Runnel Side */}
-        <rect x="-2" y="4" width="6" height="9" rx="1.5" fill="#4b3523" stroke="#7c5a38" strokeWidth="0.9" />
-        <line x1="0.5" y1="5" x2="0.5" y2="12" stroke="#b98f55" strokeWidth="0.7" opacity="0.6" />
+        {/* Left Brass Spigot Valve Bolted to Runnel Stone Edge */}
+        <g>
+          {/* Stone mounting flange plate with rivets seated onto slate flank */}
+          <rect x="-1.8" y="4.5" width="7.2" height="13" rx="1.2" fill={`url(#hoseBrass-${uid})`} stroke="#1b1109" strokeWidth="0.8" />
+          <circle cx="1.8" cy="7.2" r="0.9" fill="#1b1109" stroke="#d4af73" strokeWidth="0.35" />
+          <circle cx="1.8" cy="14.8" r="0.9" fill="#1b1109" stroke="#d4af73" strokeWidth="0.35" />
+          {/* Hex compression nut */}
+          <rect x="5.2" y="7" width="4.4" height="8" rx="0.8" fill={`url(#hoseBrass-${uid})`} stroke="#21140b" strokeWidth="0.7" />
+          <line x1="6.2" y1="9.2" x2="8.8" y2="9.2" stroke="#ebd09e" strokeWidth="0.5" opacity="0.55" />
+          {/* Miniature shutoff petcock T-valve handle */}
+          <rect x="6.6" y="3.2" width="1.6" height="4" fill="#6b4a26" stroke="#1e130b" strokeWidth="0.5" />
+          <rect x="3.6" y="1.8" width="7.6" height="2" rx="1" fill="#7c2020" stroke="#c49a5c" strokeWidth="0.55" />
+          {/* Tapered barbed brass spigot nozzle */}
+          <path d="M 9.4 8.2 L 13.5 9 L 13.5 13 L 9.4 13.8 Z" fill={`url(#hoseBrass-${uid})`} stroke="#1b1109" strokeWidth="0.65" />
+        </g>
 
-        {/* Outer Opaque Rubber/Frosted Tube Casing arching into the top of the stopper */}
+        {/* Braided Translucent Siphon Hose Arching into Jar Stopper Center (x=74) */}
         <path
-          d="M 3 8.5 C 24 8.5, 42 2, 61 2 C 70 2, 72 6, 72 16"
+          d="M 12.2 11 C 31 11, 46 3.5, 64 3.5 C 71.5 3.5, 74 7.5, 74 17.5"
           fill="none"
-          stroke="#090707"
-          strokeWidth="8"
+          stroke="#060404"
+          strokeWidth="8.6"
           strokeLinecap="round"
         />
         <path
-          d="M 3 8.5 C 24 8.5, 42 2, 61 2 C 70 2, 72 6, 72 16"
+          d="M 12.2 11 C 31 11, 46 3.5, 64 3.5 C 71.5 3.5, 74 7.5, 74 17.5"
           fill="none"
-          stroke="url(#hoseCasingGrad)"
-          strokeWidth="6"
+          stroke={`url(#hoseWall-${uid})`}
+          strokeWidth="6.2"
           strokeLinecap="round"
         />
-        {/* Inner Cloudy Core */}
+        {/* Subtle braided dark-bronze reinforcement weave */}
         <path
-          d="M 3 8.5 C 24 8.5, 42 2, 61 2 C 70 2, 72 6, 72 16"
+          d="M 13.8 11 C 31 11, 46 3.5, 64 3.5 C 71.5 3.5, 74 7.5, 74 16.5"
           fill="none"
-          stroke={displayBloodOz > 0 ? '#360b0d' : '#141010'}
+          stroke="#6b523e"
+          strokeWidth="5.4"
+          strokeDasharray="1.5 2.7"
+          opacity="0.34"
+        />
+        {/* Translucent inner blood lumen */}
+        <path
+          d="M 12.2 11 C 31 11, 46 3.5, 64 3.5 C 71.5 3.5, 74 7.5, 74 17.5"
+          fill="none"
+          stroke={displayBloodOz > 0 ? '#42080b' : '#120b0c'}
           strokeWidth="3.2"
           strokeLinecap="round"
         />
 
-        {/* Rapid Blood Surge Fill When Overkill Applies */}
+        {/* Active Overkill Arterial Blood Pulse Through Translucent Hose */}
         {isSurging && (
           <>
             <path
-              d="M 3 8.5 C 24 8.5, 42 2, 61 2 C 70 2, 72 6, 72 16"
+              d="M 12.2 11 C 31 11, 46 3.5, 64 3.5 C 71.5 3.5, 74 7.5, 74 17.5"
               fill="none"
-              stroke="url(#hoseBloodGrad)"
-              strokeWidth="3.8"
+              stroke={`url(#hoseBlood-${uid})`}
+              strokeWidth="3.6"
               strokeLinecap="round"
-              strokeDasharray="96"
+              strokeDasharray="108"
               className="animate-hose-rush"
-              style={{ filter: 'drop-shadow(0 0 4px rgba(239,68,68,0.85))' }}
+              style={{ filter: 'drop-shadow(0 0 5px rgba(239,68,68,0.9))' }}
             />
             <path
-              d="M 3 8.5 C 24 8.5, 42 2, 61 2 C 70 2, 72 6, 72 16"
+              d="M 12.2 11 C 31 11, 46 3.5, 64 3.5 C 71.5 3.5, 74 7.5, 74 17.5"
               fill="none"
               stroke="#fecaca"
-              strokeWidth="1.4"
+              strokeWidth="1.25"
               strokeLinecap="round"
-              strokeDasharray="5 19"
+              strokeDasharray="4 14"
               className="animate-hose-flow"
-              opacity="0.85"
+              opacity="0.9"
             />
           </>
         )}
 
-        {/* Subtle Matte Tube Specular Ridge */}
+        {/* Continuous Matte Glass/Rubber Top Specular Ridge */}
         <path
-          d="M 4 6.8 C 24 6.8, 42 0.4, 61 0.4 C 69 0.4, 70.5 4.5, 70.5 13"
+          d="M 13.2 9.1 C 31 9.1, 46 1.8, 64 1.8 C 70.2 1.8, 72.3 5.5, 72.3 14.5"
           fill="none"
           stroke="#ffffff"
-          strokeWidth="0.7"
+          strokeWidth="0.75"
           strokeLinecap="round"
-          opacity="0.16"
+          opacity="0.18"
         />
 
-        {/* Top Brass Intake Collar Seated Flush on Vial Stopper */}
-        <rect x="67.5" y="13.5" width="9" height="4.5" rx="1" fill="#5e4122" stroke="#9c7342" strokeWidth="0.9" />
+        {/* Right Brass Compression Union Collar Seated Flush on Jar Crown */}
+        <g style={isSurging ? { filter: 'drop-shadow(0 0 4px rgba(239,68,68,0.75))' } : undefined}>
+          <rect x="68.5" y="14.5" width="11" height="4.8" rx="1" fill={`url(#hoseBrass-${uid})`} stroke="#1b1109" strokeWidth="0.75" />
+          <line x1="70" y1="16.2" x2="78" y2="16.2" stroke="#f0d39f" strokeWidth="0.55" opacity="0.55" />
+          <circle cx="71" cy="17.2" r="0.65" fill="#1e130b" />
+          <circle cx="77" cy="17.2" r="0.65" fill="#1e130b" />
+        </g>
       </svg>
 
-      {/* Vial Brass Stopper & Narrow Neck */}
-      <div className="relative z-10 flex flex-col items-center">
-        <div style={{ width: dims.stop }} className="w-5 h-2 rounded-t-[2px] bg-gradient-to-b from-[#9c7342] via-[#5e4122] to-[#2e1e10] border border-[#b88c52]/70 shadow-sm" />
-        <div style={{ width: dims.neck }} className="w-4 h-2 bg-[#0d0607] border-x border-[#8c705a]/75 relative overflow-hidden">
-          <div className="absolute inset-y-0 left-[2px] w-[1px] bg-white/30" />
-        </div>
-      </div>
-
-      {/* Main Glass Vial Body */}
+      {/* MAIN ESCALATING ALCHEMICAL VESSEL SVG */}
       <div
-        style={{ width: dims.w, height: dims.h }}
-        className={`relative -mt-[1px] w-[52px] h-[80px] rounded-t-[10px] rounded-b-[18px] bg-[#0a0405]/95 border-[1.5px] overflow-hidden flex flex-col justify-end transition-all duration-200 shadow-[inset_0_3px_12px_rgba(0,0,0,0.96),0_6px_14px_rgba(0,0,0,0.9)] ${
-          isSurging
-            ? 'border-red-300 ring-2 ring-red-500/75 shadow-[0_0_26px_rgba(239,68,68,0.95),inset_0_0_18px_rgba(239,68,68,0.65)] scale-[1.08]'
-            : 'border-[#7c614c]/85'
-        }`}
+        className={`relative transition-transform duration-200 ${isSurging ? 'scale-[1.06]' : 'scale-100'}`}
+        style={{
+          width: spec.w,
+          height: spec.h,
+          filter: isSurging
+            ? 'drop-shadow(0 0 16px rgba(220,38,38,0.78)) drop-shadow(0 8px 14px rgba(0,0,0,0.95))'
+            : 'drop-shadow(0 8px 14px rgba(0,0,0,0.92))',
+        }}
       >
-        {/* Rising Crimson Blood Column */}
-        <div
-          className={`w-full transition-all duration-500 relative ${isSurging ? 'brightness-125' : ''}`}
-          style={{
-            height: `${fillPct}%`,
-            background: 'linear-gradient(to top, #2e0306 0%, #6b0a10 42%, #991b1b 78%, #dc2626 100%)',
-          }}
-        >
-          {fillPct > 0 && (
-            <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-red-300/60 via-rose-100/95 to-red-300/60 shadow-[0_0_6px_rgba(254,202,202,0.85)]" />
+        <svg viewBox={`0 0 ${spec.w} ${spec.h}`} width={spec.w} height={spec.h} className="block overflow-visible">
+          <defs>
+            <clipPath id={`jarInner-${uid}`}>
+              <path d={spec.innerPath} />
+            </clipPath>
+
+            {/* Tarnished Brass Horizontal Cylindrical Gradient */}
+            <linearGradient id={`brassCyl-${uid}`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#1e130a" />
+              <stop offset="22%" stopColor="#7a5731" />
+              <stop offset="44%" stopColor="#c9a063" />
+              <stop offset="68%" stopColor="#5e3f20" />
+              <stop offset="100%" stopColor="#1a1008" />
+            </linearGradient>
+
+            {/* Dark Forged Iron Gradient */}
+            <linearGradient id={`ironMetal-${uid}`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#0d0a09" />
+              <stop offset="35%" stopColor="#3a2f2a" />
+              <stop offset="65%" stopColor="#201916" />
+              <stop offset="100%" stopColor="#0a0707" />
+            </linearGradient>
+
+            {/* Smoked Obsidian Blown-Glass Cavity */}
+            <radialGradient id={`glassBg-${uid}`} cx="42%" cy="46%" r="65%">
+              <stop offset="0%" stopColor={displayBloodOz > 0 ? '#1c0608' : '#140c0c'} />
+              <stop offset="65%" stopColor="#090304" />
+              <stop offset="100%" stopColor="#040102" />
+            </radialGradient>
+
+            {/* Deep Arterial Crimson Blood Vertical Gradient */}
+            <linearGradient id={`bloodVert-${uid}`} x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stopColor="#1b0304" />
+              <stop offset="26%" stopColor="#4a070b" />
+              <stop offset="62%" stopColor="#7a0f15" />
+              <stop offset="88%" stopColor="#a81820" />
+              <stop offset="100%" stopColor="#cc242c" />
+            </linearGradient>
+
+            {/* Cylindrical Liquid Volumetric Shading (dark edges + luminous arterial center) */}
+            <linearGradient id={`bloodCylShade-${uid}`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#080101" stopOpacity="0.68" />
+              <stop offset="24%" stopColor="#ef4444" stopOpacity="0.14" />
+              <stop offset="52%" stopColor="#000000" stopOpacity="0.04" />
+              <stop offset="78%" stopColor="#000000" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#070101" stopOpacity="0.72" />
+            </linearGradient>
+
+            {/* Blown-Glass Outer Contour Rim Stroke */}
+            <linearGradient id={`glassRim-${uid}`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={isSurging ? '#fca5a5' : '#a88c72'} stopOpacity="0.88" />
+              <stop offset="50%" stopColor={isSurging ? '#dc2626' : '#5e4b3c'} stopOpacity="0.78" />
+              <stop offset="100%" stopColor={isSurging ? '#ef4444' : '#856b54'} stopOpacity="0.86" />
+            </linearGradient>
+
+            {/* Left Curved Blown-Glass Specular Glint */}
+            <linearGradient id={`glintGrad-${uid}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#fff7ed" stopOpacity="0.44" />
+              <stop offset="48%" stopColor="#ffffff" stopOpacity="0.14" />
+              <stop offset="100%" stopColor="#fff7ed" stopOpacity="0.22" />
+            </linearGradient>
+          </defs>
+
+          {/* 1. OUTER SMOKED GLASS WALL BASE */}
+          <path d={spec.outerPath} fill="#060203" />
+          <path d={spec.innerPath} fill={`url(#glassBg-${uid})`} />
+
+          {/* 2. CLIPPED INTERNAL BLOOD COLUMN + DUAL-LAYER WAVY MENISCUS + BUBBLES */}
+          <g clipPath={`url(#jarInner-${uid})`}>
+            {/* Subtle backlit arterial ambient haze inside empty headspace when blood present */}
+            {fillPct > 0 && (
+              <rect
+                x="0"
+                y={Math.max(0, surfaceY - 22)}
+                width={spec.w}
+                height="24"
+                fill="#7f1d1d"
+                opacity={isSurging ? 0.34 : 0.14}
+                style={{ transition: 'y 550ms cubic-bezier(0.2, 0.8, 0.2, 1)' }}
+              />
+            )}
+
+            {/* Overkill Active Pour Stream Falling From Neck Into Vessel */}
+            {isSurging && (
+              <g>
+                <line
+                  x1={spec.cx}
+                  y1="11"
+                  x2={spec.cx}
+                  y2={Math.min(spec.fillBottomY, surfaceY + 3)}
+                  stroke="#ef4444"
+                  strokeWidth="2"
+                  strokeDasharray="9 4"
+                  strokeLinecap="round"
+                  opacity="0.82"
+                  style={{
+                    animation: 'jarStreamPulse 0.32s linear infinite',
+                    filter: 'drop-shadow(0 0 4px rgba(248,113,113,0.9))',
+                  }}
+                />
+                {fillPct > 0 && (
+                  <ellipse
+                    cx={spec.cx}
+                    cy={surfaceY + 0.5}
+                    rx="6.5"
+                    ry="1.8"
+                    fill="#fecdd3"
+                    opacity="0.65"
+                  />
+                )}
+              </g>
+            )}
+
+            {/* Rising Crimson Blood Body (smooth GPU transform to meniscus surfaceY) */}
+            <g
+              style={{
+                transform: `translate3d(0, ${surfaceY}px, 0)`,
+                transition: 'transform 560ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+              }}
+            >
+              {/* Back Meniscus Wave Layer */}
+              {fillPct > 0 && (
+                <g style={{ animation: 'jarWaveScrollB 3.6s linear infinite' }}>
+                  <path d={waveBackPath} fill="#5e0b10" opacity="0.82" />
+                </g>
+              )}
+
+              {/* Solid Deep Crimson Blood Body Below Meniscus */}
+              <rect
+                x="0"
+                y="1"
+                width={spec.w}
+                height={Math.max(0, liquidHeight + 24)}
+                fill={`url(#bloodVert-${uid})`}
+              />
+
+              {/* Front Viscous Meniscus Wave + Specular Crimson Rim */}
+              {fillPct > 0 && (
+                <g style={{ animation: 'jarWaveScrollA 2.5s linear infinite' }}>
+                  <path d={waveFrontPath} fill="#a81820" />
+                  <path
+                    d={waveFrontCrest}
+                    fill="none"
+                    stroke={isSurging ? '#fecdd3' : '#fda4af'}
+                    strokeWidth={isSurging ? '1.5' : '1.15'}
+                    opacity="0.88"
+                  />
+                </g>
+              )}
+
+              {/* Cylindrical 3D Liquid Shading */}
+              <rect
+                x="0"
+                y="-4"
+                width={spec.w}
+                height={Math.max(0, liquidHeight + 28)}
+                fill={`url(#bloodCylShade-${uid})`}
+              />
+            </g>
+
+            {/* Rising Viscous Micro-Bubbles Clipped Inside Liquid Level */}
+            {fillPct > 14 && (
+              <g>
+                {spec.bubbles.map((b, idx) => (
+                  <circle
+                    key={idx}
+                    cx={b.cx}
+                    cy={b.cy}
+                    r={b.r}
+                    fill="#fda4af"
+                    fillOpacity="0.28"
+                    stroke="#ffe4e6"
+                    strokeWidth="0.45"
+                    strokeOpacity="0.55"
+                    style={{
+                      animation: `${b.anim} ${b.dur} ease-in ${b.delay} infinite`,
+                    }}
+                  />
+                ))}
+              </g>
+            )}
+
+            {/* Tier 3 Molded Vertical Alchemical Glass Fluting Ribs */}
+            {spec.id === 3 && (
+              <g opacity="0.12">
+                <line x1="20" y1="35" x2="21.5" y2="112" stroke="#fff7ed" strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="27.5" y1="32" x2="28.5" y2="115" stroke="#fff7ed" strokeWidth="1" strokeLinecap="round" />
+                <line x1="56.5" y1="32" x2="55.5" y2="115" stroke="#fff7ed" strokeWidth="1" strokeLinecap="round" />
+                <line x1="64" y1="35" x2="62.5" y2="112" stroke="#fff7ed" strokeWidth="1.6" strokeLinecap="round" />
+              </g>
+            )}
+
+            {/* Etched Graduation Calibration Marks on Right Glass Curve */}
+            <g opacity="0.52">
+              {spec.id >= 2 && (
+                <line
+                  x1={spec.ticks[0].x2}
+                  y1={spec.ticks[0].y}
+                  x2={spec.ticks[spec.ticks.length - 1].x2}
+                  y2={spec.ticks[spec.ticks.length - 1].y}
+                  stroke="#cbb092"
+                  strokeWidth="0.5"
+                  opacity="0.45"
+                />
+              )}
+              {spec.ticks.map((t, i) => (
+                <line
+                  key={i}
+                  x1={t.x1}
+                  y1={t.y}
+                  x2={t.x2}
+                  y2={t.y}
+                  stroke={t.major ? '#dec4a4' : '#b89b7e'}
+                  strokeWidth={t.major ? '0.95' : '0.65'}
+                  strokeLinecap="round"
+                />
+              ))}
+            </g>
+
+            {/* Curved Blown-Glass Specular Highlights & Thick Bottom Lens Pool */}
+            <path d={spec.leftShoulderGlint} fill="none" stroke="#fff7ed" strokeWidth="1.6" strokeLinecap="round" opacity="0.34" />
+            <path d={spec.leftGlintPath} fill="none" stroke={`url(#glintGrad-${uid})`} strokeWidth="2.1" strokeLinecap="round" />
+            <path d={spec.rightGlintPath} fill="none" stroke="#ffffff" strokeWidth="0.9" strokeLinecap="round" opacity="0.16" />
+            <path d={spec.bottomLensPath} fill="none" stroke="#e5c8a8" strokeWidth="1.3" strokeLinecap="round" opacity="0.22" />
+          </g>
+
+          {/* 3. OUTER BLOWN-GLASS WALL CONTOUR STROKE */}
+          <path d={spec.outerPath} fill="none" stroke={`url(#glassRim-${uid})`} strokeWidth="1.35" />
+          <path d={spec.innerPath} fill="none" stroke="#000000" strokeWidth="0.65" opacity="0.65" />
+
+          {/* 4. TIER-SPECIFIC STOPPER CROWN, BRASS BANDS, IRON CAGE & CRADLE BASE */}
+          {spec.id === 1 && (
+            <g>
+              {/* Tier 1: Wax-dipped dark cork & modest brass neck ring */}
+              <path d="M 22.5 5.5 L 37.5 5.5 L 36.2 11 L 23.8 11 Z" fill="#3b2517" stroke="#1a1009" strokeWidth="0.7" />
+              <rect x="20.5" y="2.2" width="19" height="4.2" rx="1.2" fill={`url(#brassCyl-${uid})`} stroke="#1a1008" strokeWidth="0.7" />
+              <line x1="22" y1="3.6" x2="38" y2="3.6" stroke="#f0d39f" strokeWidth="0.5" opacity="0.5" />
+              {/* Subtle crimson wax seal drip down neck lip */}
+              <path d="M 22 6.4 Q 24 11, 25.4 8.5 Q 26.8 6.4, 28.5 7.4" fill="#6b0f12" stroke="#991b1b" strokeWidth="0.45" />
+              {/* Compact forged brass & iron saucer cradle */}
+              <path
+                d="M 14 82.5 L 46 82.5 L 44 89.5 C 43.2 91.5, 41 92.5, 38 92.5 L 22 92.5 C 19 92.5, 16.8 91.5, 16 89.5 Z"
+                fill={`url(#brassCyl-${uid})`}
+                stroke="#180f08"
+                strokeWidth="0.85"
+              />
+              <line x1="16" y1="84.5" x2="44" y2="84.5" stroke="#e8c88f" strokeWidth="0.5" opacity="0.42" />
+              <text x="30" y="90.2" textAnchor="middle" fill="#e8c88f" opacity="0.55" fontSize="5.2" fontFamily="Cinzel, serif" fontWeight="700">
+                I
+              </text>
+            </g>
           )}
-        </div>
 
-        {/* Etched Graduation Ticks */}
-        <div className="pointer-events-none absolute inset-y-2.5 right-1 flex flex-col justify-between items-end opacity-45 z-10">
-            {Array.from({ length: dims.ticks }).map((_, i) => (
-              <span key={i} className={`h-[1px] bg-[#d4b89c] ${i % 2 === 0 ? 'w-2' : 'w-1.5'}`} />
-            ))}
-        </div>
+          {spec.id === 2 && (
+            <g>
+              {/* Tier 2: Flanged heavy brass stopper with side pressure thumbscrew */}
+              <rect x="20" y="2" width="24" height="5.2" rx="1.2" fill={`url(#brassCyl-${uid})`} stroke="#1a1008" strokeWidth="0.75" />
+              <rect x="22" y="7" width="20" height="4" rx="0.6" fill={`url(#brassCyl-${uid})`} stroke="#1a1008" strokeWidth="0.7" />
+              <line x1="21.5" y1="3.6" x2="42.5" y2="3.6" stroke="#f2d6a2" strokeWidth="0.55" opacity="0.52" />
+              {/* Side brass thumbscrew */}
+              <rect x="44" y="4.5" width="3.5" height="2" fill="#8f6a38" stroke="#1a1008" strokeWidth="0.5" />
+              <ellipse cx="48.2" cy="5.5" rx="1.2" ry="2.4" fill="#c49a5c" stroke="#1a1008" strokeWidth="0.55" />
 
-        {/* Curved Glass Specular Reflections */}
-        <div className="pointer-events-none absolute top-2 bottom-3 left-[4px] w-[2px] rounded-full bg-gradient-to-b from-white/40 via-white/15 to-white/5 z-20" />
-        <div className="pointer-events-none absolute top-3 bottom-4 right-[4px] w-[1px] rounded-full bg-white/15 z-20" />
+              {/* Upper Riveted Tarnished-Brass Compression Band */}
+              <rect x="5.5" y="33" width="53" height="5.2" rx="1.2" fill={`url(#brassCyl-${uid})`} stroke="#180f08" strokeWidth="0.8" />
+              <line x1="7" y1="34.5" x2="57" y2="34.5" stroke="#f0d39f" strokeWidth="0.5" opacity="0.45" />
+              {[11.5, 32, 52.5].map((rx) => (
+                <circle key={rx} cx={rx} cy="35.6" r="1.05" fill="#23160c" stroke="#e2bf82" strokeWidth="0.4" />
+              ))}
 
-        {/* Centered OZ Readout Inside Vial */}
-        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center leading-none">
+              {/* Lower Riveted Tarnished-Brass Compression Band */}
+              <rect x="5.5" y="102.5" width="53" height="5.2" rx="1.2" fill={`url(#brassCyl-${uid})`} stroke="#180f08" strokeWidth="0.8" />
+              <line x1="7" y1="104" x2="57" y2="104" stroke="#f0d39f" strokeWidth="0.5" opacity="0.45" />
+              {[11.5, 32, 52.5].map((rx) => (
+                <circle key={rx} cx={rx} cy="105.1" r="1.05" fill="#23160c" stroke="#e2bf82" strokeWidth="0.4" />
+              ))}
+
+              {/* Stepped Bronze Pedestal Base */}
+              <path
+                d="M 12.5 117 L 51.5 117 L 53 121.5 L 50.5 127.5 C 49.5 129, 47.5 129.5, 45 129.5 L 19 129.5 C 16.5 129.5, 14.5 129, 13.5 127.5 L 11 121.5 Z"
+                fill={`url(#brassCyl-${uid})`}
+                stroke="#180f08"
+                strokeWidth="0.85"
+              />
+              <line x1="13" y1="121.5" x2="51" y2="121.5" stroke="#e8c88f" strokeWidth="0.5" opacity="0.42" />
+              <text x="32" y="127.2" textAnchor="middle" fill="#e8c88f" opacity="0.58" fontSize="5.4" fontFamily="Cinzel, serif" fontWeight="700">
+                II
+              </text>
+            </g>
+          )}
+
+          {spec.id === 3 && (
+            <g>
+              {/* Tier 3: Ornate Double-Valve Brass Manifold Crown */}
+              <rect x="26" y="2" width="32" height="5.5" rx="1.4" fill={`url(#brassCyl-${uid})`} stroke="#180f08" strokeWidth="0.8" />
+              <rect x="28.5" y="7.2" width="27" height="4.2" rx="0.8" fill={`url(#brassCyl-${uid})`} stroke="#180f08" strokeWidth="0.75" />
+              <line x1="27.5" y1="3.7" x2="56.5" y2="3.7" stroke="#f2d6a2" strokeWidth="0.6" opacity="0.55" />
+              {/* Dual flanking brass pressure bleed-cocks */}
+              <rect x="21.5" y="4.5" width="4.5" height="2.2" fill="#7a5731" stroke="#180f08" strokeWidth="0.55" />
+              <circle cx="20.8" cy="5.6" r="1.8" fill="#6b0f12" stroke="#c49a5c" strokeWidth="0.55" />
+              <rect x="58" y="4.5" width="4.5" height="2.2" fill="#7a5731" stroke="#180f08" strokeWidth="0.55" />
+              <circle cx="63.2" cy="5.6" r="1.8" fill="#6b0f12" stroke="#c49a5c" strokeWidth="0.55" />
+
+              {/* Slender Forged Dark-Iron Protective Vertical Cage Straps (hugging outer flanks) */}
+              <path
+                d="M 27.5 19.5 C 18 23.5, 13.5 29, 13.8 39 L 15.8 111.5 C 16 117.5, 18.5 121.5, 22.5 124"
+                fill="none"
+                stroke={`url(#ironMetal-${uid})`}
+                strokeWidth="3.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 27.5 19.5 C 18 23.5, 13.5 29, 13.8 39 L 15.8 111.5 C 16 117.5, 18.5 121.5, 22.5 124"
+                fill="none"
+                stroke="#6b5645"
+                strokeWidth="0.6"
+                opacity="0.5"
+              />
+              <path
+                d="M 56.5 19.5 C 66 23.5, 70.5 29, 70.2 39 L 68.2 111.5 C 68 117.5, 65.5 121.5, 61.5 124"
+                fill="none"
+                stroke={`url(#ironMetal-${uid})`}
+                strokeWidth="3.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 56.5 19.5 C 66 23.5, 70.5 29, 70.2 39 L 68.2 111.5 C 68 117.5, 65.5 121.5, 61.5 124"
+                fill="none"
+                stroke="#6b5645"
+                strokeWidth="0.6"
+                opacity="0.5"
+              />
+
+              {/* Upper Riveted Brass & Iron Pressure Hoop */}
+              <rect x="4.8" y="38.2" width="74.4" height="5.4" rx="1.4" fill={`url(#brassCyl-${uid})`} stroke="#140c07" strokeWidth="0.85" />
+              <line x1="6.5" y1="39.8" x2="77.5" y2="39.8" stroke="#f0d39f" strokeWidth="0.55" opacity="0.48" />
+              {/* Center forged diamond clasp stud */}
+              <polygon points="42,37.4 45.2,40.9 42,44.4 38.8,40.9" fill="#2b1b0f" stroke="#d4af73" strokeWidth="0.65" />
+              <circle cx="42" cy="40.9" r="1" fill="#b91c1c" />
+              {[14.2, 69.8].map((rx) => (
+                <circle key={rx} cx={rx} cy="40.9" r="1.2" fill="#1c120a" stroke="#e2bf82" strokeWidth="0.45" />
+              ))}
+
+              {/* Lower Riveted Brass & Iron Pressure Hoop */}
+              <rect x="7" y="108.5" width="70" height="5.4" rx="1.4" fill={`url(#brassCyl-${uid})`} stroke="#140c07" strokeWidth="0.85" />
+              <line x1="8.5" y1="110.1" x2="75.5" y2="110.1" stroke="#f0d39f" strokeWidth="0.55" opacity="0.45" />
+              <polygon points="42,107.7 45,111.2 42,114.7 39,111.2" fill="#2b1b0f" stroke="#d4af73" strokeWidth="0.65" />
+              {[16, 68].map((rx) => (
+                <circle key={rx} cx={rx} cy="111.2" r="1.2" fill="#1c120a" stroke="#e2bf82" strokeWidth="0.45" />
+              ))}
+
+              {/* Heavy Clawed Iron-and-Brass Reliquary Cradle Base */}
+              <path
+                d="M 14.5 121.5 L 69.5 121.5 L 72.5 126 L 69 133 C 67.8 134.8, 65.5 135.5, 62 135.5 L 22 135.5 C 18.5 135.5, 16.2 134.8, 15 133 L 11.5 126 Z"
+                fill={`url(#brassCyl-${uid})`}
+                stroke="#140c07"
+                strokeWidth="0.9"
+              />
+              {/* Side forged iron cradle claws */}
+              <path d="M 13.5 122 L 10.5 126.5 L 14.5 131.5 L 18 126.5 Z" fill={`url(#ironMetal-${uid})`} stroke="#7c5e3f" strokeWidth="0.5" />
+              <path d="M 70.5 122 L 73.5 126.5 L 69.5 131.5 L 66 126.5 Z" fill={`url(#ironMetal-${uid})`} stroke="#7c5e3f" strokeWidth="0.5" />
+              <line x1="15" y1="125.8" x2="69" y2="125.8" stroke="#e8c88f" strokeWidth="0.55" opacity="0.42" />
+              <text x="42" y="132.5" textAnchor="middle" fill="#e8c88f" opacity="0.62" fontSize="5.6" fontFamily="Cinzel, serif" fontWeight="700">
+                III
+              </text>
+            </g>
+          )}
+        </svg>
+
+        {/* LIT GLOWING CRIMSON / BONE READOUT FLOATING DIRECTLY OVER GLASS (Zero UI Chrome!) */}
+        <div
+          style={{ top: `${spec.readoutTopPct}%` }}
+          className="pointer-events-none absolute inset-x-0 -translate-y-1/2 z-20 flex flex-col items-center justify-center leading-none"
+        >
           <span
-            className={`font-['Cinzel',_serif] text-[15px] font-black tracking-wide drop-shadow-[0_1px_4px_rgba(0,0,0,1)] transition-all duration-150 ${
-              isSurging ? 'text-white scale-110' : 'text-[#fde2e2] scale-100'
-            }`}
+            className={`font-['Cinzel',_serif] font-black tracking-wide transition-all duration-150 ${
+              spec.id === 3 ? 'text-[19px]' : spec.id === 2 ? 'text-[17px]' : 'text-[15.5px]'
+            } ${isSurging ? 'text-white scale-110' : 'text-[#fce7e7] scale-100'}`}
+            style={{
+              textShadow: isSurging
+                ? '0 0 12px rgba(248,113,113,1), 0 0 4px rgba(220,38,38,1), 0 2px 4px rgba(0,0,0,1)'
+                : '0 0 8px rgba(185,28,28,0.68), 0 1px 4px rgba(0,0,0,1), 0 0 2px rgba(0,0,0,1)',
+            }}
           >
             {shownOz}
           </span>
-          <span className="font-mono text-[7.5px] font-bold uppercase tracking-[0.14em] text-red-200/85 mt-0.5 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">
-            oz
-          </span>
+          <div className="flex items-center gap-1 mt-0.5">
+            <span className="w-1.5 h-[1px] bg-gradient-to-r from-transparent to-[#f87171]/60" />
+            <span
+              className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-[#fca5a5]"
+              style={{
+                textShadow: '0 0 6px rgba(220,38,38,0.85), 0 1px 3px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,0.98)',
+              }}
+            >
+              oz
+            </span>
+            <span className="w-1.5 h-[1px] bg-gradient-to-l from-transparent to-[#f87171]/60" />
+          </div>
         </div>
       </div>
 
-      {/* Brass Cradle Base */}
-      <div style={{ width: dims.base }} className="relative z-10 -mt-1 w-9 h-2 rounded-b-[4px] bg-gradient-to-b from-[#4f3720] to-[#1e130b] border border-[#7c5a38]/75 shadow-[0_3px_6px_rgba(0,0,0,0.9)]" />
-
+      {/* Floating Overkill Increment Telemetry */}
       {delta !== null && (
-        <span className="pointer-events-none absolute -top-2 -right-2 z-30 text-[10px] font-mono font-black text-red-200 drop-shadow-[0_1px_4px_rgba(0,0,0,1)] animate-telemetry-pop whitespace-nowrap">
+        <span
+          className="pointer-events-none absolute -top-2.5 -right-2 z-30 text-[10.5px] font-mono font-black text-[#fecaca] animate-telemetry-pop whitespace-nowrap"
+          style={{ textShadow: '0 0 8px rgba(239,68,68,0.95), 0 1px 4px rgba(0,0,0,1)' }}
+        >
           +{delta} oz
         </span>
       )}
