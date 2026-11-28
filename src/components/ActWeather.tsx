@@ -87,19 +87,19 @@ const MIST_ACT_1: Layer[] = [
   {
     cls: 'absolute -inset-x-[14%] bottom-[-8%] h-[80%]',
     bg:
-      'radial-gradient(circle closest-side at 24% 54%, rgba(214,210,200,0.42) 0%, rgba(168,164,156,0.2) 48%, transparent 100%), radial-gradient(circle closest-side at 54% 40%, rgba(222,216,204,0.38) 0%, rgba(172,168,158,0.18) 48%, transparent 100%), radial-gradient(circle closest-side at 82% 56%, rgba(208,202,190,0.36) 0%, rgba(150,146,138,0.16) 50%, transparent 100%)',
+      'radial-gradient(circle closest-side at 24% 54%, rgba(214,210,200,0.29) 0%, rgba(168,164,156,0.14) 48%, transparent 100%), radial-gradient(circle closest-side at 54% 40%, rgba(222,216,204,0.27) 0%, rgba(172,168,158,0.13) 48%, transparent 100%), radial-gradient(circle closest-side at 82% 56%, rgba(208,202,190,0.25) 0%, rgba(150,146,138,0.11) 50%, transparent 100%)',
     anim: 'weatherMistDriftA 34s ease-in-out infinite',
   },
   {
     cls: 'absolute -inset-x-[14%] bottom-[2%] h-[68%]',
     bg:
-      'radial-gradient(circle closest-side at 40% 50%, rgba(210,206,196,0.34) 0%, rgba(156,152,144,0.15) 50%, transparent 100%), radial-gradient(circle closest-side at 78% 44%, rgba(204,200,190,0.3) 0%, rgba(148,144,136,0.13) 50%, transparent 100%)',
+      'radial-gradient(circle closest-side at 40% 50%, rgba(210,206,196,0.24) 0%, rgba(156,152,144,0.11) 50%, transparent 100%), radial-gradient(circle closest-side at 78% 44%, rgba(204,200,190,0.21) 0%, rgba(148,144,136,0.09) 50%, transparent 100%)',
     anim: 'weatherMistDriftB 26s ease-in-out -7s infinite',
   },
   {
     cls: 'absolute -inset-x-[14%] top-[2%] h-[56%]',
     bg:
-      'radial-gradient(circle closest-side at 30% 50%, rgba(204,200,190,0.2) 0%, rgba(144,140,132,0.09) 52%, transparent 100%), radial-gradient(circle closest-side at 74% 46%, rgba(198,194,184,0.17) 0%, rgba(140,136,128,0.08) 52%, transparent 100%)',
+      'radial-gradient(circle closest-side at 30% 50%, rgba(204,200,190,0.14) 0%, rgba(144,140,132,0.06) 52%, transparent 100%), radial-gradient(circle closest-side at 74% 46%, rgba(198,194,184,0.12) 0%, rgba(140,136,128,0.06) 52%, transparent 100%)',
     anim: 'weatherMistDriftB 46s ease-in-out -15s infinite',
   },
 ];
