@@ -183,6 +183,7 @@ export const ITEM_ART_FILES: Partial<Record<ItemId, string>> = {
   bronze_crucifix: 'bronzecrucifix.png',
   loaded_die: 'loadeddie.png',
   bronze_acorn: 'bronzeacorn.png',
+  bone_lords_horn: 'bonelordhorn.png',
 };
 
 const ITEM_ART_BY_SLUG: Record<string, string> = {
@@ -193,6 +194,7 @@ const ITEM_ART_BY_SLUG: Record<string, string> = {
   bronzecrucifix: 'bronzecrucifix.png',
   loadeddie: 'loadeddie.png',
   bronzeacorn: 'bronzeacorn.png',
+  bonelordshorn: 'bonelordhorn.png',
 };
 
 export const getItemArtUrl = (
@@ -961,7 +963,6 @@ export const CARD_DISPLAY_NAMES: Record<string, string> = {
   'Black Goat': 'Judas',
   'Bloodhound': 'Bully',
   'Bullfrog': 'Cane Toad',
-  'Cat': 'Anubis',
   'Cockroach': 'Gokiburi',
   'Coyote': 'Ganywa',
   'Demon Elk': 'Wendigo',

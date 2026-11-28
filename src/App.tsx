@@ -11,6 +11,7 @@ import { isCardNamed, getStageBgClass, applyBegottenStamp, buildStrikeTargets, i
 export { getStageBgClass };
 import CardView, { type RenderCardOptions } from './components/CardView';
 import ActWeather from './components/ActWeather';
+import ActCutscene from './components/ActCutscene';
 import DuelTelemetryBanner, { BloodBankVessel, BoneOssuaryPlaque } from './components/DuelTelemetryBanner';
 import BloodRunnelGauge from './components/BloodRunnelGauge';
 import {
@@ -189,6 +190,7 @@ export default function App() {
   const [screen, setScreenRaw] = useState<ScreenState>('SPLASH');
   const [logs, setLogs] = useState<string[]>(['> System initialized. Awaiting lineage selection...']);
   const [showPauseMenu, setShowPauseMenu] = useState<boolean>(false);
+  const [actCutscene, setActCutscene] = useState<number | null>(null);
   const [archive, setArchive] = useState<PersistentArchive>(() => loadArchive());
   const isForcedDevBossRef = useRef<boolean>(false);
   const [devConfirmWipeArchive, setDevConfirmWipeArchive] = useState<boolean>(false);
@@ -353,6 +355,7 @@ export default function App() {
   const [level, setLevel] = useState<number>(1);
   const [currentStageName, setCurrentStageName] = useState<string>('Forgotten Graveyard');
   const [ouroborosBuffs, setOuroborosBuffs] = useState<number>(0);
+  const [catSacrifices, setCatSacrifices] = useState<number>(0);
   const [startingBones, setStartingBones] = useState<number>(0);
   const startingBonesRef = useRef<number>(0);
   useEffect(() => {
@@ -1011,6 +1014,7 @@ export default function App() {
     currentStageName: string;
     startingBones?: number;
     ouroborosBuffs?: number;
+    catSacrifices?: number;
     runStats?: RunStats;
     standardBossOrder?: ('Zealot' | 'The Begotten' | 'The Weaver')[];
     hasDefeatedWeaver?: boolean;
@@ -1074,6 +1078,7 @@ export default function App() {
           currentStageName,
           startingBones: startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones,
           ouroborosBuffs,
+          catSacrifices,
           runStats: runStatsRef.current,
           standardBossOrder: (window as any).__standardBossOrder,
           hasDefeatedWeaver,
@@ -1101,7 +1106,7 @@ export default function App() {
         console.warn("Auto-save failed:", e);
       }
     }
-  }, [masterDeck, items, totalOverkillDamage, highestOverkill, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, actMap, runSeed, activeVows, isCampfireSafe, flockUsedOptions, flockDisappearingRelics, flockBoneDrain, flockScaleDebtBattles, flockExtraSquirrel, flockNoSquirrelTurns, flockStartingScaleBonus, flockHandPenalty, flockSquirrelHealthBonus, screen]);
+  }, [masterDeck, items, totalOverkillDamage, highestOverkill, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, catSacrifices, runStats, permanentScaleDebuff, consecutiveOneTurnWins, otkCooldown, actMap, runSeed, activeVows, isCampfireSafe, flockUsedOptions, flockDisappearingRelics, flockBoneDrain, flockScaleDebtBattles, flockExtraSquirrel, flockNoSquirrelTurns, flockStartingScaleBonus, flockHandPenalty, flockSquirrelHealthBonus, screen]);
 
   // --- Item Restock & Blood Bank Pricing ---
   const ITEM_COSTS: Record<ItemId, number> = {
@@ -1633,6 +1638,7 @@ export default function App() {
     setShowOverkill(false);
     setBones(startingBones);
     setStartingBones(0);
+    setCatSacrifices(0);
     startingBonesRef.current = 0;
     setHand([]);
     setDeck([]);
@@ -2035,7 +2041,50 @@ export default function App() {
         }
 
 
-          if (existingCard.sigils.includes('Many Lives')) {
+          let catAscended = false;
+          if (isCardNamed(existingCard.name, 'Cat')) {
+            const CAT_ASCENSION_SACRIFICES = 9;
+            const nextCatSacs = catSacrifices + 1;
+            setCatSacrifices(nextCatSacs);
+            if (nextCatSacs >= CAT_ASCENSION_SACRIFICES && ALL_CARD_LOOKUP['Anubis']) {
+              catAscended = true;
+              const catBase = ALL_CARD_LOOKUP['Cat'];
+              const anubisBase = ALL_CARD_LOOKUP['Anubis'];
+              const buildAnubis = (src: CardDef): CardDef => {
+                const evolved = cloneCard(anubisBase, ouroborosBuffs);
+                evolved.id = src.id;
+                if ((src as any).masterId) (evolved as any).masterId = (src as any).masterId;
+                evolved.attack = (anubisBase.attack || 0) + Math.max(0, (src.attack || 0) - (catBase?.attack || 0));
+                evolved.health = (anubisBase.health || 0) + Math.max(0, (src.health || 0) - (catBase?.health || 0));
+                if (src.isGoobertClone) evolved.isGoobertClone = true;
+                if (src.isMycologistCombined) evolved.isMycologistCombined = true;
+                evolved.sigils = Array.from(new Set([...(anubisBase.sigils || []), ...(src.sigils || []), 'Many Lives']));
+                (evolved as any).hasEvolved = true;
+                return evolved;
+              };
+              const targetMasterId = (existingCard as any).masterId || existingCard.id;
+              setMasterDeck(prev => prev.map(c =>
+                (c.id === targetMasterId || ((c as any).masterId && (c as any).masterId === targetMasterId)) && isCardNamed(c.name, 'Cat')
+                  ? buildAnubis(c)
+                  : c
+              ));
+              if (existingCard.sigils.includes('Many Lives')) {
+                setSacrificedUnkillableCardIds(prev => [...prev, existingCard.id || existingCard.name || '']);
+                setPlayerBoard(prev => {
+                  const copy = [...prev];
+                  const cur = copy[laneIndex];
+                  if (!cur) return prev;
+                  copy[laneIndex] = applyPlayerTotem(buildAnubis(cur), activeTotem);
+                  return copy;
+                });
+                spawnSigilBadge(true, laneIndex, 'ANUBIS', 'gold');
+                addLog("Cat's nine lives are spent—it ascends into Anubis and retains Many Lives!");
+                return;
+              }
+            }
+          }
+
+          if (existingCard.sigils.includes('Many Lives') && !catAscended) {
             setSacrificedUnkillableCardIds(prev => [...prev, existingCard.id || existingCard.name || '']);
             if (isCardNamed(existingCard.name, 'Experiment')) {
               const nextTransformed = !existingCard.isTransformed;
@@ -2281,6 +2330,7 @@ export default function App() {
     backupState,
     sacrificedUnkillableCardIds,
     ouroborosBuffs,
+    catSacrifices,
     masterDeck,
     activeTotem,
     morselStats,
@@ -3108,7 +3158,7 @@ export default function App() {
   };
 
   const renderActWeather = (posClass: string, keyPrefix: string) => (
-    <ActWeather act={actMap?.act ?? displayStage} posClass={posClass} keyPrefix={keyPrefix} />
+    <ActWeather act={actMap?.act ?? displayStage} posClass={posClass} keyPrefix={keyPrefix} boss={keyPrefix === 'duel' && isBossMatch} />
   );
 
 
@@ -5303,6 +5353,9 @@ export default function App() {
       if (data.ouroborosBuffs !== undefined) {
         setOuroborosBuffs(data.ouroborosBuffs);
       }
+      if (data.catSacrifices !== undefined) {
+        setCatSacrifices(data.catSacrifices);
+      }
       const restoredStats: RunStats = {
         bossesDefeated: data.runStats?.bossesDefeated ?? inferredBossesDefeated,
         scaleDamageDealt: data.runStats?.scaleDamageDealt ?? 0,
@@ -6074,6 +6127,7 @@ export default function App() {
     triggerSfx('draw');
     setSelectedLineage(lineageId);
     setStartingBones(0);
+    setCatSacrifices(0);
     startingBonesRef.current = 0;
     setBones(0);
     let starters: string[] = [];
@@ -6286,6 +6340,7 @@ export default function App() {
     preDuelMapRef.current = null;
     actMapRef.current = firstActMap;
     setCurrentStageName(firstActMap.actTitle);
+    setActCutscene(1);
     setScreen('EVENT_CROSSROADS');
   };
 
@@ -6328,6 +6383,7 @@ export default function App() {
       setCurrentStageName(nextMap.actTitle);
       triggerSfx('draw');
       addLog(`Unrolled parchment for ${nextMap.actSubtitle}: ${nextMap.actTitle}.`);
+      setActCutscene(nextAct);
       setScreen('EVENT_CROSSROADS');
       return;
     }
@@ -7496,6 +7552,7 @@ export default function App() {
     setCurrentStageName(nextMap.actTitle);
     triggerSfx('draw');
     addLog(`[DEV] Jumped to Act ${targetAct}: ${nextMap.actTitle}.`);
+    setActCutscene(targetAct);
     setScreen('EVENT_CROSSROADS');
   };
 
@@ -7816,6 +7873,7 @@ export default function App() {
         />
       )}
 
+      {actCutscene !== null && <ActCutscene key={actCutscene} act={actCutscene} onDone={() => setActCutscene(null)} />}
       {showPauseMenu && (() => {
         const knob = 'radial-gradient(circle at 46% 42%, #d4af6a 0 1.8px, #876128 2.4px, #36220f 4.4px, #110904 5.4px, transparent 6.5px)';
         const pausePanelStyle: React.CSSProperties = {
@@ -7932,39 +7990,23 @@ export default function App() {
 
                   {/* Compendium & Lifetime Ledger */}
                   <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => {
+                    <RitualSlateButton onClick={() => {
                         setShowPauseMenu(false);
                         setArchiveModalTab('COMPENDIUM');
-                      }}
-                      className="w-full py-2 bg-[#1a090a] hover:bg-[#270d0f] active:bg-[#120607] border border-[#4f241c] hover:border-[#8f6a2c] rounded-[2px] shadow-[0_2px_0_#090304,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] uppercase tracking-widest text-[#d9c19c] hover:text-[#f7eedc] cursor-pointer text-center"
-                    >
-                      Compendium
-                    </button>
-                    <button
-                      onClick={() => {
+                      }} label="Compendium" block />
+                    <RitualSlateButton onClick={() => {
                         setShowPauseMenu(false);
                         setArchiveModalTab('LEDGER');
-                      }}
-                      className="w-full py-2 bg-[#1a090a] hover:bg-[#270d0f] active:bg-[#120607] border border-[#4f241c] hover:border-[#8f6a2c] rounded-[2px] shadow-[0_2px_0_#090304,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] uppercase tracking-widest text-[#d9c19c] hover:text-[#f7eedc] cursor-pointer text-center"
-                    >
-                      Ledger
-                    </button>
+                      }} label="Ledger" block />
                   </div>
 
                   <div className="h-px w-full bg-gradient-to-r from-transparent via-[#692924]/70 to-transparent" />
 
                   {/* Resume Ritual */}
-                  <button
-                    onClick={() => setShowPauseMenu(false)}
-                    className="w-full py-2.5 bg-[#240b0d] hover:bg-[#331013] active:bg-[#170708] border border-[#8f6a2c]/80 hover:border-[#c99e52] rounded-[2px] shadow-[0_2px_0_#090304,inset_0_1px_0_rgba(241,213,143,0.12)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.18em] text-[#f2e1c2] hover:text-white cursor-pointer text-center"
-                  >
-                    Resume Ritual
-                  </button>
+                  <RitualSlateButton onClick={() => setShowPauseMenu(false)} label="Resume Ritual" block />
 
                   {/* Postpone Ritual (Save & Return to Title) */}
-                  <button
-                    onClick={() => {
+                  <RitualSlateButton onClick={() => {
                       if (masterDeck && masterDeck.length > 0) {
                         const isMidDuel = preDuelMapRef.current !== null;
                         if (!isMidDuel || !localStorage.getItem(RUN_SAVE_KEY)) {
@@ -8004,15 +8046,10 @@ export default function App() {
                       }
                       setShowPauseMenu(false);
                       setScreen('SPLASH');
-                    }}
-                    className="w-full py-2 bg-[#1a090a] hover:bg-[#270d0f] active:bg-[#120607] border border-amber-900/65 hover:border-amber-700/85 rounded-[2px] shadow-[0_2px_0_#090304,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.15em] text-amber-300/90 hover:text-amber-200 cursor-pointer text-center"
-                  >
-                    Postpone Ritual
-                  </button>
+                    }} label="Postpone Ritual" block />
 
                   {/* End Ritual (Surrender & Wipe Save) */}
-                  <button
-                    onClick={() => {
+                  <RitualSlateButton onClick={() => {
                       clearRunSave();
                       setShowPauseMenu(false);
                       triggerSfx('defeat');
@@ -8023,11 +8060,7 @@ export default function App() {
                         ritualSurrendered: true,
                       }));
                       setScreen('GAME_OVER');
-                    }}
-                    className="w-full py-2 bg-[#170708] hover:bg-[#260b0d] active:bg-[#100405] border border-[#591a16] hover:border-red-700/85 rounded-[2px] shadow-[0_2px_0_#090304,inset_0_1px_0_rgba(255,255,255,0.05)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-[0.15em] text-red-400/90 hover:text-red-300 cursor-pointer text-center"
-                  >
-                    End Ritual
-                  </button>
+                    }} label="End Ritual" block />
                 </div>
               </div>
             </div>

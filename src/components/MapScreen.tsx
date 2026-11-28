@@ -692,7 +692,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
       style={bgStyle}
     >
       {/* Atmospheric Stone & Cloth Vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(15,13,17,0.36)_0%,rgba(5,4,6,0.9)_100%)] pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(15,13,17,0.28)_0%,rgba(5,4,6,0.72)_100%)] pointer-events-none z-0" />
 
       {/* Map-Specific Ambient Keyframes */}
       <style>{`

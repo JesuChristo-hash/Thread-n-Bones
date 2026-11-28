@@ -4,6 +4,7 @@ interface ActWeatherProps {
   act: number;
   posClass: string;
   keyPrefix: string;
+  boss?: boolean;
 }
 
 const hash = (n: number, a: number, b: number, c: number) =>
@@ -101,6 +102,16 @@ const MIST_ACT_1: Layer[] = [
     bg:
       'radial-gradient(circle closest-side at 30% 50%, rgba(204,200,190,0.14) 0%, rgba(144,140,132,0.06) 52%, transparent 100%), radial-gradient(circle closest-side at 74% 46%, rgba(198,194,184,0.12) 0%, rgba(140,136,128,0.06) 52%, transparent 100%)',
     anim: 'weatherMistDriftB 46s ease-in-out -15s infinite',
+  },
+];
+
+// Act 1 boss duels: one thin ground layer under the Act 2 cloud banks (no rain, no haze).
+const MIST_ACT_1_BOSS: Layer[] = [
+  {
+    cls: 'absolute -inset-x-[14%] bottom-[-8%] h-[60%]',
+    bg:
+      'radial-gradient(circle closest-side at 26% 56%, rgba(214,210,200,0.13) 0%, rgba(168,164,156,0.06) 48%, transparent 100%), radial-gradient(circle closest-side at 66% 48%, rgba(222,216,204,0.12) 0%, rgba(172,168,158,0.06) 48%, transparent 100%)',
+    anim: 'weatherMistDriftA 38s ease-in-out infinite',
   },
 ];
 
@@ -215,20 +226,21 @@ const renderLayer = (l: Layer, key: string) => (
   <div key={key} className={'wx ' + (l.desk ? 'wx-desk ' : '') + l.cls} style={{ background: l.bg, animation: l.anim }} />
 );
 
-export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefix }) => {
+export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefix, boss }) => {
   const weatherAct = Math.min(4, Math.max(1, act));
   const rainDrops = weatherAct === 3 ? RAIN_ACT_3 : weatherAct === 2 ? RAIN_ACT_2 : null;
   const rainWind = weatherAct === 3 ? RAIN_WIND[3] : RAIN_WIND[2];
-  const cloudBanks = weatherAct === 3 ? CLOUD_BANKS[3] : weatherAct === 2 ? CLOUD_BANKS[2] : null;
+  const bossAct1 = weatherAct === 1 && !!boss;
+  const cloudBanks = weatherAct === 3 ? CLOUD_BANKS[3] : weatherAct === 2 || bossAct1 ? CLOUD_BANKS[2] : null;
   const hasLightning = weatherAct === 3;
   const hasFire = weatherAct === 4;
 
   return (
     <div className={'pointer-events-none ' + posClass + ' overflow-hidden select-none'}>
-      {weatherAct === 1 && MIST_ACT_1.map((l, n) => renderLayer(l, 'mist-' + n))}
+      {weatherAct === 1 && (bossAct1 ? MIST_ACT_1_BOSS : MIST_ACT_1).map((l, n) => renderLayer(l, 'mist-' + n))}
 
       {cloudBanks && cloudBanks.map((l, n) => renderLayer(l, 'cloud-' + n))}
-      {cloudBanks && renderLayer(GROUND_HAZE, 'haze')}
+      {cloudBanks && !bossAct1 && renderLayer(GROUND_HAZE, 'haze')}
 
       {rainDrops && (
         <div

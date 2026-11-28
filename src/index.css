@@ -1497,3 +1497,13 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
   transform: scaleY(1);
 }
 
+/* --- Act cutscenes --- */
+@keyframes actCutIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes actCutRise { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+@keyframes actCutPush { from { transform: scale(1); } to { transform: scale(1.07); } }
+@keyframes actCutMoon { from { opacity: 0; transform: translate3d(0, 40px, 0); } to { opacity: 0.88; transform: translate3d(0, 0, 0); } }
+@keyframes actCutSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes actCutWindow { 0%, 100% { opacity: 0.85; } 18% { opacity: 0.55; } 32% { opacity: 0.95; } 61% { opacity: 0.7; } 80% { opacity: 0.9; } }
+.act-cut-rise { animation: actCutRise 1.3s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s) both; }
+.act-cut-window { animation: actCutWindow 3.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .act-cut, .act-cut * { animation: none !important; } }

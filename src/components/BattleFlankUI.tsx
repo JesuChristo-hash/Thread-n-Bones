@@ -547,6 +547,7 @@ export interface RitualSlateButtonProps {
   title?: string;
   variant?: 'default' | 'dev';
   compact?: boolean;
+  block?: boolean;
 }
 
 export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
@@ -556,6 +557,7 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
   title,
   variant = 'default',
   compact = false,
+  block = false,
 }) => {
   const uid = useId().replace(/:/g, '');
   const baseUrl = import.meta.env.BASE_URL || './';
@@ -566,7 +568,7 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
       type="button"
       onClick={onClick}
       title={title}
-      className={`group/rbtn relative w-38 sm:w-40 px-3.5 flex items-center justify-center gap-2 cursor-pointer select-none bg-transparent border-0 outline-none transition-all duration-150 hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.985] ${
+      className={`group/rbtn relative ${block ? 'w-full' : 'w-38 sm:w-40'} px-3.5 flex items-center justify-center gap-2 cursor-pointer select-none bg-transparent border-0 outline-none transition-all duration-150 hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.985] ${
         compact ? 'py-[5.5px]' : 'py-[9.5px]'
       }`}
       style={{

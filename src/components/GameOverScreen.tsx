@@ -1,5 +1,6 @@
 import React from 'react';
 import { ALL_CARD_LOOKUP } from '../data/gameData';
+import { RitualSlateButton } from './BattleFlankUI';
 
 export interface GameOverScreenProps {
   RITUAL_VOW_MAP: Record<string, any>;
@@ -400,29 +401,9 @@ export default function GameOverScreen({
         {/* Diegetic Action Controls */}
         <div className="shrink-0 flex flex-wrap items-center justify-center gap-6">
           {runSeed && seedsUnlocked && (
-            <button
-              onClick={() => handleRestartRun(runSeed)}
-              className="px-4 py-1.5 font-mono font-bold text-xs uppercase tracking-[0.26em] text-stone-300 hover:text-red-300 transition-all duration-150 select-none cursor-pointer"
-              style={{ textShadow: '0 2px 6px rgba(0,0,0,0.95)' }}
-            >
-              [ REPLAY SEED ]
-            </button>
+            <RitualSlateButton onClick={() => handleRestartRun(runSeed)} label="REPLAY SEED" />
           )}
-          <button
-            onClick={() => handleRestartRun()}
-            className={`px-6 py-2 rounded-[1px] border-y transition-all duration-150 font-['Cinzel',_serif] font-black text-sm uppercase tracking-[0.28em] select-none cursor-pointer ${
-              isVictory
-                ? 'border-[#d4af37]/80 text-[#f6dc93] hover:text-white bg-black/50'
-                : 'border-red-700/80 text-red-400 hover:text-red-200 bg-black/55'
-            }`}
-            style={{
-              textShadow: isVictory
-                ? '0 0 18px rgba(234,179,8,0.6), 0 2px 5px rgba(0,0,0,1)'
-                : '0 0 18px rgba(239,68,68,0.8), 0 2px 5px rgba(0,0,0,1)',
-            }}
-          >
-            {isVictory ? 'NEW RITUAL' : 'BEGIN ANEW'}
-          </button>
+          <RitualSlateButton onClick={() => handleRestartRun()} label={isVictory ? 'NEW RITUAL' : 'BEGIN ANEW'} />
         </div>
       </div>
     </div>
