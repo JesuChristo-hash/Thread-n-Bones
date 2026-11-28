@@ -1056,6 +1056,7 @@ export const BoneOssuaryPlaque: React.FC<{ bones: number; boneShaking: boolean }
   bones,
   boneShaking,
 }) => {
+  const uid = useId().replace(/:/g, '');
   const prevRef = useRef(bones);
   const [delta, setDelta] = useState<number | null>(null);
 
@@ -1070,55 +1071,159 @@ export const BoneOssuaryPlaque: React.FC<{ bones: number; boneShaking: boolean }
   }, [bones]);
 
   const baseUrl = import.meta.env.BASE_URL || './';
+  const isGain = Boolean(delta && delta > 0);
+  const isSpend = Boolean(delta && delta < 0);
 
   return (
     <div
-      style={{
-        backgroundImage: `linear-gradient(180deg, rgba(30,24,21,0.88) 0%, rgba(14,11,10,0.96) 100%), url("${baseUrl}assets/text/mapbg.jpg")`,
-        backgroundSize: 'cover, 180px 180px',
-      }}
-      className={`relative w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-[3px] border transition-all duration-200 shadow-[inset_0_2px_10px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,232,200,0.08),0_5px_14px_rgba(0,0,0,0.9)] select-none ${
-        delta && delta > 0
-          ? 'border-[#e5c16b] shadow-[0_0_14px_rgba(229,193,107,0.45),inset_0_0_10px_rgba(229,193,107,0.2)] scale-[1.05]'
-          : delta && delta < 0
-            ? 'border-red-500/85 shadow-[0_0_12px_rgba(239,68,68,0.45)] scale-[0.95]'
-            : 'border-[#5c4836]/90'
+      className={`relative w-full flex items-center justify-between gap-2 px-3 py-[6px] transition-transform duration-200 select-none ${
+        isGain ? 'scale-[1.06]' : isSpend ? 'scale-[0.95]' : 'scale-100'
       }`}
+      style={{
+        filter: isGain
+          ? 'drop-shadow(0 0 12px rgba(229,193,107,0.6)) drop-shadow(0 5px 10px rgba(0,0,0,0.95))'
+          : isSpend
+            ? 'drop-shadow(0 0 12px rgba(220,38,38,0.6)) drop-shadow(0 5px 10px rgba(0,0,0,0.95))'
+            : 'drop-shadow(0 5px 10px rgba(0,0,0,0.92))',
+      }}
       title={`Bones: ${bones}`}
     >
-      {/* Brass Corner Rivets */}
-      <span className="pointer-events-none absolute top-1 left-1 w-[2.5px] h-[2.5px] rounded-full bg-[#9c7a4c]/70" />
-      <span className="pointer-events-none absolute top-1 right-1 w-[2.5px] h-[2.5px] rounded-full bg-[#9c7a4c]/70" />
-      <span className="pointer-events-none absolute bottom-1 left-1 w-[2.5px] h-[2.5px] rounded-full bg-[#9c7a4c]/70" />
-      <span className="pointer-events-none absolute bottom-1 right-1 w-[2.5px] h-[2.5px] rounded-full bg-[#9c7a4c]/70" />
+      {/* Hand-Chiselled Aged Slate Backing */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          clipPath:
+            'polygon(7px 1px, calc(100% - 7px) 0.5px, calc(100% - 1px) 7px, calc(100% - 1.2px) calc(100% - 7px), calc(100% - 7px) calc(100% - 0.5px), 7px calc(100% - 1px), 1px calc(100% - 7px), 1.2px 7px)',
+          backgroundImage: `linear-gradient(180deg, rgba(28,23,20,0.72) 0%, rgba(14,11,10,0.88) 54%, rgba(7,5,5,0.96) 100%), url("${baseUrl}assets/text/slate.jpg")`,
+          backgroundSize: 'cover, 120px 120px',
+          backgroundPosition: 'center',
+        }}
+      />
 
-      {/* Carved Ivory Bone Glyph */}
+      {/* Chiseled Rim & Inner Engraved Groove */}
       <svg
-        viewBox="0 0 24 24"
-        className={`relative z-10 w-4 h-4 shrink-0 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] ${boneShaking || delta ? 'animate-bone-shake' : ''}`}
+        viewBox="0 0 100 32"
+        preserveAspectRatio="none"
+        className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
         aria-hidden="true"
       >
-        <path
-          d="M17.6 3.6a2.3 2.3 0 0 0-3.2 2.9L6.5 14.4a2.3 2.3 0 1 0-1.6 4.1 2.3 2.3 0 1 0 4.1-1.6l7.9-7.9a2.3 2.3 0 1 0 1.6-4.1 2.3 2.3 0 0 0-.9-1.3z"
-          fill="#e8dcc4"
-          stroke="#3a2d21"
+        <defs>
+          <linearGradient id={`boneRim-${uid}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={isGain ? '#f4d78b' : isSpend ? '#ef4444' : '#9c7848'} stopOpacity="0.92" />
+            <stop offset="50%" stopColor={isSpend ? '#7f1d1d' : '#4a3a2c'} stopOpacity="0.92" />
+            <stop offset="100%" stopColor="#211812" stopOpacity="0.96" />
+          </linearGradient>
+        </defs>
+        <polygon
+          points="7,1 93,0.5 99,7 98.8,25 93,31.5 7,31 1,25 1.2,7"
+          fill="none"
+          stroke="#060404"
+          strokeWidth="2.2"
+          vectorEffect="non-scaling-stroke"
+        />
+        <polygon
+          points="7,1 93,0.5 99,7 98.8,25 93,31.5 7,31 1,25 1.2,7"
+          fill="none"
+          stroke={`url(#boneRim-${uid})`}
           strokeWidth="1.2"
+          vectorEffect="non-scaling-stroke"
+        />
+        <polygon
+          points="10,3.8 90,3.8 95,8.5 95,23.5 90,28.2 10,28.2 5,23.5 5,8.5"
+          fill="none"
+          stroke="rgba(196,154,92,0.22)"
+          strokeWidth="0.7"
+          vectorEffect="non-scaling-stroke"
         />
       </svg>
 
-      {/* Engraved Divider */}
-      <span className="h-4 w-px bg-gradient-to-b from-transparent via-[#6e553e]/70 to-transparent shrink-0" />
+      {/* Left & Right Forged Brass Clamping End-Caps */}
+      <svg
+        viewBox="0 0 10 22"
+        className="pointer-events-none absolute -left-[2.5px] top-1/2 -translate-y-1/2 w-[10px] h-[22px] overflow-visible"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id={`boneCapL-${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#b0884f" />
+            <stop offset="50%" stopColor="#5c3e1f" />
+            <stop offset="100%" stopColor="#24160b" />
+          </linearGradient>
+        </defs>
+        <path d="M 1 6 L 5 1.5 L 9 1.5 L 7.5 6 L 7.5 16 L 9 20.5 L 5 20.5 L 1 16 Z" fill={`url(#boneCapL-${uid})`} stroke="#140c07" strokeWidth="0.8" />
+        <circle cx="4.3" cy="11" r="1.3" fill="#1b1109" stroke="#e5c185" strokeWidth="0.45" />
+      </svg>
+      <svg
+        viewBox="0 0 10 22"
+        className="pointer-events-none absolute -right-[2.5px] top-1/2 -translate-y-1/2 w-[10px] h-[22px] overflow-visible"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id={`boneCapR-${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#b0884f" />
+            <stop offset="50%" stopColor="#5c3e1f" />
+            <stop offset="100%" stopColor="#24160b" />
+          </linearGradient>
+        </defs>
+        <path d="M 9 6 L 5 1.5 L 1 1.5 L 2.5 6 L 2.5 16 L 1 20.5 L 5 20.5 L 9 16 Z" fill={`url(#boneCapR-${uid})`} stroke="#140c07" strokeWidth="0.8" />
+        <circle cx="5.7" cy="11" r="1.3" fill="#1b1109" stroke="#e5c185" strokeWidth="0.45" />
+      </svg>
 
-      {/* Bone Count */}
-      <div className="relative z-10 flex items-baseline justify-center flex-1">
+      {/* Recessed Obsidian Socket + Multi-Tone Carved Ivory Relic Bone */}
+      <div
+        className="relative z-10 w-[22px] h-[22px] rounded-full shrink-0 flex items-center justify-center"
+        style={{
+          background: 'radial-gradient(circle at 42% 38%, #211612 0%, #0d0706 72%, #050303 100%)',
+          border: '1px solid rgba(143,108,62,0.72)',
+          boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.95), 0 1px 0 rgba(255,232,190,0.1)',
+        }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className={`w-[15px] h-[15px] drop-shadow-[0_1px_3px_rgba(0,0,0,1)] ${boneShaking || delta ? 'animate-bone-shake' : ''}`}
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id={`ivoryBone-${uid}`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#fff7e6" />
+              <stop offset="55%" stopColor="#dfcfb0" />
+              <stop offset="100%" stopColor="#9c8663" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M17.8 3.5a2.4 2.4 0 0 0-3.3 2.9L6.4 14.5a2.4 2.4 0 1 0-1.6 4.2 2.4 2.4 0 1 0 4.2-1.6l8.1-8.1a2.4 2.4 0 1 0 1.6-4.2 2.4 2.4 0 0 0-.9-1.3z"
+            fill={`url(#ivoryBone-${uid})`}
+            stroke="#241910"
+            strokeWidth="1.25"
+            strokeLinejoin="round"
+          />
+          {/* Subtle carved ivory highlight & hairline crack */}
+          <path d="M 8.5 14.5 L 14.8 8.2" fill="none" stroke="#fffbf2" strokeWidth="0.85" strokeLinecap="round" opacity="0.7" />
+          <path d="M 11.4 11.5 L 12.6 13.1" fill="none" stroke="#5e4934" strokeWidth="0.6" strokeLinecap="round" opacity="0.65" />
+        </svg>
+      </div>
+
+      {/* Tarnished Brass Fluted Pin Divider */}
+      <span className="relative z-10 flex flex-col items-center justify-center shrink-0 h-5">
+        <span className="w-[3px] h-[3px] rotate-45 bg-[#b0884f]/80" />
+        <span className="w-[1px] flex-1 bg-gradient-to-b from-[#8f6a38]/80 via-[#5a4228]/60 to-[#8f6a38]/80" />
+        <span className="w-[3px] h-[3px] rotate-45 bg-[#b0884f]/80" />
+      </span>
+
+      {/* Glowing Carved-Ivory Bone Count */}
+      <div className="relative z-10 flex items-center justify-center flex-1">
         <span
-          className={`font-['Cinzel',_serif] text-base font-black tracking-wider leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,1)] transition-colors duration-200 ${
-            delta && delta > 0
-              ? 'text-amber-200'
-              : delta && delta < 0
-                ? 'text-red-300'
-                : 'text-[#f3e4c8]'
+          className={`font-['Cinzel',_serif] text-[17px] font-black tracking-wider leading-none transition-colors duration-200 ${
+            isGain ? 'text-[#fef08a]' : isSpend ? 'text-[#fca5a5]' : 'text-[#f8ebd2]'
           }`}
+          style={{
+            textShadow: isGain
+              ? '0 0 10px rgba(250,204,21,0.85), 0 1px 3px rgba(0,0,0,1)'
+              : isSpend
+                ? '0 0 10px rgba(239,68,68,0.85), 0 1px 3px rgba(0,0,0,1)'
+                : '0 0 8px rgba(196,154,92,0.35), 0 1px 3px rgba(0,0,0,1)',
+          }}
         >
           {bones}
         </span>
@@ -1126,9 +1231,10 @@ export const BoneOssuaryPlaque: React.FC<{ bones: number; boneShaking: boolean }
 
       {delta !== null && (
         <span
-          className={`pointer-events-none absolute -top-2.5 right-1 text-[10px] font-mono font-black drop-shadow-[0_1px_4px_rgba(0,0,0,1)] animate-telemetry-pop ${
-            delta > 0 ? 'text-amber-200' : 'text-red-400'
+          className={`pointer-events-none absolute -top-3 right-1 text-[10.5px] font-mono font-black animate-telemetry-pop ${
+            delta > 0 ? 'text-[#fef08a]' : 'text-[#fca5a5]'
           }`}
+          style={{ textShadow: '0 0 8px rgba(0,0,0,1), 0 1px 4px rgba(0,0,0,1)' }}
         >
           {delta > 0 ? `+${delta}` : delta}
         </span>

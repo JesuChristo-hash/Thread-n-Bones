@@ -13,6 +13,13 @@ import CardView, { type RenderCardOptions } from './components/CardView';
 import ActWeather from './components/ActWeather';
 import DuelTelemetryBanner, { BloodBankVessel, BoneOssuaryPlaque } from './components/DuelTelemetryBanner';
 import BloodRunnelGauge from './components/BloodRunnelGauge';
+import {
+  StageDepthPlaque,
+  EffigySpecimenTag,
+  EffigyInspectionPlaque,
+  RitualSlateButton,
+  RitualCardDeck,
+} from './components/BattleFlankUI';
 const DevMenuScreen = React.lazy(() => import('./components/DevMenuScreen'));
 const GameOverScreen = React.lazy(() => import('./components/GameOverScreen'));
 const SplashScreen = React.lazy(() => import('./components/SplashScreen'));
@@ -7647,18 +7654,18 @@ export default function App() {
             }
           @keyframes deckDrawBreathing {
             0%, 100% {
-              filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.7)) drop-shadow(0 0 16px rgba(217, 119, 6, 0.5));
-              box-shadow: 0 0 18px rgba(245, 158, 11, 0.55), inset 0 0 8px rgba(245, 158, 11, 0.3);
-              border-color: #fbbf24;
+              filter: drop-shadow(0 0 5px rgba(217, 149, 52, 0.55)) drop-shadow(0 0 12px rgba(180, 83, 9, 0.35));
+              box-shadow: 0 0 12px rgba(217, 149, 52, 0.45), inset 0 0 8px rgba(245, 178, 72, 0.25);
+              border-color: #d4a359;
             }
             50% {
-              filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 28px rgba(245, 158, 11, 0.85));
-              box-shadow: 0 0 32px rgba(245, 158, 11, 0.85), inset 0 0 14px rgba(251, 191, 36, 0.5);
-              border-color: #fef08a;
+              filter: drop-shadow(0 0 9px rgba(245, 188, 86, 0.85)) drop-shadow(0 0 20px rgba(196, 98, 22, 0.55));
+              box-shadow: 0 0 20px rgba(245, 188, 86, 0.7), inset 0 0 12px rgba(254, 215, 130, 0.38);
+              border-color: #f6d58e;
             }
           }
           .animate-deck-glow {
-            animation: deckDrawBreathing 3.6s ease-in-out infinite;
+            animation: deckDrawBreathing 3.4s ease-in-out infinite;
           }
           @keyframes menuFadeIn {
             0% { opacity: 0; }
@@ -8724,51 +8731,22 @@ export default function App() {
                                 : "The Weaver")
                         : currentStageName}
                     </h2>
-                    <div
-                      style={{
-                        backgroundImage: `linear-gradient(180deg, ${isBossMatch && bossState.type === 'BoneLord' ? 'rgba(26,7,8,0.82), rgba(18,5,6,0.9)' : 'rgba(16,14,16,0.72), rgba(12,10,12,0.86)'}), url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                      }}
-                      className={`mt-1 inline-flex items-center justify-center px-3 py-1.5 rounded-[2px] border shadow-[inset_0_1px_6px_rgba(0,0,0,0.75)] ${
-                        isBossMatch && bossState.type === 'BoneLord'
-                          ? 'border-red-800/85'
-                          : 'border-[#4a413b]/75'
-                      }`}
-                    >
-                      <span className={`font-['Cinzel',_serif] font-semibold text-[10px] leading-none tracking-[0.22em] pl-[0.22em] uppercase ${
-                        isBossMatch && bossState.type === 'BoneLord'
-                          ? 'text-red-200/95'
-                          : 'text-[#bfa78b]'
-                      }`}>
-                        {isBossMatch
-                          ? (bossState.type === 'BoneLord'
-                              ? (bossPhase === 1 ? 'Phase I • Ossuary' : bossPhase === 2 ? 'Phase II • Shadow' : 'Phase III • Eclipse')
-                              : `Stage ${stage} • Phase ${bossPhase}`)
-                          : `Stage ${stage} • Depth ${level}`}
-                      </span>
-                    </div>
-                    {isBossMatch && bossState.type === 'BoneLord' && (
-                      <div className="mt-1.5 flex items-center justify-center gap-2" title={`Bone Lord Phase ${bossPhase} of 3`}>
-                        {[1, 2, 3].map(p => (
-                          <span
-                            key={p}
-                            className={`w-2 h-2 rotate-45 border transition-all duration-300 ${
-                              p < bossPhase
-                                ? 'bg-red-900/70 border-red-700/70 opacity-60'
-                                : p === bossPhase
-                                  ? 'bg-red-500 border-amber-200 shadow-[0_0_8px_rgba(239,68,68,0.95)] scale-110'
-                                  : 'bg-[#160b0b] border-[#5a302c]/70'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-center gap-2 w-28 mt-2">
-                      <span className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#6e6052]/70" />
-                      <span className="w-1 h-1 rotate-45 bg-[#8f7960]/80" />
-                      <span className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#6e6052]/70" />
-                    </div>
+                    <StageDepthPlaque
+                      label={
+                        isBossMatch
+                          ? bossState.type === 'BoneLord'
+                            ? bossPhase === 1
+                              ? 'Phase I • Ossuary'
+                              : bossPhase === 2
+                                ? 'Phase II • Shadow'
+                                : 'Phase III • Eclipse'
+                            : `Stage ${stage} • Phase ${bossPhase}`
+                          : `Stage ${stage} • Depth ${level}`
+                      }
+                      isBoss={isBossMatch}
+                      isBoneLord={isBossMatch && bossState.type === 'BoneLord'}
+                      bossPhase={bossPhase}
+                    />
                   </div>
 
                   {/* Physical Stitched Effigy & Enemy Poppet Table Display */}
@@ -8794,24 +8772,6 @@ export default function App() {
                         : isFoe
                           ? 'hue-rotate-[-32deg] saturate-[1.35] brightness-[0.76] contrast-[1.15] drop-shadow-[0_8px_16px_rgba(127,29,29,0.55)]'
                           : 'drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]';
-
-                      const badgeClass = isWeaver
-                        ? 'border-purple-700/75 bg-[#120b18]/92 text-purple-200'
-                        : isFoe
-                          ? 'border-red-800/75 bg-[#160b0b]/92 text-red-200'
-                          : 'border-[#6e5638]/80 bg-[#120d09]/92 text-[#ebd1a0]';
-
-                      const tooltipBorderClass = isWeaver
-                        ? 'border-purple-600/80'
-                        : isFoe
-                          ? 'border-red-700/80'
-                          : 'border-[#9a7342]/80';
-
-                      const tooltipTitleClass = isWeaver
-                        ? 'text-purple-300'
-                        : isFoe
-                          ? 'text-red-300'
-                          : 'text-[#f4d78b]';
 
                       const crestDesc = `All ${isWeaver || isFoe ? 'enemy ' : ''}${tribeName} creatures bear the ${sigilName || 'unmarked'} Crest.`;
                       const sigilDesc = sigilName ? (SIGIL_DESCRIPTIONS as Record<string, string>)[sigilName] : '';
@@ -8936,39 +8896,24 @@ export default function App() {
                             </div>
                           </div>
 
-                          {/* Compact Nameplate Under Doll */}
-                          <div className={`-mt-1 px-1.5 py-0.5 rounded-[2px] border shadow-[0_4px_10px_rgba(0,0,0,0.85)] text-center max-w-[96px] ${badgeClass}`}>
-                            <div className="font-['Cinzel',_serif] font-bold text-[7px] uppercase tracking-[0.14em] leading-tight whitespace-nowrap">
-                              {roleLabel}
-                            </div>
-                            <div className="font-mono text-[7px] opacity-85 leading-tight break-words">
-                              {tribeName}<br />{sigilName || '—'}
-                            </div>
-                          </div>
+                          {/* Diegetic Stitched / Pinned Specimen Tag Under Doll */}
+                          <EffigySpecimenTag
+                            roleLabel={roleLabel}
+                            tribeName={tribeName}
+                            sigilName={sigilName}
+                            theme={theme}
+                          />
 
-                          {/* Hover Inspection Plaque */}
-                          <div
-                            className={`pointer-events-none opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 absolute left-full ml-2.5 top-1/2 -translate-y-1/2 z-[70] w-56 rounded-[2px] bg-[#0e0a09]/96 border ${tooltipBorderClass} px-3 py-2.5 text-left shadow-[0_14px_30px_rgba(0,0,0,0.95)]`}
-                          >
-                            <div className={`font-['Cinzel',_serif] text-[9px] font-bold uppercase tracking-[0.2em] ${tooltipTitleClass}`}>
-                              {tooltipTitle}
-                            </div>
-                            <div className="font-['Cinzel',_serif] text-[11px] font-bold text-[#f3e5cc] mt-0.5 leading-snug">
-                              {tribeName} — {sigilName || 'Unmarked'}
-                            </div>
-                            <div className="h-px w-full bg-[#3a2a1e]/80 my-1.5" />
-                            <p className="font-mono text-[9.5px] text-[#cbb89d] leading-relaxed">
-                              {crestDesc}
-                            </p>
-                            {sigilDesc && (
-                              <>
-                                <div className="h-px w-full bg-[#3a2a1e]/60 my-1.5" />
-                                <p className="font-mono text-[9px] text-[#e6d2b5]/90 leading-relaxed">
-                                  <span className="font-bold text-[#f4d78b]">{sigilName}:</span> {sigilDesc}
-                                </p>
-                              </>
-                            )}
-                          </div>
+                          {/* Carved Slate & Brass-Cornered Hover Grimoire Plaque */}
+                          <EffigyInspectionPlaque
+                            tooltipTitle={tooltipTitle}
+                            tribeName={tribeName}
+                            sigilName={sigilName}
+                            sigilIconUrl={sigilName ? getSigilArtUrl(sigilName) : undefined}
+                            crestDesc={crestDesc}
+                            sigilDesc={sigilDesc}
+                            theme={theme}
+                          />
                         </div>
                       );
                     };
@@ -9179,38 +9124,25 @@ export default function App() {
                     </div>
 
                   {/* Carved-Stone Utility Plaques (Lowered & Offset Left) */}
-                  <div className="flex flex-col items-center gap-1.5 w-full mt-2 sm:mt-2.5 -translate-x-6 sm:-translate-x-8">
-                    <button
+                  <div className="flex flex-col items-center gap-2 w-full mt-2 sm:mt-2.5 -translate-x-6 sm:-translate-x-8">
+                    <RitualSlateButton
                       onClick={openViewDeck}
-                      className="relative w-38 sm:w-40 bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/80 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer px-3 py-1.5 flex items-center justify-center gap-2"
-                    >
-                      <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
-                      <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
-                      <Layers className="w-3.5 h-3.5 text-[#c79b56]/90" />
-                      <span>VIEW DECK</span>
-                    </button>
-
-                    <button
+                      icon={<Layers className="w-3.5 h-3.5" />}
+                      label="VIEW DECK"
+                    />
+                    <RitualSlateButton
                       onClick={() => setShowPauseMenu(true)}
-                      className="relative w-38 sm:w-40 bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/80 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer px-3 py-1.5 flex items-center justify-center gap-2"
-                    >
-                      <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
-                      <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
-                      <Menu className="w-3.5 h-3.5 text-[#c79b56]/90" />
-                      <span>SANCTUARY</span>
-                    </button>
-
+                      icon={<Menu className="w-3.5 h-3.5" />}
+                      label="SANCTUARY"
+                    />
                     {showDevTools && (
-                        <button
-                          onClick={openDevMenu}
-                          className="relative w-38 sm:w-40 bg-[#100e10]/92 hover:bg-[#19161a] active:bg-[#0b0a0c] border border-[#4a413b]/80 hover:border-[#b59c7c]/85 rounded-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] transition-all duration-100 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] text-[#d6c2a5] hover:text-[#f6ead8] cursor-pointer px-3 py-1.5 flex items-center justify-center gap-2"
-                          title="Development Tools"
-                        >
-                          <span className="pointer-events-none absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#8f7960]/65" />
-                          <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#8f7960]/65" />
-                          <span>DEV TOOLS</span>
-                        </button>
-                      )}
+                      <RitualSlateButton
+                        onClick={openDevMenu}
+                        label="DEV TOOLS"
+                        title="Development Tools"
+                        variant="dev"
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -9892,114 +9824,43 @@ export default function App() {
 
   {/* Lower Flank: Centered Bones Counter directly above lowered S & C Decks */}
   <div className="flex flex-col items-center gap-2.5 w-full relative mt-3 sm:mt-4 translate-y-4 sm:translate-y-5 translate-x-2.5 sm:translate-x-3.5">
-    <div className="w-[74px] sm:w-[80px]">
+    <div className="w-[88px] sm:w-[94px]">
       <BoneOssuaryPlaque bones={bones} boneShaking={boneShaking} />
     </div>
-    <div className="flex items-center justify-center gap-4 w-full min-w-[184px] sm:min-w-[192px] relative font-mono translate-y-3 sm:translate-y-4">
-                  {/* Squirrel Deck */}
-                  <div className="group flex flex-col items-center gap-1.5">
-                    <div className="relative">
-                      <img
-                        src={`${BASE}/assets/cardbases/cardbacks.png`}
-                        alt=""
-                        aria-hidden="true"
-                        className="pointer-events-none select-none absolute inset-0 w-full h-full object-fill rounded translate-x-[4px] translate-y-[4px] brightness-[0.38] border border-black/80"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                      <img
-                        src={`${BASE}/assets/cardbases/cardbacks.png`}
-                        alt=""
-                        aria-hidden="true"
-                        className="pointer-events-none select-none absolute inset-0 w-full h-full object-fill rounded translate-x-[2px] translate-y-[2px] brightness-[0.62] border border-black/70"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                    <button
-                      disabled={phase !== 'DRAW'}
-                      onClick={() => handleDraw('sacrifice')}
-                      className={`w-[84px] h-[119px] sm:w-[88px] sm:h-[125px] rounded flex items-center justify-center border-2 transition-all select-none relative overflow-hidden bg-[#140e0a] ${
-                        phase === 'DRAW'
-                          ? 'cursor-pointer hover:scale-105 active:scale-95 animate-deck-glow z-20'
-                          : 'border-[#3d2719] opacity-75 cursor-not-allowed shadow-[2px_2px_0_#1c140e,4px_4px_0_#140e0a,6px_6px_8px_rgba(0,0,0,0.8)]'
-                      }`}
-                      title={flockNoSquirrelTurns && flockSquirrelLockDraws > 0 ? `Sealed by The Zealot's Flock (${flockSquirrelLockDraws} turn${flockSquirrelLockDraws === 1 ? '' : 's'} left)` : 'Draw Squirrel'}
-                    >
-                      {/* Card Back Graphic */}
-                      <img
-                        src={`${BASE}/assets/cardbases/cardbacks.png`}
-                        alt="Squirrel Deck"
-                        className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
+    <div className="flex items-center justify-center gap-5 w-full min-w-[184px] sm:min-w-[196px] relative font-mono translate-y-3 sm:translate-y-4">
+      {/* Squirrel Deck (Physical Stacked Cards) */}
+      <RitualCardDeck
+        cardBackSrc={`${BASE}/assets/cardbases/cardbacks.png`}
+        glyphSrc={`${BASE}/assets/cardbases/S.png`}
+        alt="Squirrel Deck"
+        glyphAlt="S"
+        disabled={phase !== 'DRAW'}
+        isDrawReady={phase === 'DRAW'}
+        onClick={() => handleDraw('sacrifice')}
+        title={
+          flockNoSquirrelTurns && flockSquirrelLockDraws > 0
+            ? `Sealed by The Zealot's Flock (${flockSquirrelLockDraws} turn${flockSquirrelLockDraws === 1 ? '' : 's'} left)`
+            : 'Draw Squirrel'
+        }
+        cardCount={10}
+        isSealed={Boolean(flockNoSquirrelTurns && flockSquirrelLockDraws > 0)}
+      />
 
-                      {/* Dead-Center Large Red Glyphed S */}
-                      <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                        <img
-                          src={`${BASE}/assets/cardbases/S.png`}
-                          alt="S"
-                          className="deck-glyph-red h-14 sm:h-16 w-auto object-contain pointer-events-none select-none"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      </div>
-                    </button>
-                    </div>
-
-                  </div>
-
-                  {/* Creature Deck */}
-                  {deck.length > 0 && (
-                  <div className="group flex flex-col items-center gap-1.5">
-                    <div className="relative">
-                      {deck.length >= 4 && (
-                        <img
-                          src={`${BASE}/assets/cardbases/cardbacks.png`}
-                          alt=""
-                          aria-hidden="true"
-                          className="pointer-events-none select-none absolute inset-0 w-full h-full object-fill rounded translate-x-[4px] translate-y-[4px] brightness-[0.38] border border-black/80"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      )}
-                      {deck.length >= 2 && (
-                        <img
-                          src={`${BASE}/assets/cardbases/cardbacks.png`}
-                          alt=""
-                          aria-hidden="true"
-                          className="pointer-events-none select-none absolute inset-0 w-full h-full object-fill rounded translate-x-[2px] translate-y-[2px] brightness-[0.62] border border-black/70"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      )}
-                    <button
-                      disabled={phase !== 'DRAW'}
-                      onClick={() => handleDraw('main')}
-                      className={`w-[84px] h-[119px] sm:w-[88px] sm:h-[125px] rounded flex items-center justify-center border-2 transition-all select-none relative overflow-hidden bg-[#140e0a] ${
-                        phase === 'DRAW'
-                          ? 'cursor-pointer hover:scale-105 active:scale-95 animate-deck-glow z-20'
-                          : 'border-[#3d2719] opacity-75 cursor-not-allowed shadow-[2px_2px_0_#1c140e,4px_4px_0_#140e0a,6px_6px_8px_rgba(0,0,0,0.8)]'
-                      }`}
-                      title="Draw Creature from Deck"
-                    >
-                      {/* Card Back Graphic */}
-                      <img
-                        src={`${BASE}/assets/cardbases/cardbacks.png`}
-                        alt="Creature Deck"
-                        className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-
-                      {/* Dead-Center Large Red Glyphed C */}
-                      <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                        <img
-                          src={`${BASE}/assets/cardbases/C.png`}
-                          alt="C"
-                          className="deck-glyph-red h-14 sm:h-16 w-auto object-contain pointer-events-none select-none"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      </div>
-                    </button>
-                    </div>
-
-                  </div>
-                  )}
-                </div>
+      {/* Creature Deck (Dynamic Physical Stack Height Based on Remaining Cards) */}
+      {deck.length > 0 && (
+        <RitualCardDeck
+          cardBackSrc={`${BASE}/assets/cardbases/cardbacks.png`}
+          glyphSrc={`${BASE}/assets/cardbases/C.png`}
+          alt="Creature Deck"
+          glyphAlt="C"
+          disabled={phase !== 'DRAW'}
+          isDrawReady={phase === 'DRAW'}
+          onClick={() => handleDraw('main')}
+          title={`Draw Creature from Deck (${deck.length} remaining)`}
+          cardCount={deck.length}
+        />
+      )}
+    </div>
 
     </div> {/* End Lower Bones + Decks Wrapper */}
 </div> {/* End FIXED FLANK wrapper */}
