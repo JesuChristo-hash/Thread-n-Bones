@@ -1576,6 +1576,33 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
   animation: shuntCalloutPop 2.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* --- Squirrel Deck Blood Debt (>13 draws) Crimson Ragged-Edge Glow & Sigil Reliquary Entrance --- */
+@keyframes deckBloodDebtBreathing {
+  0%, 100% {
+    filter: drop-shadow(0 0 1.2px rgba(248, 113, 113, 0.92)) drop-shadow(0 0 7px rgba(185, 28, 28, 0.78)) drop-shadow(0 0 16px rgba(127, 29, 29, 0.55));
+  }
+  50% {
+    filter: drop-shadow(0 0 1.8px rgba(254, 202, 202, 1)) drop-shadow(0 0 12px rgba(220, 38, 38, 0.95)) drop-shadow(0 0 24px rgba(153, 27, 27, 0.72));
+  }
+}
+.animate-deck-blood-glow {
+  animation: deckBloodDebtBreathing 2.4s ease-in-out infinite;
+}
+
+@keyframes sigilModalReveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+.animate-sigil-modal-in {
+  animation: sigilModalReveal 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 
 /* --- Act cutscenes --- */
 @keyframes actCutIn { from { opacity: 0; } to { opacity: 1; } }

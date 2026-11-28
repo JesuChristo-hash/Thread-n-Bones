@@ -20,6 +20,7 @@ import {
   EffigyInspectionPlaque,
   RitualSlateButton,
   RitualCardDeck,
+  SigilInspectionModal,
 } from './components/BattleFlankUI';
 const DevMenuScreen = React.lazy(() => import('./components/DevMenuScreen'));
 const GameOverScreen = React.lazy(() => import('./components/GameOverScreen'));
@@ -484,6 +485,9 @@ export default function App() {
   const ampouleCrackedRef = useRef<boolean>(false);
   const lastShuntBurstTimeRef = useRef<number>(0);
   const shuntResetTimerRef = useRef<number | null>(null);
+  const SQUIRREL_FREE_LIMIT = 13;
+  const [squirrelsDrawnThisDuel, setSquirrelsDrawnThisDuel] = useState<number>(0);
+  const squirrelsDrawnRef = useRef<number>(0);
   const [blood, setBlood] = useState<number>(0);
   const [bones, setBones] = useState<number>(0);
   const [hand, setHand] = useState<CardDef[]>([]);
@@ -1497,6 +1501,7 @@ export default function App() {
   const resetArterialShunt = useCallback(() => {
     ampouleCrackedRef.current = false;
     lastShuntBurstTimeRef.current = 0;
+    squirrelsDrawnRef.current = 0;
     if (shuntResetTimerRef.current !== null) {
       window.clearTimeout(shuntResetTimerRef.current);
       shuntResetTimerRef.current = null;
@@ -1504,6 +1509,7 @@ export default function App() {
     setIsAmpouleCracked(false);
     setShuntPulseId(0);
     setShuntVentedOz(0);
+    setSquirrelsDrawnThisDuel(0);
   }, []);
 
   const triggerArterialShunt = useCallback(
@@ -1873,16 +1879,74 @@ export default function App() {
     return stagePoolRef.current.splice(idx, 1)[0];
   };
 
+  // --- Squirrel Blood-Debt Exhaustion (After 13 drawn squirrels, each costs -1 Blood Gauge, lethal at -5) ---
+  const triggerBloodDebtDefeat = () => {
+    const debtQuotes = [
+      "The Squirrel pile ran dry... and took your blood instead.",
+      "Thirteen was mercy. The rest was debt.",
+      "You bled yourself hollow reaching for one more Squirrel.",
+      "Too many small offerings. The Runnel is empty.",
+    ];
+    setPhase('COMBAT');
+    setLossQuote(debtQuotes[Math.floor(Math.random() * debtQuotes.length)]);
+    setIsHeavyRecoil(true);
+    setIsLossSequenceActive(true);
+    triggerSfx('defeat');
+    if (audioEnabled && ChiptuneAudio.currentTrack !== 'gameover') {
+      ChiptuneAudio.playGameOver?.(1.6);
+    }
+    window.setTimeout(() => {
+      setIsHeavyRecoil(false);
+    }, 420);
+    window.setTimeout(() => {
+      setIsLossSequenceActive(false);
+      handleLossMatch();
+    }, 3220);
+  };
+
+  const applySquirrelDrawCost = (drawnCount: number): boolean => {
+    if (drawnCount <= 0) return false;
+    const prevDrawn = squirrelsDrawnRef.current;
+    const nextDrawn = prevDrawn + drawnCount;
+    squirrelsDrawnRef.current = nextDrawn;
+    setSquirrelsDrawnThisDuel(nextDrawn);
+
+    const bloodPenalty =
+      Math.max(0, nextDrawn - SQUIRREL_FREE_LIMIT) -
+      Math.max(0, prevDrawn - SQUIRREL_FREE_LIMIT);
+
+    if (prevDrawn < SQUIRREL_FREE_LIMIT && nextDrawn >= SQUIRREL_FREE_LIMIT && bloodPenalty === 0) {
+      addLog("The Squirrel pile has bled dry (13 drawn). Every Squirrel drawn hereafter costs -1 Blood on the Runnel!");
+    }
+
+    if (bloodPenalty > 0) {
+      const nextScale = scale - bloodPenalty;
+      setScale(nextScale);
+      triggerSfx('blood_drain');
+      addLog(
+        `Blood Debt! Drawing ${bloodPenalty === 1 ? 'a Squirrel' : `${bloodPenalty} Squirrels`} from the bled-dry pile drained -${bloodPenalty} Blood from your Runnel.`
+      );
+      if (nextScale <= -5) {
+        addLog("Your Blood Runnel emptied to -5 from Blood Debt!");
+        triggerBloodDebtDefeat();
+        return true;
+      }
+    }
+    return false;
+  };
+
   // --- Draw Mechanics ---
   const handleDraw = (type: 'sacrifice' | 'main') => {
-    if (phase !== 'DRAW') return;
+    if (phase !== 'DRAW' || isLossSequenceActive) return;
     if (type === 'sacrifice' && flockNoSquirrelTurnsRef.current && flockSquirrelLockDraws > 0) {
       triggerSfx('hit');
       addLog(`The Zealot's curse seals your Squirrel pile (${flockSquirrelLockDraws} turn${flockSquirrelLockDraws === 1 ? '' : 's'} remaining).`);
       return;
     }
     let card: CardDef;
+    let drewSquirrel = false;
     if (type === 'sacrifice') {
+      drewSquirrel = true;
       card = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
       if (flockSquirrelHealthBonusRef.current > 0) {
         card.health = (card.health || 1) + flockSquirrelHealthBonusRef.current;
@@ -1894,6 +1958,7 @@ export default function App() {
       addLog("Drew a Squirrel.");
     } else {
       if (deck.length === 0) {
+        drewSquirrel = true;
         addLog("Your deck is empty! A Squirrel approaches out of pity.");
         card = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
         if (flockSquirrelHealthBonusRef.current > 0) {
@@ -1915,6 +1980,12 @@ export default function App() {
       setFlockSquirrelLockDraws(prev => Math.max(0, prev - 1));
     }
     setHand(prev => [...prev, card]);
+
+    if (drewSquirrel) {
+      const diedToBloodDebt = applySquirrelDrawCost(1);
+      if (diedToBloodDebt) return;
+    }
+
     if (bossState.type === 'Zealot' && bossState.phase === 2 && bossState.skipNextPlayerTurn) {
       setZealotParalyzedBanner(true);
     }
@@ -6119,6 +6190,8 @@ export default function App() {
     setStage(1);
     setLevel(1);
     setDuelsCompleted(0);
+    setTurnNumber(1);
+    resetArterialShunt();
 
     // Curated starter tutorial deck
     const tutorialCards = [
@@ -10038,22 +10111,29 @@ export default function App() {
       <BoneOssuaryPlaque bones={bones} boneShaking={boneShaking} />
     </div>
     <div className="flex items-center justify-center gap-5 w-full min-w-[184px] sm:min-w-[196px] relative font-mono translate-y-3 sm:translate-y-4">
-      {/* Squirrel Deck (Physical Stacked Cards) */}
+      {/* Squirrel Deck (Physical Stacked Cards — Shaded Crimson w/ Blood Splatter after 13 draws) */}
       <RitualCardDeck
         cardBackSrc={`${BASE}/assets/cardbases/cardbacks.png`}
         glyphSrc={`${BASE}/assets/cardbases/S.png`}
         alt="Squirrel Deck"
         glyphAlt="S"
-        disabled={phase !== 'DRAW'}
-        isDrawReady={phase === 'DRAW'}
+        disabled={phase !== 'DRAW' || isLossSequenceActive}
+        isDrawReady={phase === 'DRAW' && !isLossSequenceActive}
         onClick={() => handleDraw('sacrifice')}
         title={
           flockNoSquirrelTurns && flockSquirrelLockDraws > 0
             ? `Sealed by The Zealot's Flock (${flockSquirrelLockDraws} turn${flockSquirrelLockDraws === 1 ? '' : 's'} left)`
-            : 'Draw Squirrel'
+            : squirrelsDrawnThisDuel >= SQUIRREL_FREE_LIMIT
+              ? 'BLOOD DEBT: Squirrel pile bled dry! Every Squirrel drawn costs -1 Blood on the Runnel (lethal at -5).'
+              : `Draw Squirrel (${SQUIRREL_FREE_LIMIT - squirrelsDrawnThisDuel} remaining before Blood Debt)`
         }
-        cardCount={10}
+        cardCount={
+          squirrelsDrawnThisDuel >= SQUIRREL_FREE_LIMIT
+            ? 3
+            : Math.max(2, SQUIRREL_FREE_LIMIT - squirrelsDrawnThisDuel)
+        }
         isSealed={Boolean(flockNoSquirrelTurns && flockSquirrelLockDraws > 0)}
+        isBloodExhausted={squirrelsDrawnThisDuel >= SQUIRREL_FREE_LIMIT}
       />
 
       {/* Creature Deck (Dynamic Physical Stack Height Based on Remaining Cards) */}
@@ -10063,8 +10143,8 @@ export default function App() {
           glyphSrc={`${BASE}/assets/cardbases/C.png`}
           alt="Creature Deck"
           glyphAlt="C"
-          disabled={phase !== 'DRAW'}
-          isDrawReady={phase === 'DRAW'}
+          disabled={phase !== 'DRAW' || isLossSequenceActive}
+          isDrawReady={phase === 'DRAW' && !isLossSequenceActive}
           onClick={() => handleDraw('main')}
           title={`Draw Creature from Deck (${deck.length} remaining)`}
           cardCount={deck.length}
@@ -10096,6 +10176,9 @@ export default function App() {
                   const drawnSquirrels: CardDef[] = [];
                   for (let i = 0; i < count; i++) {
                     const card = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
+                    if (flockSquirrelHealthBonusRef.current > 0) {
+                      card.health = (card.health || 1) + flockSquirrelHealthBonusRef.current;
+                    }
                     if (isAcornActive) {
                       card.attack = (card.attack || 0) + 1;
                       card.health = (card.health || 0) + 1;
@@ -10106,6 +10189,7 @@ export default function App() {
                   triggerSfx('draw');
                   addLog(`Loaded Die drew ${count} ${count === 1 ? 'Squirrel' : 'Squirrels'}.`);
                   setDieModal(null);
+                  applySquirrelDrawCost(count);
                 }}
                 className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
               >
@@ -10117,13 +10201,18 @@ export default function App() {
                   const count = dieModal.count;
                   const remainingDeck = [...deck];
                   const drawnCards: CardDef[] = [];
+                  let pitySquirrelCount = 0;
 
                   for (let i = 0; i < count; i++) {
                     if (remainingDeck.length > 0) {
                       const drawn = remainingDeck.pop()!;
                       drawnCards.push(transformAmorphous(applyPlayerTotem(drawn, activeTotem)));
                     } else {
+                      pitySquirrelCount += 1;
                       const pity = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
+                      if (flockSquirrelHealthBonusRef.current > 0) {
+                        pity.health = (pity.health || 1) + flockSquirrelHealthBonusRef.current;
+                      }
                       if (isAcornActive) {
                         pity.attack = (pity.attack || 0) + 1;
                         pity.health = (pity.health || 0) + 1;
@@ -10138,6 +10227,9 @@ export default function App() {
                   triggerSfx('draw');
                   addLog(`Loaded Die drew: ${drawnCards.map(c => getCardDisplayName(c.name)).join(', ')}.`);
                   setDieModal(null);
+                  if (pitySquirrelCount > 0) {
+                    applySquirrelDrawCost(pitySquirrelCount);
+                  }
                 }}
                 className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
               >
@@ -10149,23 +10241,16 @@ export default function App() {
       )}
 
       {/* =========================================================================
-          SIGIL DETAIL MODAL
+          SIGIL / CREST INSPECTION RELIQUARY MODAL
          ========================================================================= */}
       {sigilDetailModal && (
-        <div className="fixed inset-0 bg-black/85 z-[110] flex items-center justify-center p-4 backdrop-blur-sm font-mono select-none">
-          <div className="border border-amber-950/60 p-6 bg-[#0c0805] max-w-sm w-full text-center">
-            <div className="text-4xl mb-3 filter sepia-[0.8]">{SIGIL_MAPPING[sigilDetailModal.name] || '⭐'}</div>
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">Crest Description</div>
-            <h3 className="text-base font-mono font-bold text-amber-200 uppercase tracking-widest mb-2">{sigilDetailModal.name}</h3>
-            <p className="text-xs text-stone-300/80 leading-relaxed mb-6 font-mono border-t border-amber-950/40 pt-3">{sigilDetailModal.desc}</p>
-            <button
-              onClick={() => setSigilDetailModal(null)}
-              className="mt-4 px-6 py-2 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer"
-            >
-              CLOSE
-            </button>
-          </div>
-        </div>
+        <SigilInspectionModal
+          name={sigilDetailModal.name}
+          desc={sigilDetailModal.desc}
+          artUrl={getSigilArtUrl(sigilDetailModal.name)}
+          fallbackSymbol={SIGIL_MAPPING[sigilDetailModal.name] || '✦'}
+          onClose={() => setSigilDetailModal(null)}
+        />
       )}
 
       {/* =========================================================================

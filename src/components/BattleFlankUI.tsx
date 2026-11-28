@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 
 /* =========================================================================
    1. STAGE / PHASE / DEPTH CARVED SLATE & BRASS RITUAL CARTOUCHE
@@ -725,6 +725,8 @@ export interface RitualCardDeckProps {
   cardCount: number;
   /** Optional sealed visual treatment (e.g. Zealot's Flock squirrel lock) */
   isSealed?: boolean;
+  /** Blood-debt exhaustion state (after 13 squirrels drawn: shaded crimson with blood splatter, -1 blood per draw) */
+  isBloodExhausted?: boolean;
 }
 
 export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
@@ -738,7 +740,9 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
   title,
   cardCount,
   isSealed = false,
+  isBloodExhausted = false,
 }) => {
+  const uid = useId().replace(/:/g, '');
   // Compute visible physical card slices (1 slice for 1 card, scaling up to 7 chunky slices for >= 12 cards)
   const stackSlices =
     cardCount <= 1
@@ -774,7 +778,7 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
   };
 
   return (
-    <div className="group/deck flex flex-col items-center">
+    <div className="group/deck relative flex flex-col items-center">
       {/* Grounded Card Stack Footprint */}
       <div className="relative w-[84px] h-[119px] sm:w-[88px] sm:h-[125px]">
         {/* Deep Grounded Tabletop Cast Shadow (masked to exact ragged card silhouette) */}
@@ -786,10 +790,16 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
             filter: 'blur(5px)',
           }}
         >
-          <div className="w-full h-full bg-black/85" style={maskStyle} />
+          <div
+            className="w-full h-full"
+            style={{
+              ...maskStyle,
+              backgroundColor: isBloodExhausted ? 'rgba(35, 3, 5, 0.92)' : 'rgba(0, 0, 0, 0.85)',
+            }}
+          />
         </div>
 
-        {/* Physical Layered Aged-Parchment Card Stack Edges (Exact cardbacks.png Ragged Silhouette!) */}
+        {/* Physical Layered Aged-Parchment (or Blood-Soaked) Card Stack Edges (Exact cardbacks.png Ragged Silhouette!) */}
         {Array.from({ length: stackSlices }, (_, i) => {
           const idxFromTop = stackSlices - i; // 1 = closest to top card, stackSlices = bottom-most card
           const stepY = idxFromTop * 1.7 - totalLiftY * 0.45;
@@ -812,9 +822,13 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
                 className="w-full h-full"
                 style={{
                   ...maskStyle,
-                  background: isEven
-                    ? 'linear-gradient(148deg, #342417 0%, #6d5339 58%, #9f805c 88%, #c6a880 100%)'
-                    : 'linear-gradient(148deg, #24180f 0%, #523d29 58%, #806446 88%, #a68863 100%)',
+                  background: isBloodExhausted
+                    ? isEven
+                      ? 'linear-gradient(148deg, #240406 0%, #5c0d12 56%, #8f1820 88%, #b3262e 100%)'
+                      : 'linear-gradient(148deg, #170203 0%, #42080c 56%, #6e1117 88%, #8f1b22 100%)'
+                    : isEven
+                      ? 'linear-gradient(148deg, #342417 0%, #6d5339 58%, #9f805c 88%, #c6a880 100%)'
+                      : 'linear-gradient(148deg, #24180f 0%, #523d29 58%, #806446 88%, #a68863 100%)',
                 }}
               />
             </div>
@@ -832,23 +846,38 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
           }}
           className={`w-full h-full p-0 border-0 bg-transparent outline-none flex items-center justify-center transition-all duration-180 ease-out select-none relative z-20 ${
             isDrawReady && !disabled
-              ? 'cursor-pointer animate-deck-glow group-hover/deck:-translate-y-2 group-hover/deck:-rotate-[1.4deg] group-hover/deck:scale-[1.03] active:translate-y-0 active:scale-[0.98]'
-              : 'opacity-92 cursor-not-allowed [filter:drop-shadow(0_1.5px_0_rgba(12,8,5,0.95))_drop-shadow(0_3px_5px_rgba(0,0,0,0.9))]'
+              ? `cursor-pointer ${isBloodExhausted ? 'animate-deck-blood-glow' : 'animate-deck-glow'} group-hover/deck:-translate-y-2 group-hover/deck:-rotate-[1.4deg] group-hover/deck:scale-[1.03] active:translate-y-0 active:scale-[0.98]`
+              : isBloodExhausted
+                ? 'opacity-95 cursor-not-allowed [filter:drop-shadow(0_0_5px_rgba(153,27,27,0.55))_drop-shadow(0_2px_4px_rgba(0,0,0,0.92))]'
+                : 'opacity-92 cursor-not-allowed [filter:drop-shadow(0_1.5px_0_rgba(12,8,5,0.95))_drop-shadow(0_3px_5px_rgba(0,0,0,0.9))]'
           }`}
         >
           {/* Card Back Artwork (Exact Ragged Card Silhouette) */}
           <img
             src={cardBackSrc}
             alt={alt}
-            className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0"
+            className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0 transition-all duration-300"
             style={{
               imageRendering: 'pixelated',
-              filter: isDrawReady && !disabled ? 'brightness(1.04) contrast(1.05)' : 'brightness(0.86) contrast(1.05)',
+              filter: isBloodExhausted
+                ? isDrawReady && !disabled
+                  ? 'sepia(0.62) hue-rotate(-44deg) saturate(2.55) brightness(0.76) contrast(1.14)'
+                  : 'sepia(0.62) hue-rotate(-44deg) saturate(2.35) brightness(0.64) contrast(1.14)'
+                : isDrawReady && !disabled
+                  ? 'brightness(1.04) contrast(1.05)'
+                  : 'brightness(0.86) contrast(1.05)',
             }}
           />
 
-          {/* Dead-Center Iconic Crimson Glyphed S / C */}
-          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          {/* Dead-Center Iconic Crimson Glyphed S / C (preserve .deck-glyph-red CSS filter!) */}
+          <div
+            className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+            style={
+              isBloodExhausted
+                ? { filter: 'drop-shadow(0 0 6px rgba(220,38,38,0.9)) drop-shadow(0 1px 2px rgba(0,0,0,0.95))' }
+                : undefined
+            }
+          >
             <img
               src={glyphSrc}
               alt={glyphAlt}
@@ -856,6 +885,93 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
               style={{ imageRendering: 'pixelated' }}
             />
           </div>
+
+          {/* Blood-Debt Exhaustion Crimson Tint & Organic Blood Splatter Overlay (Strictly Masked to cardbacks.png!) */}
+          {isBloodExhausted && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-15"
+              style={maskStyle}
+            >
+              {/* Deep arterial crimson stain soak across torn card face */}
+              <div
+                className="absolute inset-0 mix-blend-multiply"
+                style={{
+                  background:
+                    'radial-gradient(ellipse 92% 82% at 64% 24%, rgba(168, 18, 22, 0.72) 0%, rgba(112, 10, 14, 0.62) 55%, rgba(56, 4, 7, 0.78) 100%)',
+                }}
+              />
+              {/* Organic Arterial Blood Splatter, Impact Cast-Off Spray & Wet Drips */}
+              <svg viewBox="0 0 88 125" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                <defs>
+                  <radialGradient id={`splatDeep-${uid}`} cx="38%" cy="34%" r="68%">
+                    <stop offset="0%" stopColor="#991418" stopOpacity="0.94" />
+                    <stop offset="55%" stopColor="#5e090d" stopOpacity="0.94" />
+                    <stop offset="100%" stopColor="#2b0305" stopOpacity="0.9" />
+                  </radialGradient>
+                  <linearGradient id={`splatDrip-${uid}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6e0b0f" stopOpacity="0.95" />
+                    <stop offset="58%" stopColor="#991418" stopOpacity="0.92" />
+                    <stop offset="100%" stopColor="#420508" stopOpacity="0.86" />
+                  </linearGradient>
+                </defs>
+
+                {/* Upper-right heavy soaked blood crown with jagged organic drip rivulets */}
+                <path
+                  d="M 48 0 L 88 0 L 88 30 C 84 28, 82 32, 80 39 C 78.5 44, 76 44, 76 38 C 76 31, 73 25, 70 28 C 67.5 30.5, 67 48, 64.5 52 C 62.5 55, 61.5 49, 62 41 C 62.5 32, 59 24, 55.5 27 C 53 29.5, 53.5 39, 51.5 41.5 C 49.5 43.5, 49 36, 49.5 29 C 50 21, 44 16, 41 11 C 38 6, 42 2, 48 0 Z"
+                  fill={`url(#splatDrip-${uid})`}
+                />
+
+                {/* Lower-left ragged spatter impact & downward smear */}
+                <path
+                  d="M 14 73 C 17 70, 21 71, 24 75 C 27 78, 32 77, 34 80 C 35.5 82.5, 31 84.5, 29 87 C 27 90, 31 94, 28.5 96.5 C 26 99, 23 93, 20.5 94.5 C 18 96, 18.5 107, 16 109.5 C 13.8 111.5, 13.5 103, 14 97 C 14.5 91, 9 91, 7.5 86.5 C 6 82, 10 79, 9.5 76 C 9 73.5, 11.5 75, 14 73 Z"
+                  fill={`url(#splatDeep-${uid})`}
+                />
+
+                {/* Lower-right coagulated thumbprint edge stain */}
+                <path
+                  d="M 66 101 C 72 96, 81 95, 88 90 L 88 125 L 58 125 C 58 117, 60 106, 66 101 Z"
+                  fill={`url(#splatDeep-${uid})`}
+                  opacity="0.82"
+                />
+
+                {/* Sharp directional arterial cast-off streaks & fine mist spatter */}
+                <g fill="#700b0f" opacity="0.92">
+                  <path d="M 27 77 L 39 67 C 40 66.5, 37.5 70, 29 79 Z" />
+                  <path d="M 15 74 L 7 61 C 6.5 60, 10 62.5, 17 72.5 Z" />
+                  <path d="M 30 85 L 44 90 C 45.5 90.5, 41.5 91.5, 29 87.5 Z" />
+                  <path d="M 50 18 L 31 11 C 29.5 10.5, 34 9.5, 51 15.5 Z" />
+                  <path d="M 76 47 L 83 56 C 83.5 57, 80.5 55.5, 75 49 Z" />
+                  <ellipse cx="36" cy="24" rx="1.9" ry="2.6" transform="rotate(-22 36 24)" />
+                  <ellipse cx="26" cy="17" rx="1.2" ry="1.8" transform="rotate(-30 26 17)" />
+                  <circle cx="19" cy="27" r="1.1" />
+                  <circle cx="43" cy="36" r="1.4" />
+                  <circle cx="46" cy="44" r="0.9" />
+                  <ellipse cx="69" cy="64" rx="1.6" ry="2.7" transform="rotate(11 69 64)" />
+                  <circle cx="75" cy="56" r="1.1" />
+                  <circle cx="57" cy="58" r="1.2" />
+                  <circle cx="44" cy="76" r="1.3" />
+                  <circle cx="49" cy="83" r="0.9" />
+                  <ellipse cx="36" cy="107" rx="1.8" ry="2.5" transform="rotate(14 36 107)" />
+                  <circle cx="44" cy="112" r="1.2" />
+                  <circle cx="29" cy="116" r="0.95" />
+                  <circle cx="10" cy="104" r="1.4" />
+                  <circle cx="21" cy="59" r="1.0" />
+                  <circle cx="77" cy="78" r="1.2" />
+                  <circle cx="71" cy="86" r="0.85" />
+                </g>
+
+                {/* Crisp dark-rose wet highlights on heavy drip tips */}
+                <g fill="#f87171" opacity="0.48">
+                  <ellipse cx="64.2" cy="49.2" rx="0.8" ry="1.7" />
+                  <ellipse cx="77.2" cy="40.5" rx="0.7" ry="1.4" />
+                  <ellipse cx="51.2" cy="39.2" rx="0.65" ry="1.2" />
+                  <ellipse cx="16.2" cy="106.8" rx="0.7" ry="1.4" />
+                  <ellipse cx="17.8" cy="81.2" rx="1.1" ry="2.0" transform="rotate(-14 17.8 81.2)" />
+                </g>
+              </svg>
+            </div>
+          )}
 
           {/* Optional Sealed Binding Overlay (Masked to Exact Card Shape) */}
           {isSealed && (
@@ -874,6 +990,275 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
           )}
         </button>
       </div>
+
+      {/* Diegetic Blood-Debt Warning Signifier (Positioned absolutely so it never shifts deck layout!) */}
+      {isBloodExhausted && !isSealed && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 flex items-center gap-1 whitespace-nowrap z-30"
+        >
+          <svg viewBox="0 0 10 13" className="w-[8px] h-[10px] shrink-0 drop-shadow-[0_0_5px_rgba(239,68,68,0.95)]">
+            <path
+              d="M 5 0.8 C 5 0.8, 9 5.8, 9 8.5 C 9 10.8, 7.2 12.2, 5 12.2 C 2.8 12.2, 1 10.8, 1 8.5 C 1 5.8, 5 0.8, 5 0.8 Z"
+              fill="#dc2626"
+              stroke="#fca5a5"
+              strokeWidth="0.65"
+            />
+            <ellipse cx="3.6" cy="8.2" rx="0.8" ry="1.4" fill="#fecaca" opacity="0.65" />
+          </svg>
+          <span
+            className="font-mono text-[9.5px] font-black uppercase tracking-[0.14em] text-[#fecaca]"
+            style={{ textShadow: '0 1px 4px rgba(0,0,0,1), 0 0 8px rgba(220,38,38,0.95)' }}
+          >
+            -1 BLOOD
+          </span>
+        </div>
+      )}
     </div>
   );
 };
+
+/* =========================================================================
+   5. SIGIL / CREST INSPECTION RELIQUARY MODAL (CARVED SLATE & FORGED BRASS)
+   ========================================================================= */
+export interface SigilInspectionModalProps {
+  name: string;
+  desc: string;
+  artUrl: string;
+  fallbackSymbol?: string;
+  onClose: () => void;
+}
+
+const SIGIL_PLAQUE_CLIP =
+  'polygon(14px 1px, calc(100% - 14px) 1px, calc(100% - 1px) 14px, calc(100% - 1px) calc(100% - 14px), calc(100% - 14px) calc(100% - 1px), 14px calc(100% - 1px), 1px calc(100% - 14px), 1px 14px)';
+
+export const SigilInspectionModal: React.FC<SigilInspectionModalProps> = ({
+  name,
+  desc,
+  artUrl,
+  fallbackSymbol = '✦',
+  onClose,
+}) => {
+  const uid = useId().replace(/:/g, '');
+  const baseUrl = import.meta.env.BASE_URL || './';
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setImgFailed(false);
+  }, [name, artUrl]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-[3px] select-none"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${name} Crest Description`}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="animate-sigil-modal-in relative w-full max-w-[356px] px-7 pt-7 pb-6 flex flex-col items-center text-center"
+        style={{
+          filter: 'drop-shadow(0 24px 44px rgba(0,0,0,0.96)) drop-shadow(0 0 18px rgba(107,15,18,0.28))',
+        }}
+      >
+        {/* 1. CARVED AGED-SLATE OCTAGONAL BODY */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            clipPath: SIGIL_PLAQUE_CLIP,
+            backgroundImage: `radial-gradient(ellipse 90% 48% at 50% 6%, rgba(136, 20, 24, 0.34) 0%, rgba(36, 24, 18, 0.42) 48%, rgba(8, 6, 6, 0.92) 100%), linear-gradient(180deg, rgba(24, 19, 16, 0.68) 0%, rgba(10, 8, 8, 0.9) 100%), url("${baseUrl}assets/text/slate.jpg")`,
+            backgroundSize: 'cover, cover, 160px 160px',
+            backgroundPosition: 'center',
+          }}
+        />
+
+        {/* 2. BEVELED STONE PERIMETER, ENGRAVED GROOVE & FORGED-BRASS CORNER CLASPS */}
+        <svg
+          viewBox="0 0 356 290"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id={`sigilEdge-${uid}`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#b08749" stopOpacity="0.92" />
+              <stop offset="35%" stopColor="#5e4632" stopOpacity="0.9" />
+              <stop offset="72%" stopColor="#3b2b20" stopOpacity="0.92" />
+              <stop offset="100%" stopColor="#8f6a38" stopOpacity="0.88" />
+            </linearGradient>
+            <linearGradient id={`sigilBrass-${uid}`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#2c1b0d" />
+              <stop offset="38%" stopColor="#9f773d" />
+              <stop offset="62%" stopColor="#e2be7d" />
+              <stop offset="100%" stopColor="#3e2611" />
+            </linearGradient>
+          </defs>
+
+          {/* Outer shadow & chamfered slate bevel */}
+          <polygon
+            points="14,1 342,1 355,14 355,276 342,289 14,289 1,276 1,14"
+            fill="none"
+            stroke="#060404"
+            strokeWidth="3"
+          />
+          <polygon
+            points="14,1 342,1 355,14 355,276 342,289 14,289 1,276 1,14"
+            fill="none"
+            stroke={`url(#sigilEdge-${uid})`}
+            strokeWidth="1.4"
+          />
+
+          {/* Recessed engraved inner brass hairline frame */}
+          <polygon
+            points="20,7.5 336,7.5 348.5,20 348.5,270 336,282.5 20,282.5 7.5,270 7.5,20"
+            fill="none"
+            stroke="rgba(196, 154, 92, 0.28)"
+            strokeWidth="0.9"
+          />
+
+          {/* Subtle aged-stone hairline fissures */}
+          <path d="M 10 92 L 22 99 L 18 109" fill="none" stroke="#080505" strokeWidth="1" opacity="0.65" />
+          <path d="M 346 196 L 333 203 L 338 214" fill="none" stroke="#080505" strokeWidth="1" opacity="0.65" />
+
+          {/* Four Forged Tarnished-Brass Corner Clamp Brackets */}
+          <path d="M 14 0.5 L 40 0.5 L 40 4.5 L 16.5 4.5 L 4.5 16.5 L 4.5 40 L 0.5 40 L 0.5 14 Z" fill={`url(#sigilBrass-${uid})`} stroke="#140c07" strokeWidth="0.8" />
+          <path d="M 342 0.5 L 316 0.5 L 316 4.5 L 339.5 4.5 L 351.5 16.5 L 351.5 40 L 355.5 40 L 355.5 14 Z" fill={`url(#sigilBrass-${uid})`} stroke="#140c07" strokeWidth="0.8" />
+          <path d="M 14 289.5 L 40 289.5 L 40 285.5 L 16.5 285.5 L 4.5 273.5 L 4.5 250 L 0.5 250 L 0.5 276 Z" fill={`url(#sigilBrass-${uid})`} stroke="#140c07" strokeWidth="0.8" />
+          <path d="M 342 289.5 L 316 289.5 L 316 285.5 L 339.5 285.5 L 351.5 273.5 L 351.5 250 L 355.5 250 L 355.5 276 Z" fill={`url(#sigilBrass-${uid})`} stroke="#140c07" strokeWidth="0.8" />
+
+          {/* Corner Forged Brass Rivets */}
+          {[
+            [15.5, 15.5],
+            [340.5, 15.5],
+            [15.5, 274.5],
+            [340.5, 274.5],
+          ].map(([cx, cy], idx) => (
+            <g key={idx}>
+              <circle cx={cx} cy={cy} r="3" fill="#090605" />
+              <circle cx={cx} cy={cy} r="2.1" fill="#4f371e" stroke="#dfba7c" strokeWidth="0.6" />
+              <circle cx={cx - 0.55} cy={cy - 0.55} r="0.65" fill="#fef0c7" opacity="0.72" />
+            </g>
+          ))}
+        </svg>
+
+        {/* 3. FORGED-BRASS & SMOKED-OBSIDIAN RELIQUARY CREST MEDALLION */}
+        <div className="relative mb-3.5 w-[78px] h-[78px] flex items-center justify-center">
+          {/* Warm crimson-gold backlit ember aura */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-2.5 rounded-full"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(185, 28, 28, 0.34) 0%, rgba(180, 120, 48, 0.14) 48%, transparent 74%)',
+            }}
+          />
+          <svg
+            viewBox="0 0 80 80"
+            className="pointer-events-none absolute inset-0 w-full h-full overflow-visible drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)]"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id={`medRing-${uid}`} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#e5c185" />
+                <stop offset="32%" stopColor="#8f6a38" />
+                <stop offset="68%" stopColor="#3a2512" />
+                <stop offset="100%" stopColor="#c49a5c" />
+              </linearGradient>
+              <radialGradient id={`medWell-${uid}`} cx="50%" cy="42%" r="58%">
+                <stop offset="0%" stopColor="#281613" />
+                <stop offset="62%" stopColor="#120a09" />
+                <stop offset="100%" stopColor="#070404" />
+              </radialGradient>
+            </defs>
+            {/* Outer forged-iron flange */}
+            <circle cx="40" cy="40" r="38" fill="#140d0a" stroke="#080504" strokeWidth="1.5" />
+            {/* Tarnished-brass stepped bezel */}
+            <circle cx="40" cy="40" r="35.2" fill={`url(#medWell-${uid})`} stroke={`url(#medRing-${uid})`} strokeWidth="2.8" />
+            {/* Fine inner engraved crimson-gold ring */}
+            <circle cx="40" cy="40" r="30.2" fill="none" stroke="rgba(185, 28, 28, 0.45)" strokeWidth="0.9" strokeDasharray="3 2.2" />
+            {/* Cardinal brass studs */}
+            {[
+              [40, 4.8],
+              [75.2, 40],
+              [40, 75.2],
+              [4.8, 40],
+            ].map(([cx, cy], idx) => (
+              <circle key={idx} cx={cx} cy={cy} r="1.8" fill="#dfba7c" stroke="#1b1109" strokeWidth="0.6" />
+            ))}
+          </svg>
+
+          {/* Actual Sigil / Crest Artwork (with graceful symbol fallback) */}
+          <div className="relative z-10 w-[50px] h-[50px] flex items-center justify-center">
+            {!imgFailed && artUrl ? (
+              <img
+                src={artUrl}
+                alt={name}
+                onError={() => setImgFailed(true)}
+                className="w-full h-full object-contain select-none"
+                style={{
+                  imageRendering: 'pixelated',
+                  filter: 'drop-shadow(0 0 8px rgba(220, 38, 38, 0.48)) drop-shadow(0 2px 3px rgba(0,0,0,0.95))',
+                }}
+              />
+            ) : (
+              <span
+                className="text-3xl leading-none text-[#e5c185]"
+                style={{ textShadow: '0 0 10px rgba(185,28,28,0.65), 0 2px 4px rgba(0,0,0,1)' }}
+              >
+                {fallbackSymbol}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 4. EYEBROW, ENGRAVED TITLE & CRIMSON-BRASS DIVIDER */}
+        <div
+          className="font-['Cinzel',_serif] text-[9.5px] font-bold uppercase tracking-[0.28em] text-[#c49a5c]/90 mb-1"
+          style={{ textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}
+        >
+          ◆ Crest Inscription ◆
+        </div>
+        <h3
+          className="font-['Cinzel',_serif] text-[18px] font-bold uppercase tracking-[0.15em] text-[#f3dfb8] leading-tight"
+          style={{ textShadow: '0 2px 6px rgba(0,0,0,1), 0 0 14px rgba(185,28,28,0.35)' }}
+        >
+          {name}
+        </h3>
+
+        {/* Tapered Brass-Crimson Rule with Centered Crimson Diamond */}
+        <div className="w-full flex items-center justify-center gap-2 my-3.5" aria-hidden="true">
+          <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#9f773d]/75 to-[#b91c1c]/85" />
+          <svg viewBox="0 0 10 10" className="w-[9px] h-[9px] shrink-0 overflow-visible">
+            <polygon points="5,0.6 9.4,5 5,9.4 0.6,5" fill="#991b1b" stroke="#dfba7c" strokeWidth="0.9" />
+          </svg>
+          <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#9f773d]/75 to-[#b91c1c]/85" />
+        </div>
+
+        {/* 5. RECESSED INSCRIPTION DESCRIPTION CHANNEL */}
+        <div className="relative w-full px-4 py-3.5 mb-5 bg-[#080505]/72 border border-[#4a3524]/65 shadow-[inset_0_2px_10px_rgba(0,0,0,0.92)]">
+          <span className="pointer-events-none absolute top-0.5 left-0.5 w-2 h-2 border-t border-l border-[#b08749]/55" />
+          <span className="pointer-events-none absolute top-0.5 right-0.5 w-2 h-2 border-t border-r border-[#b08749]/55" />
+          <span className="pointer-events-none absolute bottom-0.5 left-0.5 w-2 h-2 border-b border-l border-[#b08749]/55" />
+          <span className="pointer-events-none absolute bottom-0.5 right-0.5 w-2 h-2 border-b border-r border-[#b08749]/55" />
+          <p className="font-mono text-[12px] text-[#e1d1ba] leading-relaxed">
+            {desc}
+          </p>
+        </div>
+
+        {/* 6. SCULPTED FORGED-BRASS & SLATE DISMISS BUTTON */}
+        <RitualSlateButton label="CLOSE" onClick={onClose} />
+      </div>
+    </div>
+  );
+};
+
