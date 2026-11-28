@@ -928,120 +928,204 @@ export default function EventScreens({ ctx }: { ctx: {
                     </div>
 
                     {/* Centerpiece: Creature Suspended Over the Boiling Blood Font */}
-                    <div className="relative z-10 flex flex-col items-center justify-center w-full my-auto">
-                      {/* Clip viewport cuts off exactly at the blood pool surface so sinking cards vanish into the liquid */}
-                      <div className="relative z-30 w-[220px] h-[182px] -mb-[38px] overflow-hidden flex items-start justify-center pt-1">
-                        <div
-                          className={`relative w-[124px] h-[168px] flex items-center justify-center rounded-[4px] transition-shadow duration-500 ${
-                            campfireAnimState === 'blessed'
-                              ? 'shadow-[0_0_40px_rgba(245,158,11,0.65),0_0_20px_rgba(220,38,38,0.45)]'
-                              : selectedCard
-                                ? 'shadow-[0_16px_32px_rgba(0,0,0,0.92),0_0_20px_rgba(220,38,38,0.28)]'
-                                : ''
-                          }`}
-                          style={{
-                            animation:
-                              campfireAnimState === 'dipping'
-                                ? 'fontSubmergeDip 0.85s ease-in-out forwards'
-                                : campfireAnimState === 'drowning'
-                                  ? 'fontDrownSink 0.85s ease-in forwards'
-                                  : undefined,
-                          }}
-                        >
-                          {selectedCard ? (
-                            <div
-                              onClick={() => {
-                                if (campfireStage === 0 && !isEventBusy) {
-                                  triggerSfx('draw');
-                                  setCampfireCardIdx(null);
-                                }
-                              }}
-                              title={campfireStage === 0 && !isEventBusy ? 'Click to return to deck' : undefined}
-                              className={`scale-[1.06] origin-center ${campfireStage === 0 && !isEventBusy ? 'cursor-pointer hover:-translate-y-1 transition-transform' : ''}`}
+                    {(() => {
+                      const propBase = import.meta.env.BASE_URL || './';
+                      const isPerilous = campfireStage > 0 && !isCampfireSafe;
+                      const bubbleOffsets = isPerilous ? [-54, -32, -12, 8, 28, 48] : [-44, -16, 12, 40];
+                      const sconcePositions = [
+                        { side: 'left', leftPct: '6.2%', delay: '0s' },
+                        { side: 'right', leftPct: '93.6%', delay: '0.28s' },
+                      ];
+                      return (
+                        <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[132px] sm:pt-[142px]">
+                          {/* Aspect-Locked Stone Baptismal Font Stage (845x944) */}
+                          <div className="relative w-[248px] sm:w-[278px] lg:w-[298px] aspect-[845/944] select-none">
+                            {/* Base Stone Chalice Prop */}
+                            <img
+                              src={`${propBase}assets/props/campfire.png`}
+                              alt="Baptismal Blood Font"
+                              draggable={false}
+                              className="pointer-events-none relative z-10 w-full h-full object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.96)]"
+                            />
+
+                            {/* Boiling Blood Pool Synced Directly Inside the Stone Basin Rim */}
+                            <svg
+                              viewBox="0 0 240 60"
+                              preserveAspectRatio="none"
+                              className="pointer-events-none absolute left-[19.5%] top-[2.6%] w-[61%] h-[11.2%] z-20 overflow-visible"
                             >
-                              {renderCard(selectedCard, { isClickable: false, disableHoverScale: true })}
-                            </div>
-                          ) : (
-                            <div className="w-[114px] h-[158px] rounded-[4px] border border-dashed border-[#8a4632]/75 bg-[#120807]/75 flex flex-col items-center justify-center gap-1.5 text-[#b57c62]">
-                              <span className="text-xl opacity-70">🩸</span>
-                              <span className="text-[9.5px] uppercase tracking-[0.2em] px-2">Choose Vessel</span>
-                            </div>
-                          )}
-                        </div>
+                              <defs>
+                                <radialGradient id="boilingBloodPool" cx="50%" cy="52%" r="54%">
+                                  <stop
+                                    offset="0%"
+                                    stopColor={isAnimating ? '#fca5a5' : isPerilous ? '#f97316' : '#dc2626'}
+                                  />
+                                  <stop
+                                    offset="58%"
+                                    stopColor={isPerilous ? '#b91c1c' : '#991b1b'}
+                                  />
+                                  <stop offset="100%" stopColor="#3b0708" />
+                                </radialGradient>
+                              </defs>
+                              {/* Crimson liquid surface fill */}
+                              <ellipse
+                                cx="120"
+                                cy="31"
+                                rx="114"
+                                ry="25"
+                                fill="url(#boilingBloodPool)"
+                                className={isPerilous || isAnimating ? 'animate-pulse' : ''}
+                              />
+                              {/* Inner blood meniscus & shimmering ripples */}
+                              <ellipse cx="120" cy="31" rx="112" ry="23" fill="none" stroke="#ef4444" strokeWidth="1.6" opacity="0.55" />
+                              <ellipse cx="104" cy="29" rx="46" ry="8" fill="none" stroke="#fca5a5" strokeWidth="1.2" opacity="0.5" />
+                              <ellipse cx="144" cy="34" rx="28" ry="5" fill="none" stroke="#fecaca" strokeWidth="1" opacity="0.38" />
+                            </svg>
 
-                        {/* Surface Blood Splash / Meniscus Glow where the card enters the liquid */}
-                        {isAnimating && (
-                          <div
-                            className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-36 h-3 rounded-full bg-red-400/80 blur-[2px] shadow-[0_0_16px_rgba(248,113,113,0.95)]"
-                            style={{ animation: 'inkSplatterBurst 0.8s ease-out infinite' }}
-                          />
-                        )}
-                      </div>
-
-                      {/* Rising Steam / Blood Bubbles (escalates on Perilous Second Bath) */}
-                      {(() => {
-                        const isPerilous = campfireStage > 0 && !isCampfireSafe;
-                        const bubbleOffsets = isPerilous ? [-84, -52, -22, 6, 36, 68] : [-68, -28, 12, 54];
-                        return (
-                          <div className="pointer-events-none relative w-72 h-0 z-40">
-                            {bubbleOffsets.map((xOff, idx) => (
-                              <span
-                                key={idx}
-                                className={`absolute bottom-0 rounded-full ${
-                                  isAnimating
-                                    ? 'w-3 h-3 bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.95)]'
-                                    : isPerilous
-                                      ? 'w-2.5 h-2.5 bg-orange-400/90 shadow-[0_0_10px_rgba(249,115,22,0.85)]'
-                                      : 'w-2 h-2 bg-red-500/60'
+                            {/* Clip Viewport: Terminates Flush at the Blood Pool Surface so Sinking Cards Submerge Cleanly */}
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[90.4%] z-30 w-[196px] h-[156px] overflow-hidden flex items-start justify-center pt-1">
+                              <div
+                                className={`relative w-[114px] h-[152px] flex items-center justify-center rounded-[4px] transition-shadow duration-500 ${
+                                  campfireAnimState === 'blessed'
+                                    ? 'shadow-[0_0_40px_rgba(245,158,11,0.65),0_0_20px_rgba(220,38,38,0.45)]'
+                                    : selectedCard
+                                      ? 'shadow-[0_14px_28px_rgba(0,0,0,0.92),0_0_18px_rgba(220,38,38,0.28)]'
+                                      : ''
                                 }`}
                                 style={{
-                                  left: `calc(50% + ${xOff}px)`,
-                                  animation: `bloodBubbleRise ${isAnimating ? 0.55 : isPerilous ? 0.95 : 2.1}s ease-out ${idx * 0.18}s infinite`,
+                                  animation:
+                                    campfireAnimState === 'dipping'
+                                      ? 'fontSubmergeDip 0.85s ease-in-out forwards'
+                                      : campfireAnimState === 'drowning'
+                                        ? 'fontDrownSink 0.85s ease-in forwards'
+                                        : undefined,
                                 }}
-                              />
+                              >
+                                {selectedCard ? (
+                                  <div
+                                    onClick={() => {
+                                      if (campfireStage === 0 && !isEventBusy) {
+                                        triggerSfx('draw');
+                                        setCampfireCardIdx(null);
+                                      }
+                                    }}
+                                    title={campfireStage === 0 && !isEventBusy ? 'Click to return to deck' : undefined}
+                                    className={`scale-[0.98] origin-center ${campfireStage === 0 && !isEventBusy ? 'cursor-pointer hover:-translate-y-1 transition-transform' : ''}`}
+                                  >
+                                    {renderCard(selectedCard, { isClickable: false, disableHoverScale: true })}
+                                  </div>
+                                ) : (
+                                  <div className="w-[106px] h-[146px] rounded-[4px] border border-dashed border-[#8a4632]/75 bg-[#120807]/75 flex flex-col items-center justify-center gap-1.5 text-[#b57c62]">
+                                    <span className="text-xl opacity-70">🩸</span>
+                                    <span className="text-[9.5px] uppercase tracking-[0.2em] px-2">Choose Vessel</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Surface Blood Splash / Meniscus Glow where the card pierces the boiling blood */}
+                              {isAnimating && (
+                                <div
+                                  className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-3 rounded-full bg-red-400/85 blur-[2px] shadow-[0_0_16px_rgba(248,113,113,0.95)]"
+                                  style={{ animation: 'inkSplatterBurst 0.8s ease-out infinite' }}
+                                />
+                              )}
+                            </div>
+
+                            {/* Front Stone Basin Rim Occlusion Overlay so the Front Lip Sits Cleanly in Front of Blood & Splash */}
+                            <img
+                              src={`${propBase}assets/props/campfire.png`}
+                              alt=""
+                              aria-hidden="true"
+                              draggable={false}
+                              className="pointer-events-none absolute inset-0 z-[35] w-full h-full object-contain"
+                              style={{ clipPath: 'inset(12.2% 0 0 0)' }}
+                            />
+
+                            {/* Rising Steam / Blood Bubbles from the Basin */}
+                            <div className="pointer-events-none absolute left-1/2 top-[9%] -translate-x-1/2 w-36 h-0 z-40">
+                              {bubbleOffsets.map((xOff, idx) => (
+                                <span
+                                  key={idx}
+                                  className={`absolute bottom-0 rounded-full ${
+                                    isAnimating
+                                      ? 'w-2.5 h-2.5 bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.95)]'
+                                      : isPerilous
+                                        ? 'w-2 h-2 bg-orange-400/90 shadow-[0_0_10px_rgba(249,115,22,0.85)]'
+                                        : 'w-1.5 h-1.5 bg-red-500/70'
+                                  }`}
+                                  style={{
+                                    left: `calc(50% + ${xOff}px)`,
+                                    animation: `bloodBubbleRise ${isAnimating ? 0.55 : isPerilous ? 0.95 : 2.1}s ease-out ${idx * 0.18}s infinite`,
+                                  }}
+                                />
+                              ))}
+                            </div>
+
+                            {/* Animated Flickering Torch Flames on Both Side Sconces */}
+                            {sconcePositions.map(({ side, leftPct, delay }) => (
+                              <div
+                                key={side}
+                                className="pointer-events-none absolute z-40 -translate-x-1/2"
+                                style={{
+                                  left: leftPct,
+                                  bottom: '83.8%',
+                                  width: isPerilous ? '17%' : '14.5%',
+                                }}
+                              >
+                                {/* Warm Ambient Sconce Halo */}
+                                <div
+                                  className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/4 w-[180%] aspect-square rounded-full blur-[10px]"
+                                  style={{
+                                    background: isPerilous
+                                      ? 'radial-gradient(circle, rgba(251,146,60,0.85) 0%, rgba(220,38,38,0.45) 48%, transparent 74%)'
+                                      : 'radial-gradient(circle, rgba(251,146,60,0.68) 0%, rgba(194,65,12,0.32) 48%, transparent 74%)',
+                                    animation: `sconceGlowPulse ${isPerilous ? 0.7 : 1.35}s ease-in-out ${delay} infinite`,
+                                  }}
+                                />
+                                {/* Layered Sculpted Flame Tongues */}
+                                <svg
+                                  viewBox="0 0 40 64"
+                                  className="relative w-full h-auto overflow-visible origin-bottom"
+                                  style={{
+                                    filter: isPerilous
+                                      ? 'drop-shadow(0 0 10px rgba(249,115,22,0.95))'
+                                      : 'drop-shadow(0 0 7px rgba(234,88,12,0.85))',
+                                    animation: `sconceFlameFlicker ${isPerilous ? 0.48 : 0.85}s ease-in-out ${delay} infinite`,
+                                  }}
+                                >
+                                  {/* Outer crimson-orange tongue */}
+                                  <path
+                                    d={
+                                      isPerilous
+                                        ? 'M20 2 C10 18, 4 32, 6 46 C8 56, 14 62, 20 62 C26 62, 32 56, 34 46 C36 32, 30 18, 20 2 Z'
+                                        : 'M20 12 C12 24, 7 36, 8 48 C10 57, 15 62, 20 62 C25 62, 30 57, 32 48 C33 36, 28 24, 20 12 Z'
+                                    }
+                                    fill={isPerilous ? '#ea580c' : '#dc2626'}
+                                    opacity="0.92"
+                                  />
+                                  {/* Mid amber-gold body */}
+                                  <path
+                                    d={
+                                      isPerilous
+                                        ? 'M20 14 C13 26, 10 38, 11 49 C12 56, 16 60, 20 60 C24 60, 28 56, 29 49 C30 38, 27 26, 20 14 Z'
+                                        : 'M20 22 C14 31, 11 40, 12 50 C13 56, 16 60, 20 60 C24 60, 27 56, 28 50 C29 40, 26 31, 20 22 Z'
+                                    }
+                                    fill="#f59e0b"
+                                  />
+                                  {/* Hot bright core */}
+                                  <path
+                                    d="M20 34 C16 41, 15 48, 16 54 C17 58, 18.5 59.5, 20 59.5 C21.5 59.5, 23 58, 24 54 C25 48, 24 41, 20 34 Z"
+                                    fill="#fef08a"
+                                  />
+                                </svg>
+                              </div>
                             ))}
                           </div>
-                        );
-                      })()}
+                        </div>
+                      );
+                    })()}
 
-                      {/* Carved Stone Baptismal Font SVG Prop */}
-                      <svg
-                        viewBox="0 0 460 132"
-                        className="w-full max-w-[460px] h-auto drop-shadow-[0_18px_28px_rgba(0,0,0,0.96)] pointer-events-none relative z-20"
-                      >
-                        <defs>
-                          <linearGradient id="fontStoneBody" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#423632" />
-                            <stop offset="50%" stopColor="#261f1d" />
-                            <stop offset="100%" stopColor="#14100f" />
-                          </linearGradient>
-                          <radialGradient id="boilingBloodPool" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stopColor={isAnimating ? '#fca5a5' : campfireStage > 0 && !isCampfireSafe ? '#f97316' : '#dc2626'} />
-                            <stop offset="65%" stopColor={campfireStage > 0 && !isCampfireSafe ? '#b91c1c' : '#991b1b'} />
-                            <stop offset="100%" stopColor="#450a0a" />
-                          </radialGradient>
-                        </defs>
-                        <polygon points="145,126 168,82 292,82 315,126" fill="url(#fontStoneBody)" stroke="#594740" strokeWidth="1.6" />
-                        <rect x="128" y="120" width="204" height="9" rx="2" fill="#1c1614" stroke="#594740" strokeWidth="1.3" />
-                        <path
-                          d="M72 34 L388 34 C376 68, 342 84, 294 84 L166 84 C118 84, 84 68, 72 34 Z"
-                          fill="url(#fontStoneBody)"
-                          stroke="#6e574e"
-                          strokeWidth="1.9"
-                        />
-                        <path d="M230 46 L230 74 M218 58 L242 58" stroke="#7f1d1d" strokeWidth="2.4" strokeLinecap="round" />
-                        <ellipse cx="230" cy="34" rx="164" ry="18" fill="#2b221f" stroke="#7d6459" strokeWidth="2" />
-                        <ellipse cx="230" cy="34" rx="148" ry="13" fill="url(#boilingBloodPool)" />
-                        <ellipse cx="215" cy="33" rx="52" ry="4.5" fill="none" stroke="#fca5a5" strokeWidth="1" opacity="0.45" />
-                        <ellipse cx="255" cy="35" rx="34" ry="3" fill="none" stroke="#fecaca" strokeWidth="0.9" opacity="0.35" />
-                        <path d="M36 52 L54 52 L50 74 L40 74 Z" fill="#231c19" stroke="#634d42" strokeWidth="1.2" />
-                        <path d={campfireStage > 0 && !isCampfireSafe ? 'M37 50 Q45 22 53 50 Z' : 'M39 50 Q45 32 51 50 Z'} fill={campfireStage > 0 && !isCampfireSafe ? '#fb923c' : '#f97316'} opacity="0.95" className={campfireStage > 0 && !isCampfireSafe ? 'animate-pulse' : ''} />
-                        <path d="M406 52 L424 52 L420 74 L410 74 Z" fill="#231c19" stroke="#634d42" strokeWidth="1.2" />
-                        <path d={campfireStage > 0 && !isCampfireSafe ? 'M407 50 Q415 22 423 50 Z' : 'M409 50 Q415 32 421 50 Z'} fill={campfireStage > 0 && !isCampfireSafe ? '#fb923c' : '#f97316'} opacity="0.95" className={campfireStage > 0 && !isCampfireSafe ? 'animate-pulse' : ''} />
-                      </svg>
-                    </div>
-
-                    <p className="relative z-20 font-['Cinzel',_serif] text-sm sm:text-base tracking-[0.08em] text-[#ecd8bc] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                    <p className="relative z-20 mt-1 font-['Cinzel',_serif] text-sm sm:text-base tracking-[0.08em] text-[#ecd8bc] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                       {campfireStage === 0
                         ? 'Offer a creature.'
                         : isCampfireSafe
@@ -1205,17 +1289,15 @@ export default function EventScreens({ ctx }: { ctx: {
                     <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#9a7342]/70" />
                     <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#9a7342]/70" />
 
-                    {/* Full-Scale Ritual Column: Host Above -> Sacrifice on Slab Below */}
+                    {/* Full-Scale Ritual Column: Host Above -> Sacrifice on Altar Circle Below */}
                     <div className="relative z-10 flex flex-col items-center justify-center w-full">
-                      {/* Upper Host Slot — descends onto stone slab when sacrificing finishes */}
+                      {/* Upper Host Slot — descends directly onto the glowing red altar circle when sacrificing finishes */}
                       <div
-                        className="relative z-30 flex flex-col items-center transition-transform duration-700 ease-in-out"
-                        style={{
-                          transform:
-                            altarAnimPhase === 'descending' || altarAnimPhase === 'done'
-                              ? 'translateY(166px)'
-                              : 'translateY(0px)',
-                        }}
+                        className={`relative z-30 flex flex-col items-center transition-transform duration-700 ease-in-out ${
+                          altarAnimPhase === 'descending' || altarAnimPhase === 'done'
+                            ? 'translate-y-[98px] sm:translate-y-[126px] lg:translate-y-[166px]'
+                            : 'translate-y-0'
+                        }`}
                       >
                         <span
                           className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] border text-[9px] font-mono font-bold uppercase tracking-[0.22em] transition-colors duration-300 ${
@@ -1270,7 +1352,7 @@ export default function EventScreens({ ctx }: { ctx: {
                           {[-34, 0, 34].map((offset, i) => (
                             <div
                               key={i}
-                              className="absolute bottom-24 w-3 h-3 rounded-full bg-red-400 shadow-[0_0_16px_rgba(248,113,113,0.95)]"
+                              className="absolute bottom-28 w-3 h-3 rounded-full bg-red-400 shadow-[0_0_16px_rgba(248,113,113,0.95)]"
                               style={{
                                 marginLeft: `${offset}px`,
                                 animation: `altarSigilRise 0.8s ease-out ${i * 0.12}s forwards`,
@@ -1280,10 +1362,10 @@ export default function EventScreens({ ctx }: { ctx: {
                         </div>
                       )}
 
-                      {/* Lower Carved Stone Altar Pedestal + Sacrifice Slot */}
+                      {/* Lower Sacrificial Stone Altar Prop + Sacrifice Slot Seated on Glowing Red Tabletop Circle */}
                       <div className="relative z-20 mt-1.5 sm:mt-2 lg:mt-3 flex flex-col items-center w-full">
                         <div
-                          className="relative z-20 w-[68px] h-[92px] sm:w-[88px] sm:h-[118px] lg:w-[114px] lg:h-[154px] -mb-4 sm:-mb-5 lg:-mb-7 flex items-center justify-center transition-opacity duration-300"
+                          className="relative z-20 w-[68px] h-[92px] sm:w-[88px] sm:h-[118px] lg:w-[114px] lg:h-[154px] -mb-7 sm:-mb-9 lg:-mb-11 flex items-center justify-center transition-opacity duration-300"
                           style={{
                             animation: altarAnimPhase === 'sacrificing' ? 'altarSacrificeBurn 0.85s ease-in forwards' : undefined,
                             opacity: altarAnimPhase === 'descending' || altarAnimPhase === 'done' ? 0 : 1,
@@ -1309,47 +1391,19 @@ export default function EventScreens({ ctx }: { ctx: {
                           )}
                         </div>
 
-                        {/* Heavy Carved Stone Altar Slab SVG Prop */}
-                        <svg
-                          viewBox="0 0 460 106"
-                          className="w-full max-w-[230px] sm:max-w-[320px] lg:max-w-[470px] h-auto drop-shadow-[0_16px_26px_rgba(0,0,0,0.96)] pointer-events-none"
-                        >
-                          <defs>
-                            <linearGradient id="altarStoneTop" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#463b35" />
-                              <stop offset="55%" stopColor="#2a2320" />
-                              <stop offset="100%" stopColor="#161210" />
-                            </linearGradient>
-                            <linearGradient id="altarStoneBase" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#26201d" />
-                              <stop offset="100%" stopColor="#0f0c0b" />
-                            </linearGradient>
-                          </defs>
-                          {/* Stepped Pedestal Base */}
-                          <polygon points="46,102 68,52 392,52 414,102" fill="url(#altarStoneBase)" stroke="#55453c" strokeWidth="1.6" />
-                          {/* Carved Runic Pillars */}
-                          <line x1="122" y1="56" x2="114" y2="98" stroke="#3f332c" strokeWidth="2.2" />
-                          <line x1="338" y1="56" x2="346" y2="98" stroke="#3f332c" strokeWidth="2.2" />
-                          {/* Central Blood Channel & Sigil Ring */}
-                          <circle cx="230" cy="77" r="13" fill="none" stroke={altarAnimPhase !== 'idle' ? '#dc2626' : '#7a2c24'} strokeWidth="1.8" />
-                          <path d="M230 52 L230 97 M217 77 L243 77" stroke={altarAnimPhase !== 'idle' ? '#ef4444' : '#8f241f'} strokeWidth="1.7" />
-                          {/* Heavy Stone Tabletop Slab */}
-                          <polygon points="16,52 44,22 416,22 444,52" fill="url(#altarStoneTop)" stroke="#756052" strokeWidth="2" />
-                          <rect x="16" y="48" width="428" height="10" rx="1.5" fill="#1e1816" stroke="#5b4a3f" strokeWidth="1.3" />
-                          {/* Blood Grooves across Slab */}
-                          <path
-                            d="M132 37 Q230 43 328 37"
-                            fill="none"
-                            stroke={altarAnimPhase === 'sacrificing' ? '#ef4444' : '#85221e'}
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
+                        {/* Illustrated Sacrificial Stone Altar Prop (1292x555) */}
+                        <div className="relative w-full max-w-[280px] sm:max-w-[380px] lg:max-w-[470px] aspect-[1292/555] pointer-events-none select-none">
+                          <img
+                            src={`${import.meta.env.BASE_URL || './'}assets/props/sacrifice.png`}
+                            alt="Sacrificial Stone Altar"
+                            draggable={false}
+                            className={`w-full h-full object-contain transition-all duration-500 ${
+                              altarAnimPhase === 'sacrificing'
+                                ? 'drop-shadow-[0_0_28px_rgba(220,38,38,0.6)] brightness-110'
+                                : 'drop-shadow-[0_18px_28px_rgba(0,0,0,0.96)]'
+                            }`}
                           />
-                          {/* Flanking Tallow Candles */}
-                          <rect x="52" y="13" width="9" height="18" rx="1" fill="#dcd0b8" stroke="#64513e" strokeWidth="1" />
-                          <ellipse cx="56.5" cy="8.5" rx="3.5" ry="5.5" fill="#fbbf24" opacity="0.92" />
-                          <rect x="399" y="13" width="9" height="18" rx="1" fill="#dcd0b8" stroke="#64513e" strokeWidth="1" />
-                          <ellipse cx="403.5" cy="8.5" rx="3.5" ry="5.5" fill="#fbbf24" opacity="0.92" />
-                        </svg>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1538,51 +1592,46 @@ export default function EventScreens({ ctx }: { ctx: {
               <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch">
                 {/* Left Column: Iron Anvil + Diegetic Tools */}
                 <div className="lg:col-span-7 min-h-0 flex flex-col justify-between p-4 sm:p-5">
-                  {/* Anvil Prop Stage */}
-                  <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative">
-                    <div
-                      onClick={() => {
-                        if (!selectedCard || isEventBusy) return;
-                        triggerSfx('draw');
-                        setAnvilSelectedId(null);
-                      }}
-                      className={`relative z-20 -mb-5 transition-all duration-200 ${selectedCard && !isEventBusy ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
-                      style={{
-                        animation: anvilStrikeAnim !== 'idle' ? 'anvilStrikeJolt 0.65s ease-out' : undefined,
-                      }}
-                    >
-                      {selectedCard ? (
-                        renderCard(selectedCard, { isClickable: false, disableHoverScale: true })
-                      ) : (
-                        <div className="w-[108px] h-[152px] rounded-[4px] border border-dashed border-[#6b523b]/75 bg-[#120d0a]/75 flex flex-col items-center justify-center gap-1.5 text-[#9c8469]">
-                          <span className="text-xl opacity-65">⚒</span>
-                          <span className="text-[9px] uppercase tracking-[0.2em] px-2 text-center">Place Creature</span>
-                        </div>
-                      )}
-                    </div>
+                  {/* Anvil Prop Stage (861x939) */}
+                  <div className="flex-1 min-h-0 flex flex-col items-center justify-end relative pt-[124px] sm:pt-[136px] pb-2">
+                    <div className="relative w-[244px] sm:w-[274px] lg:w-[294px] aspect-[861/939] select-none">
+                      {/* Card Seated Directly on the Glowing Red Transmutation Circle (x≈56%, y≈9%) */}
+                      <div
+                        onClick={() => {
+                          if (!selectedCard || isEventBusy) return;
+                          triggerSfx('draw');
+                          setAnvilSelectedId(null);
+                        }}
+                        title={selectedCard && !isEventBusy ? 'Click to return creature to deck' : undefined}
+                        className={`absolute left-[56%] -translate-x-1/2 bottom-[90.5%] z-20 transition-all duration-200 ${selectedCard && !isEventBusy ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
+                        style={{
+                          animation: anvilStrikeAnim !== 'idle' ? 'anvilStrikeJolt 0.65s ease-out' : undefined,
+                        }}
+                      >
+                        {selectedCard ? (
+                          <div className="scale-[0.94] sm:scale-[0.98] origin-bottom shadow-[0_14px_28px_rgba(0,0,0,0.94),0_0_24px_rgba(220,38,38,0.34)] rounded-[4px]">
+                            {renderCard(selectedCard, { isClickable: false, disableHoverScale: true })}
+                          </div>
+                        ) : (
+                          <div className="w-[104px] h-[146px] rounded-[4px] border border-dashed border-[#8a4530]/80 bg-[#120a08]/80 shadow-[0_0_20px_rgba(220,38,38,0.2)] flex flex-col items-center justify-center gap-1.5 text-[#c79a74]">
+                            <span className="text-xl opacity-70">⚒</span>
+                            <span className="text-[9px] uppercase tracking-[0.2em] px-2 text-center">Place Creature</span>
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Heavy Blacksmith Anvil SVG Prop */}
-                    <svg
-                      viewBox="0 0 320 112"
-                      className="w-full max-w-[350px] h-auto translate-y-4 scale-y-[1.18] origin-bottom drop-shadow-[0_14px_22px_rgba(0,0,0,0.95)] pointer-events-none"
-                    >
-                      <defs>
-                        <linearGradient id="anvilIron" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#4f4844" />
-                          <stop offset="35%" stopColor="#2c2725" />
-                          <stop offset="100%" stopColor="#141110" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M16 34 C46 28, 72 24, 96 24 L256 24 L268 38 L298 40 C282 54, 260 60, 232 60 L214 60 L226 94 L256 102 L256 108 L64 108 L64 102 L94 94 L106 60 C68 60, 34 50, 16 34 Z"
-                        fill="url(#anvilIron)"
-                        stroke="#6d625a"
-                        strokeWidth="1.8"
-                        strokeLinejoin="round"
+                      {/* Illustrated Runic Iron Anvil Prop */}
+                      <img
+                        src={`${import.meta.env.BASE_URL || './'}assets/props/anvil.png`}
+                        alt="Runic Transmutation Anvil"
+                        draggable={false}
+                        className={`pointer-events-none relative z-10 w-full h-full object-contain transition-all duration-300 ${
+                          anvilStrikeAnim !== 'idle'
+                            ? 'drop-shadow-[0_0_28px_rgba(239,68,68,0.65)] brightness-115'
+                            : 'drop-shadow-[0_16px_26px_rgba(0,0,0,0.96)]'
+                        }`}
                       />
-                      <line x1="94" y1="27" x2="254" y2="27" stroke="#8a7b70" strokeWidth="1.4" opacity="0.65" />
-                      <ellipse cx="160" cy="107" rx="115" ry="4" fill="rgba(217,119,6,0.22)" />
-                    </svg>
+                    </div>
                   </div>
 
                   {/* Tool Strikes + Leave Action */}
@@ -1830,110 +1879,97 @@ export default function EventScreens({ ctx }: { ctx: {
                 </div>
               ) : (
                 <>
-                  {/* Fenced Pen Arena with 13 Wandering Sheep (or 1 Lone Grey Sheep) */}
-                  <div className="relative w-full max-w-4xl h-[270px] sm:h-[300px] mt-4 mb-4 rounded-[4px] bg-[radial-gradient(ellipse_at_center,#635746_0%,#473d30_62%,#2a231b_100%)] border-[3px] border-[#5c422c] shadow-[inset_0_0_46px_rgba(0,0,0,0.62),0_22px_54px_rgba(0,0,0,0.94)] overflow-hidden">
-                    {/* Ornate Timber & Wrought-Iron Fence Perimeter */}
-                    <div className="pointer-events-none absolute inset-0 z-20">
-                      {/* Top & Bottom Double Timber Rails */}
-                      <div className="absolute top-2 inset-x-0 h-[5px] bg-gradient-to-b from-[#8d6844] via-[#5e4128] to-[#2e1e12] shadow-[0_3px_6px_rgba(0,0,0,0.75)]" />
-                      <div className="absolute top-[13px] inset-x-0 h-[3px] bg-gradient-to-b from-[#735336] to-[#291b10] opacity-85" />
-                      <div className="absolute bottom-2 inset-x-0 h-[5px] bg-gradient-to-b from-[#8d6844] via-[#5e4128] to-[#2e1e12] shadow-[0_-2px_6px_rgba(0,0,0,0.75)]" />
-                      <div className="absolute bottom-[13px] inset-x-0 h-[3px] bg-gradient-to-b from-[#735336] to-[#291b10] opacity-85" />
-                      {/* Left & Right Side Rails */}
-                      <div className="absolute left-2 inset-y-0 w-[5px] bg-gradient-to-r from-[#8d6844] via-[#5e4128] to-[#2e1e12] shadow-[2px_0_6px_rgba(0,0,0,0.7)]" />
-                      <div className="absolute right-2 inset-y-0 w-[5px] bg-gradient-to-l from-[#8d6844] via-[#5e4128] to-[#2e1e12] shadow-[-2px_0_6px_rgba(0,0,0,0.7)]" />
-                      {/* Top & Bottom Fence Posts with Brass Rivets */}
-                      {[12, 27, 42, 58, 73, 88].map((pct) => (
-                        <React.Fragment key={`post-${pct}`}>
-                          <div
-                            className="absolute top-0.5 w-3 h-5 -translate-x-1/2 rounded-[1px] bg-gradient-to-b from-[#a07a52] via-[#614329] to-[#28190e] border border-[#24160c] shadow-[0_3px_5px_rgba(0,0,0,0.85)] flex items-center justify-center"
-                            style={{ left: `${pct}%` }}
-                          >
-                            <span className="w-1 h-1 rounded-full bg-[#d4af37]/80" />
-                          </div>
-                          <div
-                            className="absolute bottom-0.5 w-3 h-5 -translate-x-1/2 rounded-[1px] bg-gradient-to-b from-[#a07a52] via-[#614329] to-[#28190e] border border-[#24160c] shadow-[0_-2px_5px_rgba(0,0,0,0.85)] flex items-center justify-center"
-                            style={{ left: `${pct}%` }}
-                          >
-                            <span className="w-1 h-1 rounded-full bg-[#d4af37]/80" />
-                          </div>
-                        </React.Fragment>
-                      ))}
-                      {/* Reinforced Corner Post Caps */}
-                      <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-[2px] bg-gradient-to-br from-[#b0895e] via-[#65472c] to-[#26180d] border border-[#d4af37]/45 shadow-md flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/85" /></div>
-                      <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-[2px] bg-gradient-to-bl from-[#b0895e] via-[#65472c] to-[#26180d] border border-[#d4af37]/45 shadow-md flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/85" /></div>
-                      <div className="absolute bottom-0.5 left-0.5 w-4 h-4 rounded-[2px] bg-gradient-to-tr from-[#b0895e] via-[#65472c] to-[#26180d] border border-[#d4af37]/45 shadow-md flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/85" /></div>
-                      <div className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-[2px] bg-gradient-to-tl from-[#b0895e] via-[#65472c] to-[#26180d] border border-[#d4af37]/45 shadow-md flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/85" /></div>
-                    </div>
+                  {/* Fenced Pen Arena with flock.png and 13 Wandering Sheep (or 1 Lone Grey Sheep) */}
+                  {(() => {
+                    const sheepColX = [34, 220, 411, 594, 778];
+                    const sheepRowY = [24, 166, 306, 447, 582];
+                    // 24 varied black sheep cells from the 5x5 sheet (excluding center cell col=2, row=2 which is the lone grey sheep)
+                    const blackSheepCells: [number, number][] = [];
+                    for (let r = 0; r < 5; r++) {
+                      for (let c = 0; c < 5; c++) {
+                        if (c === 2 && r === 2) continue;
+                        blackSheepCells.push([c, r]);
+                      }
+                    }
+                    const sheepSheetUrl = `${flockBase}assets/props/black%20sheep.png`;
 
-                    {flockSheepList.map(sheep => {
-                      const isPicked = flockSelectedSheepId === sheep.id;
-                      const isLockedOut = Boolean(sheep.dismissed) || (Boolean(selectedSheep) && !isPicked);
-                      const woolFill = sheep.isGrey ? '#8a8d91' : '#181517';
-                      const woolStroke = isPicked
-                        ? (sheep.isGrey ? '#f8fafc' : '#f59e0b')
-                        : (sheep.isGrey ? '#cbd5e1' : '#4a3d38');
-                      const headFill = sheep.isGrey ? '#4b5563' : '#0b090a';
-                      const eyeFill = sheep.isGrey ? '#fef08a' : '#ef4444';
+                    return (
+                      <div className="relative w-full max-w-[590px] sm:max-w-[640px] aspect-[1376/768] mt-3 mb-3 select-none">
+                        {/* Illustrated Top-Down Fenced Muddy Pasture Pen */}
+                        <img
+                          src={`${flockBase}assets/props/flock.png`}
+                          alt="The Zealot's Flock Pen"
+                          draggable={false}
+                          className="pointer-events-none absolute inset-0 w-full h-full object-contain drop-shadow-[0_20px_42px_rgba(0,0,0,0.94)]"
+                        />
 
-                      return (
-                        <button
-                          key={sheep.id}
-                          type="button"
-                          disabled={Boolean(sheep.dismissed) || (Boolean(selectedSheep) && !isPicked)}
-                          onClick={() => {
-                            if (sheep.dismissed || selectedSheep) return;
-                            triggerSfx('sheep_baa');
-                            setFlockSelectedSheepId(sheep.id);
-                          }}
-                          className={`absolute -translate-x-1/2 -translate-y-1/2 p-1 rounded-full transition-all duration-300 focus:outline-none ${
-                            sheep.dismissed
-                              ? 'opacity-15 scale-75 pointer-events-none'
-                              : isPicked
-                                ? 'z-30 scale-125 drop-shadow-[0_0_16px_rgba(245,158,11,0.75)] cursor-default'
-                                : isLockedOut
-                                  ? 'opacity-40 cursor-default'
-                                  : 'z-10 hover:z-20 hover:scale-125 cursor-pointer drop-shadow-[0_6px_10px_rgba(0,0,0,0.85)]'
-                          }`}
-                          style={{
-                            left: `${sheep.x}%`,
-                            top: `${sheep.y}%`,
-                            animation: isPicked
-                              ? undefined
-                              : `${sheep.wanderAnim} ${sheep.duration}s ease-in-out ${sheep.delay}s infinite`,
-                          }}
-                          title={sheep.isGrey ? 'The Lone Grey Sheep' : 'Select a Sheep'}
-                        >
-                          <svg
-                            viewBox="0 0 64 46"
-                            className={`${sheep.isGrey ? 'w-20 h-14' : 'w-14 h-10 sm:w-16 sm:h-12'}`}
-                            style={{
-                              transform: sheep.flip ? 'scaleX(-1)' : undefined,
-                              animation: isPicked ? undefined : `sheepHop 1.9s ease-in-out ${sheep.delay}s infinite`,
-                            }}
-                          >
-                            {/* Legs */}
-                            <line x1="20" y1="32" x2="19" y2="42" stroke="#0c0a09" strokeWidth="3" strokeLinecap="round" />
-                            <line x1="28" y1="33" x2="28" y2="42" stroke="#0c0a09" strokeWidth="3" strokeLinecap="round" />
-                            <line x1="40" y1="33" x2="40" y2="42" stroke="#0c0a09" strokeWidth="3" strokeLinecap="round" />
-                            <line x1="46" y1="32" x2="47" y2="42" stroke="#0c0a09" strokeWidth="3" strokeLinecap="round" />
-                            {/* Fluffy Fleece Body */}
-                            <path
-                              d="M16 24 C14 15, 22 10, 30 12 C34 8, 43 9, 46 14 C53 15, 55 23, 50 29 C48 34, 40 35, 34 34 C26 36, 17 32, 16 24 Z"
-                              fill={woolFill}
-                              stroke={woolStroke}
-                              strokeWidth="1.8"
-                            />
-                            {/* Head & Curled Horn */}
-                            <ellipse cx="14" cy="22" rx="7.5" ry="6" fill={headFill} stroke={woolStroke} strokeWidth="1.4" />
-                            <path d="M16 16 C18 11, 23 12, 22 16" fill="none" stroke="#a89984" strokeWidth="1.8" strokeLinecap="round" />
-                            {/* Glowing Eye */}
-                            <circle cx="11.5" cy="21" r="1.4" fill={eyeFill} />
-                          </svg>
-                        </button>
-                      );
-                    })}
-                  </div>
+                        {flockSheepList.map((sheep, sheepIdx) => {
+                          const isPicked = flockSelectedSheepId === sheep.id;
+                          const isLockedOut = Boolean(sheep.dismissed) || (Boolean(selectedSheep) && !isPicked);
+                          const [cellCol, cellRow] = sheep.isGrey
+                            ? [2, 2]
+                            : blackSheepCells[(sheep.id * 5 + sheepIdx * 3) % blackSheepCells.length];
+                          const vx = sheepColX[cellCol];
+                          const vy = sheepRowY[cellRow];
+
+                          return (
+                            <button
+                              key={sheep.id}
+                              type="button"
+                              disabled={Boolean(sheep.dismissed) || (Boolean(selectedSheep) && !isPicked)}
+                              onClick={() => {
+                                if (sheep.dismissed || selectedSheep) return;
+                                triggerSfx('sheep_baa');
+                                setFlockSelectedSheepId(sheep.id);
+                              }}
+                              className={`absolute -translate-x-1/2 -translate-y-1/2 p-0.5 transition-all duration-300 focus:outline-none ${
+                                sheep.dismissed
+                                  ? 'opacity-15 scale-75 pointer-events-none'
+                                  : isPicked
+                                    ? 'z-30 scale-[1.22] cursor-default'
+                                    : isLockedOut
+                                      ? 'opacity-55 cursor-default'
+                                      : 'z-10 hover:z-20 hover:scale-[1.2] cursor-pointer'
+                              }`}
+                              style={{
+                                left: `${sheep.x}%`,
+                                top: `${sheep.y}%`,
+                                animation: isPicked
+                                  ? undefined
+                                  : `${sheep.wanderAnim} ${sheep.duration}s ease-in-out ${sheep.delay}s infinite`,
+                                filter: isPicked
+                                  ? sheep.isGrey
+                                    ? 'drop-shadow(0 0 14px rgba(248,250,252,0.9)) drop-shadow(0 6px 10px rgba(0,0,0,0.95))'
+                                    : 'drop-shadow(0 0 14px rgba(245,158,11,0.92)) drop-shadow(0 6px 10px rgba(0,0,0,0.95))'
+                                  : sheep.isGrey
+                                    ? 'drop-shadow(0 0 10px rgba(226,232,240,0.45)) drop-shadow(0 6px 8px rgba(0,0,0,0.9))'
+                                    : 'drop-shadow(0 0 3.5px rgba(214,190,152,0.36)) drop-shadow(0 5px 7px rgba(0,0,0,0.92))',
+                              }}
+                              title={sheep.isGrey ? 'The Lone Grey Sheep' : 'Select a Sheep'}
+                            >
+                              {/* Grounded Pasture Contact Shadow */}
+                              <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute left-1/2 bottom-[3px] -translate-x-1/2 w-[72%] h-[18%] rounded-full bg-black/55 blur-[2px]"
+                              />
+                              <svg
+                                viewBox={`${vx} ${vy} 160 136`}
+                                className={`relative z-10 overflow-hidden ${
+                                  sheep.isGrey ? 'w-20 h-[68px] sm:w-24 sm:h-20' : 'w-14 h-12 sm:w-16 sm:h-[54px]'
+                                }`}
+                                style={{
+                                  transform: sheep.flip ? 'scaleX(-1)' : undefined,
+                                  animation: isPicked ? undefined : `sheepHop 1.9s ease-in-out ${sheep.delay}s infinite`,
+                                }}
+                              >
+                                <image href={sheepSheetUrl} width="964" height="720" />
+                              </svg>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   {/* Revealed Offering Plaque */}
                   <div
@@ -2496,102 +2532,83 @@ export default function EventScreens({ ctx }: { ctx: {
                     <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#a89f90]/70" />
                     <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#a89f90]/70" />
 
-                    {/* Centerpiece: Offering Card above Horned Bone Lord Skull Pedestal */}
-                    <div className="relative z-10 flex flex-col items-center justify-center w-full my-auto pt-2">
-                      {/* Rising Bone Tokens during Blessing */}
-                      {boneLordAnimPhase !== 'idle' && (
-                        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
-                          {(previewBonus === 3 ? [-42, 0, 42] : [0]).map((xOff, i) => (
-                            <div
-                              key={i}
-                              className="absolute bottom-24 text-2xl drop-shadow-[0_0_12px_rgba(254,243,199,0.9)]"
-                              style={{
-                                marginLeft: `${xOff}px`,
-                                animation: `boneTokenRise 1.15s ease-out ${i * 0.16}s forwards`,
-                              }}
-                            >
-                              🦴
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Offering Card (clickable to return to side deck) or Manifested Boon Medallion */}
-                      <div className="relative z-20 w-[124px] h-[168px] -mb-6 flex items-center justify-center">
-                        {boneLordAnimPhase === 'blessed' ? (
-                          <div className="flex flex-col items-center justify-center px-5 py-4 rounded-[4px] bg-[#1a1612]/95 border-2 border-[#e5d5b7]/90 shadow-[0_0_38px_rgba(234,179,8,0.5)] animate-menu-fade-in">
-                            <span className="text-3xl mb-1">🦴</span>
-                            <span className="font-['Cinzel',_serif] font-black text-xl text-amber-200 tracking-wider">
-                              +{previewBonus}
-                            </span>
-                            <span className="text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#d6cbb8] mt-0.5 whitespace-nowrap">
-                              Starting Bone{previewBonus > 1 ? 's' : ''}
-                            </span>
-                          </div>
-                        ) : (
-                          <div
-                            className="w-full h-full flex items-center justify-center"
-                            style={{
-                              animation: boneLordAnimPhase === 'offering' ? 'boneOfferDissolve 0.88s ease-in forwards' : undefined,
-                            }}
-                          >
-                            {selectedCard ? (
+                    {/* Centerpiece: Offering Card Seated on the Horned Bone Lord Altar Summit (831x1089) */}
+                    <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[128px] sm:pt-[136px]">
+                      <div className="relative w-[225px] sm:w-[254px] lg:w-[272px] aspect-[831/1089] select-none">
+                        {/* Rising Bone Tokens Emerging from the Summit Circle */}
+                        {boneLordAnimPhase !== 'idle' && (
+                          <div className="pointer-events-none absolute left-1/2 bottom-[90%] -translate-x-1/2 z-40 flex items-center justify-center">
+                            {(previewBonus === 3 ? [-42, 0, 42] : [0]).map((xOff, i) => (
                               <div
-                                onClick={() => {
-                                  if (!isEventBusy && !isAnimating) {
-                                    triggerSfx('draw');
-                                    setBoneLordSelectedIdx(null);
-                                  }
+                                key={i}
+                                className="absolute bottom-0 text-2xl drop-shadow-[0_0_12px_rgba(254,243,199,0.9)]"
+                                style={{
+                                  marginLeft: `${xOff}px`,
+                                  animation: `boneTokenRise 1.15s ease-out ${i * 0.16}s forwards`,
                                 }}
-                                title="Click to return creature to deck"
-                                className="group relative scale-[1.06] origin-center cursor-pointer transition-transform duration-200 hover:-translate-y-1 shadow-[0_16px_32px_rgba(0,0,0,0.95)]"
                               >
-                                {renderCard(selectedCard, { isClickable: false, disableHoverScale: true, isMarkedSacrifice: true })}
+                                🦴
                               </div>
-                            ) : (
-                              <div className="w-[112px] h-[156px] rounded-[4px] border border-dashed border-[#786e60]/75 bg-[#12100e]/75 flex flex-col items-center justify-center gap-1.5 text-[#a69a88]">
-                                <span className="text-xl opacity-70">💀</span>
-                                <span className="text-[9.5px] uppercase tracking-[0.2em] px-2">Place Tribute</span>
-                              </div>
-                            )}
+                            ))}
                           </div>
                         )}
-                      </div>
 
-                      {/* Carved Ossuary Skull & Ribcage Pedestal SVG Prop */}
-                      <svg
-                        viewBox="0 0 460 124"
-                        className="w-full max-w-[475px] h-auto translate-y-4 scale-y-[1.18] origin-bottom drop-shadow-[0_18px_28px_rgba(0,0,0,0.98)] pointer-events-none relative z-20"
-                      >
-                        <defs>
-                          <linearGradient id="ossuaryBone" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#d6cbb8" />
-                            <stop offset="55%" stopColor="#8c8172" />
-                            <stop offset="100%" stopColor="#3d3730" />
-                          </linearGradient>
-                          <linearGradient id="ossuaryStone" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#332e29" />
-                            <stop offset="100%" stopColor="#12100e" />
-                          </linearGradient>
-                        </defs>
-                        <path d="M126 42 C72 34, 48 16, 40 6 C58 26, 86 48, 134 56" fill="none" stroke="url(#ossuaryBone)" strokeWidth="5.5" strokeLinecap="round" />
-                        <path d="M334 42 C388 34, 412 16, 420 6 C402 26, 374 48, 326 56" fill="none" stroke="url(#ossuaryBone)" strokeWidth="5.5" strokeLinecap="round" />
-                        <polygon points="62,118 86,58 374,58 398,118" fill="url(#ossuaryStone)" stroke="#5c5348" strokeWidth="1.6" />
-                        <polygon points="34,58 60,34 400,34 426,58" fill="#292420" stroke="#807567" strokeWidth="1.9" />
-                        <ellipse cx="230" cy="44" rx="132" ry="9" fill="#171412" stroke="#6b6054" strokeWidth="1.2" />
-                        <path
-                          d="M196 76 C196 58, 264 58, 264 76 C264 88, 252 94, 248 106 L212 106 C208 94, 196 88, 196 76 Z"
-                          fill="url(#ossuaryBone)"
-                          stroke="#4a4239"
-                          strokeWidth="1.6"
+                        {/* Offering Card (clickable to return to side deck) or Manifested Boon Medallion */}
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-[91%] z-20 w-[116px] h-[154px] flex items-end justify-center">
+                          {boneLordAnimPhase === 'blessed' ? (
+                            <div className="flex flex-col items-center justify-center px-5 py-4 mb-2 rounded-[4px] bg-[#1a1612]/95 border-2 border-[#e5d5b7]/90 shadow-[0_0_38px_rgba(234,179,8,0.5)] animate-menu-fade-in">
+                              <span className="text-3xl mb-1">🦴</span>
+                              <span className="font-['Cinzel',_serif] font-black text-xl text-amber-200 tracking-wider">
+                                +{previewBonus}
+                              </span>
+                              <span className="text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#d6cbb8] mt-0.5 whitespace-nowrap">
+                                Starting Bone{previewBonus > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          ) : (
+                            <div
+                              className="w-full h-full flex items-end justify-center"
+                              style={{
+                                animation: boneLordAnimPhase === 'offering' ? 'boneOfferDissolve 0.88s ease-in forwards' : undefined,
+                              }}
+                            >
+                              {selectedCard ? (
+                                <div
+                                  onClick={() => {
+                                    if (!isEventBusy && !isAnimating) {
+                                      triggerSfx('draw');
+                                      setBoneLordSelectedIdx(null);
+                                    }
+                                  }}
+                                  title="Click to return creature to deck"
+                                  className="group relative scale-[0.96] sm:scale-[1.0] origin-bottom cursor-pointer transition-transform duration-200 hover:-translate-y-1 shadow-[0_14px_28px_rgba(0,0,0,0.95),0_0_24px_rgba(220,38,38,0.28)]"
+                                >
+                                  {renderCard(selectedCard, { isClickable: false, disableHoverScale: true, isMarkedSacrifice: true })}
+                                </div>
+                              ) : (
+                                <div className="w-[106px] h-[146px] rounded-[4px] border border-dashed border-[#8a6d5e]/80 bg-[#120d0c]/80 shadow-[0_0_20px_rgba(220,38,38,0.18)] flex flex-col items-center justify-center gap-1.5 text-[#b5a392]">
+                                  <span className="text-xl opacity-75">💀</span>
+                                  <span className="text-[9.5px] uppercase tracking-[0.2em] px-2">Place Tribute</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Illustrated Horned Bone Lord Ossuary Altar Prop */}
+                        <img
+                          src={`${import.meta.env.BASE_URL || './'}assets/props/bonelordaltar.png`}
+                          alt="Ancient Altar of the Bone Lord"
+                          draggable={false}
+                          className={`pointer-events-none relative z-10 w-full h-full object-contain transition-all duration-500 ${
+                            boneLordAnimPhase === 'blessed'
+                              ? 'drop-shadow-[0_0_28px_rgba(234,179,8,0.5)] brightness-110'
+                              : boneLordAnimPhase === 'offering'
+                                ? 'drop-shadow-[0_0_28px_rgba(220,38,38,0.6)] brightness-110'
+                                : 'drop-shadow-[0_18px_28px_rgba(0,0,0,0.98)]'
+                          }`}
                         />
-                        <ellipse cx="216" cy="79" rx="7.5" ry="6" fill={boneLordAnimPhase !== 'idle' ? '#fbbf24' : '#0f0c0b'} />
-                        <ellipse cx="244" cy="79" rx="7.5" ry="6" fill={boneLordAnimPhase !== 'idle' ? '#fbbf24' : '#0f0c0b'} />
-                        <polygon points="230,86 225,94 235,94" fill="#171310" />
-                        <line x1="219" y1="98" x2="219" y2="106" stroke="#26201b" strokeWidth="2" />
-                        <line x1="230" y1="98" x2="230" y2="106" stroke="#26201b" strokeWidth="2" />
-                        <line x1="241" y1="98" x2="241" y2="106" stroke="#26201b" strokeWidth="2" />
-                      </svg>
+                      </div>
                     </div>
 
                     {/* Stylized & Enlarged Ossuary Inscription */}
@@ -2725,60 +2742,31 @@ export default function EventScreens({ ctx }: { ctx: {
                     <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-purple-400/60" />
                     <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-purple-400/60" />
 
-                    {/* Matching Full-Scale Loom Backdrop */}
-                    <svg
-                      viewBox="0 0 520 340"
-                      className="pointer-events-none absolute inset-0 w-full h-full z-0 opacity-95 drop-shadow-[0_18px_32px_rgba(0,0,0,0.96)]"
-                      preserveAspectRatio="xMidYMid meet"
-                    >
-                      <defs>
-                        <linearGradient id="loomTimberSolo" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#523b2c" />
-                          <stop offset="55%" stopColor="#2e2017" />
-                          <stop offset="100%" stopColor="#160f0b" />
-                        </linearGradient>
-                      </defs>
-                      <rect x="34" y="28" width="452" height="18" rx="2.5" fill="url(#loomTimberSolo)" stroke="#7a5943" strokeWidth="1.8" />
-                      <rect x="26" y="290" width="468" height="20" rx="2.5" fill="url(#loomTimberSolo)" stroke="#7a5943" strokeWidth="1.8" />
-                      <rect x="18" y="310" width="484" height="11" rx="2" fill="#1a120d" stroke="#594030" strokeWidth="1.3" />
-                      <rect x="56" y="18" width="18" height="302" rx="2" fill="url(#loomTimberSolo)" stroke="#6e503d" strokeWidth="1.6" />
-                      <rect x="446" y="18" width="18" height="302" rx="2" fill="url(#loomTimberSolo)" stroke="#6e503d" strokeWidth="1.6" />
-                      {[100, 132, 164, 196, 228, 260, 292, 324, 356, 388, 420].map((xPos, idx) => (
-                        <line
-                          key={idx}
-                          x1={xPos}
-                          y1="46"
-                          x2={xPos}
-                          y2="290"
-                          stroke="#9333ea"
-                          strokeWidth="1.25"
-                          strokeDasharray="4 3"
-                          opacity="0.58"
-                        />
-                      ))}
-                      <path
-                        d="M74 68 L446 270 M446 68 L74 270"
-                        stroke="#991b1b"
-                        strokeWidth="1.6"
-                        opacity="0.6"
+                    {/* Aspect-Locked Weaver's Loom Stage (1133x823) */}
+                    <div className="relative z-10 w-full max-w-[530px] aspect-[1133/823] flex items-center justify-center select-none">
+                      <img
+                        src={`${import.meta.env.BASE_URL || './'}assets/props/loom.png`}
+                        alt="The Weaver's Loom"
+                        draggable={false}
+                        className="pointer-events-none absolute inset-0 w-full h-full object-contain drop-shadow-[0_20px_34px_rgba(0,0,0,0.96)]"
                       />
-                    </svg>
 
-                    <div className="relative z-10 flex flex-col items-center text-center">
-                      <span className="mb-3 px-3 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[9px] font-mono font-bold uppercase tracking-[0.22em] text-purple-200">
-                        Spun From Sinew
-                      </span>
+                      <div className="relative z-10 -mt-[4%] flex flex-col items-center text-center">
+                        <span className="mb-2.5 px-3 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[9px] font-mono font-bold uppercase tracking-[0.22em] text-purple-200 shadow-md">
+                          Spun From Sinew
+                        </span>
 
-                      {mycoOfferedCard && (
-                        <div className="scale-[1.12] origin-center rounded-[4px] shadow-[0_0_44px_rgba(168,85,247,0.55),0_18px_36px_rgba(0,0,0,0.95)] my-2">
-                          {renderCard(mycoOfferedCard, { isClickable: false, disableHoverScale: true })}
-                        </div>
-                      )}
-
-                      <p className="mt-4 font-['Cinzel',_serif] italic text-sm sm:text-base tracking-[0.1em] text-[#e8d9f0] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-                        &ldquo;No twins? Take one from the loom.&rdquo;
-                      </p>
+                        {mycoOfferedCard && (
+                          <div className="scale-[1.06] origin-center rounded-[4px] shadow-[0_0_44px_rgba(168,85,247,0.55),0_18px_36px_rgba(0,0,0,0.95)] my-1">
+                            {renderCard(mycoOfferedCard, { isClickable: false, disableHoverScale: true })}
+                          </div>
+                        )}
+                      </div>
                     </div>
+
+                    <p className="relative z-10 mt-2 font-['Cinzel',_serif] italic text-sm sm:text-base tracking-[0.1em] text-[#e8d9f0] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                      &ldquo;No twins? Take one from the loom.&rdquo;
+                    </p>
                   </div>
 
                   <div className="shrink-0">
@@ -2796,7 +2784,7 @@ export default function EventScreens({ ctx }: { ctx: {
                 <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
                   {/* LEFT COLUMN: Weaver's Loom Prop + Sew Button */}
                   <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                    <div className="relative w-full flex-1 min-h-0 px-6 py-4 flex flex-col items-center justify-center">
+                    <div className="relative w-full flex-1 min-h-0 px-3 sm:px-5 py-3 flex flex-col items-center justify-center">
                       <div
                         className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
                           mycoAnimPhase === 'sewing'
@@ -2808,8 +2796,8 @@ export default function EventScreens({ ctx }: { ctx: {
                         style={{
                           background:
                             mycoAnimPhase === 'woven'
-                              ? 'radial-gradient(ellipse farthest-side at 50% 62%, rgba(168,85,247,0.38) 0%, rgba(126,34,206,0.16) 48%, transparent 74%)'
-                              : 'radial-gradient(ellipse farthest-side at 50% 54%, rgba(147,51,234,0.24) 0%, rgba(153,27,27,0.14) 50%, transparent 74%)',
+                              ? 'radial-gradient(ellipse farthest-side at 50% 58%, rgba(168,85,247,0.38) 0%, rgba(126,34,206,0.16) 48%, transparent 74%)'
+                              : 'radial-gradient(ellipse farthest-side at 50% 52%, rgba(147,51,234,0.24) 0%, rgba(153,27,27,0.14) 50%, transparent 74%)',
                         }}
                       />
 
@@ -2818,149 +2806,120 @@ export default function EventScreens({ ctx }: { ctx: {
                       <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-purple-400/60" />
                       <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-purple-400/60" />
 
-                      {/* Full-Scale Loom Backdrop Positioned Behind the Cards */}
-                      <svg
-                        viewBox="0 0 520 340"
-                        className="pointer-events-none absolute inset-0 w-full h-full z-0 opacity-95 drop-shadow-[0_18px_32px_rgba(0,0,0,0.96)]"
-                        preserveAspectRatio="xMidYMid meet"
-                      >
-                        <defs>
-                          <linearGradient id="loomTimber" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#523b2c" />
-                            <stop offset="55%" stopColor="#2e2017" />
-                            <stop offset="100%" stopColor="#160f0b" />
-                          </linearGradient>
-                        </defs>
-                        {/* Top & Bottom Timber Crossbeams */}
-                        <rect x="34" y="28" width="452" height="18" rx="2.5" fill="url(#loomTimber)" stroke="#7a5943" strokeWidth="1.8" />
-                        <rect x="26" y="290" width="468" height="20" rx="2.5" fill="url(#loomTimber)" stroke="#7a5943" strokeWidth="1.8" />
-                        <rect x="18" y="310" width="484" height="11" rx="2" fill="#1a120d" stroke="#594030" strokeWidth="1.3" />
-                        {/* Tall Left & Right Timber Uprights */}
-                        <rect x="56" y="18" width="18" height="302" rx="2" fill="url(#loomTimber)" stroke="#6e503d" strokeWidth="1.6" />
-                        <rect x="446" y="18" width="18" height="302" rx="2" fill="url(#loomTimber)" stroke="#6e503d" strokeWidth="1.6" />
-                        {/* Vertical Sinew Warp Threads Spanning Full Frame Behind Cards */}
-                        {[100, 132, 164, 196, 228, 260, 292, 324, 356, 388, 420].map((xPos, idx) => (
-                          <line
-                            key={idx}
-                            x1={xPos}
-                            y1="46"
-                            x2={xPos}
-                            y2="290"
-                            stroke={mycoAnimPhase !== 'idle' ? '#c084fc' : '#6b21a8'}
-                            strokeWidth="1.25"
-                            strokeDasharray="4 3"
-                            opacity="0.58"
-                          />
-                        ))}
-                        {/* Subtle Cross-Webbing Behind Center */}
-                        <path
-                          d="M74 68 L446 270 M446 68 L74 270"
-                          stroke={mycoAnimPhase === 'sewing' ? '#f43f5e' : '#7f1d1d'}
-                          strokeWidth="1.6"
-                          opacity="0.55"
+                      {/* Aspect-Locked Illustrated Loom Prop Stage (1133x823) */}
+                      <div className="relative z-10 w-full max-w-[555px] aspect-[1133/823] flex items-center justify-center select-none">
+                        <img
+                          src={`${import.meta.env.BASE_URL || './'}assets/props/loom.png`}
+                          alt="The Weaver's Loom"
+                          draggable={false}
+                          className={`pointer-events-none absolute inset-0 w-full h-full object-contain transition-all duration-500 ${
+                            mycoAnimPhase === 'sewing'
+                              ? 'drop-shadow-[0_0_28px_rgba(244,63,94,0.5)] brightness-110'
+                              : 'drop-shadow-[0_20px_34px_rgba(0,0,0,0.96)]'
+                          }`}
                         />
-                      </svg>
 
-                      {/* Cards Centered Directly Over the Loom Warp Threads */}
-                      <div className="relative z-10 flex items-center justify-center w-full h-full">
-                        {mycoAnimPhase === 'woven' && fusedPreview ? (
-                          <div className="flex flex-col items-center animate-menu-fade-in">
-                            <span className="mb-2 px-3 py-0.5 rounded-[2px] bg-[#22112b]/95 border border-purple-400/90 text-[9px] font-mono font-bold uppercase tracking-[0.22em] text-purple-200 shadow-[0_0_16px_rgba(168,85,247,0.45)]">
-                              Stitched Vessel
-                            </span>
-                            <div className="scale-[1.12] origin-center rounded-[4px] shadow-[0_0_46px_rgba(168,85,247,0.8),0_0_24px_rgba(220,38,38,0.5)]">
-                              {renderCard(fusedPreview, { isClickable: false, disableHoverScale: true })}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="relative flex items-center justify-center gap-12 sm:gap-16">
-                            {/* Twin I */}
-                            <div
-                              className="flex flex-col items-center"
-                              style={{
-                                animation: mycoAnimPhase === 'sewing' ? 'loomTwinConvergeLeft 0.9s ease-in-out forwards' : undefined,
-                              }}
-                            >
-                              <span className="mb-2 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200">
-                                Twin I
+                        {/* Cards Centered Directly Inside the Loom's Warp Window & Crossed Crimson Threads */}
+                        <div className="relative z-10 -mt-[4%] flex items-center justify-center w-full h-full">
+                          {mycoAnimPhase === 'woven' && fusedPreview ? (
+                            <div className="flex flex-col items-center animate-menu-fade-in">
+                              <span className="mb-2 px-3 py-0.5 rounded-[2px] bg-[#22112b]/95 border border-purple-400/90 text-[9px] font-mono font-bold uppercase tracking-[0.22em] text-purple-200 shadow-[0_0_16px_rgba(168,85,247,0.45)]">
+                                Stitched Vessel
                               </span>
-                              <div className="w-[116px] h-[160px] flex items-center justify-center">
-                                {twin1 ? (
-                                  <div
-                                    onClick={() => {
-                                      if (isAnimating) return;
-                                      triggerSfx('draw');
-                                      setMycoSelectedIndices((prev: number[]) => prev.slice(1));
-                                    }}
-                                    title={!isAnimating ? 'Click to return Twin I to deck' : undefined}
-                                    className={`scale-[1.02] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
-                                  >
-                                    {renderCard(twin1, { isClickable: false, disableHoverScale: true })}
-                                  </div>
-                                ) : (
-                                  <div className="w-[110px] h-[154px] rounded-[4px] border border-dashed border-purple-500/55 bg-[#120b14]/78 flex flex-col items-center justify-center gap-1.5 text-purple-300/65">
-                                    <span className="text-[9px] uppercase tracking-[0.22em]">Twin I</span>
-                                  </div>
-                                )}
+                              <div className="scale-[1.08] origin-center rounded-[4px] shadow-[0_0_46px_rgba(168,85,247,0.8),0_0_24px_rgba(220,38,38,0.5)]">
+                                {renderCard(fusedPreview, { isClickable: false, disableHoverScale: true })}
                               </div>
                             </div>
-
-                            {/* Twin II */}
-                            <div
-                              className="flex flex-col items-center"
-                              style={{
-                                animation: mycoAnimPhase === 'sewing' ? 'loomTwinConvergeRight 0.9s ease-in-out forwards' : undefined,
-                              }}
-                            >
-                              <span className="mb-2 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200">
-                                Twin II
-                              </span>
-                              <div className="w-[116px] h-[160px] flex items-center justify-center">
-                                {twin2 ? (
-                                  <div
-                                    onClick={() => {
-                                      if (isAnimating) return;
-                                      triggerSfx('draw');
-                                      setMycoSelectedIndices((prev: number[]) => prev.slice(0, 1));
-                                    }}
-                                    title={!isAnimating ? 'Click to return Twin II to deck' : undefined}
-                                    className={`scale-[1.02] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
-                                  >
-                                    {renderCard(twin2, { isClickable: false, disableHoverScale: true })}
-                                  </div>
-                                ) : (
-                                  <div className="w-[110px] h-[154px] rounded-[4px] border border-dashed border-purple-500/55 bg-[#120b14]/78 flex flex-col items-center justify-center gap-1.5 text-purple-300/65">
-                                    <span className="text-[9px] uppercase tracking-[0.22em]">Twin II</span>
-                                  </div>
-                                )}
+                          ) : (
+                            <div className="relative flex items-center justify-center gap-8 sm:gap-12">
+                              {/* Twin I */}
+                              <div
+                                className="flex flex-col items-center"
+                                style={{
+                                  animation: mycoAnimPhase === 'sewing' ? 'loomTwinConvergeLeft 0.9s ease-in-out forwards' : undefined,
+                                }}
+                              >
+                                <span className="mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 shadow-md">
+                                  Twin I
+                                </span>
+                                <div className="w-[108px] h-[150px] flex items-center justify-center">
+                                  {twin1 ? (
+                                    <div
+                                      onClick={() => {
+                                        if (isAnimating) return;
+                                        triggerSfx('draw');
+                                        setMycoSelectedIndices((prev: number[]) => prev.slice(1));
+                                      }}
+                                      title={!isAnimating ? 'Click to return Twin I to deck' : undefined}
+                                      className={`scale-[0.96] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                                    >
+                                      {renderCard(twin1, { isClickable: false, disableHoverScale: true })}
+                                    </div>
+                                  ) : (
+                                    <div className="w-[102px] h-[144px] rounded-[4px] border border-dashed border-purple-400/65 bg-[#120b14]/82 flex flex-col items-center justify-center gap-1.5 text-purple-200/75 shadow-md">
+                                      <span className="text-[9px] uppercase tracking-[0.22em]">Twin I</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
+
+                              {/* Twin II */}
+                              <div
+                                className="flex flex-col items-center"
+                                style={{
+                                  animation: mycoAnimPhase === 'sewing' ? 'loomTwinConvergeRight 0.9s ease-in-out forwards' : undefined,
+                                }}
+                              >
+                                <span className="mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 shadow-md">
+                                  Twin II
+                                </span>
+                                <div className="w-[108px] h-[150px] flex items-center justify-center">
+                                  {twin2 ? (
+                                    <div
+                                      onClick={() => {
+                                        if (isAnimating) return;
+                                        triggerSfx('draw');
+                                        setMycoSelectedIndices((prev: number[]) => prev.slice(0, 1));
+                                      }}
+                                      title={!isAnimating ? 'Click to return Twin II to deck' : undefined}
+                                      className={`scale-[0.96] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                                    >
+                                      {renderCard(twin2, { isClickable: false, disableHoverScale: true })}
+                                    </div>
+                                  ) : (
+                                    <div className="w-[102px] h-[144px] rounded-[4px] border border-dashed border-purple-400/65 bg-[#120b14]/82 flex flex-col items-center justify-center gap-1.5 text-purple-200/75 shadow-md">
+                                      <span className="text-[9px] uppercase tracking-[0.22em]">Twin II</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Foreground Active Bone Needle & Crimson Zig-Zag Stitch Right Over the Cards */}
+                              {mycoAnimPhase === 'sewing' && (
+                                <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
+                                  <svg viewBox="0 0 180 200" className="w-44 h-52 overflow-visible drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
+                                    {/* Crimson Cross-Stitches Binding the Center Seam */}
+                                    <path
+                                      d="M 62 34 L 118 52 L 62 72 L 118 92 L 62 112 L 118 132 L 62 152 L 118 168"
+                                      fill="none"
+                                      stroke="#f43f5e"
+                                      strokeWidth="3.2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeDasharray="320"
+                                      style={{ animation: 'loomSeamStitchDraw 0.85s ease-out forwards' }}
+                                    />
+                                    {/* Sweeping Bone Needle */}
+                                    <g style={{ animation: 'loomNeedleSweep 0.85s ease-in-out forwards' }}>
+                                      <polygon points="34,96 138,96 154,100 138,104 34,104 22,100" fill="#efe4d0" stroke="#5c4d3c" strokeWidth="1.4" />
+                                      <ellipse cx="44" cy="100" rx="4" ry="2" fill="#7e22ce" />
+                                    </g>
+                                  </svg>
+                                </div>
+                              )}
                             </div>
-
-                            {/* Foreground Active Bone Needle & Crimson Zig-Zag Stitch Right Over the Cards */}
-                            {mycoAnimPhase === 'sewing' && (
-                              <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
-                                <svg viewBox="0 0 180 200" className="w-44 h-52 overflow-visible drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
-                                  {/* Crimson Cross-Stitches Binding the Center Seam */}
-                                  <path
-                                    d="M 62 34 L 118 52 L 62 72 L 118 92 L 62 112 L 118 132 L 62 152 L 118 168"
-                                    fill="none"
-                                    stroke="#f43f5e"
-                                    strokeWidth="3.2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeDasharray="320"
-                                    style={{ animation: 'loomSeamStitchDraw 0.85s ease-out forwards' }}
-                                  />
-                                  {/* Sweeping Bone Needle */}
-                                  <g style={{ animation: 'loomNeedleSweep 0.85s ease-in-out forwards' }}>
-                                    <polygon points="34,96 138,96 154,100 138,104 34,104 22,100" fill="#efe4d0" stroke="#5c4d3c" strokeWidth="1.4" />
-                                    <ellipse cx="44" cy="100" rx="4" ry="2" fill="#7e22ce" />
-                                  </g>
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -3113,173 +3072,133 @@ export default function EventScreens({ ctx }: { ctx: {
                     <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-teal-500/65" />
                     <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-teal-500/65" />
 
-                    {/* Press Assembly Container: Platen travels down along the guide rails all the way onto the press bed */}
-                    <div className="relative z-20 flex flex-col items-center justify-end w-full flex-1 min-h-0 pt-16">
-                      {/* Upper Press Platen & Threaded Screw Shaft (resting at -196px; drops to translateY(0) flush on bed) */}
-                      <div
-                        className="pointer-events-none absolute bottom-[52px] inset-x-0 z-40 flex flex-col items-center"
-                        style={{
-                          transform: goobertStamping ? undefined : 'translateY(-196px)',
-                          animation: goobertStamping ? 'pressPlatenSlam 1.85s linear forwards' : undefined,
-                        }}
-                      >
-                        <svg viewBox="0 0 460 296" className="w-full max-w-[465px] h-auto drop-shadow-[0_18px_28px_rgba(0,0,0,0.98)]">
-                          <defs>
-                            <linearGradient id="pressIronBeam" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#3c4a46" />
-                              <stop offset="55%" stopColor="#202926" />
-                              <stop offset="100%" stopColor="#101513" />
-                            </linearGradient>
-                            <linearGradient id="pressFacePlate" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#26312e" />
-                              <stop offset="60%" stopColor="#171f1c" />
-                              <stop offset="100%" stopColor="#0d1210" />
-                            </linearGradient>
-                          </defs>
-                          {/* Turned Stamp Handle & Brass Collar */}
-                          <defs>
-                            <linearGradient id="stampHandleWood" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#1b2421" />
-                              <stop offset="35%" stopColor="#3b4d47" />
-                              <stop offset="68%" stopColor="#26332f" />
-                              <stop offset="100%" stopColor="#121816" />
-                            </linearGradient>
-                          </defs>
-                          {/* Ergonomic Bulbous Stamp Grip */}
-                          <path
-                            d="M230 112 C202 112, 192 134, 198 156 C203 174, 214 186, 214 204 L214 218 L246 218 L246 204 C246 186, 257 174, 262 156 C268 134, 258 112, 230 112 Z"
-                            fill="url(#stampHandleWood)"
-                            stroke="#6c857d"
-                            strokeWidth="1.6"
-                            strokeLinejoin="round"
-                          />
-                          {/* Specular Highlight on Handle Dome */}
-                          <path
-                            d="M214 126 C207 136, 207 150, 212 162"
-                            fill="none"
-                            stroke="#8aa89e"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            opacity="0.45"
-                          />
-                          {/* Flared Metal Ferrule / Collar Seated on Platen */}
-                          <path
-                            d="M206 218 L254 218 L264 232 L196 232 Z"
-                            fill="#2b3834"
-                            stroke="#6f877f"
-                            strokeWidth="1.5"
-                            strokeLinejoin="round"
-                          />
-                          <line x1="208" y1="224" x2="252" y2="224" stroke="#141c19" strokeWidth="1.4" />
-                          {/* Heavy Cast-Iron Stamp Head & Platen Block */}
-                          <rect x="52" y="232" width="356" height="24" rx="2" fill="url(#pressIronBeam)" stroke="#5f7870" strokeWidth="1.8" />
-                          <rect x="64" y="256" width="332" height="28" rx="1.5" fill="url(#pressFacePlate)" stroke="#4d635c" strokeWidth="1.5" />
-                          {/* Emerald Ink Contact Strip at Bottom Edge */}
-                          <rect x="72" y="284" width="316" height="9" rx="1" fill="#134e4a" stroke="#2dd4bf" strokeWidth="1.1" />
-                        </svg>
-                      </div>
+                    {/* Press Assembly Container: stamp.png travels flush into stampbase.png trough in exact lockstep with card squish/unsquish */}
+                    {(() => {
+                      const propBase = import.meta.env.BASE_URL || './';
+                      return (
+                        <div className="relative z-20 flex flex-col items-center justify-end w-full flex-1 min-h-0 pt-24 sm:pt-28">
+                          {/* Aspect-Locked Hinged Press Chest Stage (580x736) */}
+                          <div className="relative w-[258px] sm:w-[292px] aspect-[580/736] select-none">
+                            {/* Lower Hinged Press Base Back & Open Lid (behind cards) */}
+                            <img
+                              src={`${propBase}assets/props/stampbase.png`}
+                              alt="The Begotten's Printing Press Base"
+                              draggable={false}
+                              className="pointer-events-none relative z-10 w-full h-full object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.96)]"
+                            />
 
-                      {goobertStamping && (
-                        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-                          <div
-                            className="w-48 h-24 rounded-full bg-emerald-400/40 blur-md"
-                            style={{ animation: 'inkSplatterBurst 0.72s ease-out forwards' }}
-                          />
-                        </div>
-                      )}
-
-                      <div className="relative z-20 flex items-end justify-center gap-8 sm:gap-14 -mb-6">
-                        {/* Left Bed: Original Creature (squishes down & unsquishes in sync with platen) */}
-                        <div className="flex flex-col items-center">
-                          <span
-                            className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#091c18]/92 border border-teal-500/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-teal-200 transition-opacity duration-150 ${
-                              goobertStamping ? 'opacity-0' : 'opacity-100'
-                            }`}
-                          >
-                            Original
-                          </span>
-                          <div
-                            className="w-[108px] h-[148px] flex items-end justify-center origin-bottom"
-                            style={{
-                              animation: goobertStamping ? 'pressCardSquish 1.85s linear forwards' : undefined,
-                            }}
-                          >
-                            {originalPreview ? (
-                              <div
-                                onClick={() => {
-                                  if (isEventBusy || isAnimating) return;
-                                  triggerSfx('draw');
-                                  setGoobertSelectedIdx(null);
-                                }}
-                                title={!isEventBusy && !isAnimating ? 'Click to return card to deck' : undefined}
-                                className={`scale-[0.94] origin-bottom shadow-[0_14px_28px_rgba(0,0,0,0.92)] ${!isEventBusy && !isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
-                              >
-                                {renderCard(originalPreview, { isClickable: false, disableHoverScale: true })}
-                              </div>
-                            ) : (
-                              <div className="w-[102px] h-[142px] rounded-[4px] border border-dashed border-teal-600/65 bg-[#07120f]/80 flex flex-col items-center justify-center gap-1.5 text-teal-400/65">
-                                <span className="text-lg">📜</span>
-                                <span className="text-[9px] uppercase tracking-[0.2em]">Original</span>
+                            {/* Emerald Ink Splatter Burst on Impact inside Trough */}
+                            {goobertStamping && (
+                              <div className="pointer-events-none absolute left-1/2 bottom-[41%] -translate-x-1/2 z-30 flex items-center justify-center">
+                                <div
+                                  className="w-44 h-16 rounded-full bg-emerald-400/45 blur-md"
+                                  style={{ animation: 'inkSplatterBurst 0.72s ease-out forwards' }}
+                                />
                               </div>
                             )}
+
+                            {/* Cards Nested Upright Inside the Press Bed Trough (y≈59.5% => bottom: 40.5%) */}
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[40.5%] z-20 flex items-end justify-center gap-3.5 sm:gap-5">
+                              {/* Left Bed: Original Creature (exact 128px height, origin-bottom squish synced to stamp) */}
+                              <div className="flex flex-col items-center">
+                                <span
+                                  className={`mb-1 px-2 py-0.5 rounded-[2px] bg-[#091c18]/92 border border-teal-500/75 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-teal-200 transition-opacity duration-150 ${
+                                    goobertStamping ? 'opacity-0' : 'opacity-100'
+                                  }`}
+                                >
+                                  Original
+                                </span>
+                                <div
+                                  className="w-[94px] h-[128px] flex items-end justify-center origin-bottom"
+                                  style={{
+                                    animation: goobertStamping ? 'pressCardSquish 1.85s linear forwards' : undefined,
+                                  }}
+                                >
+                                  {originalPreview ? (
+                                    <div
+                                      onClick={() => {
+                                        if (isEventBusy || isAnimating) return;
+                                        triggerSfx('draw');
+                                        setGoobertSelectedIdx(null);
+                                      }}
+                                      title={!isEventBusy && !isAnimating ? 'Click to return card to deck' : undefined}
+                                      className={`scale-[0.83] origin-bottom shadow-[0_12px_24px_rgba(0,0,0,0.94)] ${!isEventBusy && !isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                                    >
+                                      {renderCard(originalPreview, { isClickable: false, disableHoverScale: true })}
+                                    </div>
+                                  ) : (
+                                    <div className="w-[90px] h-[126px] rounded-[4px] border border-dashed border-teal-500/70 bg-[#07120f]/84 flex flex-col items-center justify-center gap-1 text-teal-300/70">
+                                      <span className="text-base">📜</span>
+                                      <span className="text-[8.5px] uppercase tracking-[0.2em]">Original</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Right Bed: Blank Plate -> Stamped Clone (exact 128px height, origin-bottom squish synced to stamp) */}
+                              <div className="flex flex-col items-center">
+                                <span
+                                  className={`mb-1 px-2 py-0.5 rounded-[2px] border text-[8px] font-mono font-bold uppercase tracking-[0.2em] transition-opacity duration-150 whitespace-nowrap ${
+                                    goobertStamping ? 'opacity-0' : 'opacity-100'
+                                  } ${
+                                    goobertStampedCard
+                                      ? 'bg-[#0a261d]/95 border-emerald-400/90 text-emerald-200 shadow-[0_0_14px_rgba(52,211,153,0.45)]'
+                                      : 'bg-[#0b1815]/85 border-teal-800/70 text-teal-400/75'
+                                  }`}
+                                >
+                                  {goobertStampedCard ? 'Stamped Clone' : 'Imprint Plate'}
+                                </span>
+                                <div
+                                  className="w-[94px] h-[128px] flex items-end justify-center origin-bottom"
+                                  style={{
+                                    animation: goobertStamping ? 'pressCardSquish 1.85s linear forwards' : undefined,
+                                  }}
+                                >
+                                  {goobertStampedCard ? (
+                                    <div className="scale-[0.83] origin-bottom rounded-[4px] shadow-[0_0_34px_rgba(16,185,129,0.68),0_12px_24px_rgba(0,0,0,0.94)]">
+                                      {renderCard(goobertStampedCard, { isClickable: false, disableHoverScale: true })}
+                                    </div>
+                                  ) : (
+                                    <div className="w-[90px] h-[126px] rounded-[4px] border border-dashed border-emerald-600/65 bg-[#081511]/84 flex flex-col items-center justify-center gap-1 text-emerald-300/65">
+                                      <span className="text-base opacity-75">🧪</span>
+                                      <span className="text-[8.5px] uppercase tracking-[0.2em]">Blank Plate</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Foreground Riveted Front Lip of stampbase.png so Card Bases Nest Cleanly Inside the Trough */}
+                            <img
+                              src={`${propBase}assets/props/stampbase.png`}
+                              alt=""
+                              aria-hidden="true"
+                              draggable={false}
+                              className="pointer-events-none absolute inset-0 z-[25] w-full h-full object-contain"
+                              style={{ clipPath: 'inset(60.5% 0 0 0)' }}
+                            />
+
+                            {/* Moving Upper Gothic Stamp Prop (530x714): bottom plate at 96.8% lands flush on trough bed */}
+                            <div
+                              className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(40.5%-11px)] w-[92%] z-40 flex items-end justify-center"
+                              style={{
+                                transform: goobertStamping ? undefined : 'translateY(-162px)',
+                                animation: goobertStamping ? 'pressPlatenSlam 1.85s linear forwards' : undefined,
+                              }}
+                            >
+                              <img
+                                src={`${propBase}assets/props/stamp.png`}
+                                alt="Gothic Press Stamp"
+                                draggable={false}
+                                className="w-full h-auto object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.98)]"
+                              />
+                            </div>
                           </div>
                         </div>
+                      );
+                    })()}
 
-                        {/* Right Bed: Blank Plate -> Stamped Clone (squishes down & unsquishes in sync with platen) */}
-                        <div className="flex flex-col items-center">
-                          <span
-                            className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] border text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] transition-opacity duration-150 ${
-                              goobertStamping ? 'opacity-0' : 'opacity-100'
-                            } ${
-                              goobertStampedCard
-                                ? 'bg-[#0a261d]/95 border-emerald-400/90 text-emerald-200 shadow-[0_0_14px_rgba(52,211,153,0.45)]'
-                                : 'bg-[#0b1815]/85 border-teal-800/70 text-teal-400/75'
-                            }`}
-                          >
-                            {goobertStampedCard ? 'Stamped Clone' : 'Imprint Plate'}
-                          </span>
-                          <div
-                            className="w-[108px] h-[148px] flex items-end justify-center origin-bottom"
-                            style={{
-                              animation: goobertStamping ? 'pressCardSquish 1.85s linear forwards' : undefined,
-                            }}
-                          >
-                            {goobertStampedCard ? (
-                              <div className="scale-[0.94] origin-bottom rounded-[4px] shadow-[0_0_38px_rgba(16,185,129,0.65),0_14px_28px_rgba(0,0,0,0.92)]">
-                                {renderCard(goobertStampedCard, { isClickable: false, disableHoverScale: true })}
-                              </div>
-                            ) : (
-                              <div className="w-[102px] h-[142px] rounded-[4px] border border-dashed border-emerald-700/60 bg-[#081511]/80 flex flex-col items-center justify-center gap-1.5 text-emerald-400/60">
-                                <span className="text-lg opacity-75">🧪</span>
-                                <span className="text-[9px] uppercase tracking-[0.2em]">Blank Plate</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Lower Cast-Iron Press Bed SVG Prop */}
-                      <svg
-                        viewBox="0 0 460 76"
-                        className="w-full max-w-[465px] h-auto drop-shadow-[0_16px_26px_rgba(0,0,0,0.96)] pointer-events-none"
-                      >
-                        <defs>
-                          <linearGradient id="pressBedMetal" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#35423e" />
-                            <stop offset="55%" stopColor="#1c2422" />
-                            <stop offset="100%" stopColor="#0d1210" />
-                          </linearGradient>
-                        </defs>
-                        <rect x="52" y="4" width="12" height="44" rx="1.5" fill="#2a3532" stroke="#556b64" strokeWidth="1.2" />
-                        <rect x="396" y="4" width="12" height="44" rx="1.5" fill="#2a3532" stroke="#556b64" strokeWidth="1.2" />
-                        <polygon points="34,34 56,16 404,16 426,34" fill="url(#pressBedMetal)" stroke="#5c756d" strokeWidth="1.8" />
-                        <rect x="34" y="34" width="392" height="14" rx="1.5" fill="#171f1d" stroke="#4c615a" strokeWidth="1.4" />
-                        <path d="M110 25 Q230 31 350 25" fill="none" stroke="#10b981" strokeWidth="2.4" strokeLinecap="round" opacity="0.7" />
-                        <polygon points="62,72 78,48 382,48 398,72" fill="#131917" stroke="#42544e" strokeWidth="1.5" />
-                      </svg>
-                    </div>
-
-                    <p className="relative z-20 mt-3 font-['Cinzel',_serif] text-sm sm:text-base tracking-[0.1em] text-teal-100/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                    <p className="relative z-20 mt-2 font-['Cinzel',_serif] text-sm sm:text-base tracking-[0.1em] text-teal-100/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                       The Begotten jeers at his press.
                     </p>
                   </div>

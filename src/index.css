@@ -867,25 +867,37 @@
   100% { transform: translateY(-54px) scale(1.25); opacity: 0; }
 }
 
+@keyframes sconceFlameFlicker {
+  0%, 100% { transform: scaleX(1) scaleY(1) skewX(-1deg); opacity: 0.94; }
+  22%      { transform: scaleX(0.92) scaleY(1.09) skewX(2.5deg); opacity: 1; }
+  48%      { transform: scaleX(1.06) scaleY(0.93) skewX(-2.2deg); opacity: 0.9; }
+  74%      { transform: scaleX(0.95) scaleY(1.07) skewX(1.8deg); opacity: 0.98; }
+}
+
+@keyframes sconceGlowPulse {
+  0%, 100% { transform: scale(1); opacity: 0.72; }
+  50%      { transform: scale(1.14); opacity: 0.95; }
+}
+
 @keyframes pressPlatenSlam {
-  0%   { transform: translateY(-196px); }
-  6%   { transform: translateY(-140px); }
-  13%  { transform: translateY(-70px); }
-  20%  { transform: translateY(0px); }
-  74%  { transform: translateY(0px); }
-  81%  { transform: translateY(-70px); }
-  88%  { transform: translateY(-140px); }
-  95%  { transform: translateY(-200px); }
-  100% { transform: translateY(-196px); }
+  0%   { transform: translateY(-162px); }
+  6%   { transform: translateY(-128px); }
+  13%  { transform: translateY(-64px); }
+  20%  { transform: translateY(-6px); }
+  74%  { transform: translateY(-6px); }
+  81%  { transform: translateY(-64px); }
+  88%  { transform: translateY(-128px); }
+  95%  { transform: translateY(-166px); }
+  100% { transform: translateY(-162px); }
 }
 
 @keyframes pressCardSquish {
   0%   { transform: scaleY(1) scaleX(1); }
   6%   { transform: scaleY(1) scaleX(1); }
-  13%  { transform: scaleY(0.52) scaleX(1.06); }
+  13%  { transform: scaleY(0.50) scaleX(1.06); }
   20%  { transform: scaleY(0.05) scaleX(1.12); }
   74%  { transform: scaleY(0.05) scaleX(1.12); }
-  81%  { transform: scaleY(0.52) scaleX(1.06); }
+  81%  { transform: scaleY(0.50) scaleX(1.06); }
   88%  { transform: scaleY(1) scaleX(1); }
   94%  { transform: scaleY(1.03) scaleX(0.98); }
   100% { transform: scaleY(1) scaleX(1); }

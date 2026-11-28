@@ -536,6 +536,7 @@ export default function App() {
     eyebrow: string;
     subtitle: string;
     img: string;
+    silhouette: string;
     accent: 'crimson' | 'violet' | 'amber' | 'emerald';
   } | null>(null);
   const bossIntroTimerRef = useRef<number | null>(null);
@@ -561,24 +562,28 @@ export default function App() {
         eyebrow: 'Final Reckoning · Act IV',
         subtitle: 'Pitch-black eye sockets turn toward the scales.',
         img: `${base}assets/text/bone-lord-final-boss.png`,
+        silhouette: `${base}assets/props/bonelord.png`,
         accent: 'crimson' as const,
       },
       'The Weaver': {
         eyebrow: 'Act Boss · The Loom',
         subtitle: 'Hunched over sinew and burlap, threading your doom.',
         img: `${base}assets/text/weaver.png`,
+        silhouette: `${base}assets/props/weaver.png`,
         accent: 'violet' as const,
       },
       Zealot: {
         eyebrow: 'Act Boss · The Steeple',
         subtitle: 'The Altar of the Old One remembers every drop spilled.',
         img: `${base}assets/text/zealot.png`,
+        silhouette: `${base}assets/props/zealot.png`,
         accent: 'amber' as const,
       },
       'The Begotten': {
         eyebrow: 'Act Boss · The Rotary Press',
         subtitle: 'Wet ink and living caricatures spill across the slab.',
         img: `${base}assets/text/begotten.png`,
+        silhouette: `${base}assets/props/begotten.png`,
         accent: 'emerald' as const,
       },
     };
@@ -6906,14 +6911,14 @@ export default function App() {
     } else {
       const shuffledOptions = seededShuffle(remainingBlack, rng);
       const slots: { x: number; y: number }[] = [
-        { x: 14, y: 26 }, { x: 31, y: 20 }, { x: 50, y: 24 }, { x: 69, y: 22 }, { x: 85, y: 28 },
-        { x: 18, y: 52 }, { x: 38, y: 48 }, { x: 58, y: 52 }, { x: 79, y: 50 },
-        { x: 20, y: 76 }, { x: 42, y: 74 }, { x: 64, y: 77 }, { x: 83, y: 74 },
+        { x: 20, y: 36 }, { x: 43, y: 30 }, { x: 58, y: 29 }, { x: 74, y: 34 },
+        { x: 18, y: 52 }, { x: 35, y: 49 }, { x: 51, y: 51 }, { x: 67, y: 49 }, { x: 81, y: 52 },
+        { x: 24, y: 69 }, { x: 42, y: 70 }, { x: 59, y: 69 }, { x: 75, y: 68 },
       ];
       const sheep: FlockSheepEntity[] = slots.map((pos, idx) => ({
         id: idx,
-        x: Math.max(10, Math.min(90, Math.round(pos.x + (rng() - 0.5) * 7))),
-        y: Math.max(16, Math.min(82, Math.round(pos.y + (rng() - 0.5) * 8))),
+        x: Math.max(16, Math.min(83, Math.round(pos.x + (rng() - 0.5) * 5))),
+        y: Math.max(28, Math.min(73, Math.round(pos.y + (rng() - 0.5) * 6))),
         optionId: shuffledOptions[idx % shuffledOptions.length],
         isGrey: false,
         flip: rng() < 0.5,
@@ -8556,55 +8561,100 @@ export default function App() {
                 }
                 setBossIntroBanner(null);
               }}
-              className="fixed inset-0 z-[60] flex items-center justify-center px-0 bg-black/55 backdrop-blur-[2px] cursor-pointer select-none animate-menu-fade-in"
+              className="fixed inset-0 z-[60] flex flex-col items-center justify-center px-0 bg-black/70 backdrop-blur-[2.5px] cursor-pointer select-none animate-menu-fade-in overflow-hidden"
             >
-              <div
-                className={`w-full max-w-none relative py-7 sm:py-9 px-6 sm:px-10 text-center border-y shadow-[0_0_80px_rgba(0,0,0,0.95)] ${
-                  bossIntroBanner.accent === 'crimson'
-                    ? 'border-red-600/85 bg-[linear-gradient(90deg,transparent_0%,rgba(16,4,5,0.96)_14%,rgba(38,6,8,0.98)_50%,rgba(16,4,5,0.96)_86%,transparent_100%)] shadow-[0_0_90px_rgba(185,28,28,0.55)]'
-                    : bossIntroBanner.accent === 'violet'
-                      ? 'border-purple-500/80 bg-[linear-gradient(90deg,transparent_0%,rgba(14,8,20,0.96)_14%,rgba(32,12,48,0.98)_50%,rgba(14,8,20,0.96)_86%,transparent_100%)] shadow-[0_0_80px_rgba(126,34,206,0.45)]'
-                      : bossIntroBanner.accent === 'emerald'
-                        ? 'border-emerald-500/80 bg-[linear-gradient(90deg,transparent_0%,rgba(5,18,12,0.96)_14%,rgba(9,38,24,0.98)_50%,rgba(5,18,12,0.96)_86%,transparent_100%)] shadow-[0_0_80px_rgba(16,185,129,0.4)]'
-                        : 'border-amber-600/80 bg-[linear-gradient(90deg,transparent_0%,rgba(18,11,6,0.96)_14%,rgba(38,22,10,0.98)_50%,rgba(18,11,6,0.96)_86%,transparent_100%)] shadow-[0_0_80px_rgba(217,119,6,0.42)]'
-                }`}
-              >
-                <div className="flex items-center justify-center gap-3.5 mb-3">
-                  <span className="h-px w-14 sm:w-24 bg-gradient-to-r from-transparent via-[#c49a5c]/80 to-[#f4d78b]" />
-                  <span
-                    className={`font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.34em] ${
-                      bossIntroBanner.accent === 'crimson'
-                        ? 'text-red-400'
-                        : bossIntroBanner.accent === 'violet'
-                          ? 'text-purple-300'
-                          : bossIntroBanner.accent === 'emerald'
-                            ? 'text-emerald-300'
-                            : 'text-amber-300'
-                    }`}
-                  >
-                    {bossIntroBanner.eyebrow}
-                  </span>
-                  <span className="h-px w-14 sm:w-24 bg-gradient-to-l from-transparent via-[#c49a5c]/80 to-[#f4d78b]" />
-                </div>
-
-                <div className="flex items-center justify-center my-1">
-                  <img
-                    src={bossIntroBanner.img}
-                    alt={bossIntroBanner.type}
-                    draggable={false}
-                    className={`w-auto object-contain mx-auto ${
-                      bossIntroBanner.type === 'BoneLord'
-                        ? 'max-h-24 sm:max-h-32 drop-shadow-[0_0_24px_rgba(220,38,38,0.75)]'
-                        : 'max-h-20 sm:max-h-28 drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]'
-                    }`}
+              {/* Dramatic Backlit Boss Silhouette Looming Behind the Banner */}
+              <div className="pointer-events-none relative w-full flex flex-col items-center justify-end">
+                <div className="relative flex items-end justify-center w-full -mb-14 sm:-mb-20 z-10">
+                  {/* Accent Radial Backlight Halo so dark woodcut edges pop sharply */}
+                  <div
+                    className="pointer-events-none absolute left-1/2 bottom-0 -translate-x-1/2 w-[340px] sm:w-[480px] h-[340px] sm:h-[480px] rounded-full blur-[34px] opacity-85"
+                    style={{
+                      background:
+                        bossIntroBanner.accent === 'crimson'
+                          ? 'radial-gradient(circle at 50% 48%, rgba(220,38,38,0.52) 0%, rgba(127,29,29,0.28) 44%, transparent 74%)'
+                          : bossIntroBanner.accent === 'violet'
+                            ? 'radial-gradient(circle at 50% 48%, rgba(168,85,247,0.5) 0%, rgba(88,28,135,0.28) 44%, transparent 74%)'
+                            : bossIntroBanner.accent === 'emerald'
+                              ? 'radial-gradient(circle at 50% 48%, rgba(16,185,129,0.48) 0%, rgba(6,78,59,0.28) 44%, transparent 74%)'
+                              : 'radial-gradient(circle at 50% 48%, rgba(245,158,11,0.48) 0%, rgba(146,64,14,0.28) 44%, transparent 74%)',
+                    }}
                   />
+                  <div
+                    className="relative z-10 px-10 pt-8"
+                    style={{
+                      WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%)',
+                      maskImage: 'linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%)',
+                    }}
+                  >
+                    <img
+                      src={bossIntroBanner.silhouette}
+                      alt={`${bossIntroBanner.type} silhouette`}
+                      draggable={false}
+                      className="h-[40vh] sm:h-[48vh] max-h-[430px] w-auto object-contain select-none"
+                      style={{
+                        filter:
+                          bossIntroBanner.accent === 'crimson'
+                            ? 'drop-shadow(0 0 18px rgba(220,38,38,0.75)) drop-shadow(0 0 3px rgba(254,202,202,0.55))'
+                            : bossIntroBanner.accent === 'violet'
+                              ? 'drop-shadow(0 0 18px rgba(168,85,247,0.75)) drop-shadow(0 0 3px rgba(233,213,255,0.55))'
+                              : bossIntroBanner.accent === 'emerald'
+                                ? 'drop-shadow(0 0 18px rgba(16,185,129,0.72)) drop-shadow(0 0 3px rgba(167,243,208,0.52))'
+                                : 'drop-shadow(0 0 18px rgba(245,158,11,0.72)) drop-shadow(0 0 3px rgba(254,243,199,0.55))',
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <p className="mt-3 font-['Cinzel',_serif] italic text-xs sm:text-sm tracking-[0.1em] text-[#e6d1b0]/90">
-                  {bossIntroBanner.subtitle}
-                </p>
-                <div className="mt-3 text-[9px] font-mono uppercase tracking-[0.28em] text-[#9b8265]/75">
-                  Click or press Space to face the altar
+                {/* Foreground Ritual Nameplate Strip */}
+                <div
+                  className={`w-full max-w-none relative z-20 py-6 sm:py-8 px-6 sm:px-10 text-center border-y shadow-[0_0_80px_rgba(0,0,0,0.95)] ${
+                    bossIntroBanner.accent === 'crimson'
+                      ? 'border-red-600/85 bg-[linear-gradient(90deg,transparent_0%,rgba(16,4,5,0.94)_14%,rgba(38,6,8,0.96)_50%,rgba(16,4,5,0.94)_86%,transparent_100%)] shadow-[0_0_90px_rgba(185,28,28,0.55)]'
+                      : bossIntroBanner.accent === 'violet'
+                        ? 'border-purple-500/80 bg-[linear-gradient(90deg,transparent_0%,rgba(14,8,20,0.94)_14%,rgba(32,12,48,0.96)_50%,rgba(14,8,20,0.94)_86%,transparent_100%)] shadow-[0_0_80px_rgba(126,34,206,0.45)]'
+                        : bossIntroBanner.accent === 'emerald'
+                          ? 'border-emerald-500/80 bg-[linear-gradient(90deg,transparent_0%,rgba(5,18,12,0.94)_14%,rgba(9,38,24,0.96)_50%,rgba(5,18,12,0.94)_86%,transparent_100%)] shadow-[0_0_80px_rgba(16,185,129,0.4)]'
+                          : 'border-amber-600/80 bg-[linear-gradient(90deg,transparent_0%,rgba(18,11,6,0.94)_14%,rgba(38,22,10,0.96)_50%,rgba(18,11,6,0.94)_86%,transparent_100%)] shadow-[0_0_80px_rgba(217,119,6,0.42)]'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-3.5 mb-2.5">
+                    <span className="h-px w-14 sm:w-24 bg-gradient-to-r from-transparent via-[#c49a5c]/80 to-[#f4d78b]" />
+                    <span
+                      className={`font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.34em] ${
+                        bossIntroBanner.accent === 'crimson'
+                          ? 'text-red-400'
+                          : bossIntroBanner.accent === 'violet'
+                            ? 'text-purple-300'
+                            : bossIntroBanner.accent === 'emerald'
+                              ? 'text-emerald-300'
+                              : 'text-amber-300'
+                      }`}
+                    >
+                      {bossIntroBanner.eyebrow}
+                    </span>
+                    <span className="h-px w-14 sm:w-24 bg-gradient-to-l from-transparent via-[#c49a5c]/80 to-[#f4d78b]" />
+                  </div>
+
+                  <div className="flex items-center justify-center my-1">
+                    <img
+                      src={bossIntroBanner.img}
+                      alt={bossIntroBanner.type}
+                      draggable={false}
+                      className={`w-auto object-contain mx-auto ${
+                        bossIntroBanner.type === 'BoneLord'
+                          ? 'max-h-24 sm:max-h-32 drop-shadow-[0_0_24px_rgba(220,38,38,0.75)]'
+                          : 'max-h-20 sm:max-h-28 drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]'
+                      }`}
+                    />
+                  </div>
+
+                  <p className="mt-2.5 font-['Cinzel',_serif] italic text-xs sm:text-sm tracking-[0.1em] text-[#e6d1b0]/90">
+                    {bossIntroBanner.subtitle}
+                  </p>
+                  <div className="mt-2.5 text-[9px] font-mono uppercase tracking-[0.28em] text-[#9b8265]/75">
+                    Click or press Space to face the altar
+                  </div>
                 </div>
               </div>
             </div>
