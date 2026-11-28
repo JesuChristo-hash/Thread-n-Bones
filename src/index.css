@@ -1497,6 +1497,86 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
   transform: scaleY(1);
 }
 
+/* --- Turn 1 (+4) Arterial Hydraulic Shunt Shatter & Pressure Vent Animations --- */
+@keyframes shuntMonolithJolt {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+  14%  { transform: translate3d(-4px, -2px, 0) rotate(-1.4deg); }
+  30%  { transform: translate3d(4px, 1.5px, 0) rotate(1.2deg); }
+  48%  { transform: translate3d(-3px, 1px, 0) rotate(-0.8deg); }
+  68%  { transform: translate3d(2px, -1px, 0) rotate(0.4deg); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+}
+.animate-shunt-shatter {
+  animation: shuntMonolithJolt 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes shuntShockwave {
+  0%   { transform: translate3d(-50%, -50%, 0) scale(0.25); opacity: 0.95; }
+  55%  { opacity: 0.65; }
+  100% { transform: translate3d(-50%, -50%, 0) scale(2.55); opacity: 0; }
+}
+@keyframes shuntMistL {
+  0%   { transform: translate3d(0, -50%, 0) scaleX(0.28) scaleY(0.5); opacity: 0.98; }
+  40%  { opacity: 0.78; }
+  100% { transform: translate3d(-34px, -50%, 0) scaleX(1.45) scaleY(1.3); opacity: 0; }
+}
+@keyframes shuntMistR {
+  0%   { transform: translate3d(0, -50%, 0) scaleX(0.28) scaleY(0.5); opacity: 0.98; }
+  40%  { opacity: 0.78; }
+  100% { transform: translate3d(34px, -50%, 0) scaleX(1.45) scaleY(1.3); opacity: 0; }
+}
+@keyframes shuntShard1 {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); opacity: 1; }
+  65%  { opacity: 0.92; }
+  100% { transform: translate3d(-36px, -18px, 0) rotate(-145deg) scale(0.45); opacity: 0; }
+}
+@keyframes shuntShard2 {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); opacity: 1; }
+  65%  { opacity: 0.92; }
+  100% { transform: translate3d(38px, -15px, 0) rotate(156deg) scale(0.45); opacity: 0; }
+}
+@keyframes shuntShard3 {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); opacity: 1; }
+  65%  { opacity: 0.88; }
+  100% { transform: translate3d(-30px, 24px, 0) rotate(-195deg) scale(0.4); opacity: 0; }
+}
+@keyframes shuntShard4 {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); opacity: 1; }
+  65%  { opacity: 0.88; }
+  100% { transform: translate3d(32px, 22px, 0) rotate(178deg) scale(0.4); opacity: 0; }
+}
+@keyframes shuntShard5 {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(0.95); opacity: 0.96; }
+  100% { transform: translate3d(-19px, -32px, 0) rotate(-105deg) scale(0.35); opacity: 0; }
+}
+@keyframes shuntShard6 {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(0.95); opacity: 0.96; }
+  100% { transform: translate3d(20px, 32px, 0) rotate(118deg) scale(0.35); opacity: 0; }
+}
+@keyframes shuntDripA {
+  0%   { transform: translate3d(0, 0, 0) scaleY(0.7); opacity: 0; }
+  14%  { opacity: 0.95; transform: translate3d(0, 3px, 0) scaleY(1); }
+  82%  { opacity: 0.85; transform: translate3d(-0.5px, 38px, 0) scaleY(1.15); }
+  100% { transform: translate3d(-0.5px, 46px, 0) scaleY(0.8); opacity: 0; }
+}
+@keyframes shuntDripB {
+  0%   { transform: translate3d(0, 0, 0) scaleY(0.7); opacity: 0; }
+  18%  { opacity: 0.9; transform: translate3d(0, 2px, 0) scaleY(1); }
+  80%  { opacity: 0.8; transform: translate3d(0.6px, 28px, 0) scaleY(1.12); }
+  100% { transform: translate3d(0.6px, 35px, 0) scaleY(0.75); opacity: 0; }
+}
+@keyframes shuntCalloutPop {
+  0%   { transform: translate3d(8px, -50%, 0) scale(0.88); opacity: 0; }
+  11%  { transform: translate3d(0, -50%, 0) scale(1.03); opacity: 1; }
+  20%  { transform: translate3d(0, -50%, 0) scale(1); opacity: 1; }
+  84%  { transform: translate3d(0, -50%, 0) scale(1); opacity: 1; }
+  100% { transform: translate3d(-4px, -50%, 0) scale(0.96); opacity: 0; }
+}
+.animate-shunt-callout {
+  animation: shuntCalloutPop 2.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+
 /* --- Act cutscenes --- */
 @keyframes actCutIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes actCutRise { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }

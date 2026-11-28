@@ -1975,6 +1975,7 @@ export type SoundEffectType =
   | 'sheep_baa'
   | 'cauldron_devour'
   | 'overkill'
+  | 'glass_shunt'
   | 'ritual_begin';
 
 export const playSound = (type: SoundEffectType) => {
@@ -2238,6 +2239,47 @@ export const playSound = (type: SoundEffectType) => {
       bDrain(310, 490, 0.036, 0.54, 0.024);
       bDrain(195, 310, 0.042, 0.44, 0.048);
       crispNoise(0.068, 'bandpass', 2800 * jitter, 1150 * jitter, 2.6, 0.34, 0.005, false, 0.008);
+    } else if (type === 'glass_shunt') {
+      // Turn 1 (+4) Arterial Shunt: forged-brass clamp snap + blown-glass crystalline fracture + pressurized arterial vent hiss
+      ChiptuneAudio.duckMusic?.(0.66, 0.22);
+      // 1. Forged-brass latch snap thump
+      const latchOsc = ctx.createOscillator();
+      const latchGain = ctx.createGain();
+      latchOsc.type = 'triangle';
+      latchOsc.frequency.setValueAtTime(195 * jitter, now);
+      latchOsc.frequency.exponentialRampToValueAtTime(62 * jitter, now + 0.055);
+      latchGain.gain.setValueAtTime(0.001, now);
+      latchGain.gain.linearRampToValueAtTime(0.46, now + 0.003);
+      latchGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.065);
+      latchOsc.connect(latchGain);
+      latchGain.connect(dest);
+      latchOsc.start(now);
+      latchOsc.stop(now + 0.072);
+
+      // 2. Staggered blown-glass crystalline crack & shard tinkles
+      const glassPing = (freq: number, dur: number, vol: number, delay: number) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq * jitter, now + delay);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.94 * jitter, now + delay + dur);
+        g.gain.setValueAtTime(0.0005, now + delay);
+        g.gain.linearRampToValueAtTime(vol, now + delay + 0.0018);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+        osc.connect(g);
+        g.connect(dest);
+        osc.start(now + delay);
+        osc.stop(now + delay + dur + 0.008);
+      };
+      glassPing(2680, 0.085, 0.34, 0.0);
+      glassPing(4120, 0.072, 0.28, 0.008);
+      glassPing(5480, 0.058, 0.22, 0.017);
+      glassPing(3340, 0.095, 0.16, 0.044);
+      glassPing(4890, 0.065, 0.13, 0.078);
+
+      // 3. Sharp fracture crack + pressurized arterial blood mist spray
+      crispNoise(0.032, 'highpass', 3200 * jitter, 5800 * jitter, 1.4, 0.42, 0.002, false, 0.0);
+      crispNoise(0.145, 'bandpass', 4100 * jitter, 1350 * jitter, 2.2, 0.36, 0.006, false, 0.014);
     } else if (type === 'armor') {
       ChiptuneAudio.duckMusic?.(0.62, 0.2);
       // Heavy iron plate deflection & shatter (low-mid metal clunk + staggered plate crunch)

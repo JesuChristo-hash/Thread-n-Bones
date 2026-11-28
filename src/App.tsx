@@ -479,6 +479,11 @@ export default function App() {
   const [phase, setPhase] = useState<GamePhase>('DRAW');
   const [turnNumber, setTurnNumber] = useState<number>(1);
   const [isAmpouleCracked, setIsAmpouleCracked] = useState<boolean>(false);
+  const [shuntPulseId, setShuntPulseId] = useState<number>(0);
+  const [shuntVentedOz, setShuntVentedOz] = useState<number>(0);
+  const ampouleCrackedRef = useRef<boolean>(false);
+  const lastShuntBurstTimeRef = useRef<number>(0);
+  const shuntResetTimerRef = useRef<number | null>(null);
   const [blood, setBlood] = useState<number>(0);
   const [bones, setBones] = useState<number>(0);
   const [hand, setHand] = useState<CardDef[]>([]);
@@ -1489,12 +1494,65 @@ export default function App() {
     }
   }, [scale]);
 
-  // Arterial Shunt safety observer: fractures ampoule if pressure hits +4 on turn 1
-  useEffect(() => {
-    if (turnNumber === 1 && scale >= 4) {
-      setIsAmpouleCracked(true);
+  const resetArterialShunt = useCallback(() => {
+    ampouleCrackedRef.current = false;
+    lastShuntBurstTimeRef.current = 0;
+    if (shuntResetTimerRef.current !== null) {
+      window.clearTimeout(shuntResetTimerRef.current);
+      shuntResetTimerRef.current = null;
     }
-  }, [turnNumber, scale]);
+    setIsAmpouleCracked(false);
+    setShuntPulseId(0);
+    setShuntVentedOz(0);
+  }, []);
+
+  const triggerArterialShunt = useCallback(
+    (ventedDelta: number, requestBurst: boolean) => {
+      ampouleCrackedRef.current = true;
+      setIsAmpouleCracked(true);
+
+      if (ventedDelta > 0) {
+        setShuntVentedOz((prev) => prev + ventedDelta);
+      }
+
+      if (shuntResetTimerRef.current !== null) {
+        window.clearTimeout(shuntResetTimerRef.current);
+      }
+      shuntResetTimerRef.current = window.setTimeout(() => {
+        setShuntVentedOz(0);
+        shuntResetTimerRef.current = null;
+      }, 3000);
+
+      const now = Date.now();
+      if (requestBurst && now - lastShuntBurstTimeRef.current > 240) {
+        lastShuntBurstTimeRef.current = now;
+        setShuntPulseId((prev) => prev + 1);
+        triggerSfx('glass_shunt');
+      } else if (ventedDelta > 0) {
+        triggerSfx('blood_fill');
+      }
+    },
+    [triggerSfx]
+  );
+
+  // Arterial Shunt safety observer: fractures ampoule & plays shatter burst if pressure reaches +4 on Turn 1
+  useEffect(() => {
+    if (turnNumber === 1 && scale >= 4 && !ampouleCrackedRef.current) {
+      triggerArterialShunt(0, true);
+    }
+  }, [turnNumber, scale, triggerArterialShunt]);
+
+  // Clear transient Turn 1 callout burst once Turn 2+ begins (leaving persistent glass scar if cracked)
+  useEffect(() => {
+    if (turnNumber > 1) {
+      if (shuntResetTimerRef.current !== null) {
+        window.clearTimeout(shuntResetTimerRef.current);
+        shuntResetTimerRef.current = null;
+      }
+      setShuntPulseId(0);
+      setShuntVentedOz(0);
+    }
+  }, [turnNumber]);
 
   // Sync ChiptuneAudio BGM with screen state and mute status
   useEffect(() => {
@@ -1655,7 +1713,7 @@ export default function App() {
     setActiveTotem({ head: null, body: null });
     setTotemPieces([]);
     setTurnNumber(1);
-    setIsAmpouleCracked(false);
+    resetArterialShunt();
     setIsLossSequenceActive(false);
     setAltarAnimPhase('idle');
     setAltarStageCards(null);
@@ -3718,9 +3776,8 @@ export default function App() {
                     if (turnNumber === 1 && currentScale >= 4) {
                       turnBloodDealt += 1;
                       trampleVented += 1;
-                      setIsAmpouleCracked(true);
                       setTotalOverkillDamage(prev => (prev || 0) + 1);
-                      triggerSfx('blood_fill');
+                      triggerArterialShunt(1, trampleVented === 1);
                       await sleep(60);
                     } else {
                       currentScale += 1;
@@ -3791,9 +3848,8 @@ export default function App() {
             if (turnNumber === 1 && currentScale >= 4) {
               turnBloodDealt += 1;
               ventedThisStrike += 1;
-              setIsAmpouleCracked(true);
               setTotalOverkillDamage(prev => (prev || 0) + 1);
-              triggerSfx('blood_fill');
+              triggerArterialShunt(1, ventedThisStrike === 1);
               await sleep(60);
             } else {
               currentScale += 1;
@@ -6048,7 +6104,7 @@ export default function App() {
     setDieModal(null);
 
     setTurnNumber(1);
-    setIsAmpouleCracked(false);
+    resetArterialShunt();
     setScreen('DUEL');
   };
 
@@ -9949,6 +10005,9 @@ export default function App() {
       scaleRumble={scaleRumble}
       isAmpouleCracked={isAmpouleCracked}
       isTurnOneDanger={turnNumber === 1 && scale >= 4}
+      turnNumber={turnNumber}
+      shuntPulseId={shuntPulseId}
+      shuntVentedOz={shuntVentedOz}
     />
 
   {/* 2. TURN (ROMAN) & RELICS BANNER + BLOOD/BONES COLUMN (Right of Runnel) */}
