@@ -1431,3 +1431,18 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
 .edge-band--red:not(:disabled):hover { --band-rule: rgba(248,113,113,0.95); }
 .edge-band--gold:not(:disabled):hover { --band-rule: rgba(253,230,138,0.95); }
 .edge-band--dead { --band-rule: rgba(60,34,35,0.9); --band-bg: rgba(0,0,0,0.3); --band-glow: transparent; }
+
+/* --- Mobile: no backdrop blur over animated weather --- */
+/* Full-screen overlays blur the animated weather behind them every frame, which mobile GPUs evict tiles over. */
+@media (max-width: 768px), (pointer: coarse) {
+  .backdrop-blur-xs,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-\[1px\],
+  .backdrop-blur-\[1\.5px\],
+  .backdrop-blur-\[2px\],
+  .backdrop-blur-\[3px\] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
