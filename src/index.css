@@ -1731,3 +1731,111 @@ html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
 .act-cut-rise { animation: actCutRise 1.3s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s) both; }
 .act-cut-window { animation: actCutWindow 3.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .act-cut, .act-cut * { animation: none !important; } }
+
+/* --- Tribe-Specific Card Battle Strike VFX (Dark Gray + Red Accents) --- */
+@keyframes tribeClawSweep {
+  0%   { opacity: 0; transform: translateX(-28px) scaleX(0.35); }
+  22%  { opacity: 1; transform: translateX(0px) scaleX(1.04); }
+  70%  { opacity: 0.94; transform: translateX(6px) scaleX(1); }
+  100% { opacity: 0; transform: translateX(16px) scaleX(1.06); }
+}
+
+@keyframes tribeSlashDraw {
+  0%   { stroke-dashoffset: 120; opacity: 0.35; }
+  35%  { stroke-dashoffset: 0; opacity: 1; }
+  80%  { stroke-dashoffset: 0; opacity: 0.9; }
+  100% { stroke-dashoffset: -12; opacity: 0; }
+}
+
+@keyframes tribeImpactFlash {
+  0%   { opacity: 0; transform: scale(0.55); }
+  22%  { opacity: 1; transform: scale(1.06); }
+  68%  { opacity: 0.85; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(1.18); }
+}
+
+@keyframes tribeShockRing {
+  0%   { opacity: 0; transform: scale(0.42); }
+  22%  { opacity: 0.98; transform: scale(0.88); }
+  100% { opacity: 0; transform: scale(1.42); }
+}
+
+@keyframes tribeHoofStomp {
+  0%   { opacity: 0; transform: translateY(-42px) scale(1.55); }
+  24%  { opacity: 1; transform: translateY(4px) scale(0.92, 1.06); }
+  38%  { opacity: 1; transform: translateY(0px) scale(1.05, 0.94); }
+  74%  { opacity: 0.95; transform: translateY(0px) scale(1); }
+  100% { opacity: 0; transform: translateY(4px) scale(0.96); }
+}
+
+@keyframes tribeChompTop {
+  0%   { opacity: 0; transform: translateY(-34px) scaleY(0.85); }
+  24%  { opacity: 1; transform: translateY(6px) scaleY(1.08); }
+  36%  { opacity: 1; transform: translateY(1px) scaleY(1); }
+  74%  { opacity: 0.95; transform: translateY(1px) scaleY(1); }
+  100% { opacity: 0; transform: translateY(-10px) scaleY(0.92); }
+}
+
+@keyframes tribeChompBot {
+  0%   { opacity: 0; transform: translateY(34px) scaleY(0.85); }
+  24%  { opacity: 1; transform: translateY(-6px) scaleY(1.08); }
+  36%  { opacity: 1; transform: translateY(-1px) scaleY(1); }
+  74%  { opacity: 0.95; transform: translateY(-1px) scaleY(1); }
+  100% { opacity: 0; transform: translateY(10px) scaleY(0.92); }
+}
+
+@keyframes tribeFeatherPlume {
+  0%   { opacity: 0; transform: translateY(-48px) scale(0.75); }
+  26%  { opacity: 1; transform: translateY(4px) scale(1.06); }
+  66%  { opacity: 0.92; transform: translateY(14px) scale(0.98); }
+  100% { opacity: 0; transform: translateY(28px) scale(0.88); }
+}
+
+@keyframes tribePincerLeft {
+  0%   { opacity: 0; transform: rotate(-38deg) translateX(-14px); }
+  28%  { opacity: 1; transform: rotate(9deg) translateX(4px); }
+  45%  { opacity: 1; transform: rotate(4deg) translateX(2px); }
+  76%  { opacity: 0.92; transform: rotate(4deg) translateX(2px); }
+  100% { opacity: 0; transform: rotate(-8deg) translateX(-4px); }
+}
+
+@keyframes tribePincerRight {
+  0%   { opacity: 0; transform: rotate(38deg) translateX(14px); }
+  28%  { opacity: 1; transform: rotate(-9deg) translateX(-4px); }
+  45%  { opacity: 1; transform: rotate(-4deg) translateX(-2px); }
+  76%  { opacity: 0.92; transform: rotate(-4deg) translateX(-2px); }
+  100% { opacity: 0; transform: rotate(8deg) translateX(4px); }
+}
+
+@keyframes tribeTailWhip {
+  0%   { opacity: 0; transform: rotate(-32deg) scaleX(0.45); }
+  24%  { opacity: 1; transform: rotate(6deg) scaleX(1.08); }
+  42%  { opacity: 1; transform: rotate(2deg) scaleX(1.0); }
+  76%  { opacity: 0.9; transform: rotate(8deg) scaleX(1.02); }
+  100% { opacity: 0; transform: rotate(14deg) scaleX(1.06); }
+}
+
+@keyframes tribeVerminSlice {
+  0%   { opacity: 0; transform: translateX(-24px) scaleX(0.4); }
+  28%  { opacity: 1; transform: translateX(0px) scaleX(1.06); }
+  72%  { opacity: 0.92; transform: translateX(6px) scaleX(1); }
+  100% { opacity: 0; transform: translateX(14px) scaleX(1.05); }
+}
+
+/* --- Event Card Drop-Slot Ready & Hover Pulse --- */
+@keyframes eventDropSlotPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(244, 215, 139, 0.55), 0 0 20px rgba(220, 38, 38, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(244, 215, 139, 0.95), 0 0 32px rgba(234, 179, 8, 0.58);
+  }
+}
+.event-drop-slot-ready {
+  animation: eventDropSlotPulse 1.15s ease-in-out infinite;
+}
+.event-drop-slot-active {
+  box-shadow: 0 0 0 3px rgba(254, 240, 138, 1), 0 0 38px rgba(239, 68, 68, 0.65) !important;
+  transform: scale(1.04);
+}
+

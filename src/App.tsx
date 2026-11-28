@@ -14,6 +14,7 @@ import ActWeather from './components/ActWeather';
 import ActCutscene from './components/ActCutscene';
 import DuelTelemetryBanner, { BloodBankVessel, BoneOssuaryPlaque } from './components/DuelTelemetryBanner';
 import BloodRunnelGauge from './components/BloodRunnelGauge';
+import { TribeAttackVfx, resolveTribeAttackStyle, type TribeStrikeEvent } from './components/TribeAttackVfx';
 import {
   StageDepthPlaque,
   EffigySpecimenTag,
@@ -955,6 +956,8 @@ export default function App() {
     text: string;
     tone: 'gold' | 'bone' | 'blood' | 'emerald' | 'violet';
   }>>([]);
+  const [tribeStrikeVfx, setTribeStrikeVfx] = useState<TribeStrikeEvent[]>([]);
+  const tribeStrikeIdRef = useRef<number>(1);
   const sigilBadgeIdRef = useRef<number>(1);
   const [summonedCardIds, setSummonedCardIds] = useState<Set<string>>(new Set());
 
@@ -1275,6 +1278,24 @@ export default function App() {
     window.setTimeout(() => {
       setSigilBadges(prev => prev.filter(b => b.id !== id));
     }, 950);
+  };
+
+  const spawnTribeStrikeVfx = (
+    targetIsPlayer: boolean,
+    targetLane: number,
+    attackerCard?: CardDef | null,
+    direction: 'left' | 'right' | 'straight' = 'straight',
+    isMassiveTarget = false
+  ) => {
+    const id = tribeStrikeIdRef.current++;
+    const style = resolveTribeAttackStyle(attackerCard);
+    setTribeStrikeVfx(prev => [
+      ...prev.slice(-8),
+      { id, targetIsPlayer, targetLane, isMassiveTarget, style, direction },
+    ]);
+    window.setTimeout(() => {
+      setTribeStrikeVfx(prev => prev.filter(v => v.id !== id));
+    }, 560);
   };
 
   const triggerMicroHitstop = async (ms = 55) => {
@@ -3678,6 +3699,7 @@ export default function App() {
           }
 
           const finalEnemySlot = hasMassive ? massiveCardIdx : effectiveEnemyLane;
+          spawnTribeStrikeVfx(false, finalEnemySlot, pCard, direction, hasMassive);
 
           if (eCard.sigils.includes('Armored') && !eCard.shieldBroken) {
             await triggerSigilJitter(false, effectiveEnemyLane);
@@ -4261,15 +4283,6 @@ export default function App() {
           setPlayerBoard(currPBoard);
           setBones(currBones);
           setHand(prev => [...prev, ...handAdditions]);
-          const flockDebtThisDuel = flockScaleDebtBattlesRef.current > 0 ? 2 : 0;
-    if (flockDebtThisDuel > 0) {
-      const nextDebtBattles = Math.max(0, flockScaleDebtBattlesRef.current - 1);
-      flockScaleDebtBattlesRef.current = nextDebtBattles;
-      setFlockScaleDebtBattles(nextDebtBattles);
-    }
-    const flockBonusThisDuel = flockStartingScaleBonusRef.current ? 2 : 0;
-    setScale(-permanentScaleDebuff - flockDebtThisDuel + flockBonusThisDuel);
-    setFlockSquirrelLockDraws(flockNoSquirrelTurnsRef.current ? 2 : 0);
           if (turnBloodDealt > 0) {
             setHighestOverkill(prev => Math.max(prev, turnBloodDealt));
           }
@@ -4543,6 +4556,8 @@ export default function App() {
             }
           }
 
+          spawnTribeStrikeVfx(true, effectivePlayerLane, eCard, direction, false);
+
           if (pCard.sigils.includes('Armored') && !pCard.shieldBroken) {
             await triggerSigilJitter(true, effectivePlayerLane);
             pCard.shieldBroken = true;
@@ -4596,6 +4611,7 @@ export default function App() {
                   isDirect: false,
                   direction: dausDir,
                 });
+                spawnTribeStrikeVfx(false, lane, currPBoard[dausIdx], dausDir, false);
                 await animateCardDamage(false, lane);
                 eCard.health -= dausAtk;
                 triggerHpFlash(false, lane);
@@ -5570,7 +5586,19 @@ export default function App() {
     const duelRng = createSeededRng(`${activeSeed}:duel:${effectiveDuelsCompleted}:${stage}:${level}:${forcedBoss || 'std'}`);
     duelRngRef.current = duelRng;
 
-    setScale(-permanentScaleDebuff - (activeVowsRef.current.includes('heavier_scale_debt') ? 1 : 0));
+    const vowScaleDebt = activeVowsRef.current.includes('heavier_scale_debt') ? 1 : 0;
+    const flockDebtThisDuel = flockScaleDebtBattlesRef.current > 0 ? 2 : 0;
+    if (flockDebtThisDuel > 0) {
+      const nextDebtBattles = Math.max(0, flockScaleDebtBattlesRef.current - 1);
+      flockScaleDebtBattlesRef.current = nextDebtBattles;
+      setFlockScaleDebtBattles(nextDebtBattles);
+      addLog(
+        `The Zealot's debt drags the Blood Gauge down by -2 (${nextDebtBattles} battle${nextDebtBattles === 1 ? '' : 's'} remaining).`
+      );
+    }
+    const flockBonusThisDuel = flockStartingScaleBonusRef.current ? 2 : 0;
+    setScale(-permanentScaleDebuff - vowScaleDebt - flockDebtThisDuel + flockBonusThisDuel);
+    setFlockSquirrelLockDraws(flockNoSquirrelTurnsRef.current ? 2 : 0);
     setBattleWonAction(null);
     // Jar upgrades apply between battles only, never mid-fight
     setJarTier(pendingJarTierRef.current);
@@ -9498,6 +9526,16 @@ export default function App() {
                             >
                               {/* Pulsing Crimson Atmospheric Aura */}
                               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.18)_0%,transparent_75%)] animate-pulse pointer-events-none" />
+                              {tribeStrikeVfx
+                                .filter(v => v.targetIsPlayer === false && v.isMassiveTarget)
+                                .map(v => (
+                                  <TribeAttackVfx
+                                    key={v.id}
+                                    styleType={v.style}
+                                    direction={v.direction}
+                                    className="!inset-[8%]"
+                                  />
+                                ))}
 
                               {/* 5 Sigil Icons Centered Between Sockets Under Card Art */}
                               <div
@@ -9762,6 +9800,11 @@ export default function App() {
                                        })}
                                      </div>
                                    ) : null}
+                                      {tribeStrikeVfx
+                                        .filter(v => v.targetIsPlayer === false && !v.isMassiveTarget && v.targetLane === idx)
+                                        .map(v => (
+                                          <TribeAttackVfx key={v.id} styleType={v.style} direction={v.direction} />
+                                        ))}
                                       {sigilBadges
                                         .filter(b => b.isPlayer === false && b.lane === idx)
                                         .map((b, bIdx) => (
@@ -9974,6 +10017,11 @@ export default function App() {
                                     {card.sigils.includes('Worthy Sacrifice') ? '† +3 BLOOD' : '† SACRIFICE'}
                                   </div>
                                 )}
+                                      {tribeStrikeVfx
+                                        .filter(v => v.targetIsPlayer === true && v.targetLane === idx)
+                                        .map(v => (
+                                          <TribeAttackVfx key={v.id} styleType={v.style} direction={v.direction} />
+                                        ))}
                                       {sigilBadges
                                         .filter(b => b.isPlayer === true && b.lane === idx)
                                         .map((b, bIdx) => (

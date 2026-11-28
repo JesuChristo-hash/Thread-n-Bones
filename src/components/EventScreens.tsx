@@ -197,6 +197,236 @@ export default function EventScreens({ ctx }: { ctx: {
     hasDraftFlippedRef.current = true;
   }
 
+  // --- Unified Desktop Mouse & Mobile Touch Drag-to-Place Engine for Event Card Slots ---
+  type EventDragState = {
+    card: CardDef;
+    cardKey: string;
+    allowedSlots: string[];
+    x: number;
+    y: number;
+    isTouch: boolean;
+    hoveredSlot: string | null;
+  };
+  const [eventDrag, setEventDrag] = React.useState<EventDragState | null>(null);
+  const eventDragRef = React.useRef<EventDragState | null>(null);
+  const suppressNextClickRef = React.useRef<boolean>(false);
+  const pendingDragRef = React.useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    isTouch: boolean;
+    card: CardDef;
+    cardKey: string;
+    allowedSlots: string[];
+    onDrop: (slotId: string) => void;
+    holdTimer: number | null;
+  } | null>(null);
+
+  const findHoveredDropSlot = React.useCallback((clientX: number, clientY: number, allowedSlots: string[]): string | null => {
+    const nodes = document.querySelectorAll<HTMLElement>('[data-event-drop-slot]');
+    const pad = 28;
+    let bestSlot: string | null = null;
+    let bestDist = Infinity;
+    nodes.forEach((el) => {
+      const slotId = el.getAttribute('data-event-drop-slot');
+      if (!slotId || !allowedSlots.includes(slotId)) return;
+      if (el.getAttribute('data-event-drop-enabled') === 'false') return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+      if (
+        clientX >= r.left - pad &&
+        clientX <= r.right + pad &&
+        clientY >= r.top - pad &&
+        clientY <= r.bottom + pad
+      ) {
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const d = Math.hypot(clientX - cx, clientY - cy);
+        if (d < bestDist) {
+          bestDist = d;
+          bestSlot = slotId;
+        }
+      }
+    });
+    return bestSlot;
+  }, []);
+
+  React.useEffect(() => {
+    // Clear any in-progress drag when switching event screens
+    if (pendingDragRef.current?.holdTimer) {
+      window.clearTimeout(pendingDragRef.current.holdTimer);
+    }
+    pendingDragRef.current = null;
+    eventDragRef.current = null;
+    setEventDrag(null);
+  }, [screen]);
+
+  React.useEffect(() => {
+    const onPointerMove = (e: PointerEvent) => {
+      const active = eventDragRef.current;
+      const pending = pendingDragRef.current;
+
+      if (active) {
+        const hitX = e.clientX;
+        const hitY = active.isTouch ? e.clientY - 26 : e.clientY;
+        const hoveredSlot = findHoveredDropSlot(hitX, hitY, active.allowedSlots);
+        const next: EventDragState = { ...active, x: e.clientX, y: e.clientY, hoveredSlot };
+        eventDragRef.current = next;
+        setEventDrag(next);
+        return;
+      }
+
+      if (!pending || e.pointerId !== pending.pointerId) return;
+      const dx = e.clientX - pending.startX;
+      const dy = e.clientY - pending.startY;
+      const dist = Math.hypot(dx, dy);
+
+      if (pending.isTouch) {
+        // Let horizontal swipes scroll the mobile deck strip naturally
+        if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+          if (pending.holdTimer) window.clearTimeout(pending.holdTimer);
+          pendingDragRef.current = null;
+          return;
+        }
+        // Upward / vertical pull immediately lifts the card into drag mode
+        if (dist >= 10 && Math.abs(dy) >= Math.abs(dx) * 0.85) {
+          if (pending.holdTimer) window.clearTimeout(pending.holdTimer);
+          const hoveredSlot = findHoveredDropSlot(e.clientX, e.clientY - 26, pending.allowedSlots);
+          const started: EventDragState = {
+            card: pending.card,
+            cardKey: pending.cardKey,
+            allowedSlots: pending.allowedSlots,
+            x: e.clientX,
+            y: e.clientY,
+            isTouch: true,
+            hoveredSlot,
+          };
+          eventDragRef.current = started;
+          setEventDrag(started);
+          triggerSfx('draw');
+        }
+      } else if (dist >= 7) {
+        const hoveredSlot = findHoveredDropSlot(e.clientX, e.clientY, pending.allowedSlots);
+        const started: EventDragState = {
+          card: pending.card,
+          cardKey: pending.cardKey,
+          allowedSlots: pending.allowedSlots,
+          x: e.clientX,
+          y: e.clientY,
+          isTouch: false,
+          hoveredSlot,
+        };
+        eventDragRef.current = started;
+        setEventDrag(started);
+        triggerSfx('draw');
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (eventDragRef.current) {
+        e.preventDefault();
+      }
+    };
+
+    const finishDrag = (e: PointerEvent) => {
+      const pending = pendingDragRef.current;
+      const active = eventDragRef.current;
+
+      if (pending?.holdTimer) {
+        window.clearTimeout(pending.holdTimer);
+      }
+
+      if (active && pending) {
+        const hitX = e.clientX;
+        const hitY = active.isTouch ? e.clientY - 26 : e.clientY;
+        const dropSlot = findHoveredDropSlot(hitX, hitY, active.allowedSlots) || active.hoveredSlot;
+        suppressNextClickRef.current = true;
+        window.setTimeout(() => {
+          suppressNextClickRef.current = false;
+        }, 120);
+        if (dropSlot) {
+          pending.onDrop(dropSlot);
+        }
+      }
+
+      pendingDragRef.current = null;
+      eventDragRef.current = null;
+      setEventDrag(null);
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('pointerup', finishDrag);
+    window.addEventListener('pointercancel', finishDrag);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('pointerup', finishDrag);
+      window.removeEventListener('pointercancel', finishDrag);
+    };
+  }, [findHoveredDropSlot, triggerSfx]);
+
+  const startEventCardDrag = (
+    e: React.PointerEvent,
+    opts: {
+      disabled?: boolean;
+      card: CardDef;
+      cardKey: string;
+      allowedSlots: string[];
+      onDrop: (slotId: string) => void;
+    }
+  ) => {
+    if (opts.disabled || opts.allowedSlots.length === 0) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    const isTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    if (pendingDragRef.current?.holdTimer) {
+      window.clearTimeout(pendingDragRef.current.holdTimer);
+    }
+
+    const holdTimer = isTouch
+      ? window.setTimeout(() => {
+          const cur = pendingDragRef.current;
+          if (!cur || eventDragRef.current) return;
+          const hoveredSlot = findHoveredDropSlot(cur.startX, cur.startY - 26, cur.allowedSlots);
+          const started: EventDragState = {
+            card: cur.card,
+            cardKey: cur.cardKey,
+            allowedSlots: cur.allowedSlots,
+            x: cur.startX,
+            y: cur.startY,
+            isTouch: true,
+            hoveredSlot,
+          };
+          eventDragRef.current = started;
+          setEventDrag(started);
+          triggerSfx('draw');
+        }, 170)
+      : null;
+
+    pendingDragRef.current = {
+      pointerId: e.pointerId,
+      startX,
+      startY,
+      isTouch,
+      card: opts.card,
+      cardKey: opts.cardKey,
+      allowedSlots: opts.allowedSlots,
+      onDrop: opts.onDrop,
+      holdTimer,
+    };
+  };
+
+  const getDropSlotClass = (slotId: string, enabled = true) => {
+    if (!eventDrag || !enabled || !eventDrag.allowedSlots.includes(slotId)) return '';
+    return eventDrag.hoveredSlot === slotId
+      ? 'event-drop-slot-active transition-transform duration-150'
+      : 'event-drop-slot-ready';
+  };
+
   return (
     <>
       {screen === 'DRAFT' && (() => {
@@ -526,7 +756,7 @@ export default function EventScreens({ ctx }: { ctx: {
 
       {/* Floating persistent Dev Tools & Deck access during all events */}
       {screen.startsWith('EVENT_') && (
-        <div className="fixed top-3 right-4 z-[60] flex items-center gap-3 select-none">
+        <div className="fixed top-2 right-2.5 sm:top-3 sm:right-4 z-[60] flex items-center gap-2 sm:gap-3 select-none scale-[0.82] sm:scale-100 origin-top-right">
           <RitualSlateButton onClick={openViewDeck} icon={<RbLayers className="w-4 h-4" />} label={`DECK (${masterDeck.length})`} />
           {showDevTools && (
               <RitualSlateButton onClick={openDevMenu} label="DEV TOOLS" title="Development Tools" variant="dev" />
@@ -857,32 +1087,32 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 pt-12 pb-2 sm:py-3 lg:py-4 overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('campfireevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,8,5,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
             {renderActWeather('absolute inset-0 z-[5]', 'event_campfire')}
-            <div className="relative z-10 max-w-5xl w-full h-full flex flex-col items-center justify-center gap-5">
+            <div className="relative z-10 max-w-5xl w-full h-full min-h-0 flex flex-col items-center justify-between gap-2 sm:gap-4">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#d69758]">
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
+                  <span className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.26em] sm:tracking-[0.3em] text-[#d69758]">
                     Divine Blessing
                   </span>
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent via-[#9c5a3c]/75 to-[#d48b47]/85" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-lg sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Baptism of Boiling Blood
                 </h1>
               </div>
 
-              {/* Two-Column Split: Boiling Font Stage Left, Deck Panel Right */}
-              <div className="w-full flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-3 lg:gap-5 items-stretch">
+              {/* Two-Column Split on Desktop, Top-Stage + Bottom Horizontal Tray on Mobile */}
+              <div className="w-full flex-1 min-h-0 flex flex-col md:grid md:grid-cols-12 gap-2.5 sm:gap-4 lg:gap-5 items-stretch">
                 {/* LEFT COLUMN: Stone Baptismal Font Prop + Action Buttons */}
-                <div className="md:col-span-7 flex flex-col items-center justify-between gap-1.5 sm:gap-2 lg:gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 flex flex-col items-center justify-between">
+                <div className="flex-1 md:col-span-7 flex flex-col items-center justify-between gap-1.5 sm:gap-2 lg:gap-3 min-h-0">
+                  <div className="relative w-full flex-1 min-h-0 px-3 sm:px-6 py-2 sm:py-4 flex flex-col items-center justify-between">
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
                         isAnimating
@@ -937,9 +1167,9 @@ export default function EventScreens({ ctx }: { ctx: {
                         { side: 'right', leftPct: '93.6%', delay: '0.28s' },
                       ];
                       return (
-                        <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[132px] sm:pt-[142px]">
+                        <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[94px] sm:pt-[142px]">
                           {/* Aspect-Locked Stone Baptismal Font Stage (845x944) */}
-                          <div className="relative w-[248px] sm:w-[278px] lg:w-[298px] aspect-[845/944] select-none">
+                          <div className="relative w-[178px] sm:w-[278px] lg:w-[298px] aspect-[845/944] select-none">
                             {/* Base Stone Chalice Prop */}
                             <img
                               src={`${propBase}assets/props/campfire.png`}
@@ -983,9 +1213,11 @@ export default function EventScreens({ ctx }: { ctx: {
                             </svg>
 
                             {/* Clip Viewport: Terminates Flush at the Blood Pool Surface so Sinking Cards Submerge Cleanly */}
-                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[90.4%] z-30 w-[196px] h-[156px] overflow-hidden flex items-start justify-center pt-1">
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[90.4%] z-30 w-[144px] h-[116px] sm:w-[196px] sm:h-[156px] overflow-hidden flex items-start justify-center pt-1">
                               <div
-                                className={`relative w-[114px] h-[152px] flex items-center justify-center rounded-[4px] transition-shadow duration-500 ${
+                                data-event-drop-slot="campfire"
+                                data-event-drop-enabled={campfireStage === 0 && !isEventBusy ? 'true' : 'false'}
+                                className={`relative w-[84px] h-[112px] sm:w-[114px] sm:h-[152px] flex items-center justify-center rounded-[4px] transition-shadow duration-500 ${getDropSlotClass('campfire', campfireStage === 0 && !isEventBusy)} ${
                                   campfireAnimState === 'blessed'
                                     ? 'shadow-[0_0_40px_rgba(245,158,11,0.65),0_0_20px_rgba(220,38,38,0.45)]'
                                     : selectedCard
@@ -1010,14 +1242,14 @@ export default function EventScreens({ ctx }: { ctx: {
                                       }
                                     }}
                                     title={campfireStage === 0 && !isEventBusy ? 'Click to return to deck' : undefined}
-                                    className={`scale-[0.98] origin-center ${campfireStage === 0 && !isEventBusy ? 'cursor-pointer hover:-translate-y-1 transition-transform' : ''}`}
+                                    className={`scale-[0.72] sm:scale-[0.98] origin-center ${campfireStage === 0 && !isEventBusy ? 'cursor-pointer hover:-translate-y-1 transition-transform' : ''}`}
                                   >
                                     {renderCard(selectedCard, { isClickable: false, disableHoverScale: true })}
                                   </div>
                                 ) : (
-                                  <div className="w-[106px] h-[146px] rounded-[4px] border border-dashed border-[#8a4632]/75 bg-[#120807]/75 flex flex-col items-center justify-center gap-1.5 text-[#b57c62]">
-                                    <span className="text-xl opacity-70">🩸</span>
-                                    <span className="text-[9.5px] uppercase tracking-[0.2em] px-2">Choose Vessel</span>
+                                  <div className="w-[78px] h-[108px] sm:w-[106px] sm:h-[146px] rounded-[4px] border border-dashed border-[#8a4632]/75 bg-[#120807]/75 flex flex-col items-center justify-center gap-1 sm:gap-1.5 text-[#b57c62]">
+                                    <span className="text-base sm:text-xl opacity-70">🩸</span>
+                                    <span className="text-[8px] sm:text-[9.5px] uppercase tracking-[0.16em] sm:tracking-[0.2em] px-1 sm:px-2 text-center">Drop Vessel</span>
                                   </div>
                                 )}
                               </div>
@@ -1161,9 +1393,9 @@ export default function EventScreens({ ctx }: { ctx: {
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Side Deck Selector Panel */}
+                {/* RIGHT COLUMN: Side Deck Selector Panel (Horizontal Touch Tray on Mobile) */}
                 <div
-                  className={`md:col-span-5 relative flex flex-col min-h-[160px] md:min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#422719]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,220,180,0.06)] backdrop-blur-[2px] transition-opacity duration-300 ${
+                  className={`shrink-0 h-[150px] sm:h-[168px] md:h-auto md:col-span-5 relative flex flex-col md:min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#422719]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,220,180,0.06)] backdrop-blur-[2px] transition-opacity duration-300 ${
                     isEventBusy ? 'opacity-40 pointer-events-none' : 'opacity-100'
                   }`}
                 >
@@ -1172,44 +1404,56 @@ export default function EventScreens({ ctx }: { ctx: {
                   <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c643b]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c643b]/70" />
 
-                  <div className="px-4 py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
-                    <div className="text-left">
-                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#d69758]">
-                        Your Creatures ({masterDeck.length})
-                      </div>
-
+                  <div className="px-3 sm:px-4 py-1.5 sm:py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
+                    <div className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#d69758]">
+                      Your Creatures ({masterDeck.length})
                     </div>
+                    <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9b7a5e]">
+                      Drag or tap
+                    </span>
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
-                    <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden md:overflow-y-auto md:overflow-x-hidden px-3 py-1.5 md:py-4">
+                    <div className="flex flex-nowrap md:flex-wrap gap-x-2 md:gap-x-2.5 gap-y-4 justify-start md:justify-center items-center md:content-start h-full md:h-auto">
                       {masterDeck.map((c, idx) => {
                         const isSelected = campfireCardIdx === idx;
                         if (isSelected) return null;
                         const lockedOut = campfireStage > 0;
+                        const cardKey = c.id || `camp-${c.name}-${idx}`;
+                        const isBeingDragged = eventDrag?.cardKey === cardKey;
                         return (
                           <div
-                            key={c.id || `camp-${c.name}-${idx}`}
+                            key={cardKey}
+                            onPointerDown={(e) =>
+                              startEventCardDrag(e, {
+                                disabled: lockedOut || isEventBusy,
+                                card: c,
+                                cardKey,
+                                allowedSlots: ['campfire'],
+                                onDrop: () => {
+                                  if (campfireStage === 0 && !isEventBusy) {
+                                    triggerSfx('place');
+                                    setCampfireCardIdx(idx);
+                                  }
+                                },
+                              })
+                            }
                             onClick={() => {
+                              if (suppressNextClickRef.current) return;
                               if (campfireStage === 0 && !isEventBusy) {
                                 triggerSfx('draw');
                                 setCampfireCardIdx(idx);
                               }
                             }}
-                            className={`relative flex flex-col items-center justify-center w-[104px] h-[146px] transition-all duration-200 ${
-                              lockedOut
-                                ? 'opacity-30 grayscale-[45%] cursor-default'
-                                : isSelected
-                                  ? '-translate-y-1.5 z-30 cursor-pointer'
-                                  : 'hover:-translate-y-1 cursor-pointer'
+                            className={`relative shrink-0 flex flex-col items-center justify-center w-[78px] h-[108px] md:w-[104px] md:h-[146px] touch-pan-x md:touch-auto transition-all duration-200 ${
+                              isBeingDragged
+                                ? 'opacity-25 scale-95'
+                                : lockedOut
+                                  ? 'opacity-30 grayscale-[45%] cursor-default'
+                                  : 'hover:-translate-y-1 cursor-grab active:cursor-grabbing'
                             }`}
                           >
-                            {isSelected && (
-                              <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1c0c08]/95 border border-[#c88a42]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f5d38d] whitespace-nowrap shadow-md">
-                                {campfireStage === 0 ? 'Selected' : 'Baptized'}
-                              </span>
-                            )}
-                            <div className={`transform origin-center transition-transform duration-200 ${isSelected ? 'scale-[0.9]' : 'scale-[0.86] hover:scale-[0.91]'}`}>
+                            <div className="transform origin-center transition-transform duration-200 scale-[0.66] md:scale-[0.86] md:hover:scale-[0.91]">
                               {renderCard(c, { isSelected, isClickable: !lockedOut, disableHoverScale: true })}
                             </div>
                           </div>
@@ -1240,31 +1484,31 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 pt-12 pb-2 sm:py-4 overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('altarevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.3)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
             {renderActWeather('absolute inset-0 z-[5]', 'event_altar')}
-            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+            <div className="relative z-10 max-w-6xl w-full h-full min-h-0 flex flex-col items-center justify-between gap-2 sm:gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.26em] sm:tracking-[0.3em] text-[#c79d5a]">
                     Crestfallen Altar
                   </span>
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-lg sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Crest Transfer
                 </h1>
               </div>
 
-              {/* Two-Column Split: Prominent Altar Left, Scrollable Deck Panel Right */}
-              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              {/* Two-Column Split on Desktop, Top Stage + Bottom Horizontal Tray on Mobile */}
+              <div className="w-full flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 sm:gap-4 lg:gap-5 items-stretch">
                 {/* LEFT COLUMN: Dominant Stone Altar Stage + Ritual Action */}
-                <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
+                <div className="flex-1 lg:col-span-7 flex flex-col items-center justify-between gap-2 lg:gap-3 min-h-0">
                   <div className="relative w-full flex-1 min-h-0 px-2 sm:px-4 lg:px-6 py-1 sm:py-2 lg:py-4 flex flex-col items-center justify-center">
                     {/* Ambient crimson / gold ritual glow */}
                     <div
@@ -1300,7 +1544,7 @@ export default function EventScreens({ ctx }: { ctx: {
                         }`}
                       >
                         <span
-                          className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] border text-[9px] font-mono font-bold uppercase tracking-[0.22em] transition-colors duration-300 ${
+                          className={`mb-1 sm:mb-1.5 px-2 sm:px-2.5 py-0.5 rounded-[2px] border text-[8.5px] sm:text-[9px] font-mono font-bold uppercase tracking-[0.2em] sm:tracking-[0.22em] transition-colors duration-300 ${
                             altarAnimPhase === 'descending' || altarAnimPhase === 'done'
                               ? 'bg-[#21160b]/95 border-[#eab308]/90 text-[#fde68a] shadow-[0_0_14px_rgba(234,179,8,0.45)]'
                               : hostPreview
@@ -1312,11 +1556,13 @@ export default function EventScreens({ ctx }: { ctx: {
                             ? 'Crests Inherited'
                             : hostPreview
                               ? 'Host'
-                              : '1. Select Host'}
+                              : '1. Drop or Select Host'}
                         </span>
 
                         <div
-                          className={`w-[68px] h-[92px] sm:w-[88px] sm:h-[118px] lg:w-[114px] lg:h-[154px] flex items-center justify-center rounded-[4px] transition-all duration-500 ${
+                          data-event-drop-slot="altar-host"
+                          data-event-drop-enabled={!isAnimating ? 'true' : 'false'}
+                          className={`w-[72px] h-[98px] sm:w-[88px] sm:h-[118px] lg:w-[114px] lg:h-[154px] flex items-center justify-center rounded-[4px] transition-all duration-300 ${getDropSlotClass('altar-host', !isAnimating)} ${
                             altarAnimPhase === 'descending' || altarAnimPhase === 'done'
                               ? 'shadow-[0_0_40px_rgba(234,179,8,0.65),0_0_20px_rgba(220,38,38,0.5)]'
                               : hostPreview
@@ -1333,14 +1579,14 @@ export default function EventScreens({ ctx }: { ctx: {
                                 setAltarSacrificeId(null);
                               }}
                               title={!isAnimating ? 'Click to return Host to deck' : undefined}
-                              className={`scale-[0.58] sm:scale-[0.76] lg:scale-[0.98] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                              className={`scale-[0.62] sm:scale-[0.76] lg:scale-[0.98] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
                             >
                               {renderCard(hostPreview, { isClickable: false, disableHoverScale: true })}
                             </div>
                           ) : (
-                            <div className="w-[64px] h-[88px] sm:w-[84px] sm:h-[114px] lg:w-[108px] lg:h-[150px] rounded-[4px] border border-dashed border-[#7a5a3a]/75 bg-[#0d0907]/75 flex flex-col items-center justify-center gap-1 text-[#9a7d5e]">
-                              <span className="text-xl opacity-65">✧</span>
-                              <span className="text-[9.5px] uppercase tracking-[0.22em]">Host</span>
+                            <div className="w-[68px] h-[94px] sm:w-[84px] sm:h-[114px] lg:w-[108px] lg:h-[150px] rounded-[4px] border border-dashed border-[#7a5a3a]/75 bg-[#0d0907]/75 flex flex-col items-center justify-center gap-1 text-[#9a7d5e]">
+                              <span className="text-lg sm:text-xl opacity-65">✧</span>
+                              <span className="text-[8.5px] sm:text-[9.5px] uppercase tracking-[0.2em]">Host</span>
                             </div>
                           )}
                         </div>
@@ -1365,7 +1611,9 @@ export default function EventScreens({ ctx }: { ctx: {
                       {/* Lower Sacrificial Stone Altar Prop + Sacrifice Slot Seated on Glowing Red Tabletop Circle */}
                       <div className="relative z-20 mt-1.5 sm:mt-2 lg:mt-3 flex flex-col items-center w-full">
                         <div
-                          className="relative z-20 w-[68px] h-[92px] sm:w-[88px] sm:h-[118px] lg:w-[114px] lg:h-[154px] -mb-7 sm:-mb-9 lg:-mb-11 flex items-center justify-center transition-opacity duration-300"
+                          data-event-drop-slot="altar-sacrifice"
+                          data-event-drop-enabled={!isAnimating ? 'true' : 'false'}
+                          className={`relative z-20 w-[72px] h-[98px] sm:w-[88px] sm:h-[118px] lg:w-[114px] lg:h-[154px] -mb-6 sm:-mb-9 lg:-mb-11 flex items-center justify-center rounded-[4px] transition-opacity duration-300 ${getDropSlotClass('altar-sacrifice', !isAnimating)}`}
                           style={{
                             animation: altarAnimPhase === 'sacrificing' ? 'altarSacrificeBurn 0.85s ease-in forwards' : undefined,
                             opacity: altarAnimPhase === 'descending' || altarAnimPhase === 'done' ? 0 : 1,
@@ -1379,20 +1627,20 @@ export default function EventScreens({ ctx }: { ctx: {
                                 setAltarSacrificeId(null);
                               }}
                               title={!isAnimating ? 'Click to return Sacrifice to deck' : undefined}
-                              className={`scale-[0.60] sm:scale-[0.78] lg:scale-[1.0] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                              className={`scale-[0.62] sm:scale-[0.78] lg:scale-[1.0] origin-center ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
                             >
                               {renderCard(sacPreview, { isClickable: false, disableHoverScale: true, isMarkedSacrifice: true })}
                             </div>
                           ) : (
-                            <div className="w-[64px] h-[88px] sm:w-[84px] sm:h-[114px] lg:w-[108px] lg:h-[150px] rounded-[4px] border border-dashed border-red-900/75 bg-[#120807]/80 flex flex-col items-center justify-center gap-1 text-red-400/70">
-                              <span className="text-xl opacity-75">†</span>
-                              <span className="text-[9.5px] uppercase tracking-[0.22em]">Sacrifice</span>
+                            <div className="w-[68px] h-[94px] sm:w-[84px] sm:h-[114px] lg:w-[108px] lg:h-[150px] rounded-[4px] border border-dashed border-red-900/75 bg-[#120807]/80 flex flex-col items-center justify-center gap-1 text-red-400/70">
+                              <span className="text-lg sm:text-xl opacity-75">†</span>
+                              <span className="text-[8.5px] sm:text-[9.5px] uppercase tracking-[0.18em] sm:tracking-[0.22em]">Sacrifice</span>
                             </div>
                           )}
                         </div>
 
                         {/* Illustrated Sacrificial Stone Altar Prop (1292x555) */}
-                        <div className="relative w-full max-w-[280px] sm:max-w-[380px] lg:max-w-[470px] aspect-[1292/555] pointer-events-none select-none">
+                        <div className="relative w-full max-w-[238px] sm:max-w-[380px] lg:max-w-[470px] aspect-[1292/555] pointer-events-none select-none">
                           <img
                             src={`${import.meta.env.BASE_URL || './'}assets/props/sacrifice.png`}
                             alt="Sacrificial Stone Altar"
@@ -1420,9 +1668,9 @@ export default function EventScreens({ ctx }: { ctx: {
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Side Deck Selector Panel */}
+                {/* RIGHT COLUMN: Side Deck Selector Panel (Horizontal Touch Tray on Mobile) */}
                 <div
-                  className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
+                  className={`shrink-0 h-[150px] sm:h-[168px] lg:h-auto lg:col-span-5 relative flex flex-col lg:min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
                     isAnimating ? 'opacity-30 pointer-events-none' : 'opacity-100'
                   }`}
                 >
@@ -1432,54 +1680,101 @@ export default function EventScreens({ ctx }: { ctx: {
                   <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
                   {/* Panel Header & Step Prompt */}
-                  <div className="px-4 py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
-                    <div className="text-left">
-                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
-                        Your Creatures ({masterDeck.length})
-                      </div>
-
+                  <div className="px-3 sm:px-4 py-1.5 sm:py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
+                    <div className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#c79d5a]">
+                      Your Creatures ({masterDeck.length})
                     </div>
-                    {(altarHostId || altarSacrificeId) && !isAnimating && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          triggerSfx('draw');
-                          setAltarHostId(null);
-                          setAltarSacrificeId(null);
-                        }}
-                        className="px-2.5 py-1 rounded-[2px] bg-[#1a110c] hover:bg-[#281a12] border border-[#5a3d28] text-[9.5px] font-mono uppercase tracking-[0.18em] text-[#d4bfa0] cursor-pointer transition shrink-0"
-                      >
-                        Clear
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9c8469]">
+                        Drag or tap
+                      </span>
+                      {(altarHostId || altarSacrificeId) && !isAnimating && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerSfx('draw');
+                            setAltarHostId(null);
+                            setAltarSacrificeId(null);
+                          }}
+                          className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-[2px] bg-[#1a110c] hover:bg-[#281a12] border border-[#5a3d28] text-[9px] sm:text-[9.5px] font-mono uppercase tracking-[0.18em] text-[#d4bfa0] cursor-pointer transition shrink-0"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Internally Scrollable Card Grid */}
-                  <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
-                    <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                  {/* Horizontal Touch Tray on Mobile, Vertical Scrollable Grid on Desktop */}
+                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden lg:overflow-y-auto lg:overflow-x-hidden px-3 py-1.5 lg:py-4">
+                    <div className="flex flex-nowrap lg:flex-wrap gap-x-2 lg:gap-x-2.5 gap-y-4 justify-start lg:justify-center items-center lg:content-start h-full lg:h-auto">
                       {masterDeck.map(c => {
                         const isHost = altarHostId === c.id;
                         const isSac = altarSacrificeId === c.id;
                         if (isHost || isSac) return null;
                         const hostCard = masterDeck.find(m => m.id === altarHostId);
+                        const sacCard = masterDeck.find(m => m.id === altarSacrificeId);
                         const cannotBeHost = hasMoreSigilsThanOriginal(c);
 
-                        let wouldExceedFive = false;
-                        if (hostCard && !isHost && c.sigils && c.sigils.length > 0) {
+                        let wouldExceedFiveAsSac = false;
+                        if (hostCard && c.sigils && c.sigils.length > 0) {
                           const merged = new Set(hostCard.sigils || []);
                           c.sigils.forEach((s: any) => merged.add(s));
-                          if (merged.size >= 5) wouldExceedFive = true;
+                          if (merged.size >= 5) wouldExceedFiveAsSac = true;
                         }
 
-                        const isDisabled =
+                        let wouldExceedFiveAsHost = false;
+                        if (sacCard && sacCard.sigils && sacCard.sigils.length > 0) {
+                          const merged = new Set(c.sigils || []);
+                          sacCard.sigils.forEach((s: any) => merged.add(s));
+                          if (merged.size >= 5) wouldExceedFiveAsHost = true;
+                        }
+
+                        const canDropOnHost = !isAnimating && !cannotBeHost && !wouldExceedFiveAsHost;
+                        const canDropOnSac = !isAnimating && Boolean(c.sigils && c.sigils.length > 0) && !wouldExceedFiveAsSac;
+                        const allowedSlots: string[] = [];
+                        if (canDropOnHost) allowedSlots.push('altar-host');
+                        if (canDropOnSac) allowedSlots.push('altar-sacrifice');
+
+                        const isClickDisabled =
                           isAnimating ||
                           (!altarHostId && cannotBeHost) ||
-                          (Boolean(altarHostId) && !isHost && (wouldExceedFive || !c.sigils || c.sigils.length === 0));
+                          (Boolean(altarHostId) && !isHost && (wouldExceedFiveAsSac || !c.sigils || c.sigils.length === 0));
+                        const cardKey = c.id || `altar-${c.name}`;
+                        const isBeingDragged = eventDrag?.cardKey === cardKey;
 
                         return (
                           <div
-                            key={c.id}
+                            key={cardKey}
+                            onPointerDown={(e) =>
+                              startEventCardDrag(e, {
+                                disabled: allowedSlots.length === 0,
+                                card: c,
+                                cardKey,
+                                allowedSlots,
+                                onDrop: (slotId) => {
+                                  if (isAnimating) return;
+                                  if (slotId === 'altar-host') {
+                                    if (cannotBeHost) {
+                                      addLog(`${getCardDisplayName(c.name)} cannot receive more crests: it already bears more than its original nature allows.`);
+                                      return;
+                                    }
+                                    triggerSfx('place');
+                                    setAltarHostId(c.id || null);
+                                  } else if (slotId === 'altar-sacrifice') {
+                                    if (wouldExceedFiveAsSac) {
+                                      addLog(`Cannot sacrifice ${getCardDisplayName(c.name)}: ${getCardDisplayName(hostCard?.name)} would have 5 or more crests (max 4 allowed).`);
+                                      return;
+                                    }
+                                    if (c.sigils && c.sigils.length > 0) {
+                                      triggerSfx('place');
+                                      setAltarSacrificeId(c.id || null);
+                                    }
+                                  }
+                                },
+                              })
+                            }
                             onClick={() => {
+                              if (suppressNextClickRef.current) return;
                               if (isAnimating) return;
                               if (!altarHostId) {
                                 if (cannotBeHost) {
@@ -1493,7 +1788,7 @@ export default function EventScreens({ ctx }: { ctx: {
                                 setAltarHostId(null);
                                 setAltarSacrificeId(null);
                               } else if (!altarSacrificeId) {
-                                if (wouldExceedFive) {
+                                if (wouldExceedFiveAsSac) {
                                   addLog(`Cannot sacrifice ${getCardDisplayName(c.name)}: ${getCardDisplayName(hostCard?.name)} would have 5 or more crests (max 4 allowed).`);
                                   return;
                                 }
@@ -1506,39 +1801,31 @@ export default function EventScreens({ ctx }: { ctx: {
                                 setAltarSacrificeId(null);
                               }
                             }}
-                            className={`relative flex flex-col items-center justify-center w-[104px] h-[146px] transition-all duration-200 ${
-                              isDisabled
-                                ? 'opacity-35 grayscale-[55%] cursor-not-allowed'
-                                : isHost || isSac
-                                  ? '-translate-y-1.5 z-30 cursor-pointer'
-                                  : 'hover:-translate-y-1 cursor-pointer'
+                            className={`relative shrink-0 flex flex-col items-center justify-center w-[78px] h-[108px] lg:w-[104px] lg:h-[146px] touch-pan-x lg:touch-auto transition-all duration-200 ${
+                              isBeingDragged
+                                ? 'opacity-25 scale-95'
+                                : isClickDisabled && allowedSlots.length === 0
+                                  ? 'opacity-35 grayscale-[55%] cursor-not-allowed'
+                                  : isClickDisabled
+                                    ? 'opacity-65 cursor-grab active:cursor-grabbing hover:-translate-y-1'
+                                    : 'hover:-translate-y-1 cursor-grab active:cursor-grabbing'
                             }`}
                           >
-                            {isHost && (
-                              <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1a130b]/95 border border-[#d4af37]/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-[#f4d78b] whitespace-nowrap shadow-md">
-                                Host
-                              </span>
-                            )}
-                            {isSac && (
-                              <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#210b0a]/95 border border-red-500/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-red-200 whitespace-nowrap shadow-md">
-                                Sacrifice
-                              </span>
-                            )}
-                            <div className={`transform origin-center transition-transform duration-200 ${isHost || isSac ? 'scale-[0.9]' : 'scale-[0.86] hover:scale-[0.91]'}`}>
+                            <div className="transform origin-center transition-transform duration-200 scale-[0.66] lg:scale-[0.86] lg:hover:scale-[0.91]">
                               {renderCard(c, {
                                 isSelected: isHost,
                                 isMarkedSacrifice: isSac,
-                                isClickable: !isDisabled,
+                                isClickable: !isClickDisabled || allowedSlots.length > 0,
                                 disableHoverScale: true,
                               })}
                             </div>
                             {!altarHostId && cannotBeHost && (
-                              <span className="pointer-events-none absolute -bottom-2 text-[8px] font-mono text-amber-400/90 font-bold uppercase tracking-wider whitespace-nowrap">
-                                Cannot Host
+                              <span className="pointer-events-none absolute -bottom-1 lg:-bottom-2 text-[7.5px] lg:text-[8px] font-mono text-amber-400/90 font-bold uppercase tracking-wider whitespace-nowrap">
+                                Sac Only
                               </span>
                             )}
-                            {altarHostId && !isHost && wouldExceedFive && (
-                              <span className="pointer-events-none absolute -bottom-2 text-[8px] font-mono text-red-400/90 font-bold uppercase tracking-wider whitespace-nowrap">
+                            {altarHostId && !isHost && wouldExceedFiveAsSac && (
+                              <span className="pointer-events-none absolute -bottom-1 lg:-bottom-2 text-[7.5px] lg:text-[8px] font-mono text-red-400/90 font-bold uppercase tracking-wider whitespace-nowrap">
                                 Exceeds 4
                               </span>
                             )}
@@ -1564,7 +1851,7 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0b0807] z-50 flex flex-col items-center justify-center px-4 py-4 sm:px-6 sm:py-5 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0b0807] z-50 flex flex-col items-center justify-center px-3 pt-12 pb-2 sm:px-6 sm:py-5 overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('altarevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(22,12,8,0.42)_0%,rgba(6,4,3,0.92)_100%)] pointer-events-none" />
@@ -1572,50 +1859,52 @@ export default function EventScreens({ ctx }: { ctx: {
             {renderActWeather('absolute inset-0 z-[5]', 'event_anvil')}
             <div className="relative z-10 w-full max-w-6xl h-full min-h-0 flex flex-col">
               {/* Header */}
-              <div className="shrink-0 flex flex-col items-center text-center pb-3">
-                <div className="flex items-center gap-3.5 mb-0.5">
-                  <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+              <div className="shrink-0 flex flex-col items-center text-center pb-1.5 sm:pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-px w-8 sm:w-20 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.26em] sm:tracking-[0.3em] text-[#c79d5a]">
                     Iron &amp; Sinew
                   </span>
-                  <div className="h-px w-12 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <div className="h-px w-8 sm:w-20 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-lg sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#efe0be] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Transmutation Table
                 </h1>
-                <p className="mt-1 font-['Cinzel',_serif] text-sm italic tracking-[0.1em] text-[#e5cfa8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                <p className="hidden sm:block mt-1 font-['Cinzel',_serif] text-sm italic tracking-[0.1em] text-[#e5cfa8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                   &ldquo;Something about this feels wrong.&rdquo;
                 </p>
               </div>
 
-              {/* Two-Column Split: Forge Stage Left, Scrollable Deck Right */}
-              <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch">
+              {/* Two-Column Split on Desktop, Top Stage + Bottom Horizontal Tray on Mobile */}
+              <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 sm:gap-5 items-stretch">
                 {/* Left Column: Iron Anvil + Diegetic Tools */}
-                <div className="lg:col-span-7 min-h-0 flex flex-col justify-between p-4 sm:p-5">
+                <div className="flex-1 lg:col-span-7 min-h-0 flex flex-col justify-between p-2 sm:p-5">
                   {/* Anvil Prop Stage (861x939) */}
-                  <div className="flex-1 min-h-0 flex flex-col items-center justify-end relative pt-[124px] sm:pt-[136px] pb-2">
-                    <div className="relative w-[244px] sm:w-[274px] lg:w-[294px] aspect-[861/939] select-none">
+                  <div className="flex-1 min-h-0 flex flex-col items-center justify-end relative pt-[84px] sm:pt-[136px] pb-1 sm:pb-2">
+                    <div className="relative w-[168px] sm:w-[274px] lg:w-[294px] aspect-[861/939] select-none">
                       {/* Card Seated Directly on the Glowing Red Transmutation Circle (x≈56%, y≈9%) */}
                       <div
+                        data-event-drop-slot="anvil"
+                        data-event-drop-enabled={!isEventBusy ? 'true' : 'false'}
                         onClick={() => {
                           if (!selectedCard || isEventBusy) return;
                           triggerSfx('draw');
                           setAnvilSelectedId(null);
                         }}
                         title={selectedCard && !isEventBusy ? 'Click to return creature to deck' : undefined}
-                        className={`absolute left-[56%] -translate-x-1/2 bottom-[90.5%] z-20 transition-all duration-200 ${selectedCard && !isEventBusy ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
+                        className={`absolute left-[56%] -translate-x-1/2 bottom-[90.5%] z-20 rounded-[4px] transition-all duration-200 ${getDropSlotClass('anvil', !isEventBusy)} ${selectedCard && !isEventBusy ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
                         style={{
                           animation: anvilStrikeAnim !== 'idle' ? 'anvilStrikeJolt 0.65s ease-out' : undefined,
                         }}
                       >
                         {selectedCard ? (
-                          <div className="scale-[0.94] sm:scale-[0.98] origin-bottom shadow-[0_14px_28px_rgba(0,0,0,0.94),0_0_24px_rgba(220,38,38,0.34)] rounded-[4px]">
+                          <div className="scale-[0.72] sm:scale-[0.98] origin-bottom shadow-[0_14px_28px_rgba(0,0,0,0.94),0_0_24px_rgba(220,38,38,0.34)] rounded-[4px]">
                             {renderCard(selectedCard, { isClickable: false, disableHoverScale: true })}
                           </div>
                         ) : (
-                          <div className="w-[104px] h-[146px] rounded-[4px] border border-dashed border-[#8a4530]/80 bg-[#120a08]/80 shadow-[0_0_20px_rgba(220,38,38,0.2)] flex flex-col items-center justify-center gap-1.5 text-[#c79a74]">
-                            <span className="text-xl opacity-70">⚒</span>
-                            <span className="text-[9px] uppercase tracking-[0.2em] px-2 text-center">Place Creature</span>
+                          <div className="w-[78px] h-[108px] sm:w-[104px] sm:h-[146px] rounded-[4px] border border-dashed border-[#8a4530]/80 bg-[#120a08]/80 shadow-[0_0_20px_rgba(220,38,38,0.2)] flex flex-col items-center justify-center gap-1 sm:gap-1.5 text-[#c79a74]">
+                            <span className="text-base sm:text-xl opacity-70">⚒</span>
+                            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.16em] sm:tracking-[0.2em] px-1.5 sm:px-2 text-center">Drop Creature</span>
                           </div>
                         )}
                       </div>
@@ -1635,31 +1924,31 @@ export default function EventScreens({ ctx }: { ctx: {
                   </div>
 
                   {/* Tool Strikes + Leave Action */}
-                  <div className="shrink-0 pt-3.5 border-t border-[#3a271b]/75 flex flex-col gap-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                  <div className="shrink-0 pt-2 sm:pt-3.5 border-t border-[#3a271b]/75 flex flex-col gap-2 sm:gap-3">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 text-left">
                       <button
                         onClick={() => applyAnvilStrike('hammer')}
                         disabled={!canHammer || isEventBusy}
-                        className={`group relative w-full p-3.5 rounded-[3px] border flex items-center gap-3.5 text-left transition-all duration-200 ${
+                        className={`group relative w-full p-2 sm:p-3.5 rounded-[3px] border flex items-center gap-2 sm:gap-3.5 text-left transition-all duration-200 ${
                           canHammer && !isEventBusy
                             ? 'bg-gradient-to-r from-[#24130f]/95 to-[#160c09]/95 border-[#8f4c35]/85 hover:border-[#e08256] hover:shadow-[0_0_24px_rgba(224,130,86,0.22)] cursor-pointer'
                             : 'bg-[#120d0b]/70 border-[#2e231c]/70 opacity-40 cursor-not-allowed'
                         }`}
                       >
-                        <div className="w-12 h-12 shrink-0 rounded-[3px] bg-[#0d0806] border border-[#543624] group-hover:border-[#d4845a] flex items-center justify-center shadow-inner">
-                          <svg viewBox="0 0 32 32" className="w-7 h-7 text-amber-300" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="w-8 h-8 sm:w-12 sm:h-12 shrink-0 rounded-[3px] bg-[#0d0806] border border-[#543624] group-hover:border-[#d4845a] flex items-center justify-center shadow-inner">
+                          <svg viewBox="0 0 32 32" className="w-5 h-5 sm:w-7 sm:h-7 text-amber-300" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M18 6l8 8-4 4-8-8 4-4Z" fill="rgba(251,191,36,0.16)" />
                             <path d="M14 10l-3 3 5 5 3-3" />
                             <path d="M13 15L5 23a2 2 0 0 0 2.8 2.8L16 17.8" />
                           </svg>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.15em] text-[#f3dfb6] group-hover:text-white">
+                          <div className="font-['Cinzel',_serif] font-bold text-[11px] sm:text-sm uppercase tracking-[0.1em] sm:tracking-[0.15em] text-[#f3dfb6] group-hover:text-white leading-tight">
                             Blood-to-Bone
                           </div>
                           {selectedCard && !canHammer && (
-                            <div className="mt-0.5 text-[9.5px] uppercase tracking-wider text-red-400/85">
-                              Requires Blood Cost
+                            <div className="mt-0.5 text-[8.5px] sm:text-[9.5px] uppercase tracking-wider text-red-400/85">
+                              Requires Blood
                             </div>
                           )}
                         </div>
@@ -1668,14 +1957,14 @@ export default function EventScreens({ ctx }: { ctx: {
                       <button
                         onClick={() => applyAnvilStrike('forceps')}
                         disabled={!canForceps || isEventBusy}
-                        className={`group relative w-full p-3.5 rounded-[3px] border flex items-center gap-3.5 text-left transition-all duration-200 ${
+                        className={`group relative w-full p-2 sm:p-3.5 rounded-[3px] border flex items-center gap-2 sm:gap-3.5 text-left transition-all duration-200 ${
                           canForceps && !isEventBusy
                             ? 'bg-gradient-to-r from-[#1a151b]/95 to-[#100d12]/95 border-[#6b5a78]/85 hover:border-[#c4a7db] hover:shadow-[0_0_24px_rgba(196,167,219,0.2)] cursor-pointer'
                             : 'bg-[#120d0b]/70 border-[#2e231c]/70 opacity-40 cursor-not-allowed'
                         }`}
                       >
-                        <div className="w-12 h-12 shrink-0 rounded-[3px] bg-[#0b090d] border border-[#453a4f] group-hover:border-[#b799cf] flex items-center justify-center shadow-inner">
-                          <svg viewBox="0 0 32 32" className="w-7 h-7 text-stone-200" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="w-8 h-8 sm:w-12 sm:h-12 shrink-0 rounded-[3px] bg-[#0b090d] border border-[#453a4f] group-hover:border-[#b799cf] flex items-center justify-center shadow-inner">
+                          <svg viewBox="0 0 32 32" className="w-5 h-5 sm:w-7 sm:h-7 text-stone-200" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="9" cy="24" r="3" />
                             <circle cx="23" cy="24" r="3" />
                             <path d="M11 21.5L19.5 7.5C20.3 6.2 21.8 5.5 23 6" />
@@ -1684,11 +1973,11 @@ export default function EventScreens({ ctx }: { ctx: {
                           </svg>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-['Cinzel',_serif] font-bold text-sm uppercase tracking-[0.15em] text-[#e7dff0] group-hover:text-white">
+                          <div className="font-['Cinzel',_serif] font-bold text-[11px] sm:text-sm uppercase tracking-[0.1em] sm:tracking-[0.15em] text-[#e7dff0] group-hover:text-white leading-tight">
                             Hollowing
                           </div>
                           {selectedCard && !canForceps && (
-                            <div className="mt-0.5 text-[9.5px] uppercase tracking-wider text-amber-400/85">
+                            <div className="mt-0.5 text-[8.5px] sm:text-[9.5px] uppercase tracking-wider text-amber-400/85">
                               Cannot Hollow
                             </div>
                           )}
@@ -1703,7 +1992,7 @@ export default function EventScreens({ ctx }: { ctx: {
                           returnToMap();
                         }}
                         disabled={isEventBusy}
-                        className="px-4 py-1.5 rounded-[2px] bg-[#16100d] hover:bg-[#221814] border border-[#4a3628] text-[10px] font-mono uppercase tracking-[0.2em] text-[#b8a085] hover:text-[#f0dec2] cursor-pointer transition"
+                        className="px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-[2px] bg-[#16100d] hover:bg-[#221814] border border-[#4a3628] text-[9.5px] sm:text-[10px] font-mono uppercase tracking-[0.2em] text-[#b8a085] hover:text-[#f0dec2] cursor-pointer transition"
                       >
                         Step Away
                       </button>
@@ -1711,36 +2000,54 @@ export default function EventScreens({ ctx }: { ctx: {
                   </div>
                 </div>
 
-                {/* Right Column: Scrollable Deck Selector */}
-                <div className="lg:col-span-5 min-h-0 flex flex-col rounded-[3px] bg-[#0d0806]/82 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] overflow-hidden">
-                  <div className="shrink-0 px-4 py-2.5 border-b border-[#342217]/80 flex items-center justify-between bg-[#120b08]/80">
-                    <span className="font-['Cinzel',_serif] text-xs font-bold uppercase tracking-[0.22em] text-[#d8c19a]">
-                      Deck
+                {/* Right Column: Scrollable Deck Selector (Horizontal Touch Tray on Mobile) */}
+                <div className="shrink-0 h-[146px] sm:h-[168px] lg:h-auto lg:col-span-5 lg:min-h-0 flex flex-col rounded-[3px] bg-[#0d0806]/82 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.9)] overflow-hidden">
+                  <div className="shrink-0 px-3 sm:px-4 py-1.5 sm:py-2.5 border-b border-[#342217]/80 flex items-center justify-between bg-[#120b08]/80">
+                    <span className="font-['Cinzel',_serif] text-[10.5px] sm:text-xs font-bold uppercase tracking-[0.22em] text-[#d8c19a]">
+                      Deck ({masterDeck.length})
                     </span>
-                    <span className="text-[10px] font-mono tracking-[0.18em] text-[#9b8266]">
-                      {masterDeck.length}
+                    <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9b8266]">
+                      Drag or tap
                     </span>
                   </div>
-                  <div className="flex-1 min-h-0 overflow-y-auto p-3">
-                    <div className="flex flex-wrap gap-2.5 justify-center content-start">
-                      {masterDeck.map(c => {
+                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden lg:overflow-y-auto lg:overflow-x-hidden px-3 py-1.5 lg:p-3">
+                    <div className="flex flex-nowrap lg:flex-wrap gap-2 lg:gap-2.5 justify-start lg:justify-center items-center lg:content-start h-full lg:h-auto">
+                      {masterDeck.map((c, idx) => {
                         const isPicked = anvilSelectedId === c.id;
                         if (isPicked) return null;
+                        const cardKey = c.id || `anvil-${c.name}-${idx}`;
+                        const isBeingDragged = eventDrag?.cardKey === cardKey;
                         return (
                           <div
-                            key={c.id}
+                            key={cardKey}
+                            onPointerDown={(e) =>
+                              startEventCardDrag(e, {
+                                disabled: isEventBusy,
+                                card: c,
+                                cardKey,
+                                allowedSlots: ['anvil'],
+                                onDrop: () => {
+                                  if (isEventBusy) return;
+                                  triggerSfx('place');
+                                  setAnvilSelectedId(c.id || null);
+                                },
+                              })
+                            }
                             onClick={() => {
+                              if (suppressNextClickRef.current) return;
                               if (isEventBusy) return;
                               triggerSfx('draw');
                               setAnvilSelectedId(isPicked ? null : c.id || null);
                             }}
-                            className={`relative cursor-pointer transition-all duration-200 ${
-                              isPicked
-                                ? 'scale-[0.95] -translate-y-1 z-20'
-                                : 'scale-[0.86] hover:scale-[0.93] hover:-translate-y-0.5 opacity-85 hover:opacity-100'
+                            className={`relative shrink-0 flex items-center justify-center w-[76px] h-[106px] lg:w-[104px] lg:h-[146px] touch-pan-x lg:touch-auto transition-all duration-200 ${
+                              isBeingDragged
+                                ? 'opacity-25 scale-95'
+                                : 'cursor-grab active:cursor-grabbing hover:-translate-y-0.5'
                             }`}
                           >
-                            {renderCard(c, { isSelected: isPicked, isClickable: !isEventBusy, disableHoverScale: true })}
+                            <div className="transform origin-center transition-transform duration-200 scale-[0.65] lg:scale-[0.86] lg:hover:scale-[0.92]">
+                              {renderCard(c, { isSelected: isPicked, isClickable: !isEventBusy, disableHoverScale: true })}
+                            </div>
                           </div>
                         );
                       })}
@@ -2147,7 +2454,7 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 pt-12 pb-2 sm:py-3 lg:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('tribeeventbg.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
@@ -2262,8 +2569,8 @@ export default function EventScreens({ ctx }: { ctx: {
                             <div className="relative z-10 font-['Cinzel',_serif] font-bold text-[#f2ddb7] group-hover:text-white text-sm uppercase tracking-[0.18em]">
                               {tribe}
                             </div>
-                            <div className="relative z-10 w-9 h-px bg-gradient-to-r from-transparent via-[#9c7847]/75 to-transparent my-1.5" />
-                            <div className="relative z-10 font-mono text-[8.5px] font-bold uppercase tracking-[0.22em] text-[#c7a77a]/85 group-hover:text-[#f4d78b] transition-colors">
+                            <div className="relative z-10 w-8 sm:w-9 h-px bg-gradient-to-r from-transparent via-[#9c7847]/75 to-transparent my-1 sm:my-1.5" />
+                            <div className="relative z-10 font-mono text-[6.5px] sm:text-[8.5px] font-bold uppercase tracking-[0.12em] sm:tracking-[0.22em] text-[#c7a77a]/85 group-hover:text-[#f4d78b] transition-colors whitespace-nowrap">
                               {isChosen ? 'Unraveling...' : '› Tug Thread ‹'}
                             </div>
                           </button>
@@ -2511,32 +2818,32 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0b0908] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0b0908] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 pt-12 pb-2 sm:py-4 overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('bonelordevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,12,11,0.34)_0%,rgba(4,3,3,0.92)_100%)] pointer-events-none" />
 
             {renderActWeather('absolute inset-0 z-[5]', 'event_bone_lord')}
-            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+            <div className="relative z-10 max-w-6xl w-full h-full min-h-0 flex flex-col items-center justify-between gap-2 sm:gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c7beb0]">
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
+                  <span className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.26em] sm:tracking-[0.3em] text-[#c7beb0]">
                     The Bone Lord
                   </span>
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent via-[#8a8275]/70 to-[#d9d0c1]/85" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#ece5d8] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-lg sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#ece5d8] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Ancient Altar of Bones
                 </h1>
               </div>
 
-              {/* Two-Column Split: Ossuary Skull Pedestal Left, Deck Selector Right */}
-              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              {/* Two-Column Split on Desktop, Top Stage + Bottom Horizontal Tray on Mobile */}
+              <div className="w-full flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 sm:gap-4 lg:gap-5 items-stretch">
                 {/* LEFT COLUMN: Ossuary Pedestal & Horned Skull Prop + Stylized Inscription + Offer Button */}
-                <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-5 flex flex-col items-center justify-between">
+                <div className="flex-1 lg:col-span-7 flex flex-col items-center justify-between gap-2 lg:gap-3 min-h-0">
+                  <div className="relative w-full flex-1 min-h-0 px-3 sm:px-6 py-2 sm:py-5 flex flex-col items-center justify-between">
                     {/* Ambient Ivory / Ember Aura */}
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
@@ -2560,8 +2867,8 @@ export default function EventScreens({ ctx }: { ctx: {
                     <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#a89f90]/70" />
 
                     {/* Centerpiece: Offering Card Seated on the Horned Bone Lord Altar Summit (831x1089) */}
-                    <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[128px] sm:pt-[136px]">
-                      <div className="relative w-[225px] sm:w-[254px] lg:w-[272px] aspect-[831/1089] select-none">
+                    <div className="relative z-10 flex flex-col items-center justify-end w-full my-auto pt-[86px] sm:pt-[136px]">
+                      <div className="relative w-[158px] sm:w-[254px] lg:w-[272px] aspect-[831/1089] select-none">
                         {/* Rising Bone Tokens Emerging from the Summit Circle */}
                         {boneLordAnimPhase !== 'idle' && (
                           <div className="pointer-events-none absolute left-1/2 bottom-[90%] -translate-x-1/2 z-40 flex items-center justify-center">
@@ -2581,14 +2888,18 @@ export default function EventScreens({ ctx }: { ctx: {
                         )}
 
                         {/* Offering Card (clickable to return to side deck) or Manifested Boon Medallion */}
-                        <div className="absolute left-1/2 -translate-x-1/2 bottom-[91%] z-20 w-[116px] h-[154px] flex items-end justify-center">
+                        <div
+                          data-event-drop-slot="bone-lord"
+                          data-event-drop-enabled={!isEventBusy && !isAnimating ? 'true' : 'false'}
+                          className={`absolute left-1/2 -translate-x-1/2 bottom-[91%] z-20 w-[84px] h-[114px] sm:w-[116px] sm:h-[154px] flex items-end justify-center rounded-[4px] ${getDropSlotClass('bone-lord', !isEventBusy && !isAnimating)}`}
+                        >
                           {boneLordAnimPhase === 'blessed' ? (
-                            <div className="flex flex-col items-center justify-center px-5 py-4 mb-2 rounded-[4px] bg-[#1a1612]/95 border-2 border-[#e5d5b7]/90 shadow-[0_0_38px_rgba(234,179,8,0.5)] animate-menu-fade-in">
-                              <span className="text-3xl mb-1">🦴</span>
-                              <span className="font-['Cinzel',_serif] font-black text-xl text-amber-200 tracking-wider">
+                            <div className="flex flex-col items-center justify-center px-4 sm:px-5 py-3 sm:py-4 mb-2 rounded-[4px] bg-[#1a1612]/95 border-2 border-[#e5d5b7]/90 shadow-[0_0_38px_rgba(234,179,8,0.5)] animate-menu-fade-in">
+                              <span className="text-2xl sm:text-3xl mb-1">🦴</span>
+                              <span className="font-['Cinzel',_serif] font-black text-lg sm:text-xl text-amber-200 tracking-wider">
                                 +{previewBonus}
                               </span>
-                              <span className="text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#d6cbb8] mt-0.5 whitespace-nowrap">
+                              <span className="text-[8px] sm:text-[8.5px] font-mono uppercase tracking-[0.22em] text-[#d6cbb8] mt-0.5 whitespace-nowrap">
                                 Starting Bone{previewBonus > 1 ? 's' : ''}
                               </span>
                             </div>
@@ -2608,14 +2919,14 @@ export default function EventScreens({ ctx }: { ctx: {
                                     }
                                   }}
                                   title="Click to return creature to deck"
-                                  className="group relative scale-[0.96] sm:scale-[1.0] origin-bottom cursor-pointer transition-transform duration-200 hover:-translate-y-1 shadow-[0_14px_28px_rgba(0,0,0,0.95),0_0_24px_rgba(220,38,38,0.28)]"
+                                  className="group relative scale-[0.72] sm:scale-[1.0] origin-bottom cursor-pointer transition-transform duration-200 hover:-translate-y-1 shadow-[0_14px_28px_rgba(0,0,0,0.95),0_0_24px_rgba(220,38,38,0.28)]"
                                 >
                                   {renderCard(selectedCard, { isClickable: false, disableHoverScale: true, isMarkedSacrifice: true })}
                                 </div>
                               ) : (
-                                <div className="w-[106px] h-[146px] rounded-[4px] border border-dashed border-[#8a6d5e]/80 bg-[#120d0c]/80 shadow-[0_0_20px_rgba(220,38,38,0.18)] flex flex-col items-center justify-center gap-1.5 text-[#b5a392]">
-                                  <span className="text-xl opacity-75">💀</span>
-                                  <span className="text-[9.5px] uppercase tracking-[0.2em] px-2">Place Tribute</span>
+                                <div className="w-[78px] h-[108px] sm:w-[106px] sm:h-[146px] rounded-[4px] border border-dashed border-[#8a6d5e]/80 bg-[#120d0c]/80 shadow-[0_0_20px_rgba(220,38,38,0.18)] flex flex-col items-center justify-center gap-1 sm:gap-1.5 text-[#b5a392]">
+                                  <span className="text-base sm:text-xl opacity-75">💀</span>
+                                  <span className="text-[8px] sm:text-[9.5px] uppercase tracking-[0.16em] sm:tracking-[0.2em] px-1.5 sm:px-2 text-center">Drop Tribute</span>
                                 </div>
                               )}
                             </div>
@@ -2640,12 +2951,12 @@ export default function EventScreens({ ctx }: { ctx: {
 
                     {/* Stylized & Enlarged Ossuary Inscription */}
                     <div className="relative z-20 w-full max-w-xl flex flex-col items-center text-center pt-1">
-                      <div className="flex items-center gap-3 w-full max-w-xs mb-2 opacity-75">
+                      <div className="hidden sm:flex items-center gap-3 w-full max-w-xs mb-2 opacity-75">
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#8a7f70] to-[#c9bea9]" />
                         <span className="text-[10px] text-[#c9bea9]">✦</span>
                         <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[#8a7f70] to-[#c9bea9]" />
                       </div>
-                      <p className="font-['Cinzel',_serif] text-base sm:text-lg tracking-[0.1em] text-[#efe5d4] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] px-3">
+                      <p className="font-['Cinzel',_serif] text-xs sm:text-lg tracking-[0.08em] sm:tracking-[0.1em] text-[#efe5d4] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] px-3">
                         A flooding darkness envelops the chamber.
                       </p>
                     </div>
@@ -2656,16 +2967,16 @@ export default function EventScreens({ ctx }: { ctx: {
                     <button
                       onClick={confirmBoneLordOffering}
                       disabled={boneLordSelectedIdx === null || isEventBusy || isAnimating}
-                      className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#2e2620] to-[#171310] hover:from-[#3d322a] hover:to-[#211b17] active:translate-y-[1px] border border-[#b5a994]/85 hover:border-[#efe5d5] text-[#f2eadc] hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
+                      className="px-6 sm:px-8 py-2 sm:py-2.5 rounded-[2px] bg-gradient-to-b from-[#2e2620] to-[#171310] hover:from-[#3d322a] hover:to-[#211b17] active:translate-y-[1px] border border-[#b5a994]/85 hover:border-[#efe5d5] text-[#f2eadc] hover:text-white font-['Cinzel',_serif] font-bold text-[11px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
                     >
                       {isAnimating ? 'The Bone Lord Consumes...' : 'Offer Sacrifice'}
                     </button>
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Side Deck Selector Panel (hides card currently resting on the altar) */}
+                {/* RIGHT COLUMN: Side Deck Selector Panel (Horizontal Touch Tray on Mobile) */}
                 <div
-                  className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#0c0a09]/84 border border-[#3f3830]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(235,225,210,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
+                  className={`shrink-0 h-[150px] sm:h-[168px] lg:h-auto lg:col-span-5 relative flex flex-col lg:min-h-0 rounded-[3px] bg-[#0c0a09]/84 border border-[#3f3830]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(235,225,210,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
                     isAnimating ? 'opacity-30 pointer-events-none' : 'opacity-100'
                   }`}
                 >
@@ -2674,30 +2985,50 @@ export default function EventScreens({ ctx }: { ctx: {
                   <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9c9282]/70" />
                   <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9c9282]/70" />
 
-                  <div className="px-4 py-3 border-b border-[#38312a]/80 flex items-center justify-between gap-2 shrink-0">
-                    <div className="text-left">
-                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#d6cbb8]">
-                        Your Creatures ({boneLordSelectedIdx !== null ? Math.max(0, masterDeck.length - 1) : masterDeck.length})
-                      </div>
-
+                  <div className="px-3 sm:px-4 py-1.5 sm:py-3 border-b border-[#38312a]/80 flex items-center justify-between gap-2 shrink-0">
+                    <div className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#d6cbb8]">
+                      Your Creatures ({boneLordSelectedIdx !== null ? Math.max(0, masterDeck.length - 1) : masterDeck.length})
                     </div>
+                    <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9c9282]">
+                      Drag or tap
+                    </span>
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
-                    <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden lg:overflow-y-auto lg:overflow-x-hidden px-3 py-1.5 lg:py-4">
+                    <div className="flex flex-nowrap lg:flex-wrap gap-x-2 lg:gap-x-2.5 gap-y-4 justify-start lg:justify-center items-center lg:content-start h-full lg:h-auto">
                       {masterDeck.map((c, idx) => {
                         if (boneLordSelectedIdx === idx) return null;
+                        const cardKey = c.id || `bl-${c.name}-${idx}`;
+                        const isBeingDragged = eventDrag?.cardKey === cardKey;
                         return (
                           <div
-                            key={c.id || `bl-${c.name}-${idx}`}
+                            key={cardKey}
+                            onPointerDown={(e) =>
+                              startEventCardDrag(e, {
+                                disabled: isEventBusy || isAnimating,
+                                card: c,
+                                cardKey,
+                                allowedSlots: ['bone-lord'],
+                                onDrop: () => {
+                                  if (isEventBusy || isAnimating) return;
+                                  triggerSfx('place');
+                                  setBoneLordSelectedIdx(idx);
+                                },
+                              })
+                            }
                             onClick={() => {
+                              if (suppressNextClickRef.current) return;
                               if (isEventBusy || isAnimating) return;
                               triggerSfx('draw');
                               setBoneLordSelectedIdx(idx);
                             }}
-                            className="relative flex flex-col items-center justify-center w-[104px] h-[146px] cursor-pointer transition-all duration-200 hover:-translate-y-1"
+                            className={`relative shrink-0 flex flex-col items-center justify-center w-[78px] h-[108px] lg:w-[104px] lg:h-[146px] touch-pan-x lg:touch-auto transition-all duration-200 ${
+                              isBeingDragged
+                                ? 'opacity-25 scale-95'
+                                : 'cursor-grab active:cursor-grabbing hover:-translate-y-1'
+                            }`}
                           >
-                            <div className="transform origin-center transition-transform duration-200 scale-[0.86] hover:scale-[0.91]">
+                            <div className="transform origin-center transition-transform duration-200 scale-[0.66] lg:scale-[0.86] lg:hover:scale-[0.91]">
                               {renderCard(c, { isClickable: true, disableHoverScale: true })}
                             </div>
                           </div>
@@ -2732,22 +3063,22 @@ export default function EventScreens({ ctx }: { ctx: {
         return (
           <div
             style={getScreenBgStyle('weaverevent.jpg')}
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 pt-12 pb-2 sm:py-4 overflow-hidden animate-fade-up font-mono select-none"
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.32)_0%,rgba(5,3,2,0.9)_100%)] pointer-events-none" />
 
             {renderActWeather('absolute inset-0 z-[5]', 'event_mycologist')}
-            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+            <div className="relative z-10 max-w-6xl w-full h-full min-h-0 flex flex-col items-center justify-between gap-2 sm:gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#c79d5a]">
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <span className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.26em] sm:tracking-[0.3em] text-[#c79d5a]">
                     {mycoHasDuplicates ? "The Weaver's Loom" : 'The Weaver Scoffs'}
                   </span>
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent via-[#9c7847]/70 to-[#d4af37]/85" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-lg sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#efe0be] leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   {mycoHasDuplicates ? 'Sanguine Stitching' : 'Sleight of Hand'}
                 </h1>
               </div>
@@ -2755,7 +3086,7 @@ export default function EventScreens({ ctx }: { ctx: {
               {!mycoHasDuplicates ? (
                 /* Loom-Matched Twin Gift Stage when player has no duplicates */
                 <div className="w-full max-w-4xl flex-1 min-h-0 flex flex-col items-center justify-between gap-3">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-5 flex flex-col items-center justify-center">
+                  <div className="relative w-full flex-1 min-h-0 px-3 sm:px-6 py-3 sm:py-5 flex flex-col items-center justify-center">
                     <div
                       className="pointer-events-none absolute inset-0 opacity-75"
                       style={{
@@ -2770,7 +3101,7 @@ export default function EventScreens({ ctx }: { ctx: {
                     <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-purple-400/60" />
 
                     {/* Aspect-Locked Weaver's Loom Stage (1133x823) */}
-                    <div className="relative z-10 w-full max-w-[530px] aspect-[1133/823] flex items-center justify-center select-none">
+                    <div className="relative z-10 w-full max-w-[340px] sm:max-w-[530px] aspect-[1133/823] flex items-center justify-center select-none">
                       <img
                         src={`${import.meta.env.BASE_URL || './'}assets/props/loom.png`}
                         alt="The Weaver's Loom"
@@ -2779,19 +3110,19 @@ export default function EventScreens({ ctx }: { ctx: {
                       />
 
                       <div className="relative z-10 -mt-[4%] flex flex-col items-center text-center">
-                        <span className="mb-2.5 px-3 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[9px] font-mono font-bold uppercase tracking-[0.22em] text-purple-200 shadow-md">
+                        <span className="mb-1.5 sm:mb-2.5 px-2.5 sm:px-3 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8px] sm:text-[9px] font-mono font-bold uppercase tracking-[0.2em] sm:tracking-[0.22em] text-purple-200 shadow-md">
                           Spun From Sinew
                         </span>
 
                         {mycoOfferedCard && (
-                          <div className="scale-[1.06] origin-center rounded-[4px] shadow-[0_0_44px_rgba(168,85,247,0.55),0_18px_36px_rgba(0,0,0,0.95)] my-1">
+                          <div className="scale-[0.76] sm:scale-[1.06] origin-center rounded-[4px] shadow-[0_0_44px_rgba(168,85,247,0.55),0_18px_36px_rgba(0,0,0,0.95)] my-1">
                             {renderCard(mycoOfferedCard, { isClickable: false, disableHoverScale: true })}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <p className="relative z-10 mt-2 font-['Cinzel',_serif] italic text-sm sm:text-base tracking-[0.1em] text-[#e8d9f0] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                    <p className="relative z-10 mt-2 font-['Cinzel',_serif] italic text-xs sm:text-base tracking-[0.1em] text-[#e8d9f0] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                       &ldquo;No twins? Take one from the loom.&rdquo;
                     </p>
                   </div>
@@ -2807,11 +3138,11 @@ export default function EventScreens({ ctx }: { ctx: {
                   </div>
                 </div>
               ) : (
-                /* Two-Column Split: Weaver's Loom Stage Left, Deck Selector Right */
-                <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                /* Two-Column Split on Desktop, Top Stage + Bottom Horizontal Tray on Mobile */
+                <div className="w-full flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 sm:gap-4 lg:gap-5 items-stretch">
                   {/* LEFT COLUMN: Weaver's Loom Prop + Sew Button */}
-                  <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                    <div className="relative w-full flex-1 min-h-0 px-3 sm:px-5 py-3 flex flex-col items-center justify-center">
+                  <div className="flex-1 lg:col-span-7 flex flex-col items-center justify-between gap-2 lg:gap-3 min-h-0">
+                    <div className="relative w-full flex-1 min-h-0 px-2 sm:px-5 py-1.5 sm:py-3 flex flex-col items-center justify-center">
                       <div
                         className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
                           mycoAnimPhase === 'sewing'
@@ -2964,18 +3295,20 @@ export default function EventScreens({ ctx }: { ctx: {
                               </div>
                             </div>
                           ) : (
-                            <div className="relative flex items-center justify-center gap-[44px]">
+                            <div className="relative flex items-center justify-center gap-4 sm:gap-[44px]">
                               {/* Twin I — pulls to center and cleanly bisects into the Left Half */}
                               <div className="flex flex-col items-center">
                                 <span
-                                  className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 shadow-md transition-opacity duration-200 ${
+                                  className={`mb-1 sm:mb-1.5 px-2 sm:px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8px] sm:text-[8.5px] font-mono font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-purple-200 shadow-md transition-opacity duration-200 ${
                                     mycoAnimPhase === 'sewing' ? 'opacity-0' : 'opacity-100'
                                   }`}
                                 >
                                   Twin I
                                 </span>
                                 <div
-                                  className="w-[108px] h-[150px] flex items-center justify-center"
+                                  data-event-drop-slot="myco-1"
+                                  data-event-drop-enabled={!isAnimating ? 'true' : 'false'}
+                                  className={`w-[76px] h-[108px] sm:w-[108px] sm:h-[150px] flex items-center justify-center rounded-[4px] ${getDropSlotClass('myco-1', !isAnimating)}`}
                                   style={{
                                     animation: mycoAnimPhase === 'sewing' ? 'loomTwinBisectLeft 2.05s linear forwards' : undefined,
                                   }}
@@ -2988,13 +3321,13 @@ export default function EventScreens({ ctx }: { ctx: {
                                         setMycoSelectedIndices((prev: number[]) => prev.slice(1));
                                       }}
                                       title={!isAnimating ? 'Click to return Twin I to deck' : undefined}
-                                      className={`scale-[0.96] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                                      className={`scale-[0.68] sm:scale-[0.96] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
                                     >
                                       {renderCard(twin1, { isClickable: false, disableHoverScale: true })}
                                     </div>
                                   ) : (
-                                    <div className="w-[102px] h-[144px] rounded-[4px] border border-dashed border-purple-400/65 bg-[#120b14]/82 flex flex-col items-center justify-center gap-1.5 text-purple-200/75 shadow-md">
-                                      <span className="text-[9px] uppercase tracking-[0.22em]">Twin I</span>
+                                    <div className="w-[72px] h-[104px] sm:w-[102px] sm:h-[144px] rounded-[4px] border border-dashed border-purple-400/65 bg-[#120b14]/82 flex flex-col items-center justify-center gap-1 text-purple-200/75 shadow-md">
+                                      <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.18em] sm:tracking-[0.22em]">Twin I</span>
                                     </div>
                                   )}
                                 </div>
@@ -3003,14 +3336,16 @@ export default function EventScreens({ ctx }: { ctx: {
                               {/* Twin II — pulls to center and cleanly bisects into the Right Half */}
                               <div className="flex flex-col items-center">
                                 <span
-                                  className={`mb-1.5 px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8.5px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 shadow-md transition-opacity duration-200 ${
+                                  className={`mb-1 sm:mb-1.5 px-2 sm:px-2.5 py-0.5 rounded-[2px] bg-[#1e1224]/92 border border-purple-400/75 text-[8px] sm:text-[8.5px] font-mono font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-purple-200 shadow-md transition-opacity duration-200 ${
                                     mycoAnimPhase === 'sewing' ? 'opacity-0' : 'opacity-100'
                                   }`}
                                 >
                                   Twin II
                                 </span>
                                 <div
-                                  className="w-[108px] h-[150px] flex items-center justify-center"
+                                  data-event-drop-slot="myco-2"
+                                  data-event-drop-enabled={!isAnimating ? 'true' : 'false'}
+                                  className={`w-[76px] h-[108px] sm:w-[108px] sm:h-[150px] flex items-center justify-center rounded-[4px] ${getDropSlotClass('myco-2', !isAnimating)}`}
                                   style={{
                                     animation: mycoAnimPhase === 'sewing' ? 'loomTwinBisectRight 2.05s linear forwards' : undefined,
                                   }}
@@ -3023,13 +3358,13 @@ export default function EventScreens({ ctx }: { ctx: {
                                         setMycoSelectedIndices((prev: number[]) => prev.slice(0, 1));
                                       }}
                                       title={!isAnimating ? 'Click to return Twin II to deck' : undefined}
-                                      className={`scale-[0.96] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
+                                      className={`scale-[0.68] sm:scale-[0.96] origin-center shadow-[0_16px_32px_rgba(0,0,0,0.92)] ${!isAnimating ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : ''}`}
                                     >
                                       {renderCard(twin2, { isClickable: false, disableHoverScale: true })}
                                     </div>
                                   ) : (
-                                    <div className="w-[102px] h-[144px] rounded-[4px] border border-dashed border-purple-400/65 bg-[#120b14]/82 flex flex-col items-center justify-center gap-1.5 text-purple-200/75 shadow-md">
-                                      <span className="text-[9px] uppercase tracking-[0.22em]">Twin II</span>
+                                    <div className="w-[72px] h-[104px] sm:w-[102px] sm:h-[144px] rounded-[4px] border border-dashed border-purple-400/65 bg-[#120b14]/82 flex flex-col items-center justify-center gap-1 text-purple-200/75 shadow-md">
+                                      <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.18em] sm:tracking-[0.22em]">Twin II</span>
                                     </div>
                                   )}
                                 </div>
@@ -3236,9 +3571,9 @@ export default function EventScreens({ ctx }: { ctx: {
                     </div>
                   </div>
 
-                  {/* RIGHT COLUMN: Side Deck Selector Panel */}
+                  {/* RIGHT COLUMN: Side Deck Selector Panel (Horizontal Touch Tray on Mobile) */}
                   <div
-                    className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
+                    className={`shrink-0 h-[150px] sm:h-[168px] lg:h-auto lg:col-span-5 relative flex flex-col lg:min-h-0 rounded-[3px] bg-[#0d0806]/84 border border-[#3e291b]/85 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,228,185,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
                       isAnimating ? 'opacity-30 pointer-events-none' : 'opacity-100'
                     }`}
                   >
@@ -3247,26 +3582,28 @@ export default function EventScreens({ ctx }: { ctx: {
                     <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-[#9a7342]/70" />
                     <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-[#9a7342]/70" />
 
-                    <div className="px-4 py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
-                      <div className="text-left">
-                        <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-[#c79d5a]">
-                          Your Creatures ({masterDeck.length})
-                        </div>
-
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-3 border-b border-[#3a2618]/80 flex items-center justify-between gap-2 shrink-0">
+                      <div className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-[#c79d5a]">
+                        Your Creatures ({masterDeck.length})
                       </div>
-                      {mycoSelectedIndices.length > 0 && !isAnimating && (
-                        <button
-                          type="button"
-                          onClick={() => setMycoSelectedIndices([])}
-                          className="px-2.5 py-1 rounded-[2px] bg-[#1a110c] hover:bg-[#281a12] border border-[#5a3d28] text-[9.5px] font-mono uppercase tracking-[0.18em] text-[#d4bfa0] cursor-pointer transition shrink-0"
-                        >
-                          Clear
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-[#9c8469]">
+                          Drag or tap
+                        </span>
+                        {mycoSelectedIndices.length > 0 && !isAnimating && (
+                          <button
+                            type="button"
+                            onClick={() => setMycoSelectedIndices([])}
+                            className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-[2px] bg-[#1a110c] hover:bg-[#281a12] border border-[#5a3d28] text-[9px] sm:text-[9.5px] font-mono uppercase tracking-[0.18em] text-[#d4bfa0] cursor-pointer transition shrink-0"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
-                      <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                    <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden lg:overflow-y-auto lg:overflow-x-hidden px-3 py-1.5 lg:py-4">
+                      <div className="flex flex-nowrap lg:flex-wrap gap-x-2 lg:gap-x-2.5 gap-y-4 justify-start lg:justify-center items-center lg:content-start h-full lg:h-auto">
                         {masterDeck.map((c, idx) => {
                           const selPos = mycoSelectedIndices.indexOf(idx);
                           const isSelected = selPos !== -1;
@@ -3275,11 +3612,33 @@ export default function EventScreens({ ctx }: { ctx: {
                           const firstPickedName = mycoSelectedIndices.length > 0 ? masterDeck[mycoSelectedIndices[0]]?.name : null;
                           const wrongTwin = Boolean(firstPickedName && c.name !== firstPickedName);
                           const isDisabled = !isDuplicateCard || wrongTwin;
+                          const cardKey = c.id || `myco-${c.name}-${idx}`;
+                          const isBeingDragged = eventDrag?.cardKey === cardKey;
 
                           return (
                             <div
-                              key={c.id || `myco-${c.name}-${idx}`}
+                              key={cardKey}
+                              onPointerDown={(e) =>
+                                startEventCardDrag(e, {
+                                  disabled: isDisabled || isAnimating || mycoSelectedIndices.length >= 2,
+                                  card: c,
+                                  cardKey,
+                                  allowedSlots: ['myco-1', 'myco-2'],
+                                  onDrop: (slotId) => {
+                                    if (isDisabled || isAnimating) return;
+                                    triggerSfx('place');
+                                    setMycoSelectedIndices((prev: number[]) => {
+                                      if (prev.includes(idx)) return prev;
+                                      if (slotId === 'myco-1' && prev.length === 0) return [idx];
+                                      if (slotId === 'myco-1' && prev.length === 1) return [idx, prev[0]];
+                                      if (prev.length < 2) return [...prev, idx];
+                                      return prev;
+                                    });
+                                  },
+                                })
+                              }
                               onClick={() => {
+                                if (suppressNextClickRef.current) return;
                                 if (isDisabled || isAnimating) return;
                                 triggerSfx('draw');
                                 if (mycoSelectedIndices.includes(idx)) {
@@ -3288,20 +3647,15 @@ export default function EventScreens({ ctx }: { ctx: {
                                   setMycoSelectedIndices((prev: number[]) => [...prev, idx]);
                                 }
                               }}
-                              className={`relative flex flex-col items-center justify-center w-[104px] h-[146px] transition-all duration-200 ${
-                                isDisabled
-                                  ? 'opacity-30 grayscale-[55%] cursor-not-allowed'
-                                  : isSelected
-                                    ? '-translate-y-1.5 z-30 cursor-pointer'
-                                    : 'hover:-translate-y-1 cursor-pointer'
+                              className={`relative shrink-0 flex flex-col items-center justify-center w-[78px] h-[108px] lg:w-[104px] lg:h-[146px] touch-pan-x lg:touch-auto transition-all duration-200 ${
+                                isBeingDragged
+                                  ? 'opacity-25 scale-95'
+                                  : isDisabled
+                                    ? 'opacity-30 grayscale-[55%] cursor-not-allowed'
+                                    : 'hover:-translate-y-1 cursor-grab active:cursor-grabbing'
                               }`}
                             >
-                              {isSelected && (
-                                <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#1e1224]/95 border border-purple-400/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200 whitespace-nowrap shadow-md">
-                                  Twin {selPos === 0 ? 'I' : 'II'}
-                                </span>
-                              )}
-                              <div className={`transform origin-center transition-transform duration-200 ${isSelected ? 'scale-[0.9]' : 'scale-[0.86] hover:scale-[0.91]'}`}>
+                              <div className="transform origin-center transition-transform duration-200 scale-[0.66] lg:scale-[0.86] lg:hover:scale-[0.91]">
                                 {renderCard(c, { isSelected, isClickable: !isDisabled, disableHoverScale: true })}
                               </div>
                             </div>
@@ -3327,32 +3681,32 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#090d0b] z-50 flex flex-col items-center justify-between px-5 sm:px-8 py-4 overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#090d0b] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 pt-12 pb-2 sm:py-4 overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('begottenboss.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(12,26,21,0.38)_0%,rgba(4,8,7,0.92)_100%)] pointer-events-none" />
 
             {renderActWeather('absolute inset-0 z-[5]', 'event_goobert')}
-            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-3">
+            <div className="relative z-10 max-w-6xl w-full h-full min-h-0 flex flex-col items-center justify-between gap-2 sm:gap-3">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-r from-transparent via-teal-600/70 to-teal-300/80" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-teal-400/90">
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent via-teal-600/70 to-teal-300/80" />
+                  <span className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.26em] sm:tracking-[0.3em] text-teal-400/90">
                     The Begotten&apos;s Workshop
                   </span>
-                  <div className="h-px w-10 sm:w-16 bg-gradient-to-l from-transparent via-teal-600/70 to-teal-300/80" />
+                  <div className="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent via-teal-600/70 to-teal-300/80" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.2em] text-teal-200 leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                <h1 className="text-lg sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-[0.16em] sm:tracking-[0.2em] text-teal-200 leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
                   Printing Press
                 </h1>
               </div>
 
-              {/* Two-Column Split: Rotary Printing Press Stage Left, Deck Selector Right */}
-              <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              {/* Two-Column Split on Desktop, Top Stage + Bottom Horizontal Tray on Mobile */}
+              <div className="w-full flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 sm:gap-4 lg:gap-5 items-stretch">
                 {/* LEFT COLUMN: Heavy Rotary Printing Press Prop + Stamp Button */}
-                <div className="lg:col-span-7 flex flex-col items-center justify-between gap-3 min-h-0">
-                  <div className="relative w-full flex-1 min-h-0 px-6 py-4 flex flex-col items-center justify-between">
+                <div className="flex-1 lg:col-span-7 flex flex-col items-center justify-between gap-2 lg:gap-3 min-h-0">
+                  <div className="relative w-full flex-1 min-h-0 px-3 sm:px-6 py-2 sm:py-4 flex flex-col items-center justify-between">
                     <div
                       className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
                         goobertStampedCard ? 'opacity-95' : goobertStamping ? 'opacity-80' : 'opacity-40'
@@ -3368,13 +3722,13 @@ export default function EventScreens({ ctx }: { ctx: {
                     <span className="pointer-events-none absolute bottom-2 left-2 w-3 h-3 border-b border-l border-teal-500/65" />
                     <span className="pointer-events-none absolute bottom-2 right-2 w-3 h-3 border-b border-r border-teal-500/65" />
 
-                    {/* Press Assembly Container: stamp.png travels flush into stampbase.png trough in exact lockstep with card squish/unsquish */}
+                    {/* Press Assembly Container: scaled uniformly on mobile so stamp.png travels flush into stampbase.png in exact lockstep */}
                     {(() => {
                       const propBase = import.meta.env.BASE_URL || './';
                       return (
-                        <div className="relative z-20 flex flex-col items-center justify-end w-full flex-1 min-h-0 pt-24 sm:pt-28">
+                        <div className="relative z-20 flex flex-col items-center justify-end w-full flex-1 min-h-0 pt-10 sm:pt-28">
                           {/* Aspect-Locked Hinged Press Chest Stage (580x736) */}
-                          <div className="relative w-[258px] sm:w-[292px] aspect-[580/736] select-none">
+                          <div className="relative w-[258px] sm:w-[292px] aspect-[580/736] scale-[0.72] sm:scale-100 origin-bottom select-none">
                             {/* Lower Hinged Press Base Back & Open Lid (behind cards) */}
                             <img
                               src={`${propBase}assets/props/stampbase.png`}
@@ -3405,7 +3759,9 @@ export default function EventScreens({ ctx }: { ctx: {
                                   Original
                                 </span>
                                 <div
-                                  className="w-[94px] h-[128px] flex items-end justify-center origin-bottom"
+                                  data-event-drop-slot="goobert"
+                                  data-event-drop-enabled={!isEventBusy && !isAnimating ? 'true' : 'false'}
+                                  className={`w-[94px] h-[128px] flex items-end justify-center origin-bottom rounded-[4px] ${getDropSlotClass('goobert', !isEventBusy && !isAnimating)}`}
                                   style={{
                                     animation: goobertStamping ? 'pressCardSquish 1.85s linear forwards' : undefined,
                                   }}
@@ -3425,7 +3781,7 @@ export default function EventScreens({ ctx }: { ctx: {
                                   ) : (
                                     <div className="w-[90px] h-[126px] rounded-[4px] border border-dashed border-teal-500/70 bg-[#07120f]/84 flex flex-col items-center justify-center gap-1 text-teal-300/70">
                                       <span className="text-base">📜</span>
-                                      <span className="text-[8.5px] uppercase tracking-[0.2em]">Original</span>
+                                      <span className="text-[8.5px] uppercase tracking-[0.2em] text-center px-1">Drop Card</span>
                                     </div>
                                   )}
                                 </div>
@@ -3494,7 +3850,7 @@ export default function EventScreens({ ctx }: { ctx: {
                       );
                     })()}
 
-                    <p className="relative z-20 mt-2 font-['Cinzel',_serif] text-sm sm:text-base tracking-[0.1em] text-teal-100/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                    <p className="relative z-20 mt-1 sm:mt-2 font-['Cinzel',_serif] text-xs sm:text-base tracking-[0.08em] sm:tracking-[0.1em] text-teal-100/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                       The Begotten jeers at his press.
                     </p>
                   </div>
@@ -3504,16 +3860,16 @@ export default function EventScreens({ ctx }: { ctx: {
                     <button
                       onClick={confirmGoobertClone}
                       disabled={goobertSelectedIdx === null || isEventBusy || isAnimating}
-                      className="px-8 py-2.5 rounded-[2px] bg-gradient-to-b from-[#13332b] to-[#0a1c17] hover:from-[#1b463b] hover:to-[#0f2922] active:translate-y-[1px] border border-teal-500/85 hover:border-teal-300 text-teal-100 hover:text-white font-['Cinzel',_serif] font-bold text-xs uppercase tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
+                      className="px-6 sm:px-8 py-2 sm:py-2.5 rounded-[2px] bg-gradient-to-b from-[#13332b] to-[#0a1c17] hover:from-[#1b463b] hover:to-[#0f2922] active:translate-y-[1px] border border-teal-500/85 hover:border-teal-300 text-teal-100 hover:text-white font-['Cinzel',_serif] font-bold text-[11px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.22em] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_22px_rgba(0,0,0,0.88)] transition-all select-none"
                     >
                       {goobertStamping ? 'Pressing Plate...' : goobertStampedCard ? 'Imprint Complete' : 'Stamp Your Card'}
                     </button>
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Side Deck Selector Panel */}
+                {/* RIGHT COLUMN: Side Deck Selector Panel (Horizontal Touch Tray on Mobile) */}
                 <div
-                  className={`lg:col-span-5 relative flex flex-col min-h-0 rounded-[3px] bg-[#080e0c]/84 border border-teal-900/80 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(153,246,228,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
+                  className={`shrink-0 h-[150px] sm:h-[168px] lg:h-auto lg:col-span-5 relative flex flex-col lg:min-h-0 rounded-[3px] bg-[#080e0c]/84 border border-teal-900/80 shadow-[0_18px_44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(153,246,228,0.06)] backdrop-blur-[2px] transition-opacity duration-500 ${
                     isAnimating ? 'opacity-30 pointer-events-none' : 'opacity-100'
                   }`}
                 >
@@ -3522,38 +3878,51 @@ export default function EventScreens({ ctx }: { ctx: {
                   <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-2.5 h-2.5 border-b border-l border-teal-500/65" />
                   <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-b border-r border-teal-500/65" />
 
-                  <div className="px-4 py-3 border-b border-teal-950/90 flex items-center justify-between gap-2 shrink-0">
-                    <div className="text-left">
-                      <div className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-teal-400/90">
-                        Your Creatures ({masterDeck.length})
-                      </div>
-
+                  <div className="px-3 sm:px-4 py-1.5 sm:py-3 border-b border-teal-950/90 flex items-center justify-between gap-2 shrink-0">
+                    <div className="text-[9.5px] sm:text-[10px] font-mono font-bold uppercase tracking-[0.22em] text-teal-400/90">
+                      Your Creatures ({masterDeck.length})
                     </div>
+                    <span className="text-[8.5px] font-mono uppercase tracking-[0.16em] text-teal-500/75">
+                      Drag or tap
+                    </span>
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
-                    <div className="flex flex-wrap gap-x-2.5 gap-y-4 justify-center content-start">
+                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden lg:overflow-y-auto lg:overflow-x-hidden px-3 py-1.5 lg:py-4">
+                    <div className="flex flex-nowrap lg:flex-wrap gap-x-2 lg:gap-x-2.5 gap-y-4 justify-start lg:justify-center items-center lg:content-start h-full lg:h-auto">
                       {masterDeck.map((c, idx) => {
                         const isSelected = goobertSelectedIdx === idx;
                         if (isSelected) return null;
+                        const cardKey = c.id || `goo-${c.name}-${idx}`;
+                        const isBeingDragged = eventDrag?.cardKey === cardKey;
                         return (
                           <div
-                            key={c.id || `goo-${c.name}-${idx}`}
+                            key={cardKey}
+                            onPointerDown={(e) =>
+                              startEventCardDrag(e, {
+                                disabled: isEventBusy || isAnimating,
+                                card: c,
+                                cardKey,
+                                allowedSlots: ['goobert'],
+                                onDrop: () => {
+                                  if (isEventBusy || isAnimating) return;
+                                  triggerSfx('place');
+                                  setGoobertSelectedIdx(idx);
+                                },
+                              })
+                            }
                             onClick={() => {
+                              if (suppressNextClickRef.current) return;
                               if (isEventBusy || isAnimating) return;
                               triggerSfx('draw');
                               setGoobertSelectedIdx(idx);
                             }}
-                            className={`relative flex flex-col items-center justify-center w-[104px] h-[146px] cursor-pointer transition-all duration-200 ${
-                              isSelected ? '-translate-y-1.5 z-30' : 'hover:-translate-y-1'
+                            className={`relative shrink-0 flex flex-col items-center justify-center w-[78px] h-[108px] lg:w-[104px] lg:h-[146px] touch-pan-x lg:touch-auto transition-all duration-200 ${
+                              isBeingDragged
+                                ? 'opacity-25 scale-95'
+                                : 'cursor-grab active:cursor-grabbing hover:-translate-y-1'
                             }`}
                           >
-                            {isSelected && (
-                              <span className="pointer-events-none absolute -top-2.5 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded-[2px] bg-[#091c18]/95 border border-teal-400/85 text-[8px] font-mono font-bold uppercase tracking-[0.2em] text-teal-200 whitespace-nowrap shadow-md">
-                                Original
-                              </span>
-                            )}
-                            <div className={`transform origin-center transition-transform duration-200 ${isSelected ? 'scale-[0.9]' : 'scale-[0.86] hover:scale-[0.91]'}`}>
+                            <div className="transform origin-center transition-transform duration-200 scale-[0.66] lg:scale-[0.86] lg:hover:scale-[0.91]">
                               {renderCard(c, { isSelected, isClickable: true, disableHoverScale: true })}
                             </div>
                           </div>
@@ -4147,13 +4516,13 @@ export default function EventScreens({ ctx }: { ctx: {
 
         return (
           <div
-            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 py-2.5 sm:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
+            className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-between px-3 sm:px-6 lg:px-8 pt-12 pb-3 sm:py-4 overflow-y-auto md:overflow-hidden animate-fade-up font-mono select-none"
             style={getScreenBgStyle('weaverevent.jpg')}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,9,6,0.34)_0%,rgba(5,3,2,0.93)_100%)] pointer-events-none" />
             {renderActWeather('absolute inset-0 z-[5]', 'build-totem')}
 
-            <div className="relative z-10 max-w-6xl w-full h-full flex flex-col items-center justify-between gap-2.5 sm:gap-3.5">
+            <div className="relative z-10 max-w-6xl w-full h-auto md:h-full flex flex-col items-center justify-between gap-2.5 sm:gap-3.5 pb-4 md:pb-0">
               {/* Top Header */}
               <div className="flex flex-col items-center text-center shrink-0">
                 <div className="flex items-center gap-3">
@@ -4472,10 +4841,10 @@ export default function EventScreens({ ctx }: { ctx: {
                   className="md:col-span-7 flex flex-col min-h-0"
                 >
                   {/* Step Progress & Satchel Header */}
-                  <div className={`relative z-10 flex items-center justify-between gap-2 px-5 sm:px-6 pt-4 pb-3 border-b border-[#543a27]/70 bg-[#110808]/55 transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
-                    <div className="flex items-center gap-2">
+                  <div className={`relative z-10 flex items-center justify-between gap-1.5 sm:gap-2 px-3 sm:px-6 pt-3.5 sm:pt-4 pb-2.5 sm:pb-3 border-b border-[#543a27]/70 bg-[#110808]/55 transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                       <span
-                        className={`px-2.5 py-1 text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] border ${
+                        className={`px-2 sm:px-2.5 py-1 text-[8px] sm:text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.12em] sm:tracking-[0.18em] border whitespace-nowrap ${
                           totemStage === 'REWARD'
                             ? 'bg-[#29090b]/90 border-[#c49a5c]/85 text-[#f7e3bd] shadow-[inset_0_0_10px_rgba(185,28,28,0.28)]'
                             : 'bg-[#100a08]/70 border-[#3d2c1f]/75 text-[#8a7560]'
@@ -4483,9 +4852,9 @@ export default function EventScreens({ ctx }: { ctx: {
                       >
                         I. Claim Scrap
                       </span>
-                      <span className="text-[#785c40] text-xs">›</span>
+                      <span className="text-[#785c40] text-xs shrink-0">›</span>
                       <span
-                        className={`px-2.5 py-1 text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.18em] border ${
+                        className={`px-2 sm:px-2.5 py-1 text-[8px] sm:text-[9.5px] font-['Cinzel',_serif] font-bold uppercase tracking-[0.12em] sm:tracking-[0.18em] border whitespace-nowrap ${
                           totemStage === 'ASSEMBLE'
                             ? 'bg-[#29090b]/90 border-[#c49a5c]/85 text-[#f7e3bd] shadow-[inset_0_0_10px_rgba(185,28,28,0.28)]'
                             : 'bg-[#100a08]/70 border-[#3d2c1f]/75 text-[#8a7560]'
@@ -4494,8 +4863,8 @@ export default function EventScreens({ ctx }: { ctx: {
                         II. Stitch Poppet
                       </span>
                     </div>
-                    <span className="px-2.5 py-1 bg-[#120b09] border border-[#4a3423]/80 text-[10px] font-mono tracking-[0.16em] text-[#cbb390]">
-                      Satchel {totemPieces.length}/7
+                    <span className="px-2 sm:px-2.5 py-1 bg-[#120b09] border border-[#4a3423]/80 text-[8.5px] sm:text-[10px] font-mono tracking-[0.1em] sm:tracking-[0.16em] text-[#cbb390] whitespace-nowrap shrink-0">
+                      {totemPieces.length}/7
                     </span>
                   </div>
 
@@ -4593,7 +4962,7 @@ export default function EventScreens({ ctx }: { ctx: {
 
                                   {/* Piece Name */}
                                   <div className="w-full pt-1.5 border-t border-[#3b291d]/75 text-center">
-                                    <div className="font-['Cinzel',_serif] font-bold text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[#f3dfb8] group-hover:text-white leading-tight truncate">
+                                    <div className="font-['Cinzel',_serif] font-bold text-[9px] sm:text-xs uppercase tracking-[0.08em] sm:tracking-[0.14em] text-[#f3dfb8] group-hover:text-white leading-tight break-words sm:truncate">
                                       {tc.value}
                                     </div>
                                   </div>
@@ -5449,6 +5818,24 @@ export default function EventScreens({ ctx }: { ctx: {
           </div>
         );
       })()}
+      {/* Floating Lifted Ghost Card for Event Slot Drag-and-Drop (Desktop & Mobile Touch) */}
+      {eventDrag && (
+        <div
+          aria-hidden="true"
+          className="fixed z-[220] pointer-events-none select-none will-change-transform"
+          style={{
+            left: `${eventDrag.x}px`,
+            top: `${eventDrag.isTouch ? eventDrag.y - 44 : eventDrag.y}px`,
+            transform: `translate(-50%, -50%) rotate(${eventDrag.hoveredSlot ? '0deg' : '-3deg'}) scale(${eventDrag.hoveredSlot ? (eventDrag.isTouch ? 0.9 : 1.02) : eventDrag.isTouch ? 0.84 : 0.94})`,
+            transition: 'transform 120ms cubic-bezier(0.16, 1, 0.3, 1)',
+            filter: eventDrag.hoveredSlot
+              ? 'drop-shadow(0 18px 28px rgba(0,0,0,0.95)) drop-shadow(0 0 20px rgba(244,215,139,0.72))'
+              : 'drop-shadow(0 20px 30px rgba(0,0,0,0.95)) drop-shadow(0 0 12px rgba(220,38,38,0.38))',
+          }}
+        >
+          {renderCard(eventDrag.card, { isClickable: false, disableHoverScale: true })}
+        </div>
+      )}
     </>
   );
 }
