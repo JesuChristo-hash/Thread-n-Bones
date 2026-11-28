@@ -7,8 +7,12 @@ import {
   BOSS_DISPLAY_META,
   MAP_NODE_META,
   MapNode,
-  MapNodeType,
 } from '../data/mapGenerator';
+import {
+  MapFigurineSharedDefs,
+  MapFigurineToken,
+  type FigurineKind,
+} from './MapFigurineTokens';
 
 interface MapScreenProps {
   mapData: ActMapData;
@@ -21,149 +25,6 @@ interface MapScreenProps {
   activeVows?: VowId[];
   onSelectNode: (node: MapNode) => void;
 }
-
-const renderInkGlyph = (type: MapNodeType, isBoss?: boolean) => {
-  const stroke = isBoss ? '#f3e1be' : 'currentColor';
-  switch (type) {
-    case 'start':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-        </svg>
-      );
-    case 'combat':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 19L19 5M15 5h4v4" />
-          <path d="M19 19L5 5M9 5H5v4" />
-          <path d="M7 17l-2 2M17 17l2 2" />
-        </svg>
-      );
-    case 'elite_combat':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 9l3 3 4-6 4 6 3-3-1.5 9h-11L5 9Z" />
-          <path d="M9 14h.01M15 14h.01M9 21h6" />
-        </svg>
-      );
-    case 'boss':
-      return (
-        <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 10a6 6 0 1 1 12 0c0 2.5-1 4.2-2 5.2V18a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.8C7 14.2 6 12.5 6 10Z" />
-          <circle cx="9.5" cy="10.5" r="1.2" fill={stroke} />
-          <circle cx="14.5" cy="10.5" r="1.2" fill={stroke} />
-          <path d="M10 19v2M14 19v2M4 5l3 2M20 5l-3 2" />
-        </svg>
-      );
-    case 'campfire':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3c2 3.2 4.5 5.2 4.5 8.5a4.5 4.5 0 0 1-9 0c0-1.9.9-3.4 2-4.8.2 1.4 1 2.2 1.8 2.5C11 6.7 11.2 4.8 12 3Z" />
-          <path d="M5 19l14-2M5 17l14 2" />
-        </svg>
-      );
-    case 'altar':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 19h16M6 19l1.5-8h9L18 19" />
-          <path d="M12 3v7M9.5 6.5h5" />
-        </svg>
-      );
-    case 'carving':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="4" width="16" height="16" rx="2" strokeDasharray="3 2" />
-          <path d="M8 12c1.5-3 6.5-3 8 0-1.5 3-6.5 3-8 0Z" />
-          <circle cx="12" cy="12" r="1.3" fill={stroke} />
-        </svg>
-      );
-    case 'cost':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3s6 6.4 6 11a6 6 0 1 1-12 0c0-4.6 6-11 6-11Z" />
-          <path d="M10 15.5c.6.9 2.2 1.3 3.4.5" />
-        </svg>
-      );
-    case 'bonelord':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 4c0 4 2.2 6.5 7 6.5S19 8 19 4" />
-          <path d="M8 11l1.5 8h5L16 11" />
-          <circle cx="10.5" cy="14" r="0.9" fill={stroke} />
-          <circle cx="13.5" cy="14" r="0.9" fill={stroke} />
-        </svg>
-      );
-    case 'mycologist':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="8.5" cy="12" r="4.5" />
-          <circle cx="15.5" cy="12" r="4.5" />
-          <path d="M12 7v10" strokeDasharray="2 2" />
-        </svg>
-      );
-    case 'goobert':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7 18h10v2H7z" />
-          <path d="M9 18v-4h6v4" />
-          <path d="M6 10h12v4H6z" />
-          <path d="M12 4v6" />
-        </svg>
-      );
-    case 'cave':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 19h18" />
-          <path d="M5 19c0-7.5 3-13 7-13s7 5.5 7 13" />
-          <circle cx="12" cy="13" r="2" />
-        </svg>
-      );
-    case 'choice':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="6" width="8" height="12" rx="1" transform="rotate(-10 8 12)" />
-          <rect x="12" y="6" width="8" height="12" rx="1" transform="rotate(10 16 12)" />
-        </svg>
-      );
-    case 'totem':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M8 5h8l-1 5H9L8 5Z" />
-          <path d="M9 10h6v5H9z" />
-          <path d="M7 15h10l1 4H6l1-4Z" />
-        </svg>
-      );
-    case 'items':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 8h12l1 12H5L6 8Z" />
-          <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-          <path d="M10 13h4" />
-        </svg>
-      );
-    case 'anvil':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 9h14l4 2.5-4 2.5H9c-2.5 0-4.5-1.5-6-5Z" />
-          <path d="M9 14l-1.5 5h9L15 14" />
-          <path d="M5 19h14" />
-        </svg>
-      );
-    case 'flock':
-      return (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7 9c-2.5 0-4 1.8-3 3.8.6 1.2 2 1.2 3 .5" />
-          <path d="M17 9c2.5 0 4 1.8 3 3.8-.6 1.2-2 1.2-3 .5" />
-          <path d="M7.5 10.5C7.5 7 9.5 5.5 12 5.5s4.5 1.5 4.5 5c0 4-2 8-4.5 8s-4.5-4-4.5-8Z" />
-          <circle cx="10.2" cy="11.5" r="0.8" fill={stroke} />
-          <circle cx="13.8" cy="11.5" r="0.8" fill={stroke} />
-        </svg>
-      );
-    default:
-      return null;
-  }
-};
 
 type DecorKind =
   | 'obelisk'
@@ -810,6 +671,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                   values="0.18 0 0 0 0.03  0 0.16 0 0 0.025  0 0 0.15 0 0.025  0 0 0 0.42 0"
                 />
               </filter>
+              <MapFigurineSharedDefs />
             </defs>
           </svg>
 
@@ -1183,18 +1045,33 @@ const MapScreen: React.FC<MapScreenProps> = ({
                       ? { title: bossMeta.name, tag: 'Boss' }
                       : MAP_NODE_META[node.type];
 
-                  // Carved chalk-in-basalt vs lit ember groove filters (zero radial blobs)
-                  const glyphFilter = isBoss
-                    ? isReachable
-                      ? 'drop-shadow(0 2px 3px rgba(0,0,0,0.95)) drop-shadow(0 0 12px rgba(210,44,32,0.95))'
-                      : 'drop-shadow(-1px -1px 0 rgba(0,0,0,0.95)) drop-shadow(0 2px 4px rgba(0,0,0,0.95))'
-                    : isReachable
-                      ? isCombat
-                        ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.95)) drop-shadow(0 0 7px rgba(212,48,34,0.95)) drop-shadow(0 0 14px rgba(176,24,20,0.75))'
-                        : 'drop-shadow(0 1px 2px rgba(0,0,0,0.95)) drop-shadow(0 0 7px rgba(234,186,98,0.92)) drop-shadow(0 0 14px rgba(196,138,48,0.65))'
-                      : isOnTracedPath
-                        ? 'drop-shadow(-1px -1px 0 rgba(0,0,0,0.95)) drop-shadow(0 0 9px rgba(214,174,104,0.82))'
-                        : 'drop-shadow(-1px -1px 0 rgba(0,0,0,0.96)) drop-shadow(0 2px 4px rgba(0,0,0,0.96))';
+                  const figurineKind: FigurineKind = isCurrent
+                    ? 'player'
+                    : obscured
+                      ? 'obscured'
+                      : node.type;
+
+                  const figurineSizeClass =
+                    isBoss && !isCurrent
+                      ? 'w-11 h-14 -translate-y-2'
+                      : 'w-8 h-10 -translate-y-1.5';
+
+                  // Physical tabletop directional cast shadow + lit ember rim glow matching the pawn piece aesthetic
+                  const pieceFilter = isCurrent
+                    ? 'drop-shadow(4px 6px 3px rgba(0,0,0,0.94)) drop-shadow(0 0 8px rgba(244,224,186,0.48))'
+                    : isBoss
+                      ? isReachable
+                        ? 'drop-shadow(5px 7px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 11px rgba(218,46,34,0.95))'
+                        : 'drop-shadow(5px 7px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 6px rgba(136,22,22,0.45))'
+                      : isReachable
+                        ? isCombat
+                          ? 'drop-shadow(4px 6px 3px rgba(0,0,0,0.94)) drop-shadow(0 0 8px rgba(216,48,34,0.95)) drop-shadow(0 0 15px rgba(176,24,20,0.72))'
+                          : 'drop-shadow(4px 6px 3px rgba(0,0,0,0.94)) drop-shadow(0 0 8px rgba(234,186,98,0.92)) drop-shadow(0 0 15px rgba(196,138,48,0.62))'
+                        : isOnTracedPath
+                          ? 'drop-shadow(4px 6px 3px rgba(0,0,0,0.94)) drop-shadow(0 0 9px rgba(226,184,112,0.82))'
+                          : isHovered
+                            ? 'drop-shadow(4px 6px 3px rgba(0,0,0,0.94)) drop-shadow(0 0 7px rgba(220,196,154,0.52))'
+                            : 'drop-shadow(4px 6px 3px rgba(0,0,0,0.92))';
 
                   return (
                     <div
@@ -1206,7 +1083,7 @@ const MapScreen: React.FC<MapScreenProps> = ({
                         isHovered ? 'z-40' : isOnTracedPath ? 'z-30' : isCurrent ? 'z-30' : isReachable ? 'z-20' : 'z-10'
                       } ${isLockedOut && !isHovered ? 'opacity-45 saturate-50' : 'opacity-100'}`}
                     >
-                      {/* Carved Node Hit Target (No Floating Radial Blob) */}
+                      {/* Physical Carved Tabletop Figurine Hit Target */}
                       <button
                         type="button"
                         aria-disabled={!isReachable}
@@ -1216,117 +1093,54 @@ const MapScreen: React.FC<MapScreenProps> = ({
                         aria-label={meta.title}
                         className={`relative flex items-center justify-center transition-transform duration-200 ${
                           isBoss ? 'w-16 h-16' : 'w-14 h-14'
-                        } ${isOnTracedPath && !isBoss ? 'scale-110 ' : ''}${
+                        } ${isOnTracedPath && !isBoss ? 'scale-105 ' : ''}${
                           isCurrent
                             ? 'cursor-default'
                             : isReachable
-                              ? 'hover:scale-110 cursor-pointer'
+                              ? 'hover:-translate-y-1 hover:scale-110 cursor-pointer'
                               : 'hover:scale-105 cursor-help'
                         }`}
                       >
-                        {/* Screen-Blended Ember Bleed into Stone Grain for Reachable Choices */}
+                        {/* Grounded Elliptical Tabletop Cast Shadow Beneath Every Figurine */}
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none absolute bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-black/85 blur-[2.2px] ${
+                            isBoss && !isCurrent ? 'w-11 h-3' : 'w-8 h-2.5'
+                          }`}
+                        />
+
+                        {/* Screen-Blended Silhouette Ember Glow for Reachable Choices */}
                         {isReachable && !isCurrent && (
                           <span
                             aria-hidden="true"
-                            className={`pointer-events-none absolute inset-0 flex items-center justify-center animate-pulse [animation-duration:2.8s] ${
-                              isBoss ? '[&>svg]:scale-[2.05]' : '[&>svg]:scale-[1.7]'
-                            }`}
+                            className="pointer-events-none absolute inset-0 flex items-center justify-center animate-pulse [animation-duration:2.8s]"
                             style={{
                               mixBlendMode: 'screen',
-                              color: isBoss || isCombat ? '#d93829' : '#d6a456',
-                              filter: isBoss || isCombat
-                                ? 'blur(4px) drop-shadow(0 0 8px rgba(217,56,41,0.9))'
-                                : 'blur(4px) drop-shadow(0 0 8px rgba(214,164,86,0.85))',
-                              opacity: 0.78,
+                              filter:
+                                isBoss || isCombat
+                                  ? 'blur(4.5px) drop-shadow(0 0 9px rgba(217,56,41,0.95))'
+                                  : 'blur(4.5px) drop-shadow(0 0 9px rgba(226,174,88,0.9))',
+                              opacity: 0.82,
                             }}
                           >
-                            {renderInkGlyph(node.type, isBoss)}
+                            <MapFigurineToken
+                              kind={figurineKind}
+                              className={figurineSizeClass}
+                              glowSilhouette
+                              glowColor={isBoss || isCombat ? '#d93829' : '#dfb05e'}
+                            />
                           </span>
                         )}
 
-                        {isCurrent ? (
-                          /* Physical Carved Bone/Ivory Game Piece Resting on the Stone */
-                          <span className="relative flex items-center justify-center">
-                            <span
-                              aria-hidden="true"
-                              className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-7 h-2.5 rounded-full bg-black/85 blur-[2px]"
-                            />
-                            <svg
-                              viewBox="0 0 28 36"
-                              className="w-7 h-9 -translate-y-1.5 overflow-visible"
-                              style={{
-                                filter: 'drop-shadow(4px 6px 3px rgba(0,0,0,0.92))',
-                              }}
-                            >
-                              <defs>
-                                <linearGradient id="ivoryPawnBody" x1="0%" y1="0%" x2="100%" y2="100%">
-                                  <stop offset="0%" stopColor="#f4ead6" />
-                                  <stop offset="52%" stopColor="#cbb898" />
-                                  <stop offset="100%" stopColor="#6c5c46" />
-                                </linearGradient>
-                                <linearGradient id="brassPawnBase" x1="0%" y1="0%" x2="100%" y2="0%">
-                                  <stop offset="0%" stopColor="#5e4326" />
-                                  <stop offset="45%" stopColor="#c79e5e" />
-                                  <stop offset="100%" stopColor="#462e18" />
-                                </linearGradient>
-                              </defs>
-                              {/* Pedestal Base */}
-                              <ellipse cx="14" cy="31.5" rx="8.5" ry="2.6" fill="url(#brassPawnBase)" stroke="#1b120a" strokeWidth="1" />
-                              {/* Carved Ivory Body */}
-                              <path
-                                d="M7.5 30.5 C8.5 23.5, 10.2 18.5, 11.2 15.5 L16.8 15.5 C17.8 18.5, 19.5 23.5, 20.5 30.5 Z"
-                                fill="url(#ivoryPawnBody)"
-                                stroke="#2a2118"
-                                strokeWidth="1"
-                                strokeLinejoin="round"
-                              />
-                              {/* Carved Collar Ring */}
-                              <ellipse cx="14" cy="15.2" rx="4.4" ry="1.4" fill="#d9c6a5" stroke="#2a2118" strokeWidth="0.9" />
-                              {/* Ivory Crown Head */}
-                              <circle cx="14" cy="9.2" r="4.8" fill="url(#ivoryPawnBody)" stroke="#2a2118" strokeWidth="1" />
-                              {/* Subtle Wax Seal Dot */}
-                              <circle cx="14" cy="24.2" r="1.7" fill="#7c1518" stroke="#2d0708" strokeWidth="0.6" />
-                            </svg>
-                          </span>
-                        ) : obscured ? (
-                          <span
-                            className="font-['Cinzel',_serif] font-black text-base select-none"
-                            style={{
-                              color: 'rgba(10, 9, 12, 0.85)',
-                              textShadow: '1px 1px 0 rgba(235,220,195,0.22), -1px -1px 1px rgba(0,0,0,0.9)',
-                            }}
-                          >
-                            ?
-                          </span>
-                        ) : (
-                          <span
-                            className={`relative flex items-center justify-center ${
-                              isBoss ? '[&>svg]:scale-[2.05]' : '[&>svg]:scale-[1.7]'
-                            }`}
-                            style={{
-                              color: isBoss
-                                ? isReachable
-                                  ? '#f6dfb4'
-                                  : '#a8967c'
-                                : isReachable
-                                  ? isCombat
-                                    ? '#f5a89a'
-                                    : '#f5dfb0'
-                                  : isVisited
-                                    ? 'rgba(128, 118, 108, 0.58)'
-                                    : isOnTracedPath
-                                      ? '#e2c9a2'
-                                      : isHovered
-                                        ? '#dfd0b8'
-                                        : isCombat
-                                          ? '#a86960'
-                                          : '#968a7a',
-                              filter: glyphFilter,
-                            }}
-                          >
-                            {renderInkGlyph(node.type, isBoss)}
-                          </span>
-                        )}
+                        {/* Physical Carved Bone/Ivory & Brass Miniature Game Piece */}
+                        <span
+                          className={`relative flex items-center justify-center transition-all duration-200 ${
+                            isVisited ? 'opacity-55 brightness-75 saturate-50' : ''
+                          }`}
+                          style={{ filter: pieceFilter }}
+                        >
+                          <MapFigurineToken kind={figurineKind} className={figurineSizeClass} />
+                        </span>
 
                         {/* Tapered Blood-Brushed Slash Blended Into Stone on Visited Nodes */}
                         {isVisited && (
@@ -1750,15 +1564,24 @@ const MapScreen: React.FC<MapScreenProps> = ({
                     </svg>
 
                     <div
-                      className={`relative [&>svg]:scale-[1.95] ${
+                      className={`relative flex items-center justify-center ${
                         inspectedMeta.tone === 'boss'
-                          ? 'text-[#fae6ba] drop-shadow-[0_0_13px_rgba(210,42,30,0.95)]'
+                          ? 'drop-shadow-[0_4px_8px_rgba(0,0,0,0.95)] drop-shadow-[0_0_13px_rgba(210,42,30,0.9)]'
                           : inspectedMeta.tone === 'combat'
-                            ? 'text-[#f8c2b6] drop-shadow-[0_0_11px_rgba(205,46,32,0.88)]'
-                            : 'text-[#f7ead2] drop-shadow-[0_0_10px_rgba(222,190,136,0.78)]'
+                            ? 'drop-shadow-[0_4px_8px_rgba(0,0,0,0.95)] drop-shadow-[0_0_11px_rgba(205,46,32,0.82)]'
+                            : 'drop-shadow-[0_4px_8px_rgba(0,0,0,0.95)] drop-shadow-[0_0_10px_rgba(222,190,136,0.72)]'
                       }`}
                     >
-                      {renderInkGlyph(inspectedNode.type, inspectedNode.type === 'boss')}
+                      <MapFigurineToken
+                        kind={
+                          isNodeObscured(inspectedNode)
+                            ? 'obscured'
+                            : inspectedNode.id === mapData.currentNodeId
+                              ? 'player'
+                              : inspectedNode.type
+                        }
+                        className={inspectedNode.type === 'boss' ? 'w-14 h-[70px] -translate-y-0.5' : 'w-12 h-[60px] -translate-y-0.5'}
+                      />
                     </div>
                   </div>
 
