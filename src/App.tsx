@@ -9849,7 +9849,7 @@ export default function App() {
 
               {/* FIXED FLANK: Bleeding Stone Runnel & Blood Ampoule Rack + S & C Draw Decks directly beneath */}
 <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-3 w-auto select-none pointer-events-auto z-20">
-  <div className="flex items-start justify-center gap-6 translate-x-2 sm:translate-x-3">
+  <div className="flex items-start justify-center gap-6 translate-x-2 sm:translate-x-3 h-[396px]">
     {/* Floating OVERKILL text anchored above runnel without displacing layout */}
     {isOverkill && (
       <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm font-mono font-black text-red-500 uppercase tracking-widest animate-bounce drop-shadow-[0_0_12px_rgba(239,68,68,1)] text-center leading-none whitespace-nowrap pointer-events-none z-30">
@@ -9869,7 +9869,7 @@ export default function App() {
     />
 
   {/* 2. TURN (ROMAN) & RELICS BANNER + BLOOD/BONES COLUMN (Right of Runnel) */}
-  <div className="flex flex-col items-center gap-2 w-[84px] sm:w-[90px]">
+  <div className="flex flex-col items-center gap-2 w-[84px] sm:w-[90px] h-full overflow-visible">
     <DuelTelemetryBanner
       turnNumber={turnNumber}
       stage={stage}
@@ -9882,7 +9882,7 @@ export default function App() {
     {(() => {
       const displayBloodOz = totalOverkillDamage || 0;
       return (
-        <div className="flex flex-col items-center mt-7">
+        <div className="flex flex-col items-center mt-5 h-0 overflow-visible">
           <BloodBankVessel displayBloodOz={displayBloodOz} isOverkill={isOverkill} tier={jarTier} />
         </div>
       );

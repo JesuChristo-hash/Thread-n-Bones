@@ -409,7 +409,7 @@ const JAR_TIERS: Record<1 | 2 | 3, JarTierSpec> = {
     label: 'Caged Alchemical Carboy',
     w: 84,
     h: 138,
-    cap: 100,
+    cap: 133,
     cx: 42,
     outerPath:
       'M 30 10.5 L 54 10.5 L 54 17.5 C 54 22.5, 78 23.8, 78 36 L 75.6 112.5 C 75.2 121.2, 68 125.8, 58 125.8 L 26 125.8 C 16 125.8, 8.8 121.2, 8.4 112.5 L 6 36 C 6 23.8, 30 22.5, 30 17.5 Z',
@@ -495,12 +495,13 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
   const surfaceY = fillPct > 0 ? spec.fillBottomY - (fillSpan * fillPct) / 100 : spec.fillBottomY + 6;
   const liquidHeight = spec.fillBottomY - surfaceY + 8;
 
-  // Seamless 48px-period dual wave paths (192px wide) for liquid meniscus
+  // Seamless 48px-period dual wave paths (uniform 24px half-waves across 192px) for liquid meniscus
   const waveBackPath =
-    'M 0 0 Q 12 2.1, 24 0 T 48 0 T 96 0 T 144 0 T 192 0 L 192 14 L 0 14 Z';
+    'M 0 0 Q 12 2.1, 24 0 T 48 0 T 72 0 T 96 0 T 120 0 T 144 0 T 168 0 T 192 0 L 192 14 L 0 14 Z';
   const waveFrontPath =
-    'M 0 0 Q 12 -2.2, 24 0 T 48 0 T 96 0 T 144 0 T 192 0 L 192 14 L 0 14 Z';
-  const waveFrontCrest = 'M 0 0 Q 12 -2.2, 24 0 T 48 0 T 96 0 T 144 0 T 192 0';
+    'M 0 0 Q 12 -2.2, 24 0 T 48 0 T 72 0 T 96 0 T 120 0 T 144 0 T 168 0 T 192 0 L 192 14 L 0 14 Z';
+  const waveFrontCrest =
+    'M 0 0 Q 12 -2.2, 24 0 T 48 0 T 72 0 T 96 0 T 120 0 T 144 0 T 168 0 T 192 0';
 
   return (
     <div
