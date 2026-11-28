@@ -109,7 +109,7 @@ import {
   cloneCard,
   transformAmorphous,
   applyPlayerTotem
-, getCardDisplayName , cardMatchesTribe } from './data/gameData';
+, getCardDisplayName , cardMatchesTribe , ITEM_ART_FILES } from './data/gameData';
 
 // --- Built-in Chiptune Audio Synthesizer ---
 
@@ -1378,6 +1378,7 @@ export default function App() {
         `${BASE}/assets/cardbases/bestowed-card-base.png`,
         `${BASE}/assets/cardbases/combined-card-base.png`,
         `${BASE}/assets/cardbases/duplicate-card-base.png`,
+        ...Object.values(ITEM_ART_FILES).map((f) => `${BASE}/assets/text/${f}`),
         `${BASE}/assets/cardart/chime1.png`,
         `${BASE}/assets/cardart/chime2.png`,
         ...Object.values(ALL_CARD_LOOKUP)
@@ -8494,9 +8495,9 @@ export default function App() {
             return (
               <div
                 onClick={dismissPhaseTransition}
-                className="fixed inset-0 z-[58] pointer-events-auto cursor-pointer bg-black/45 flex items-center justify-center px-4 select-none"
+                className="fixed inset-0 z-[58] pointer-events-auto cursor-pointer bg-black/45 flex items-center justify-center select-none"
               >
-                <div className="w-full max-w-2xl relative py-6 px-8 text-center border-y border-red-700/80 bg-[linear-gradient(90deg,transparent_0%,rgba(14,5,6,0.95)_16%,rgba(28,7,9,0.96)_50%,rgba(14,5,6,0.95)_84%,transparent_100%)] shadow-[0_0_60px_rgba(153,27,27,0.55)] animate-menu-fade-in">
+                <div className="edge-band edge-band--full edge-band--red w-full relative py-7 px-6 text-center animate-menu-fade-in">
                   <div className="flex items-center justify-center gap-3 mb-1.5">
                     <span className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent to-red-500/80" />
                     <span className="font-mono text-[10px] font-bold uppercase tracking-[0.34em] text-red-400">
@@ -8524,9 +8525,9 @@ export default function App() {
                 setZealotParalyzedBanner(false);
                 handleEndTurn(true);
               }}
-              className="fixed inset-0 z-[59] pointer-events-auto cursor-pointer bg-black/45 flex items-center justify-center px-4 select-none"
+              className="fixed inset-0 z-[59] pointer-events-auto cursor-pointer bg-black/45 flex items-center justify-center select-none"
             >
-              <div className="w-full max-w-xl relative py-5 px-8 text-center border-y border-red-700/85 bg-[linear-gradient(90deg,transparent_0%,rgba(14,5,6,0.94)_16%,rgba(32,6,8,0.96)_50%,rgba(14,5,6,0.94)_84%,transparent_100%)] shadow-[0_0_50px_rgba(185,28,28,0.55)] animate-menu-fade-in">
+              <div className="edge-band edge-band--full edge-band--red w-full relative py-6 px-6 text-center animate-menu-fade-in">
                 <div className="font-mono text-[10px] font-bold uppercase tracking-[0.34em] text-red-400 mb-1">
                   ✦ The Zealot&rsquo;s Grace ✦
                 </div>
@@ -9554,13 +9555,13 @@ export default function App() {
                                battleWonIsBoss ? (
                                  <button
                                    onClick={battleWonAction}
-                                   className="absolute inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-full max-w-xl z-[60] py-4 px-8 flex flex-col items-center justify-center gap-1 border-y border-[#d4af37]/85 bg-[linear-gradient(90deg,transparent_0%,rgba(16,4,5,0.92)_18%,rgba(44,8,10,0.95)_50%,rgba(16,4,5,0.92)_82%,transparent_100%)] shadow-[0_0_55px_rgba(185,28,28,0.65)] hover:border-[#fde68a] cursor-pointer select-none group transition-all"
+                                   className="edge-band edge-band--gold absolute inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-full max-w-3xl z-[60] py-4 px-8 flex flex-col items-center justify-center gap-1 cursor-pointer select-none group"
                                  >
-                                   <span className="font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.38em] text-[#f3cf7a] drop-shadow-[0_0_10px_rgba(234,179,8,0.75)]">
+                                   <span className="font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.38em] text-[#f3cf7a] drop-shadow-[0_0_10px_rgba(234,179,8,0.75)] whitespace-nowrap">
                                      ✦ {bossState.type === 'Zealot' ? 'The Zealot' : bossState.type} Felled ✦
                                    </span>
                                    <span
-                                     className="font-['Cinzel',_serif] font-black text-3xl sm:text-4xl uppercase tracking-[0.32em] text-red-400 group-hover:text-[#fff3ce] animate-pulse transition-colors"
+                                     className="font-['Cinzel',_serif] font-black text-3xl sm:text-4xl uppercase tracking-[0.32em] text-red-400 group-hover:text-[#fff3ce] animate-pulse transition-colors whitespace-nowrap"
                                      style={{ textShadow: '0 0 26px rgba(239,68,68,0.95), 0 0 10px rgba(212,175,55,0.55), 0 2px 6px rgba(0,0,0,1)' }}
                                    >
                                      CLAIM SPOILS
@@ -9569,10 +9570,10 @@ export default function App() {
                                ) : (
                                  <button
                                    onClick={battleWonAction}
-                                   className="absolute inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-fit z-[60] px-10 py-3 font-['Cinzel',_serif] font-black text-3xl sm:text-4xl uppercase tracking-[0.3em] text-red-500 hover:text-red-300 bg-black/55 border-y border-red-700/70 animate-pulse cursor-pointer select-none"
+                                   className="edge-band edge-band--red absolute inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-full max-w-3xl z-[60] px-8 py-4 font-['Cinzel',_serif] font-black text-3xl sm:text-4xl uppercase tracking-[0.3em] text-red-500 hover:text-red-300 whitespace-nowrap cursor-pointer select-none"
                                    style={{ textShadow: '0 0 22px rgba(239,68,68,0.95), 0 0 6px rgba(0,0,0,1)' }}
                                  >
-                                   CONTINUE
+                                   <span className="animate-pulse">CONTINUE</span>
                                  </button>
                                )
                              )}

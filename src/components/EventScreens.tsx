@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CardDef, Tribe } from '../data/gameData';
-import { ALL_ITEMS , getCardDisplayName , getCardTribeLabel } from '../data/gameData';
+import { ALL_ITEMS , getCardDisplayName , getCardTribeLabel , getItemArtUrl } from '../data/gameData';
 import MapScreen from '../components/MapScreen';
 import { generateActMap, getBossForAct } from '../data/mapGenerator';
 import { ALL_CARD_LOOKUP, SIGIL_DESCRIPTIONS, SIGIL_MAPPING, getSigilArtUrl } from '../data/gameData';
@@ -479,10 +479,10 @@ export default function EventScreens({ ctx }: { ctx: {
               <button
                 onClick={executeDraftTrade}
                 disabled={!canConfirmTrade}
-                className={`px-5 sm:px-7 py-2 rounded-[1px] border-y transition-all duration-150 font-['Cinzel',_serif] font-black text-xs sm:text-sm uppercase tracking-[0.24em] select-none ${
+                className={`edge-band edge-band--btn relative px-8 sm:px-10 py-2 transition-colors duration-150 font-['Cinzel',_serif] font-black text-xs sm:text-sm uppercase tracking-[0.24em] select-none ${
                   canConfirmTrade
-                    ? 'border-red-700/90 text-red-400 hover:text-red-200 bg-black/55 cursor-pointer'
-                    : 'border-[#2c191a] text-stone-600 bg-black/30 opacity-45 cursor-not-allowed'
+                    ? 'edge-band--red text-red-400 hover:text-red-200 cursor-pointer'
+                    : 'edge-band--dead text-stone-600 opacity-45 cursor-not-allowed'
                 }`}
                 style={
                   canConfirmTrade
@@ -498,10 +498,10 @@ export default function EventScreens({ ctx }: { ctx: {
               <button
                 onClick={finalizeDraft}
                 disabled={!canVentureOnward}
-                className={`px-5 sm:px-7 py-2 rounded-[1px] border-y transition-all duration-150 font-['Cinzel',_serif] font-black text-xs sm:text-sm uppercase tracking-[0.24em] select-none ${
+                className={`edge-band edge-band--btn relative px-8 sm:px-10 py-2 transition-colors duration-150 font-['Cinzel',_serif] font-black text-xs sm:text-sm uppercase tracking-[0.24em] select-none ${
                   canVentureOnward
-                    ? 'border-[#d4af37]/85 text-[#f6dc93] hover:text-white bg-black/55 cursor-pointer'
-                    : 'border-[#2c191a] text-stone-600 bg-black/30 opacity-45 cursor-not-allowed'
+                    ? 'edge-band--gold text-[#f6dc93] hover:text-white cursor-pointer'
+                    : 'edge-band--dead text-stone-600 opacity-45 cursor-not-allowed'
                 }`}
                 style={
                   canVentureOnward
@@ -768,8 +768,16 @@ export default function EventScreens({ ctx }: { ctx: {
                               />
 
                               <div className="relative z-10 flex flex-col items-center">
-                                <div className="w-16 h-16 mb-3 rounded-full bg-[#0e0907] border border-[#523723] group-hover:border-[#d4af37]/90 flex items-center justify-center text-3xl shadow-[inset_0_0_14px_rgba(0,0,0,0.95)] transition-colors">
-                                  <span className="group-hover:scale-110 transition-transform">{def.emoji}</span>
+                                <div className="w-16 h-16 mb-3 rounded-full bg-[#0e0907] border border-[#523723] group-hover:border-[#d4af37]/90 flex items-center justify-center text-3xl shadow-[inset_0_0_14px_rgba(0,0,0,0.95)] transition-colors overflow-hidden">
+                                  {getItemArtUrl(def) ? (
+                                    <img
+                                      src={getItemArtUrl(def)!}
+                                      alt={def.name}
+                                      className="w-11 h-11 object-contain select-none pointer-events-none group-hover:scale-110 transition-transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]"
+                                    />
+                                  ) : (
+                                    <span className="group-hover:scale-110 transition-transform">{def.emoji}</span>
+                                  )}
                                 </div>
                                 <div className="font-['Cinzel',_serif] text-sm font-bold text-[#f2ddb7] group-hover:text-white uppercase tracking-[0.15em] mb-1.5">
                                   {def.name}
@@ -816,7 +824,19 @@ export default function EventScreens({ ctx }: { ctx: {
                                   : 'bg-[#0c0806]/80 border-dashed border-[#4a3524]/70 text-[#5c4838]'
                               }`}
                             >
-                              {slotDef ? slotDef.emoji : <span className="text-[10px]">·</span>}
+                              {slotDef ? (
+                                getItemArtUrl(slotDef) ? (
+                                  <img
+                                    src={getItemArtUrl(slotDef)!}
+                                    alt={slotDef.name}
+                                    className="w-7 h-7 object-contain select-none pointer-events-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]"
+                                  />
+                                ) : (
+                                  slotDef.emoji
+                                )
+                              ) : (
+                                <span className="text-[10px]">·</span>
+                              )}
                             </div>
                           );
                         })}

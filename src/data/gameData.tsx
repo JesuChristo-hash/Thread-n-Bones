@@ -175,6 +175,44 @@ export const getSigilArtUrl = (sigilName: string): string => {
   return `${BASE}/assets/sigils/${toAssetSlug(sigilName)}.png`;
 };
 
+export const ITEM_ART_FILES: Partial<Record<ItemId, string>> = {
+  magical_hat: 'magicalhat.png',
+  joker_stamp: 'jokerstamp.png',
+  large_matchbook: 'largematchbook.png',
+  coin_purse: 'coinpurse.png',
+  bronze_crucifix: 'bronzecrucifix.png',
+  loaded_die: 'loadeddie.png',
+  bronze_acorn: 'bronzeacorn.png',
+};
+
+const ITEM_ART_BY_SLUG: Record<string, string> = {
+  magicalhat: 'magicalhat.png',
+  jokerstamp: 'jokerstamp.png',
+  largematchbook: 'largematchbook.png',
+  coinpurse: 'coinpurse.png',
+  bronzecrucifix: 'bronzecrucifix.png',
+  loadeddie: 'loadeddie.png',
+  bronzeacorn: 'bronzeacorn.png',
+};
+
+export const getItemArtUrl = (
+  item?: { id?: string; name?: string } | string | null
+): string | null => {
+  if (!item) return null;
+  const id = typeof item === 'string' ? item : item.id;
+  if (id && ITEM_ART_FILES[id as ItemId]) {
+    return `${BASE}/assets/text/${ITEM_ART_FILES[id as ItemId]}`;
+  }
+  const name = typeof item === 'string' ? item : item.name;
+  if (name) {
+    const slug = toAssetSlug(name);
+    if (ITEM_ART_BY_SLUG[slug]) {
+      return `${BASE}/assets/text/${ITEM_ART_BY_SLUG[slug]}`;
+    }
+  }
+  return null;
+};
+
 // Exact file registry to handle the mixed .jpg / .png extensions
 const ARENA_BACKGROUND_FILES: Record<string, string> = {
   battle1: 'battlebg1.jpg',
@@ -708,6 +746,7 @@ export const preloadCoreAssets = async () => {
 
   const priorityUrls = [
     ...PRELOAD_PRIORITY_TEXT_FILES.map(f => `${BASE}/assets/text/${f}`),
+    ...Object.values(ITEM_ART_FILES).map(f => `${BASE}/assets/text/${f}`),
     ...PRELOAD_PRIORITY_BG_FILES.filter(f => f !== 'splash.jpg').map(f => `${BASE}/assets/backgrounds/${f}`),
   ];
   await preloadBatch(priorityUrls, 6);

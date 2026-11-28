@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { getItemArtUrl } from '../data/gameData';
 
 export interface ResolvedRelic {
   name: string;
@@ -273,18 +274,32 @@ export const DuelTelemetryBanner: React.FC<DuelTelemetryBannerProps> = ({
                       : 'cursor-not-allowed opacity-40'
                   }`}
                 >
-                  {item ? (
-                    <span
-                      className="transition-[filter] duration-150"
-                      style={{
-                        filter: isTargetingThis
-                          ? 'sepia(0.25) saturate(0.95) brightness(1.05) contrast(1.1) drop-shadow(0 0 2px #090303) drop-shadow(0 0 8px rgba(251,191,36,0.9))'
-                          : 'sepia(0.55) saturate(0.52) brightness(0.8) contrast(1.15) drop-shadow(1px 0 0 #090303) drop-shadow(-1px 0 0 #090303) drop-shadow(0 1px 0 #090303) drop-shadow(0 -1px 0 #090303) drop-shadow(0 2px 3px rgba(0,0,0,0.85))',
-                      }}
-                    >
-                      {item.emoji}
-                    </span>
-                  ) : (
+                  {item ? (() => {
+                    const artUrl = getItemArtUrl(item);
+                    return artUrl ? (
+                      <img
+                        src={artUrl}
+                        alt={item.name}
+                        className="w-8 h-8 object-contain select-none pointer-events-none transition-[filter] duration-150"
+                        style={{
+                          filter: isTargetingThis
+                            ? 'brightness(1.12) drop-shadow(0 0 2px #090303) drop-shadow(0 0 8px rgba(251,191,36,0.95))'
+                            : 'drop-shadow(0 2px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 1px #090303)',
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className="transition-[filter] duration-150"
+                        style={{
+                          filter: isTargetingThis
+                            ? 'sepia(0.25) saturate(0.95) brightness(1.05) contrast(1.1) drop-shadow(0 0 2px #090303) drop-shadow(0 0 8px rgba(251,191,36,0.9))'
+                            : 'sepia(0.55) saturate(0.52) brightness(0.8) contrast(1.15) drop-shadow(1px 0 0 #090303) drop-shadow(-1px 0 0 #090303) drop-shadow(0 1px 0 #090303) drop-shadow(0 -1px 0 #090303) drop-shadow(0 2px 3px rgba(0,0,0,0.85))',
+                        }}
+                      >
+                        {item.emoji}
+                      </span>
+                    );
+                  })() : (
                     <span className="text-[#e5c27a]/45 text-sm font-mono">•</span>
                   )}
                 </button>

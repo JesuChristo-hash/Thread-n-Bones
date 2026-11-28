@@ -1393,3 +1393,41 @@
 /* --- Freeze weather while a full-screen menu is open --- */
 html[data-wx-pause="1"] .wx { animation-play-state: paused !important; }
 html[data-wx-pause="1"] .wx-flash { visibility: hidden; }
+
+/* --- Edge-fade message bands --- */
+/* Backdrop and top/bottom rules are drawn as gradients that fade out together at both ends. */
+/* Parent element must be positioned (relative/absolute); Tailwind classes handle that. */
+.edge-band {
+  isolation: isolate;
+  --band-rule: rgba(185,28,28,0.8);
+  --band-bg: rgba(14,5,6,0.93);
+  --band-glow: rgba(127,20,24,0.4);
+  --band-fade: 14%;
+}
+.edge-band::before,
+.edge-band::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.edge-band::before {
+  background:
+    radial-gradient(ellipse closest-side at 50% 50%, var(--band-glow) 0%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, var(--band-bg) var(--band-fade), var(--band-bg) calc(100% - var(--band-fade)), transparent 100%);
+}
+.edge-band::after {
+  background:
+    linear-gradient(90deg, transparent 0%, var(--band-rule) calc(var(--band-fade) * 1.4), var(--band-rule) calc(100% - var(--band-fade) * 1.4), transparent 100%) top / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent 0%, var(--band-rule) calc(var(--band-fade) * 1.4), var(--band-rule) calc(100% - var(--band-fade) * 1.4), transparent 100%) bottom / 100% 1px no-repeat;
+}
+/* Full-screen phase banners: no side fade, rules run edge to edge. */
+.edge-band--full { --band-fade: 0%; --band-bg: rgba(16,5,7,0.95); --band-glow: rgba(153,27,27,0.45); }
+/* Buttons: tighter fade. */
+.edge-band--btn { --band-fade: 20%; }
+.edge-band--red { --band-rule: rgba(185,28,28,0.8); --band-glow: rgba(127,20,24,0.4); }
+.edge-band--gold { --band-rule: rgba(212,175,55,0.85); --band-glow: rgba(150,24,28,0.45); }
+.edge-band--red:not(:disabled):hover { --band-rule: rgba(248,113,113,0.95); }
+.edge-band--gold:not(:disabled):hover { --band-rule: rgba(253,230,138,0.95); }
+.edge-band--dead { --band-rule: rgba(60,34,35,0.9); --band-bg: rgba(0,0,0,0.3); --band-glow: transparent; }
