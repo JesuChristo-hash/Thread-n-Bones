@@ -98,6 +98,7 @@ export const LEFT_FACING_CARD_NAMES = new Set([
     'field mice',
     'fieldmice',
     'hodag',
+    'mole',
     'lammergeier',
     'experiment',
   ]);
