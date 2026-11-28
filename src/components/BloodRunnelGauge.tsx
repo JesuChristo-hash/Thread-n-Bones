@@ -10,11 +10,15 @@ export interface BloodRunnelGaugeProps {
   isTurnOneDanger?: boolean;
 }
 
+// Architectural gothic chamfered-slate monolith silhouette (clean beveled crown, shaft waist, equilibrium flare, and pedestal foot)
 const SLATE_POLYGON_CLIP =
-  'polygon(1.4px 1.6px, 8px 0.9px, 14px 0.6px, 21px 1.5px, 27px 1.9px, 34px 0.8px, 41px 0.5px, 48px 1.2px, 54.2px 1.3px, 52.7px 8px, 52.8px 16px, 53.2px 22px, 53.3px 26px, 53px 34px, 52.3px 41px, 53.9px 46px, 53.3px 55px, 50.8px 59px, 53px 66px, 52.4px 70px, 53.7px 73px, 53.5px 85px, 53.3px 89px, 53.2px 97px, 53.9px 104px, 54.1px 117px, 53.2px 120px, 53.7px 133px, 53.6px 137px, 53.6px 141px, 53.4px 147px, 53.5px 156px, 53.4px 161px, 53.9px 170px, 54.3px 174px, 53.4px 181px, 52.7px 189px, 53.3px 198px, 53.3px 208px, 52.8px 219px, 53.5px 227px, 53.4px 239px, 53.5px 250px, 51.5px 257px, 53.5px 264px, 54.3px 276px, 53.2px 286px, 53.5px 296px, 54.6px 306px, 52.2px 316px, 53.7px 327px, 51.5px 331px, 54.1px 336px, 52.1px 348px, 54.2px 351px, 53.6px 360px, 52.4px 366px, 54.5px 372px, 54px 374px, 53.5px 379px, 53.8px 394.7px, 49px 395.1px, 42px 395.5px, 35px 394.4px, 28px 394px, 20px 394.9px, 13px 395.2px, 7px 394.3px, 2px 394.5px, 3.2px 380px, 4.3px 375px, 3.3px 371px, 4.3px 367px, 3.9px 360px, 4.7px 352px, 4.2px 347px, 3px 337px, 3.5px 331px, 4px 327px, 3.9px 316px, 3.4px 307px, 4.8px 297px, 3.2px 287px, 2.9px 276px, 3.8px 265px, 3.9px 258px, 3.3px 249px, 2.5px 238px, 3.7px 227px, 2.6px 219px, 2.1px 208px, 2.9px 197px, 2.3px 189px, 2.7px 180px, 1.9px 174px, 2.2px 169px, 2.3px 161px, 2.9px 156px, 1.8px 147px, 2.4px 142px, 2.1px 136px, 3px 132px, 2.4px 121px, 4.2px 116px, 1.2px 105px, 2.5px 98px, 1.4px 90px, 2.5px 84px, 2px 74px, 4.6px 69px, 1px 65px, 1.1px 59px, 1.7px 55px, 1.7px 46px, 2.2px 41px, 2.2px 35px, 1.6px 27px, 2px 23px, 3.6px 15px, 2px 7px)';
+  'polygon(8px 1px, 48px 1px, 54px 8px, 54px 23px, 51.5px 27px, 51.5px 189px, 54px 193px, 54px 203px, 51.5px 207px, 51.5px 369px, 54px 373px, 54px 388px, 48px 395px, 8px 395px, 2px 388px, 2px 373px, 4.5px 369px, 4.5px 207px, 2px 203px, 2px 193px, 4.5px 189px, 4.5px 27px, 2px 23px, 2px 8px)';
 
 const SLATE_POLYGON_POINTS =
-  '1.4,1.6 8,0.9 14,0.6 21,1.5 27,1.9 34,0.8 41,0.5 48,1.2 54.2,1.3 52.7,8 52.8,16 53.2,22 53.3,26 53,34 52.3,41 53.9,46 53.3,55 50.8,59 53,66 52.4,70 53.7,73 53.5,85 53.3,89 53.2,97 53.9,104 54.1,117 53.2,120 53.7,133 53.6,137 53.6,141 53.4,147 53.5,156 53.4,161 53.9,170 54.3,174 53.4,181 52.7,189 53.3,198 53.3,208 52.8,219 53.5,227 53.4,239 53.5,250 51.5,257 53.5,264 54.3,276 53.2,286 53.5,296 54.6,306 52.2,316 53.7,327 51.5,331 54.1,336 52.1,348 54.2,351 53.6,360 52.4,366 54.5,372 54,374 53.5,379 53.8,394.7 49,395.1 42,395.5 35,394.4 28,394 20,394.9 13,395.2 7,394.3 2,394.5 3.2,380 4.3,375 3.3,371 4.3,367 3.9,360 4.7,352 4.2,347 3,337 3.5,331 4,327 3.9,316 3.4,307 4.8,297 3.2,287 2.9,276 3.8,265 3.9,258 3.3,249 2.5,238 3.7,227 2.6,219 2.1,208 2.9,197 2.3,189 2.7,180 1.9,174 2.2,169 2.3,161 2.9,156 1.8,147 2.4,142 2.1,136 3,132 2.4,121 4.2,116 1.2,105 2.5,98 1.4,90 2.5,84 2,74 4.6,69 1,65 1.1,59 1.7,55 1.7,46 2.2,41 2.2,35 1.6,27 2,23 3.6,15 2,7';
+  '8,1 48,1 54,8 54,23 51.5,27 51.5,189 54,193 54,203 51.5,207 51.5,369 54,373 54,388 48,395 8,395 2,388 2,373 4.5,369 4.5,207 2,203 2,193 4.5,189 4.5,27 2,23 2,8';
+
+const SLATE_INNER_GROOVE_POINTS =
+  '10.5,4.2 45.5,4.2 50.5,9.8 50.5,22 48.2,26 48.2,370 50.5,374 50.5,386.2 45.5,391.8 10.5,391.8 5.5,386.2 5.5,374 7.8,370 7.8,26 5.5,22 5.5,9.8';
 
 export const BloodRunnelGauge: React.FC<BloodRunnelGaugeProps> = ({
   scale,
@@ -54,67 +58,94 @@ export const BloodRunnelGauge: React.FC<BloodRunnelGaugeProps> = ({
       }`}
       title={`Runnel Balance: ${scale === 0 ? '0 (Balanced)' : scale > 0 ? `+${scale}` : `${scale}`} (Target +${winTarget})`}
     >
-      {/* 1. HAND-CHISELLED AGED SLATE MONOLITH BACKING */}
+      {/* 1. ARCHITECTURAL CHAMFERED AGED-SLATE & FORGED BRASS MONOLITH HOUSING */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -inset-px -z-10"
         style={{
           filter: isOverflowing
-            ? 'drop-shadow(0 0 12px rgba(185,28,28,0.45)) drop-shadow(0 6px 10px rgba(0,0,0,0.92))'
-            : 'drop-shadow(0 6px 10px rgba(0,0,0,0.9))',
+            ? 'drop-shadow(0 0 12px rgba(185,28,28,0.48)) drop-shadow(0 6px 12px rgba(0,0,0,0.94))'
+            : 'drop-shadow(0 6px 12px rgba(0,0,0,0.92))',
         }}
       >
         <div
           className="absolute inset-0"
           style={{
             clipPath: SLATE_POLYGON_CLIP,
-            backgroundImage: `linear-gradient(180deg, rgba(24,20,18,0.52) 0%, rgba(12,10,10,0.74) 48%, rgba(6,5,5,0.9) 100%), radial-gradient(ellipse 85% 32% at 50% 8%, rgba(107,15,18,${isOverflowing ? '0.42' : '0.12'}) 0%, transparent 100%), url("${baseUrl}assets/text/slate.jpg")`,
+            backgroundImage: `linear-gradient(180deg, rgba(28,23,20,0.58) 0%, rgba(13,11,11,0.78) 48%, rgba(6,5,5,0.92) 100%), radial-gradient(ellipse 85% 32% at 50% 8%, rgba(107,15,18,${isOverflowing ? '0.44' : '0.12'}) 0%, transparent 100%), url("${baseUrl}assets/text/slate.jpg")`,
             backgroundSize: 'cover, cover, 140px 140px',
             backgroundPosition: 'center, center, center',
           }}
         />
-        {/* Subtle aged stone grain + carved fissures & bevel edge */}
+        {/* Beveled Architectural Stone Frame, Engraved Groove & Forged Brass Corner Clasps */}
         <svg viewBox="0 0 56 396" preserveAspectRatio="none" className="absolute inset-0 w-full h-full overflow-visible">
           <defs>
             <linearGradient id={`slateEdge-${uid}`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#6c5949" stopOpacity="0.88" />
-              <stop offset="45%" stopColor="#3e332b" stopOpacity="0.92" />
-              <stop offset="100%" stopColor="#211a16" stopOpacity="0.95" />
+              <stop offset="0%" stopColor={isOverflowing ? '#c93838' : '#8a7056'} stopOpacity="0.92" />
+              <stop offset="45%" stopColor="#46392e" stopOpacity="0.92" />
+              <stop offset="100%" stopColor="#211914" stopOpacity="0.96" />
+            </linearGradient>
+            <linearGradient id={`monolithBrass-${uid}`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#24160b" />
+              <stop offset="28%" stopColor="#8f6a38" />
+              <stop offset="52%" stopColor="#cfa668" />
+              <stop offset="78%" stopColor="#5c3e1f" />
+              <stop offset="100%" stopColor="#1b1109" />
             </linearGradient>
             <linearGradient id={`troughShade-${uid}`} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#050303" stopOpacity="0.9" />
-              <stop offset="18%" stopColor="#0b0707" stopOpacity="0.6" />
+              <stop offset="0%" stopColor="#050303" stopOpacity="0.92" />
+              <stop offset="18%" stopColor="#0b0707" stopOpacity="0.62" />
               <stop offset="50%" stopColor="#140c0c" stopOpacity="0.45" />
               <stop offset="82%" stopColor="#0b0707" stopOpacity="0.65" />
               <stop offset="100%" stopColor="#050303" stopOpacity="0.92" />
             </linearGradient>
           </defs>
 
-          {/* Outer stone shadow outline + chiseled rim */}
-          <polygon points={SLATE_POLYGON_POINTS} fill="none" stroke="#080605" strokeWidth="2.4" strokeLinejoin="miter" />
+          {/* Outer dark shadow & crisp chamfered stone bevel */}
+          <polygon points={SLATE_POLYGON_POINTS} fill="none" stroke="#070505" strokeWidth="2.4" strokeLinejoin="miter" />
           <polygon points={SLATE_POLYGON_POINTS} fill="none" stroke={`url(#slateEdge-${uid})`} strokeWidth="1.2" strokeLinejoin="miter" />
 
+          {/* Subtle engraved inner brass/stone frame groove */}
+          <polygon
+            points={SLATE_INNER_GROOVE_POINTS}
+            fill="none"
+            stroke={isOverflowing ? 'rgba(220,60,60,0.34)' : 'rgba(196,154,92,0.2)'}
+            strokeWidth="0.7"
+            strokeLinejoin="miter"
+          />
+
           {/* Recessed carved vertical stone channel cradling the glass ampoule */}
-          <rect x="14.5" y="25" width="27" height="346" rx="5" fill={`url(#troughShade-${uid})`} stroke="#2b221c" strokeWidth="0.7" opacity="0.85" />
+          <rect x="14.5" y="25" width="27" height="346" rx="4" fill={`url(#troughShade-${uid})`} stroke="#2b221c" strokeWidth="0.75" opacity="0.88" />
 
-          {/* Faint carved stone fissures & ritual flank hairline */}
-          <path d="M 6 62 L 10 67 L 8.5 75" fill="none" stroke="#0b0807" strokeWidth="0.85" opacity="0.65" />
-          <path d="M 6.5 62.3 L 10.4 67.3" fill="none" stroke="#6d5d4e" strokeWidth="0.45" opacity="0.3" />
-          <path d="M 49 144 L 44.5 151 L 47 161" fill="none" stroke="#0b0807" strokeWidth="0.85" opacity="0.65" />
-          <path d="M 8 274 L 12 281 L 9 290" fill="none" stroke="#0b0807" strokeWidth="0.8" opacity="0.6" />
-          <path d="M 48 312 L 43.5 318 L 46 325" fill="none" stroke="#0b0807" strokeWidth="0.8" opacity="0.6" />
+          {/* Forged Tarnished-Brass Crown & Foot Clamping Plates */}
+          <path
+            d="M 8 0.6 L 48 0.6 L 54.4 7.8 L 54.4 13 L 50.8 13 L 50.8 9.2 L 46.2 4 L 9.8 4 L 5.2 9.2 L 5.2 13 L 1.6 13 L 1.6 7.8 Z"
+            fill={`url(#monolithBrass-${uid})`}
+            stroke="#140c07"
+            strokeWidth="0.75"
+          />
+          <path
+            d="M 8 395.4 L 48 395.4 L 54.4 388.2 L 54.4 383 L 50.8 383 L 50.8 386.8 L 46.2 392 L 9.8 392 L 5.2 386.8 L 5.2 383 L 1.6 383 L 1.6 388.2 Z"
+            fill={`url(#monolithBrass-${uid})`}
+            stroke="#140c07"
+            strokeWidth="0.75"
+          />
 
-          {/* Corner forged iron piton rivets embedded into the slate */}
+          {/* Subtle architectural stone cracks (minimal, crisp, intentional) */}
+          <path d="M 8 68 L 12 73 L 10.5 79" fill="none" stroke="#080605" strokeWidth="0.75" opacity="0.6" />
+          <path d="M 48 286 L 44.5 292 L 46.5 299" fill="none" stroke="#080605" strokeWidth="0.75" opacity="0.6" />
+
+          {/* Corner forged brass rivets anchoring the crown & foot brackets */}
           {[
-            [9, 9.5],
-            [47, 9.5],
-            [9, 386.5],
-            [47, 386.5],
+            [7.5, 9],
+            [48.5, 9],
+            [7.5, 387],
+            [48.5, 387],
           ].map(([cx, cy], idx) => (
             <g key={idx}>
-              <circle cx={cx} cy={cy} r="2.2" fill="#090706" />
-              <circle cx={cx} cy={cy} r="1.5" fill="#463527" stroke="#7c5e3f" strokeWidth="0.45" />
-              <circle cx={cx - 0.45} cy={cy - 0.45} r="0.45" fill="#c7a26d" opacity="0.65" />
+              <circle cx={cx} cy={cy} r="2.1" fill="#090706" />
+              <circle cx={cx} cy={cy} r="1.45" fill="#4f371e" stroke="#cfa668" strokeWidth="0.45" />
+              <circle cx={cx - 0.4} cy={cy - 0.4} r="0.45" fill="#f5dca8" opacity="0.72" />
             </g>
           ))}
         </svg>

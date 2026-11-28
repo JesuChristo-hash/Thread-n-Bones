@@ -262,7 +262,7 @@ export const EffigySpecimenTag: React.FC<EffigySpecimenTagProps> = ({
 
   return (
     <div
-      className="relative -mt-1.5 pt-2 pb-1.5 px-2.5 min-w-[74px] max-w-[104px] text-center select-none transition-transform duration-150 group-hover:scale-[1.04]"
+      className="relative z-10 mt-0.5 pt-2 pb-1.5 px-2.5 min-w-[74px] max-w-[104px] text-center select-none transition-transform duration-150 group-hover:scale-[1.04]"
       style={{ filter: 'drop-shadow(0 5px 8px rgba(0,0,0,0.92))' }}
     >
       {/* Deckled / Hand-Cut Parchment-Slate Slip Backing */}
@@ -564,7 +564,7 @@ export const RitualSlateButton: React.FC<RitualSlateButtonProps> = ({
       type="button"
       onClick={onClick}
       title={title}
-      className="group/rbtn relative w-38 sm:w-40 py-[7px] px-3.5 flex items-center justify-center gap-2 cursor-pointer select-none bg-transparent border-0 outline-none transition-transform duration-120 hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.985]"
+      className="group/rbtn relative w-38 sm:w-40 py-[5.5px] px-3.5 flex items-center justify-center gap-2 cursor-pointer select-none bg-transparent border-0 outline-none transition-transform duration-120 hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.985]"
       style={{
         filter: 'drop-shadow(0 5px 8px rgba(0,0,0,0.92))',
       }}
@@ -752,52 +752,64 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
 
   const totalLiftY = Math.round(stackSlices * 1.65);
 
+  const maskStyle: React.CSSProperties = {
+    WebkitMaskImage: `url("${cardBackSrc}")`,
+    maskImage: `url("${cardBackSrc}")`,
+    WebkitMaskSize: '100% 100%',
+    maskSize: '100% 100%',
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+  };
+
   return (
     <div className="group/deck flex flex-col items-center">
       {/* Grounded Card Stack Footprint */}
       <div className="relative w-[84px] h-[119px] sm:w-[88px] sm:h-[125px]">
-        {/* Deep Grounded Tabletop Cast Shadow */}
+        {/* Deep Grounded Tabletop Cast Shadow (masked to exact ragged card silhouette) */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-[5px] bg-black/85 blur-[5px]"
+          className="pointer-events-none absolute inset-0"
           style={{
             transform: `translate3d(${Math.round(stackSlices * 0.95) + 4}px, ${Math.round(stackSlices * 0.55) + 7}px, 0) scale(1.01)`,
+            filter: 'blur(5px)',
           }}
-        />
+        >
+          <div className="w-full h-full bg-black/85" style={maskStyle} />
+        </div>
 
-        {/* Physical Layered Aged-Parchment Card Stack Edges (Bottom-to-Top) */}
+        {/* Physical Layered Aged-Parchment Card Stack Edges (Exact cardbacks.png Ragged Silhouette!) */}
         {Array.from({ length: stackSlices }, (_, i) => {
-          // idxFromBottom: 0 is very bottom resting card, stackSlices-1 is directly beneath top card
           const idxFromTop = stackSlices - i; // 1 = closest to top card, stackSlices = bottom-most card
-          const stepY = idxFromTop * 1.65 - totalLiftY * 0.45;
+          const stepY = idxFromTop * 1.7 - totalLiftY * 0.45;
           const stepX = idxFromTop * 0.85;
           const jitter = sliceOffsets[i % sliceOffsets.length];
           const isEven = i % 2 === 0;
-          // Darker toward bottom of stack, warm worn-parchment edge highlight on every card lip
-          const edgeTone = Math.max(0.42, 0.92 - (idxFromTop / (stackSlices + 1)) * 0.48);
+          const edgeTone = Math.max(0.42, 0.94 - (idxFromTop / (stackSlices + 1)) * 0.46);
 
           return (
             <div
               key={i}
               aria-hidden="true"
-              className="pointer-events-none select-none absolute inset-0 rounded-[4px]"
+              className="pointer-events-none select-none absolute inset-0"
               style={{
                 transform: `translate3d(${(stepX + jitter.dx).toFixed(2)}px, ${stepY.toFixed(2)}px, 0) rotate(${jitter.rot}deg)`,
-                background: isEven
-                  ? 'linear-gradient(155deg, #2a1d13 0%, #5e4731 62%, #8e7251 90%, #b59770 100%)'
-                  : 'linear-gradient(155deg, #1f150e 0%, #4a3726 62%, #755c40 90%, #9b7e5b 100%)',
-                borderRight: '1.5px solid rgba(196, 168, 126, 0.52)',
-                borderBottom: '1.8px solid rgba(178, 148, 108, 0.58)',
-                borderLeft: '1px solid rgba(15, 10, 7, 0.85)',
-                borderTop: '1px solid rgba(15, 10, 7, 0.85)',
-                boxShadow: 'inset -1px -1px 0 rgba(12, 8, 5, 0.88), 0 1px 1px rgba(0, 0, 0, 0.85)',
-                filter: `brightness(${edgeTone.toFixed(2)})`,
+                filter: `brightness(${edgeTone.toFixed(2)}) drop-shadow(0.8px 1px 0 rgba(14,9,6,0.95))`,
               }}
-            />
+            >
+              <div
+                className="w-full h-full"
+                style={{
+                  ...maskStyle,
+                  background: isEven
+                    ? 'linear-gradient(148deg, #342417 0%, #6d5339 58%, #9f805c 88%, #c6a880 100%)'
+                    : 'linear-gradient(148deg, #24180f 0%, #523d29 58%, #806446 88%, #a68863 100%)',
+                }}
+              />
+            </div>
           );
         })}
 
-        {/* Top Interactive Card (Physically Lifts & Tilts Off the Stack on Hover!) */}
+        {/* Top Interactive Card (Borderless/Transparent — Outline & Glow Trace Exact Ragged Card Edges!) */}
         <button
           type="button"
           disabled={disabled}
@@ -806,30 +818,20 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
           style={{
             top: `${(-totalLiftY * 0.45).toFixed(1)}px`,
           }}
-          className={`w-full h-full rounded-[4px] flex items-center justify-center border-[1.5px] transition-all duration-180 ease-out select-none relative overflow-hidden bg-[#140e0a] ${
+          className={`w-full h-full p-0 border-0 bg-transparent outline-none flex items-center justify-center transition-all duration-180 ease-out select-none relative z-20 ${
             isDrawReady && !disabled
-              ? 'cursor-pointer animate-deck-glow z-20 group-hover/deck:-translate-y-2 group-hover/deck:-rotate-[1.4deg] group-hover/deck:scale-[1.03] active:translate-y-0 active:scale-[0.98]'
-              : 'border-[#5a412c]/90 opacity-90 cursor-not-allowed z-20 shadow-[0_2px_4px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,232,190,0.16)]'
+              ? 'cursor-pointer animate-deck-glow group-hover/deck:-translate-y-2 group-hover/deck:-rotate-[1.4deg] group-hover/deck:scale-[1.03] active:translate-y-0 active:scale-[0.98]'
+              : 'opacity-92 cursor-not-allowed [filter:drop-shadow(0_1.5px_0_rgba(12,8,5,0.95))_drop-shadow(0_3px_5px_rgba(0,0,0,0.9))]'
           }`}
         >
-          {/* Card Back Artwork */}
+          {/* Card Back Artwork (Exact Ragged Card Silhouette) */}
           <img
             src={cardBackSrc}
             alt={alt}
             className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0"
             style={{
               imageRendering: 'pixelated',
-              filter: isDrawReady && !disabled ? 'brightness(1.04) contrast(1.04)' : 'brightness(0.84) contrast(1.04)',
-            }}
-          />
-
-          {/* Subtle Top-Edge Paper Bevel & Candlelight Rim Vignette */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-[5] rounded-[3px]"
-            style={{
-              boxShadow:
-                'inset 0 1px 0 rgba(255,236,198,0.28), inset 1px 0 0 rgba(255,236,198,0.14), inset -1.5px -1.5px 4px rgba(0,0,0,0.65)',
+              filter: isDrawReady && !disabled ? 'brightness(1.04) contrast(1.05)' : 'brightness(0.86) contrast(1.05)',
             }}
           />
 
@@ -843,11 +845,12 @@ export const RitualCardDeck: React.FC<RitualCardDeckProps> = ({
             />
           </div>
 
-          {/* Optional Sealed Binding Overlay (Zealot's Flock Squirrel Lock) */}
+          {/* Optional Sealed Binding Overlay (Masked to Exact Card Shape) */}
           {isSealed && (
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 z-20 bg-red-950/35 flex items-center justify-center"
+              style={maskStyle}
             >
               <svg viewBox="0 0 88 125" className="w-full h-full opacity-80">
                 <line x1="6" y1="20" x2="82" y2="105" stroke="#7f1d1d" strokeWidth="4" />

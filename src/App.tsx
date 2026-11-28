@@ -7654,14 +7654,10 @@ export default function App() {
             }
           @keyframes deckDrawBreathing {
             0%, 100% {
-              filter: drop-shadow(0 0 5px rgba(217, 149, 52, 0.55)) drop-shadow(0 0 12px rgba(180, 83, 9, 0.35));
-              box-shadow: 0 0 12px rgba(217, 149, 52, 0.45), inset 0 0 8px rgba(245, 178, 72, 0.25);
-              border-color: #d4a359;
+              filter: drop-shadow(0 0 1px rgba(244, 198, 108, 0.9)) drop-shadow(0 0 6px rgba(217, 149, 52, 0.65)) drop-shadow(0 0 14px rgba(180, 83, 9, 0.4));
             }
             50% {
-              filter: drop-shadow(0 0 9px rgba(245, 188, 86, 0.85)) drop-shadow(0 0 20px rgba(196, 98, 22, 0.55));
-              box-shadow: 0 0 20px rgba(245, 188, 86, 0.7), inset 0 0 12px rgba(254, 215, 130, 0.38);
-              border-color: #f6d58e;
+              filter: drop-shadow(0 0 1.5px rgba(254, 232, 168, 1)) drop-shadow(0 0 10px rgba(245, 188, 86, 0.9)) drop-shadow(0 0 22px rgba(196, 98, 22, 0.62));
             }
           }
           .animate-deck-glow {
@@ -8779,7 +8775,7 @@ export default function App() {
                       return (
                         <div key={uid} className={`group relative z-10 hover:z-[80] flex flex-col items-center select-none cursor-help ${isWeaver || isFoe ? '-translate-y-1.5' : ''}`}>
                           {/* Physical Stitched Burlap Doll Container */}
-                          <div className={`relative flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.05] ${isDual ? 'h-[102px]' : 'h-[110px]'} aspect-[235/347]`}>
+                          <div className={`relative z-20 flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.05] ${isDual ? 'h-[100px]' : 'h-[106px]'} aspect-[235/347]`}>
                             <div className={`relative w-full h-full pointer-events-none ${isWeaver || isFoe ? '-scale-x-100' : ''} ${dollFilterClass}`}>
                               <img
                                 src={`${import.meta.env.BASE_URL || './'}assets/text/effigy.png`}
@@ -8942,24 +8938,142 @@ export default function App() {
                 </div>
 
                 {/* Lower Tier: End Turn Button & Utility Plaques */}
-                <div className="flex flex-col items-center gap-0 w-full mt-auto mb-0 pt-0.5 relative scale-105 origin-bottom translate-y-4 sm:translate-y-5">
-                  {/* Diegetic Blood-Prick Talisman (Enlarged Plinth) */}
-                  <div className="flex flex-col items-center mt-1 -translate-x-6 sm:-translate-x-8 group select-none">
+                <div className="flex flex-col items-center gap-0 w-full mt-auto mb-0 pt-0 relative translate-y-0">
+                  {/* Diegetic Blood-Prick Talisman (Sculpted Forged-Iron & Tarnished-Brass Plinth) */}
+                  <div className="flex flex-col items-center mt-0.5 -translate-x-6 sm:-translate-x-8 group select-none">
+                    <div className="relative flex items-center justify-center">
+                      {/* Sculpted Outer Forged-Iron & Tarnished-Brass Plinth Bezel SVG */}
+                      <svg
+                        viewBox="-8 -8 116 116"
+                        className={`pointer-events-none absolute -inset-[9px] w-[calc(100%+18px)] h-[calc(100%+18px)] z-20 overflow-visible transition-all duration-200 ${
+                          isTalismanPricked
+                            ? 'translate-y-1 scale-[0.98]'
+                            : phase === 'PLAY'
+                              ? 'group-active:translate-y-1 group-active:scale-[0.98]'
+                              : 'opacity-60'
+                        }`}
+                        aria-hidden="true"
+                      >
+                        <defs>
+                          <linearGradient id="plinthBezelBrass" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor={isTalismanPricked ? '#ef4444' : '#c9a063'} />
+                            <stop offset="45%" stopColor={isTalismanPricked ? '#7f1d1d' : '#5e3f20'} />
+                            <stop offset="100%" stopColor="#1b1109" />
+                          </linearGradient>
+                          <linearGradient id="plinthIronRing" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#4f4034" />
+                            <stop offset="50%" stopColor="#201915" />
+                            <stop offset="100%" stopColor="#0b0807" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Outer cast-iron shadow ring */}
+                        <circle cx="50" cy="50" r="52.4" fill="none" stroke="#060404" strokeWidth="3.2" />
+                        {/* Main forged iron & tarnished brass outer rim */}
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="51.2"
+                          fill="none"
+                          stroke="url(#plinthIronRing)"
+                          strokeWidth="3.4"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="49.7"
+                          fill="none"
+                          stroke="url(#plinthBezelBrass)"
+                          strokeWidth="1.2"
+                          className={`transition-all duration-200 ${
+                            isTalismanPricked
+                              ? 'stroke-[#ef4444] drop-shadow-[0_0_5px_rgba(239,68,68,0.9)]'
+                              : 'group-hover:stroke-[#ef4444] group-hover:drop-shadow-[0_0_4px_rgba(239,68,68,0.75)]'
+                          }`}
+                        />
+
+                        {/* Engraved Arcane Compass Tick Ring (32 precision graduation notches) */}
+                        <g
+                          className={`transition-all duration-200 ${
+                            isTalismanPricked
+                              ? 'stroke-[#ef4444] drop-shadow-[0_0_3px_rgba(239,68,68,0.85)]'
+                              : 'stroke-[#6b5642]/70 group-hover:stroke-[#dc2626]'
+                          }`}
+                        >
+                          {Array.from({ length: 32 }, (_, i) => {
+                            const deg = i * 11.25;
+                            const isCardinal = i % 8 === 0;
+                            const isOrdinal = i % 4 === 0 && !isCardinal;
+                            const rOut = 48.2;
+                            const rIn = isCardinal ? 44.8 : isOrdinal ? 45.6 : 46.7;
+                            return (
+                              <line
+                                key={i}
+                                x1="50"
+                                y1={50 - rOut}
+                                x2="50"
+                                y2={50 - rIn}
+                                strokeWidth={isCardinal ? '1.15' : isOrdinal ? '0.85' : '0.55'}
+                                transform={`rotate(${deg} 50 50)`}
+                              />
+                            );
+                          })}
+                        </g>
+
+                        {/* 4 Cardinal Forged Brass Spear-Clasps Gripping the Plinth Rim (N / E / S / W) */}
+                        {[0, 90, 180, 270].map((deg) => (
+                          <g key={`card-${deg}`} transform={`rotate(${deg} 50 50)`}>
+                            <path
+                              d="M 46.2 -3.6 L 53.8 -3.6 L 55.2 0.8 L 52.2 3.4 L 47.8 3.4 L 44.8 0.8 Z"
+                              fill="url(#plinthBezelBrass)"
+                              stroke="#120a06"
+                              strokeWidth="0.9"
+                            />
+                            <circle
+                              cx="50"
+                              cy="-0.4"
+                              r="1.35"
+                              fill={isTalismanPricked ? '#fca5a5' : '#1b1109'}
+                              stroke={isTalismanPricked ? '#ef4444' : '#e5c185'}
+                              strokeWidth="0.5"
+                              className="transition-colors duration-200 group-hover:fill-[#ef4444]"
+                            />
+                          </g>
+                        ))}
+
+                        {/* 4 Ordinal Forged Iron & Brass Rivet Lugs (NE / SE / SW / NW) */}
+                        {[45, 135, 225, 315].map((deg) => (
+                          <g key={`ord-${deg}`} transform={`rotate(${deg} 50 50)`}>
+                            <rect
+                              x="47.2"
+                              y="-2.6"
+                              width="5.6"
+                              height="4.4"
+                              rx="1"
+                              fill="url(#plinthIronRing)"
+                              stroke="#8f6a38"
+                              strokeWidth="0.65"
+                            />
+                            <circle cx="50" cy="-0.4" r="1.0" fill="#cfa668" stroke="#180f08" strokeWidth="0.4" />
+                          </g>
+                        ))}
+                      </svg>
+
                       <button
                           onClick={handleTalismanPrick}
                           disabled={phase !== 'PLAY' || isTalismanPricked}
                           title={phase === 'PLAY' ? "Prick your finger upon the iron dish to seal your assault" : "Awaiting your turn..."}
                           style={{
-                            backgroundImage: `radial-gradient(circle at 38% 30%, rgba(36,32,30,0.42), rgba(14,12,14,0.82) 72%, rgba(8,7,9,0.94) 100%), url("${import.meta.env.BASE_URL || './'}assets/text/mapbg.jpg")`,
-                            backgroundSize: 'cover, cover',
+                            backgroundImage: `radial-gradient(circle at 38% 30%, rgba(36,30,28,0.45), rgba(13,11,13,0.84) 70%, rgba(7,5,7,0.95) 100%), url("${import.meta.env.BASE_URL || './'}assets/text/slate.jpg")`,
+                            backgroundSize: 'cover, 140px 140px',
                             backgroundPosition: 'center, center',
                           }}
-                          className={`relative overflow-hidden w-[138px] h-[138px] sm:w-[154px] sm:h-[154px] rounded-full bg-[#151316] border-2 flex items-center justify-center select-none outline-none transition-all duration-200 ${
+                          className={`relative overflow-hidden w-[132px] h-[132px] sm:w-[142px] sm:h-[142px] rounded-full bg-[#131114] border-0 flex items-center justify-center select-none outline-none transition-all duration-200 ${
                             isTalismanPricked
-                              ? 'translate-y-1 scale-[0.98] border-[#ef4444] shadow-[0_1px_0_#070504,inset_0_5px_14px_rgba(0,0,0,0.98),0_0_28px_rgba(239,68,68,0.85)] cursor-default'
+                              ? 'translate-y-1 scale-[0.98] shadow-[0_1px_0_#070504,inset_0_5px_14px_rgba(0,0,0,0.98),0_0_28px_rgba(239,68,68,0.85)] cursor-default'
                               : phase === 'PLAY'
-                                ? 'border-[#4a413b] shadow-[0_4px_0_#080709,0_10px_20px_rgba(0,0,0,0.88),inset_0_1px_1px_rgba(255,255,255,0.08)] hover:border-[#ef4444] hover:shadow-[0_0_24px_rgba(239,68,68,0.55),0_0_44px_rgba(185,28,28,0.3),inset_0_0_16px_rgba(185,28,28,0.35)] cursor-pointer active:translate-y-1 active:scale-[0.98]'
-                                : 'border-[#262326] opacity-60 shadow-[0_3px_0_#080709,0_6px_12px_rgba(0,0,0,0.7)] cursor-not-allowed'
+                                ? 'shadow-[0_6px_16px_rgba(0,0,0,0.92),inset_0_2px_10px_rgba(0,0,0,0.9)] hover:shadow-[0_0_24px_rgba(239,68,68,0.55),0_0_44px_rgba(185,28,28,0.3),inset_0_0_16px_rgba(185,28,28,0.35)] cursor-pointer active:translate-y-1 active:scale-[0.98]'
+                                : 'opacity-60 shadow-[0_4px_12px_rgba(0,0,0,0.75)] cursor-not-allowed'
                           }`}
                         >
                           {/* Inner Radial Bloodlight Atmosphere (Hover & Pricked) */}
@@ -8971,19 +9085,16 @@ export default function App() {
                             }`}
                           />
 
-                          {/* Outer Inset Groove */}
-                          <div className="absolute inset-2 sm:inset-2.5 rounded-full border border-black/80 shadow-[inset_0_1px_3px_rgba(0,0,0,0.9)] pointer-events-none" />
-
                           {/* Outermost Band: Full-Bleed Perimeter Zalgo Inscription Loop */}
                           <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
                             <defs>
                               <path
                                 id="talismanOuterZalgoPath"
-                                d="M 50, 4.5 a 45.5,45.5 0 1,1 0,91 a 45.5,45.5 0 1,1 0,-91"
+                                d="M 50, 6.5 a 43.5,43.5 0 1,1 0,87 a 43.5,43.5 0 1,1 0,-87"
                               />
                             </defs>
                             <text
-                              className={`font-mono text-[3.8px] font-bold select-none tracking-[0.03em] transition-all duration-200 ${
+                              className={`font-mono text-[3.7px] font-bold select-none tracking-[0.03em] transition-all duration-200 ${
                                 isTalismanPricked
                                   ? 'fill-[#ef4444] drop-shadow-[0_0_3px_rgba(239,68,68,0.7)]'
                                   : 'fill-[#0a090b] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
@@ -8992,7 +9103,7 @@ export default function App() {
                               <textPath
                                 href="#talismanOuterZalgoPath"
                                 startOffset="0%"
-                                textLength="285.9"
+                                textLength="273.3"
                                 lengthAdjust="spacing"
                               >
                                 S̴̵̷A̸̷N̴̵̷G̸̷U̴̵̷I̸̷S̴̵̷ • E̸̷X̴̵̷C̴̵̷I̸̷D̴̵̷I̸̷U̴̵̷M̸̷ • ᚛ᚨ̴̵̷ᛚ̴̵̷ᛏ̴̵̷ᚨ̴̵̷ᚱ̴̵̷᚜ • O̸̷B̸̷L̴̵̷A̴̵̷T̸̷I̸̷O̴̵̷ • M̸̷O̴̵̷R̸̷T̴̵̷A̸̷L̸̷I̸̷S̴̵̷ • S̴̵̷A̸̷N̴̵̷G̸̷U̴̵̷I̸̷S̴̵̷ • E̸̷X̴̵̷C̴̵̷I̸̷D̴̵̷I̸̷U̴̵̷M̸̷ • ᚛ᚨ̴̵̷ᛚ̴̵̷ᛏ̴̵̷ᚨ̴̵̷ᚱ̴̵̷᚜ • O̸̷B̸̷L̴̵̷A̴̵̷T̸̷I̸̷O̴̵̷ • M̸̷O̴̵̷R̸̷T̴̵̷A̸̷L̸̷I̸̷S̴̵̷ •
@@ -9029,19 +9140,12 @@ export default function App() {
                             />
                           </svg>
 
-                          {/* Mid Dashed Ring */}
-                          <div className={`absolute inset-3 sm:inset-3.5 rounded-full border border-dashed transition-all duration-200 pointer-events-none ${
-                            isTalismanPricked
-                              ? 'border-red-900/60 shadow-[0_0_8px_rgba(185,28,28,0.25)]'
-                              : 'border-[#0a090b] group-hover:border-[#b91c1c]/90 group-hover:shadow-[0_0_6px_rgba(185,28,28,0.4)]'
-                          }`} />
-
                           {/* Pentagram PNG: black at rest, lit on hover/prick */}
                           <img
                             src={`${import.meta.env.BASE_URL || './'}assets/text/plinth.png`}
                             alt=""
                             draggable={false}
-                            className={`absolute inset-[7%] w-[86%] h-[86%] object-contain pointer-events-none select-none transition-all duration-200 ${
+                            className={`absolute inset-[8%] w-[84%] h-[84%] object-contain pointer-events-none select-none transition-all duration-200 ${
                               isTalismanPricked
                                 ? 'brightness-110 saturate-150 drop-shadow-[0_0_4px_rgba(255,120,120,1)] drop-shadow-[0_0_14px_rgba(239,68,68,1)] drop-shadow-[0_0_32px_rgba(220,38,38,0.95)]'
                                 : 'brightness-[0.12] opacity-90 group-hover:brightness-110 group-hover:saturate-150 group-hover:opacity-100 group-hover:drop-shadow-[0_0_4px_rgba(255,120,120,1)] group-hover:drop-shadow-[0_0_14px_rgba(239,68,68,1)] group-hover:drop-shadow-[0_0_32px_rgba(220,38,38,0.95)]'
@@ -9049,7 +9153,7 @@ export default function App() {
                           />
 
                           {/* Inner Core SVG */}
-                          <svg viewBox="0 0 100 100" className="relative z-10 w-[96px] h-[96px] sm:w-[116px] sm:h-[116px] overflow-visible pointer-events-none transition-transform duration-150">
+                          <svg viewBox="0 0 100 100" className="relative z-10 w-[92px] h-[92px] sm:w-[106px] sm:h-[106px] overflow-visible pointer-events-none transition-transform duration-150">
                             <defs>
                               <path
                                 id="talismanInnerZalgoPath"
@@ -9057,14 +9161,24 @@ export default function App() {
                               />
                             </defs>
 
-                            {/* Plinth Inner Bevel */}
+                            {/* Plinth Inner Engraved Groove & Ring */}
                             <circle
                               cx="50"
                               cy="50"
-                              r="44"
+                              r="44.2"
                               fill="none"
-                              stroke={isTalismanPricked ? "#7f1d1d" : "#0a090b"}
-                              strokeWidth="2.5"
+                              stroke={isTalismanPricked ? '#991b1b' : '#3a2d22'}
+                              strokeWidth="1.2"
+                              strokeDasharray="3 2.5"
+                              className="transition-colors duration-200 group-hover:stroke-[#991b1b]"
+                            />
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="41.8"
+                              fill="none"
+                              stroke={isTalismanPricked ? '#7f1d1d' : '#0a090b'}
+                              strokeWidth="1.8"
                               className="transition-colors duration-200 group-hover:stroke-[#7f1d1d]"
                             />
 
@@ -9090,10 +9204,11 @@ export default function App() {
                             <TalismanEye isTalismanPricked={isTalismanPricked} />
                           </svg>
                         </button>
+                    </div>
 
                       <pre
                         style={{ fontFamily: '"ArtMono", "DejaVu Sans Mono", monospace', letterSpacing: '0px' }}
-                        className={`text-[5px] leading-[4.5px] whitespace-pre select-none pointer-events-none origin-top mt-1.5 transition-all duration-200 text-center ${
+                        className={`text-[5px] leading-[4.5px] whitespace-pre select-none pointer-events-none origin-top mt-2 -mb-3 transition-all duration-200 text-center ${
                           isTalismanPricked
                             ? 'scale-[0.38] text-red-400 font-bold drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]'
                             : phase === 'PLAY'
@@ -9123,8 +9238,8 @@ export default function App() {
                       </pre>
                     </div>
 
-                  {/* Carved-Stone Utility Plaques (Lowered & Offset Left) */}
-                  <div className="flex flex-col items-center gap-2 w-full mt-2 sm:mt-2.5 -translate-x-6 sm:-translate-x-8">
+                  {/* Carved-Stone Utility Plaques (All 3 Fit Cleanly Onscreen!) */}
+                  <div className="flex flex-col items-center gap-1.5 w-full mt-1.5 -translate-x-6 sm:-translate-x-8">
                     <RitualSlateButton
                       onClick={openViewDeck}
                       icon={<Layers className="w-3.5 h-3.5" />}
@@ -9814,7 +9929,7 @@ export default function App() {
     {(() => {
       const displayBloodOz = totalOverkillDamage || 0;
       return (
-        <div className="flex flex-col items-center mt-5 h-0 overflow-visible">
+        <div className="flex flex-col items-center mt-3.5 h-0 overflow-visible">
           <BloodBankVessel displayBloodOz={displayBloodOz} isOverkill={isOverkill} tier={jarTier} />
         </div>
       );

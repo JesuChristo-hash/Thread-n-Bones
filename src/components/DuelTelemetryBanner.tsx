@@ -373,33 +373,33 @@ const JAR_TIERS: Record<1 | 2 | 3, JarTierSpec> = {
     roman: 'II',
     label: 'Brass-Banded Specimen Jar',
     w: 64,
-    h: 132,
+    h: 118,
     cap: 50,
     cx: 32,
     outerPath:
-      'M 23 10.5 L 41 10.5 L 41 16.5 C 41 20, 57 22, 57 29.5 L 57 109.5 C 57 117.2, 51 120.5, 43 120.5 L 21 120.5 C 13 120.5, 7 117.2, 7 109.5 L 7 29.5 C 7 22, 23 20, 23 16.5 Z',
+      'M 23 10.5 L 41 10.5 L 41 16.5 C 41 20, 57 22, 57 29.5 L 57 95.5 C 57 103.2, 51 106.5, 43 106.5 L 21 106.5 C 13 106.5, 7 103.2, 7 95.5 L 7 29.5 C 7 22, 23 20, 23 16.5 Z',
     innerPath:
-      'M 25.2 12 L 38.8 12 L 38.8 17 C 38.8 21.3, 54.6 23.3, 54.6 30 L 54.6 109 C 54.6 115.2, 49.6 118, 42.4 118 L 21.6 118 C 14.4 118, 9.4 115.2, 9.4 109 L 9.4 30 C 9.4 23.3, 25.2 21.3, 25.2 17 Z',
-    fillBottomY: 118.2,
+      'M 25.2 12 L 38.8 12 L 38.8 17 C 38.8 21.3, 54.6 23.3, 54.6 30 L 54.6 95 C 54.6 101.2, 49.6 104, 42.4 104 L 21.6 104 C 14.4 104, 9.4 101.2, 9.4 95 L 9.4 30 C 9.4 23.3, 25.2 21.3, 25.2 17 Z',
+    fillBottomY: 104.2,
     fillTopY: 25,
     readoutTopPct: 54,
     leftShoulderGlint: 'M 12.2 28.5 C 14 24.5, 20.5 23, 25.5 19',
-    leftGlintPath: 'M 11.8 40 L 11.8 100.5',
-    rightGlintPath: 'M 52.4 40 L 52.4 100',
-    bottomLensPath: 'M 18.5 115.8 Q 32 119, 45.5 115.8',
+    leftGlintPath: 'M 11.8 39.5 L 11.8 87',
+    rightGlintPath: 'M 52.4 39.5 L 52.4 86.5',
+    bottomLensPath: 'M 18.5 101.8 Q 32 105, 45.5 101.8',
     ticks: [
-      { y: 44, x1: 46.5, x2: 53.2, major: true },
-      { y: 54.5, x1: 48.8, x2: 53.2 },
-      { y: 65, x1: 46.5, x2: 53.2, major: true },
-      { y: 75.5, x1: 48.8, x2: 53.2 },
-      { y: 86, x1: 46.5, x2: 53.2, major: true },
-      { y: 96.5, x1: 48.8, x2: 53.2 },
+      { y: 42.5, x1: 46.5, x2: 53.2, major: true },
+      { y: 50.8, x1: 48.8, x2: 53.2 },
+      { y: 59.1, x1: 46.5, x2: 53.2, major: true },
+      { y: 67.4, x1: 48.8, x2: 53.2 },
+      { y: 75.7, x1: 46.5, x2: 53.2, major: true },
+      { y: 84, x1: 48.8, x2: 53.2 },
     ],
     bubbles: [
-      { cx: 20, cy: 112, r: 1.5, anim: 'jarBubbleRiseB', dur: '4.1s', delay: '0.2s' },
-      { cx: 43, cy: 114, r: 1.15, anim: 'jarBubbleRiseA', dur: '3.5s', delay: '1.5s' },
-      { cx: 30, cy: 113, r: 1.35, anim: 'jarBubbleRiseB', dur: '4.8s', delay: '2.6s' },
-      { cx: 25, cy: 110, r: 1.0, anim: 'jarBubbleRiseC', dur: '3.2s', delay: '0.9s' },
+      { cx: 20, cy: 98, r: 1.5, anim: 'jarBubbleRiseB', dur: '4.1s', delay: '0.2s' },
+      { cx: 43, cy: 100, r: 1.15, anim: 'jarBubbleRiseA', dur: '3.5s', delay: '1.5s' },
+      { cx: 30, cy: 99, r: 1.35, anim: 'jarBubbleRiseB', dur: '4.8s', delay: '2.6s' },
+      { cx: 25, cy: 96, r: 1.0, anim: 'jarBubbleRiseC', dur: '3.2s', delay: '0.9s' },
     ],
   },
   // Tier 3 (50+ oz): Wide Ribbed & Iron-Caged Alchemical Carboy with double-valve crown
@@ -408,36 +408,36 @@ const JAR_TIERS: Record<1 | 2 | 3, JarTierSpec> = {
     roman: 'III',
     label: 'Caged Alchemical Carboy',
     w: 84,
-    h: 138,
+    h: 122,
     cap: 133,
     cx: 42,
     outerPath:
-      'M 30 10.5 L 54 10.5 L 54 17.5 C 54 22.5, 78 23.8, 78 36 L 75.6 112.5 C 75.2 121.2, 68 125.8, 58 125.8 L 26 125.8 C 16 125.8, 8.8 121.2, 8.4 112.5 L 6 36 C 6 23.8, 30 22.5, 30 17.5 Z',
+      'M 30 10.5 L 54 10.5 L 54 17.5 C 54 22.5, 78 23.8, 78 36 L 75.6 96.5 C 75.2 105.2, 68 109.8, 58 109.8 L 26 109.8 C 16 109.8, 8.8 105.2, 8.4 96.5 L 6 36 C 6 23.8, 30 22.5, 30 17.5 Z',
     innerPath:
-      'M 32.4 12 L 51.6 12 L 51.6 18 C 51.6 24, 75.2 25.3, 75.2 36.4 L 72.8 112 C 72.5 119.3, 66.2 123.2, 57.4 123.2 L 26.6 123.2 C 17.8 123.2, 11.5 119.3, 11.2 112 L 8.8 36.4 C 8.8 25.3, 32.4 24, 32.4 18 Z',
-    fillBottomY: 123.4,
+      'M 32.4 12 L 51.6 12 L 51.6 18 C 51.6 24, 75.2 25.3, 75.2 36.4 L 72.8 96 C 72.5 103.3, 66.2 107.2, 57.4 107.2 L 26.6 107.2 C 17.8 107.2, 11.5 103.3, 11.2 96 L 8.8 36.4 C 8.8 25.3, 32.4 24, 32.4 18 Z',
+    fillBottomY: 107.4,
     fillTopY: 27,
     readoutTopPct: 55,
     leftShoulderGlint: 'M 12.2 33.5 C 14.5 27.2, 24.5 25.2, 31.8 20.2',
-    leftGlintPath: 'M 11.5 45 L 13.4 105.5',
-    rightGlintPath: 'M 72.5 45 L 70.6 105.5',
-    bottomLensPath: 'M 22 120.8 Q 42 124.2, 62 120.8',
+    leftGlintPath: 'M 11.5 44 L 13.4 90',
+    rightGlintPath: 'M 72.5 44 L 70.6 90',
+    bottomLensPath: 'M 22 104.8 Q 42 108.2, 62 104.8',
     ticks: [
-      { y: 47, x1: 63.5, x2: 71.2, major: true },
-      { y: 55, x1: 66.5, x2: 71.0 },
-      { y: 63, x1: 63.5, x2: 70.8, major: true },
-      { y: 71, x1: 66.5, x2: 70.6 },
-      { y: 79, x1: 63.5, x2: 70.4, major: true },
-      { y: 87, x1: 66.5, x2: 70.2 },
-      { y: 95, x1: 63.5, x2: 70.0, major: true },
-      { y: 103, x1: 66.5, x2: 69.8 },
+      { y: 45.5, x1: 63.5, x2: 71.2, major: true },
+      { y: 51.8, x1: 66.5, x2: 71.0 },
+      { y: 58.1, x1: 63.5, x2: 70.8, major: true },
+      { y: 64.4, x1: 66.5, x2: 70.6 },
+      { y: 70.7, x1: 63.5, x2: 70.4, major: true },
+      { y: 77.0, x1: 66.5, x2: 70.2 },
+      { y: 83.3, x1: 63.5, x2: 70.0, major: true },
+      { y: 89.6, x1: 66.5, x2: 69.8 },
     ],
     bubbles: [
-      { cx: 23, cy: 117, r: 1.6, anim: 'jarBubbleRiseB', dur: '4.0s', delay: '0.1s' },
-      { cx: 56, cy: 118, r: 1.3, anim: 'jarBubbleRiseA', dur: '3.6s', delay: '1.2s' },
-      { cx: 36, cy: 116, r: 1.45, anim: 'jarBubbleRiseB', dur: '4.6s', delay: '2.1s' },
-      { cx: 49, cy: 119, r: 1.1, anim: 'jarBubbleRiseC', dur: '3.1s', delay: '0.8s' },
-      { cx: 29, cy: 114, r: 1.0, anim: 'jarBubbleRiseA', dur: '4.3s', delay: '3.0s' },
+      { cx: 23, cy: 101, r: 1.6, anim: 'jarBubbleRiseB', dur: '4.0s', delay: '0.1s' },
+      { cx: 56, cy: 102, r: 1.3, anim: 'jarBubbleRiseA', dur: '3.6s', delay: '1.2s' },
+      { cx: 36, cy: 100, r: 1.45, anim: 'jarBubbleRiseB', dur: '4.6s', delay: '2.1s' },
+      { cx: 49, cy: 103, r: 1.1, anim: 'jarBubbleRiseC', dur: '3.1s', delay: '0.8s' },
+      { cx: 29, cy: 98, r: 1.0, anim: 'jarBubbleRiseA', dur: '4.3s', delay: '3.0s' },
     ],
   },
 };
@@ -535,17 +535,17 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
         {/* Left Brass Spigot Valve Bolted to Runnel Stone Edge */}
         <g>
           {/* Stone mounting flange plate with rivets seated onto slate flank */}
-          <rect x="-1.8" y="4.5" width="7.2" height="13" rx="1.2" fill={`url(#hoseBrass-${uid})`} stroke="#1b1109" strokeWidth="0.8" />
-          <circle cx="1.8" cy="7.2" r="0.9" fill="#1b1109" stroke="#d4af73" strokeWidth="0.35" />
-          <circle cx="1.8" cy="14.8" r="0.9" fill="#1b1109" stroke="#d4af73" strokeWidth="0.35" />
+          <rect x="-3.0" y="4.5" width="7.4" height="13" rx="1.2" fill={`url(#hoseBrass-${uid})`} stroke="#1b1109" strokeWidth="0.8" />
+          <circle cx="0.7" cy="7.2" r="0.9" fill="#1b1109" stroke="#d4af73" strokeWidth="0.35" />
+          <circle cx="0.7" cy="14.8" r="0.9" fill="#1b1109" stroke="#d4af73" strokeWidth="0.35" />
           {/* Hex compression nut */}
-          <rect x="5.2" y="7" width="4.4" height="8" rx="0.8" fill={`url(#hoseBrass-${uid})`} stroke="#21140b" strokeWidth="0.7" />
-          <line x1="6.2" y1="9.2" x2="8.8" y2="9.2" stroke="#ebd09e" strokeWidth="0.5" opacity="0.55" />
+          <rect x="4.2" y="7" width="4.4" height="8" rx="0.8" fill={`url(#hoseBrass-${uid})`} stroke="#21140b" strokeWidth="0.7" />
+          <line x1="5.2" y1="9.2" x2="7.8" y2="9.2" stroke="#ebd09e" strokeWidth="0.5" opacity="0.55" />
           {/* Miniature shutoff petcock T-valve handle */}
-          <rect x="6.6" y="3.2" width="1.6" height="4" fill="#6b4a26" stroke="#1e130b" strokeWidth="0.5" />
-          <rect x="3.6" y="1.8" width="7.6" height="2" rx="1" fill="#7c2020" stroke="#c49a5c" strokeWidth="0.55" />
+          <rect x="5.6" y="3.2" width="1.6" height="4" fill="#6b4a26" stroke="#1e130b" strokeWidth="0.5" />
+          <rect x="2.6" y="1.8" width="7.6" height="2" rx="1" fill="#7c2020" stroke="#c49a5c" strokeWidth="0.55" />
           {/* Tapered barbed brass spigot nozzle */}
-          <path d="M 9.4 8.2 L 13.5 9 L 13.5 13 L 9.4 13.8 Z" fill={`url(#hoseBrass-${uid})`} stroke="#1b1109" strokeWidth="0.65" />
+          <path d="M 8.4 8.2 L 13.5 9 L 13.5 13 L 8.4 13.8 Z" fill={`url(#hoseBrass-${uid})`} stroke="#1b1109" strokeWidth="0.65" />
         </g>
 
         {/* Braided Translucent Siphon Hose Arching into Jar Stopper Center (x=74) */}
@@ -822,10 +822,10 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
             {/* Tier 3 Molded Vertical Alchemical Glass Fluting Ribs */}
             {spec.id === 3 && (
               <g opacity="0.12">
-                <line x1="20" y1="35" x2="21.5" y2="112" stroke="#fff7ed" strokeWidth="1.6" strokeLinecap="round" />
-                <line x1="27.5" y1="32" x2="28.5" y2="115" stroke="#fff7ed" strokeWidth="1" strokeLinecap="round" />
-                <line x1="56.5" y1="32" x2="55.5" y2="115" stroke="#fff7ed" strokeWidth="1" strokeLinecap="round" />
-                <line x1="64" y1="35" x2="62.5" y2="112" stroke="#fff7ed" strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="20" y1="35" x2="21.5" y2="96" stroke="#fff7ed" strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="27.5" y1="32" x2="28.5" y2="99" stroke="#fff7ed" strokeWidth="1" strokeLinecap="round" />
+                <line x1="56.5" y1="32" x2="55.5" y2="99" stroke="#fff7ed" strokeWidth="1" strokeLinecap="round" />
+                <line x1="64" y1="35" x2="62.5" y2="96" stroke="#fff7ed" strokeWidth="1.6" strokeLinecap="round" />
               </g>
             )}
 
@@ -908,21 +908,21 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
               ))}
 
               {/* Lower Riveted Tarnished-Brass Compression Band */}
-              <rect x="5.5" y="102.5" width="53" height="5.2" rx="1.2" fill={`url(#brassCyl-${uid})`} stroke="#180f08" strokeWidth="0.8" />
-              <line x1="7" y1="104" x2="57" y2="104" stroke="#f0d39f" strokeWidth="0.5" opacity="0.45" />
+              <rect x="5.5" y="88.5" width="53" height="5.2" rx="1.2" fill={`url(#brassCyl-${uid})`} stroke="#180f08" strokeWidth="0.8" />
+              <line x1="7" y1="90" x2="57" y2="90" stroke="#f0d39f" strokeWidth="0.5" opacity="0.45" />
               {[11.5, 32, 52.5].map((rx) => (
-                <circle key={rx} cx={rx} cy="105.1" r="1.05" fill="#23160c" stroke="#e2bf82" strokeWidth="0.4" />
+                <circle key={rx} cx={rx} cy="91.1" r="1.05" fill="#23160c" stroke="#e2bf82" strokeWidth="0.4" />
               ))}
 
               {/* Stepped Bronze Pedestal Base */}
               <path
-                d="M 12.5 117 L 51.5 117 L 53 121.5 L 50.5 127.5 C 49.5 129, 47.5 129.5, 45 129.5 L 19 129.5 C 16.5 129.5, 14.5 129, 13.5 127.5 L 11 121.5 Z"
+                d="M 12.5 103 L 51.5 103 L 53 107.5 L 50.5 113.5 C 49.5 115, 47.5 115.5, 45 115.5 L 19 115.5 C 16.5 115.5, 14.5 115, 13.5 113.5 L 11 107.5 Z"
                 fill={`url(#brassCyl-${uid})`}
                 stroke="#180f08"
                 strokeWidth="0.85"
               />
-              <line x1="13" y1="121.5" x2="51" y2="121.5" stroke="#e8c88f" strokeWidth="0.5" opacity="0.42" />
-              <text x="32" y="127.2" textAnchor="middle" fill="#e8c88f" opacity="0.58" fontSize="5.4" fontFamily="Cinzel, serif" fontWeight="700">
+              <line x1="13" y1="107.5" x2="51" y2="107.5" stroke="#e8c88f" strokeWidth="0.5" opacity="0.42" />
+              <text x="32" y="113.2" textAnchor="middle" fill="#e8c88f" opacity="0.58" fontSize="5.4" fontFamily="Cinzel, serif" fontWeight="700">
                 II
               </text>
             </g>
@@ -942,28 +942,28 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
 
               {/* Slender Forged Dark-Iron Protective Vertical Cage Straps (hugging outer flanks) */}
               <path
-                d="M 27.5 19.5 C 18 23.5, 13.5 29, 13.8 39 L 15.8 111.5 C 16 117.5, 18.5 121.5, 22.5 124"
+                d="M 27.5 19.5 C 18 23.5, 13.5 29, 13.8 39 L 15.8 95.5 C 16 101.5, 18.5 105.5, 22.5 108"
                 fill="none"
                 stroke={`url(#ironMetal-${uid})`}
                 strokeWidth="3.2"
                 strokeLinecap="round"
               />
               <path
-                d="M 27.5 19.5 C 18 23.5, 13.5 29, 13.8 39 L 15.8 111.5 C 16 117.5, 18.5 121.5, 22.5 124"
+                d="M 27.5 19.5 C 18 23.5, 13.5 29, 13.8 39 L 15.8 95.5 C 16 101.5, 18.5 105.5, 22.5 108"
                 fill="none"
                 stroke="#6b5645"
                 strokeWidth="0.6"
                 opacity="0.5"
               />
               <path
-                d="M 56.5 19.5 C 66 23.5, 70.5 29, 70.2 39 L 68.2 111.5 C 68 117.5, 65.5 121.5, 61.5 124"
+                d="M 56.5 19.5 C 66 23.5, 70.5 29, 70.2 39 L 68.2 95.5 C 68 101.5, 65.5 105.5, 61.5 108"
                 fill="none"
                 stroke={`url(#ironMetal-${uid})`}
                 strokeWidth="3.2"
                 strokeLinecap="round"
               />
               <path
-                d="M 56.5 19.5 C 66 23.5, 70.5 29, 70.2 39 L 68.2 111.5 C 68 117.5, 65.5 121.5, 61.5 124"
+                d="M 56.5 19.5 C 66 23.5, 70.5 29, 70.2 39 L 68.2 95.5 C 68 101.5, 65.5 105.5, 61.5 108"
                 fill="none"
                 stroke="#6b5645"
                 strokeWidth="0.6"
@@ -971,35 +971,35 @@ export const BloodBankVessel: React.FC<{ displayBloodOz: number; isOverkill?: bo
               />
 
               {/* Upper Riveted Brass & Iron Pressure Hoop */}
-              <rect x="4.8" y="38.2" width="74.4" height="5.4" rx="1.4" fill={`url(#brassCyl-${uid})`} stroke="#140c07" strokeWidth="0.85" />
-              <line x1="6.5" y1="39.8" x2="77.5" y2="39.8" stroke="#f0d39f" strokeWidth="0.55" opacity="0.48" />
+              <rect x="4.8" y="37.2" width="74.4" height="5.4" rx="1.4" fill={`url(#brassCyl-${uid})`} stroke="#140c07" strokeWidth="0.85" />
+              <line x1="6.5" y1="38.8" x2="77.5" y2="38.8" stroke="#f0d39f" strokeWidth="0.55" opacity="0.48" />
               {/* Center forged diamond clasp stud */}
-              <polygon points="42,37.4 45.2,40.9 42,44.4 38.8,40.9" fill="#2b1b0f" stroke="#d4af73" strokeWidth="0.65" />
-              <circle cx="42" cy="40.9" r="1" fill="#b91c1c" />
+              <polygon points="42,36.4 45.2,39.9 42,43.4 38.8,39.9" fill="#2b1b0f" stroke="#d4af73" strokeWidth="0.65" />
+              <circle cx="42" cy="39.9" r="1" fill="#b91c1c" />
               {[14.2, 69.8].map((rx) => (
-                <circle key={rx} cx={rx} cy="40.9" r="1.2" fill="#1c120a" stroke="#e2bf82" strokeWidth="0.45" />
+                <circle key={rx} cx={rx} cy="39.9" r="1.2" fill="#1c120a" stroke="#e2bf82" strokeWidth="0.45" />
               ))}
 
               {/* Lower Riveted Brass & Iron Pressure Hoop */}
-              <rect x="7" y="108.5" width="70" height="5.4" rx="1.4" fill={`url(#brassCyl-${uid})`} stroke="#140c07" strokeWidth="0.85" />
-              <line x1="8.5" y1="110.1" x2="75.5" y2="110.1" stroke="#f0d39f" strokeWidth="0.55" opacity="0.45" />
-              <polygon points="42,107.7 45,111.2 42,114.7 39,111.2" fill="#2b1b0f" stroke="#d4af73" strokeWidth="0.65" />
+              <rect x="7" y="92.5" width="70" height="5.4" rx="1.4" fill={`url(#brassCyl-${uid})`} stroke="#140c07" strokeWidth="0.85" />
+              <line x1="8.5" y1="94.1" x2="75.5" y2="94.1" stroke="#f0d39f" strokeWidth="0.55" opacity="0.45" />
+              <polygon points="42,91.7 45,95.2 42,98.7 39,95.2" fill="#2b1b0f" stroke="#d4af73" strokeWidth="0.65" />
               {[16, 68].map((rx) => (
-                <circle key={rx} cx={rx} cy="111.2" r="1.2" fill="#1c120a" stroke="#e2bf82" strokeWidth="0.45" />
+                <circle key={rx} cx={rx} cy="95.2" r="1.2" fill="#1c120a" stroke="#e2bf82" strokeWidth="0.45" />
               ))}
 
               {/* Heavy Clawed Iron-and-Brass Reliquary Cradle Base */}
               <path
-                d="M 14.5 121.5 L 69.5 121.5 L 72.5 126 L 69 133 C 67.8 134.8, 65.5 135.5, 62 135.5 L 22 135.5 C 18.5 135.5, 16.2 134.8, 15 133 L 11.5 126 Z"
+                d="M 14.5 105.5 L 69.5 105.5 L 72.5 110 L 69 117 C 67.8 118.8, 65.5 119.5, 62 119.5 L 22 119.5 C 18.5 119.5, 16.2 118.8, 15 117 L 11.5 110 Z"
                 fill={`url(#brassCyl-${uid})`}
                 stroke="#140c07"
                 strokeWidth="0.9"
               />
               {/* Side forged iron cradle claws */}
-              <path d="M 13.5 122 L 10.5 126.5 L 14.5 131.5 L 18 126.5 Z" fill={`url(#ironMetal-${uid})`} stroke="#7c5e3f" strokeWidth="0.5" />
-              <path d="M 70.5 122 L 73.5 126.5 L 69.5 131.5 L 66 126.5 Z" fill={`url(#ironMetal-${uid})`} stroke="#7c5e3f" strokeWidth="0.5" />
-              <line x1="15" y1="125.8" x2="69" y2="125.8" stroke="#e8c88f" strokeWidth="0.55" opacity="0.42" />
-              <text x="42" y="132.5" textAnchor="middle" fill="#e8c88f" opacity="0.62" fontSize="5.6" fontFamily="Cinzel, serif" fontWeight="700">
+              <path d="M 13.5 106 L 10.5 110.5 L 14.5 115.5 L 18 110.5 Z" fill={`url(#ironMetal-${uid})`} stroke="#7c5e3f" strokeWidth="0.5" />
+              <path d="M 70.5 106 L 73.5 110.5 L 69.5 115.5 L 66 110.5 Z" fill={`url(#ironMetal-${uid})`} stroke="#7c5e3f" strokeWidth="0.5" />
+              <line x1="15" y1="109.8" x2="69" y2="109.8" stroke="#e8c88f" strokeWidth="0.55" opacity="0.42" />
+              <text x="42" y="116.5" textAnchor="middle" fill="#e8c88f" opacity="0.62" fontSize="5.6" fontFamily="Cinzel, serif" fontWeight="700">
                 III
               </text>
             </g>
