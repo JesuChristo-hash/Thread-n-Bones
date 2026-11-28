@@ -81,25 +81,25 @@ const buildRainDrops = (weatherAct: 2 | 3) => {
 const RAIN_ACT_2 = buildRainDrops(2);
 const RAIN_ACT_3 = buildRainDrops(3);
 
-// Act 1: three layers only. Round vmax puffs are baked into each layer's background,
-// so mobile GPUs keep a handful of textures instead of a pile of them.
+// Act 1: three layers. Puffs use circle closest-side, so each one fits inside its own box
+// (a puff can never be bigger than the box that holds it, so nothing gets sliced).
 const MIST_ACT_1: Layer[] = [
   {
-    cls: 'absolute -inset-x-[14%] bottom-[-8%] h-[64%]',
+    cls: 'absolute -inset-x-[14%] bottom-[-8%] h-[80%]',
     bg:
-      'radial-gradient(circle 40vmax at 22% 78%, rgba(214,210,200,0.42) 0%, rgba(168,164,156,0.2) 48%, transparent 100%), radial-gradient(circle 34vmax at 58% 92%, rgba(222,216,204,0.38) 0%, rgba(172,168,158,0.18) 48%, transparent 100%), radial-gradient(circle 38vmax at 88% 74%, rgba(208,202,190,0.36) 0%, rgba(150,146,138,0.16) 50%, transparent 100%)',
+      'radial-gradient(circle closest-side at 24% 54%, rgba(214,210,200,0.42) 0%, rgba(168,164,156,0.2) 48%, transparent 100%), radial-gradient(circle closest-side at 54% 40%, rgba(222,216,204,0.38) 0%, rgba(172,168,158,0.18) 48%, transparent 100%), radial-gradient(circle closest-side at 82% 56%, rgba(208,202,190,0.36) 0%, rgba(150,146,138,0.16) 50%, transparent 100%)',
     anim: 'weatherMistDriftA 34s ease-in-out infinite',
   },
   {
-    cls: 'absolute -inset-x-[14%] bottom-[8%] h-[52%]',
+    cls: 'absolute -inset-x-[14%] bottom-[2%] h-[68%]',
     bg:
-      'radial-gradient(circle 32vmax at 40% 62%, rgba(210,206,196,0.34) 0%, rgba(156,152,144,0.15) 50%, transparent 100%), radial-gradient(circle 28vmax at 80% 70%, rgba(204,200,190,0.3) 0%, rgba(148,144,136,0.13) 50%, transparent 100%)',
+      'radial-gradient(circle closest-side at 40% 50%, rgba(210,206,196,0.34) 0%, rgba(156,152,144,0.15) 50%, transparent 100%), radial-gradient(circle closest-side at 78% 44%, rgba(204,200,190,0.3) 0%, rgba(148,144,136,0.13) 50%, transparent 100%)',
     anim: 'weatherMistDriftB 26s ease-in-out -7s infinite',
   },
   {
-    cls: 'absolute -inset-x-[14%] top-[6%] h-[50%]',
+    cls: 'absolute -inset-x-[14%] top-[2%] h-[56%]',
     bg:
-      'radial-gradient(circle 30vmax at 30% 50%, rgba(204,200,190,0.2) 0%, rgba(144,140,132,0.09) 52%, transparent 100%), radial-gradient(circle 26vmax at 74% 40%, rgba(198,194,184,0.17) 0%, rgba(140,136,128,0.08) 52%, transparent 100%)',
+      'radial-gradient(circle closest-side at 30% 50%, rgba(204,200,190,0.2) 0%, rgba(144,140,132,0.09) 52%, transparent 100%), radial-gradient(circle closest-side at 74% 46%, rgba(198,194,184,0.17) 0%, rgba(140,136,128,0.08) 52%, transparent 100%)',
     anim: 'weatherMistDriftB 46s ease-in-out -15s infinite',
   },
 ];
@@ -158,15 +158,15 @@ const GROUND_HAZE: Layer = {
 // Act 4: one smoke layer, no blend modes, gradient embers (no box-shadow halos).
 const FIRE_SMOKE: Layer[] = [
   {
-    cls: 'absolute -inset-x-[12%] bottom-[-5%] h-[66%]',
+    cls: 'absolute -inset-x-[12%] bottom-[-5%] h-[78%]',
     bg:
-      'radial-gradient(circle 34vmax at 38% 72%, rgba(92,82,78,0.28) 0%, rgba(45,40,38,0.14) 52%, transparent 100%), radial-gradient(circle 30vmax at 72% 62%, rgba(78,66,62,0.22) 0%, rgba(40,34,32,0.1) 52%, transparent 100%)',
+      'radial-gradient(circle closest-side at 36% 56%, rgba(92,82,78,0.3) 0%, rgba(45,40,38,0.15) 52%, transparent 100%), radial-gradient(circle closest-side at 70% 44%, rgba(78,66,62,0.24) 0%, rgba(40,34,32,0.11) 52%, transparent 100%)',
     anim: 'weatherSmokeDrift 22s ease-in-out infinite',
   },
   {
     desk: true,
-    cls: 'absolute -inset-x-[12%] bottom-[-8%] h-[70%]',
-    bg: 'radial-gradient(circle 32vmax at 66% 68%, rgba(78,66,62,0.22) 0%, rgba(40,34,32,0.1) 52%, transparent 100%)',
+    cls: 'absolute -inset-x-[12%] bottom-[-8%] h-[84%]',
+    bg: 'radial-gradient(circle closest-side at 62% 54%, rgba(78,66,62,0.24) 0%, rgba(40,34,32,0.11) 52%, transparent 100%)',
     anim: 'weatherSmokeRise 27s ease-in-out -9s infinite',
   },
 ];
@@ -291,7 +291,7 @@ export const ActWeather = React.memo<ActWeatherProps>(({ act, posClass, keyPrefi
             className="wx wx-blend absolute inset-x-[10%] bottom-0 h-[46%] origin-bottom"
             style={{
               background:
-                'radial-gradient(ellipse 70% 80% at 50% 100%, rgba(253,186,116,0.46) 0%, rgba(249,115,22,0.24) 46%, transparent 82%)',
+                'radial-gradient(ellipse 50% 95% at 50% 100%, rgba(253,186,116,0.46) 0%, rgba(249,115,22,0.24) 46%, transparent 82%)',
               animation: 'weatherFireFlicker 2.7s ease-in-out -0.9s infinite',
             }}
           />
